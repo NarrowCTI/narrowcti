@@ -2,8 +2,10 @@ import json
 import os
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
+from connectors.otx.processor import OTXProcessor
 from connectors.otx.settings import load_settings
 from core.policy import should_ingest
 from core.state_repository import PulseStateRepository
@@ -81,6 +83,30 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(5, settings.max_pulses_per_query)
         self.assertEqual(5, settings.max_search_results_per_query)
         self.assertEqual(3, settings.otx_retries)
+
+
+class ProcessorTests(unittest.TestCase):
+    def test_prepare_candidate_limits_exported_indicators_but_keeps_original_count(self):
+        settings = SimpleNamespace(max_iocs_per_pulse=1)
+        processor = OTXProcessor(settings, otx_client=None, api_client=None, logger=None)
+
+        candidate = processor.prepare_candidate(
+            "lummac2",
+            {
+                "name": "LummaC2 sample",
+                "description": "description",
+                "created": "2026-04-01T00:00:00Z",
+                "indicators": [
+                    {"type": "domain", "indicator": "one.example"},
+                    {"type": "domain", "indicator": "two.example"},
+                ],
+            },
+        )
+
+        self.assertEqual("LummaC2 sample", candidate.name)
+        self.assertEqual(2, candidate.ioc_count)
+        self.assertEqual(1, len(candidate.indicators))
+        self.assertGreaterEqual(candidate.score, 60)
 
 
 class StixBuilderTests(unittest.TestCase):

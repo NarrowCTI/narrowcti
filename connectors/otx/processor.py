@@ -1,4 +1,5 @@
 import time
+from dataclasses import dataclass
 
 from core.policy import should_ingest
 from core.scoring import age_days, calculate_score
@@ -10,6 +11,17 @@ def age_label(age):
     if age is None:
         return "unknown"
     return f"{age}d"
+
+
+@dataclass(frozen=True)
+class PulseCandidate:
+    pulse: dict
+    name: str
+    description: str
+    indicators: list[dict]
+    ioc_count: int
+    age: int | None
+    score: int
 
 
 class OTXProcessor:
@@ -57,23 +69,15 @@ class OTXProcessor:
             self.log(f"Skip enrich failed: {pulse.get('name')}")
             return False
 
-        name = full.get("name")
-        indicators = full.get("indicators", [])
-        ioc_count = len(indicators)
-        age = age_days(full.get("created"))
-
-        if ioc_count > self.settings.max_iocs_per_pulse:
-            indicators = indicators[: self.settings.max_iocs_per_pulse]
-
-        score = calculate_score(full, query)
+        candidate = self.prepare_candidate(query, full)
         self.log(
-            f"Candidate: {name} age={age_label(age)} "
-            f"iocs={ioc_count} score={score}"
+            f"Candidate: {candidate.name} age={age_label(candidate.age)} "
+            f"iocs={candidate.ioc_count} score={candidate.score}"
         )
 
         decision, reason = should_ingest(
-            full,
-            score,
+            candidate.pulse,
+            candidate.score,
             self.settings.quarantine_score_threshold,
             self.settings.enable_quarantine,
             self.settings.min_score_to_ingest,
@@ -83,27 +87,47 @@ class OTXProcessor:
         )
 
         if decision == "quarantine":
-            self.log(f"Quarantine: {name} score={score} reason={reason}")
+            self.log(
+                f"Quarantine: {candidate.name} "
+                f"score={candidate.score} reason={reason}"
+            )
             return False
 
         if decision is False:
-            self.log(f"Drop: {name} score={score} reason={reason}")
+            self.log(f"Drop: {candidate.name} score={candidate.score} reason={reason}")
             return False
 
-        self.log(f"Ingest: {name} score={score} reason={reason}")
+        self.log(f"Ingest: {candidate.name} score={candidate.score} reason={reason}")
         try:
             imported_iocs = send_bundle(
                 self.api_client,
-                name,
-                full.get("description", ""),
-                score,
-                indicators,
+                candidate.name,
+                candidate.description,
+                candidate.score,
+                candidate.indicators,
                 identity_name=self.settings.connector_name,
             )
         except Exception as exc:
-            self.log(f"Ingest failed: {name} error={exc}")
+            self.log(f"Ingest failed: {candidate.name} error={exc}")
             return False
 
-        self.log(f"Ingest complete: {name} indicators={imported_iocs}")
+        self.log(f"Ingest complete: {candidate.name} indicators={imported_iocs}")
         state.mark_pulse(pulse_id)
         return True
+
+    def prepare_candidate(self, query, pulse):
+        indicators = pulse.get("indicators", [])
+        ioc_count = len(indicators)
+
+        if ioc_count > self.settings.max_iocs_per_pulse:
+            indicators = indicators[: self.settings.max_iocs_per_pulse]
+
+        return PulseCandidate(
+            pulse=pulse,
+            name=pulse.get("name"),
+            description=pulse.get("description", ""),
+            indicators=indicators,
+            ioc_count=ioc_count,
+            age=age_days(pulse.get("created")),
+            score=calculate_score(pulse, query),
+        )
