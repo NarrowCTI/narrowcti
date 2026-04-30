@@ -1,12 +1,12 @@
 import os
 import time
-import requests
 from pycti import OpenCTIApiClient
 
 from core.scoring import age_days, calculate_score
 from core.policy import should_ingest
 from core.state_repository import load_state, save_state
 from exporters.opencti import send_bundle
+from otx_client import OTXClient
 
 
 def env_required(name):
@@ -35,10 +35,18 @@ OPENCTI_URL = env_required("OPENCTI_URL")
 OPENCTI_TOKEN = env_required("OPENCTI_TOKEN")
 OTX_API_KEY = env_required("OTX_API_KEY")
 OTX_QUERIES = env_list("OTX_QUERIES")
+OTX_TIMEOUT = env_int("OTX_TIMEOUT", 60)
+OTX_SEARCH_TIMEOUT = env_int("OTX_SEARCH_TIMEOUT", 45)
+OTX_RETRIES = env_int("OTX_RETRIES", 3)
+OTX_RETRY_BACKOFF_SECONDS = env_int("OTX_RETRY_BACKOFF_SECONDS", 3)
 CONNECTOR_RUN_INTERVAL = env_int("CONNECTOR_RUN_INTERVAL", 3600)
 MAX_DAYS_OLD = env_int("MAX_DAYS_OLD", 1095)
 MAX_DAYS_HARD_FILTER = env_int("MAX_DAYS_HARD_FILTER", 0)
 MAX_PULSES_PER_QUERY = env_int("MAX_PULSES_PER_QUERY", 5)
+MAX_SEARCH_RESULTS_PER_QUERY = env_int(
+    "MAX_SEARCH_RESULTS_PER_QUERY",
+    max(MAX_PULSES_PER_QUERY, 10),
+)
 MAX_IOCS_PER_PULSE = env_int("MAX_IOCS_PER_PULSE", 2000)
 MIN_SCORE_FOR_OLD_PULSE = env_int("MIN_SCORE_FOR_OLD_PULSE", 80)
 MIN_SCORE_TO_INGEST = env_int("MIN_SCORE_TO_INGEST", 60)
@@ -59,54 +67,14 @@ def age_label(age):
     return f"{age}d"
 
 
-def safe_request(url, headers=None, params=None, retries=3):
-    for attempt in range(retries):
-        try:
-            log(f"HTTP request attempt {attempt + 1}: {url}")
-            response = requests.get(
-                url,
-                headers={
-                    **(headers or {}),
-                    "Connection": "close",
-                    "User-Agent": "curl/7.88.1",
-                },
-                params=params,
-                timeout=(5, 30),
-                verify=True,
-            )
-            log(f"HTTP status: {response.status_code}")
-            if response.status_code == 200:
-                return response.json()
-            if response.status_code == 403:
-                log("Auth error or invalid API key")
-        except requests.exceptions.ReadTimeout:
-            log("Read timeout")
-        except requests.exceptions.ConnectTimeout:
-            log("Connect timeout")
-        except Exception as exc:
-            log(f"HTTP error: {str(exc)}")
-        time.sleep((attempt + 1) * 3)
-    log("Request failed completely")
-    return None
-
-
-def search(query):
-    log(f"Searching OTX: {query}")
-    data = safe_request(
-        "https://otx.alienvault.com/api/v1/search/pulses",
-        headers={"X-OTX-API-KEY": OTX_API_KEY},
-        params={"q": query},
-    )
-    if not data:
-        return []
-    return data.get("results", [])
-
-
-def enrich(pulse_id):
-    return safe_request(
-        f"https://otx.alienvault.com/api/v1/pulses/{pulse_id}",
-        headers={"X-OTX-API-KEY": OTX_API_KEY},
-    )
+otx = OTXClient(
+    OTX_API_KEY,
+    search_timeout=OTX_SEARCH_TIMEOUT,
+    enrich_timeout=OTX_TIMEOUT,
+    retries=OTX_RETRIES,
+    retry_backoff_seconds=OTX_RETRY_BACKOFF_SECONDS,
+    logger=log,
+)
 
 
 def run():
@@ -114,16 +82,22 @@ def run():
 
     for query in OTX_QUERIES:
         log(f"Query: {query}")
-        pulses = search(query)
+        pulses = otx.search_pulses(query)
+        ingested = 0
+        reviewed = 0
 
-        for pulse in pulses[:MAX_PULSES_PER_QUERY]:
+        for pulse in pulses[:MAX_SEARCH_RESULTS_PER_QUERY]:
+            if ingested >= MAX_PULSES_PER_QUERY:
+                break
+
             pid = pulse.get("id")
+            reviewed += 1
 
             if pid in state["pulses"]:
                 log(f"Skip state: {pulse.get('name')}")
                 continue
 
-            full = enrich(pid)
+            full = otx.enrich_pulse(pid)
             if not full:
                 log(f"Skip enrich failed: {pulse.get('name')}")
                 continue
@@ -161,11 +135,28 @@ def run():
                 continue
 
             log(f"Ingest: {name} score={score} reason={reason}")
-            send_bundle(api, name, full.get("description", ""), score)
+            try:
+                imported_iocs = send_bundle(
+                    api,
+                    name,
+                    full.get("description", ""),
+                    score,
+                    indicators,
+                )
+            except Exception as exc:
+                log(f"Ingest failed: {name} error={exc}")
+                continue
+            log(f"Ingest complete: {name} indicators={imported_iocs}")
 
             state["pulses"].append(pid)
             save_state(STATE_FILE, state)
+            ingested += 1
             time.sleep(2)
+
+        log(
+            f"Query summary: {query} reviewed={reviewed} "
+            f"ingested={ingested} available={len(pulses)}"
+        )
 
 
 while True:

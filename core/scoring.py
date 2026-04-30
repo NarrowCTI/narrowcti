@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+import re
+
 from dateutil.parser import parse
 
 
@@ -17,6 +19,16 @@ def age_days(date_str):
         return None
 
 
+def query_terms(query):
+    terms = re.findall(r"[a-z0-9]+", query.lower())
+    return [term for term in terms if len(term) >= 3 or any(char.isdigit() for char in term)]
+
+
+def has_query_term(value, terms):
+    normalized = value.lower()
+    return any(term in normalized for term in terms)
+
+
 def calculate_score(pulse, query):
     score = 40
 
@@ -27,12 +39,17 @@ def calculate_score(pulse, query):
 
     age = age_days(created)
     ioc_count = len(iocs)
+    terms = query_terms(query)
 
     if query.lower() in name:
         score += 15
+    elif has_query_term(name, terms):
+        score += 10
 
     if any(query.lower() in t for t in tags):
         score += 10
+    elif any(has_query_term(tag, terms) for tag in tags):
+        score += 5
 
     if 10 <= ioc_count <= 500:
         score += 20
