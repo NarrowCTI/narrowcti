@@ -99,6 +99,7 @@ class ProcessorTests(unittest.TestCase):
             max_days_old=1095,
             min_score_for_old_pulse=80,
             max_days_hard_filter=0,
+            connector_name="Test Connector",
         )
 
     def test_prepare_candidate_limits_exported_indicators_but_keeps_original_count(self):
@@ -146,6 +147,56 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertFalse(processed)
         self.assertIn("Skip pulse without id: No ID", logs)
+
+    def test_process_pulse_uses_exporter_and_marks_state_after_success(self):
+        logs = []
+        marked = []
+        export_calls = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "LummaC2 fresh",
+                "description": "description",
+                "created": "2026-04-01T00:00:00Z",
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: marked.append(pulse_id),
+        )
+
+        def exporter(api_client, name, description, score, indicators, identity_name):
+            export_calls.append(
+                {
+                    "api_client": api_client,
+                    "name": name,
+                    "description": description,
+                    "score": score,
+                    "indicators": indicators,
+                    "identity_name": identity_name,
+                }
+            )
+            return len(indicators)
+
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=otx_client,
+            api_client="api",
+            logger=logs.append,
+            exporter=exporter,
+        )
+
+        processed = processor.process_pulse(
+            "lummac2",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertTrue(processed)
+        self.assertEqual(["pulse-1"], marked)
+        self.assertEqual("LummaC2 fresh", export_calls[0]["name"])
+        self.assertEqual("Test Connector", export_calls[0]["identity_name"])
+        self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)
 
 
 class StixBuilderTests(unittest.TestCase):

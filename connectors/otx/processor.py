@@ -25,11 +25,12 @@ class PulseCandidate:
 
 
 class OTXProcessor:
-    def __init__(self, settings, otx_client, api_client, logger):
+    def __init__(self, settings, otx_client, api_client, logger, exporter=send_bundle):
         self.settings = settings
         self.otx_client = otx_client
         self.api_client = api_client
         self.log = logger
+        self.exporter = exporter
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -106,7 +107,7 @@ class OTXProcessor:
 
         self.log(f"Ingest: {candidate.name} score={candidate.score} reason={reason}")
         try:
-            imported_iocs = send_bundle(
+            imported_iocs = self.exporter(
                 self.api_client,
                 candidate.name,
                 candidate.description,
