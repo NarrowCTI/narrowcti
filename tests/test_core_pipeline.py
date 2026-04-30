@@ -90,8 +90,8 @@ class SettingsTests(unittest.TestCase):
 
 
 class ProcessorTests(unittest.TestCase):
-    def test_prepare_candidate_limits_exported_indicators_but_keeps_original_count(self):
-        settings = SimpleNamespace(
+    def settings(self):
+        return SimpleNamespace(
             max_iocs_per_pulse=1,
             quarantine_score_threshold=50,
             enable_quarantine=True,
@@ -100,7 +100,14 @@ class ProcessorTests(unittest.TestCase):
             min_score_for_old_pulse=80,
             max_days_hard_filter=0,
         )
-        processor = OTXProcessor(settings, otx_client=None, api_client=None, logger=None)
+
+    def test_prepare_candidate_limits_exported_indicators_but_keeps_original_count(self):
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=None,
+            api_client=None,
+            logger=None,
+        )
 
         candidate = processor.prepare_candidate(
             "lummac2",
@@ -119,6 +126,26 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(2, candidate.ioc_count)
         self.assertEqual(1, len(candidate.indicators))
         self.assertGreaterEqual(candidate.score, 60)
+
+    def test_process_pulse_skips_missing_id(self):
+        logs = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: self.fail("enrich should not be called")
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: self.fail("state should not be queried")
+        )
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=otx_client,
+            api_client=None,
+            logger=logs.append,
+        )
+
+        processed = processor.process_pulse("lummac2", {"name": "No ID"}, state)
+
+        self.assertFalse(processed)
+        self.assertIn("Skip pulse without id: No ID", logs)
 
 
 class StixBuilderTests(unittest.TestCase):

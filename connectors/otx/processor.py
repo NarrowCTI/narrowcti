@@ -68,6 +68,10 @@ class OTXProcessor:
     def process_pulse(self, query, pulse, state):
         pulse_id = pulse.get("id")
 
+        if not pulse_id:
+            self.log(f"Skip pulse without id: {pulse.get('name')}")
+            return False
+
         if state.has_pulse(pulse_id):
             self.log(f"Skip state: {pulse.get('name')}")
             return False
