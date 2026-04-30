@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from connectors.otx.processor import OTXProcessor
+from connectors.otx.runtime import run_processor_loop
 from connectors.otx.settings import load_settings
 from core.policy import PolicyConfig, should_ingest
 from core.state_repository import PulseStateRepository
@@ -197,6 +198,22 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("LummaC2 fresh", export_calls[0]["name"])
         self.assertEqual("Test Connector", export_calls[0]["identity_name"])
         self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)
+
+
+class RuntimeTests(unittest.TestCase):
+    def test_run_processor_loop_runs_cycle_and_sleeps(self):
+        calls = []
+        processor = SimpleNamespace(run_once=lambda: calls.append("run_once"))
+        settings = SimpleNamespace(connector_run_interval=15)
+
+        def sleeper(seconds):
+            calls.append(("sleep", seconds))
+            raise StopIteration
+
+        with self.assertRaises(StopIteration):
+            run_processor_loop(processor, settings, calls.append, sleeper=sleeper)
+
+        self.assertEqual(["run_once", "Sleeping 15s", ("sleep", 15)], calls)
 
 
 class StixBuilderTests(unittest.TestCase):

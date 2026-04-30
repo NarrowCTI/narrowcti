@@ -1,8 +1,8 @@
-import time
 from pycti import OpenCTIApiClient
 
 from otx_client import OTXClient
 from processor import OTXProcessor
+from runtime import run_processor_loop
 from settings import load_settings
 
 
@@ -26,11 +26,7 @@ def build_processor(settings):
 def main():
     settings = load_settings()
     processor = build_processor(settings)
-
-    while True:
-        processor.run_once()
-        log(f"Sleeping {settings.connector_run_interval}s")
-        time.sleep(settings.connector_run_interval)
+    run_processor_loop(processor, settings, log)
 
 
 if __name__ == "__main__":
