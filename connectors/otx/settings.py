@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Settings:
+    connector_name: str
     opencti_url: str
     opencti_token: str
     otx_api_key: str
@@ -59,6 +60,7 @@ def load_settings():
     )
 
     return Settings(
+        connector_name=os.getenv("CONNECTOR_NAME", "OTX Gateway"),
         opencti_url=env_required("OPENCTI_URL"),
         opencti_token=env_required("OPENCTI_TOKEN"),
         otx_api_key=env_required("OTX_API_KEY"),

@@ -54,9 +54,15 @@ def build_indicators(raw_indicators, identity_id, score, valid_from):
     return objects
 
 
-def build_report_bundle(name, description, score, indicators=None):
+def build_report_bundle(
+    name,
+    description,
+    score,
+    indicators=None,
+    identity_name="OTX Gateway",
+):
     now = datetime.now(timezone.utc)
-    identity = Identity(name="OTX Gateway", identity_class="organization")
+    identity = Identity(name=identity_name, identity_class="organization")
     indicator_objects = build_indicators(indicators or [], identity.id, score, now)
     object_refs = [indicator.id for indicator in indicator_objects] or [identity.id]
 

@@ -98,6 +98,7 @@ class OTXProcessor:
                 full.get("description", ""),
                 score,
                 indicators,
+                identity_name=self.settings.connector_name,
             )
         except Exception as exc:
             self.log(f"Ingest failed: {name} error={exc}")

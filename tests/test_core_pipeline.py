@@ -77,6 +77,7 @@ class SettingsTests(unittest.TestCase):
             settings = load_settings()
 
         self.assertEqual(["lummac2", "stealc"], settings.otx_queries)
+        self.assertEqual("OTX Gateway", settings.connector_name)
         self.assertEqual(5, settings.max_pulses_per_query)
         self.assertEqual(5, settings.max_search_results_per_query)
         self.assertEqual(3, settings.otx_retries)
@@ -108,14 +109,29 @@ class StixBuilderTests(unittest.TestCase):
         )
 
         data = json.loads(bundle.serialize())
+        identities = [item for item in data["objects"] if item["type"] == "identity"]
         indicator_objects = [
             item for item in data["objects"] if item["type"] == "indicator"
         ]
         reports = [item for item in data["objects"] if item["type"] == "report"]
 
+        self.assertEqual("OTX Gateway", identities[0]["name"])
         self.assertEqual(2, indicator_count)
         self.assertEqual(2, len(indicator_objects))
         self.assertEqual(2, len(reports[0]["object_refs"]))
+
+    def test_build_report_bundle_uses_custom_identity_name(self):
+        bundle, _ = build_report_bundle(
+            "Example report",
+            "description",
+            80,
+            identity_name="Custom Connector",
+        )
+
+        data = json.loads(bundle.serialize())
+        identities = [item for item in data["objects"] if item["type"] == "identity"]
+
+        self.assertEqual("Custom Connector", identities[0]["name"])
 
 
 if __name__ == "__main__":
