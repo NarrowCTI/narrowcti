@@ -1,7 +1,7 @@
 import time
 from dataclasses import dataclass
 
-from core.policy import should_ingest
+from core.policy import PolicyConfig, should_ingest
 from core.scoring import age_days, calculate_score
 from core.state_repository import PulseStateRepository
 from exporters.opencti import send_bundle
@@ -30,6 +30,14 @@ class OTXProcessor:
         self.otx_client = otx_client
         self.api_client = api_client
         self.log = logger
+        self.policy_config = PolicyConfig(
+            quarantine_score_threshold=settings.quarantine_score_threshold,
+            enable_quarantine=settings.enable_quarantine,
+            min_score_to_ingest=settings.min_score_to_ingest,
+            max_days_old=settings.max_days_old,
+            min_score_for_old_pulse=settings.min_score_for_old_pulse,
+            max_days_hard_filter=settings.max_days_hard_filter,
+        )
 
     def run_once(self):
         state = PulseStateRepository(self.settings.state_file)
@@ -78,12 +86,7 @@ class OTXProcessor:
         decision, reason = should_ingest(
             candidate.pulse,
             candidate.score,
-            self.settings.quarantine_score_threshold,
-            self.settings.enable_quarantine,
-            self.settings.min_score_to_ingest,
-            self.settings.max_days_old,
-            self.settings.min_score_for_old_pulse,
-            self.settings.max_days_hard_filter,
+            self.policy_config,
         )
 
         if decision == "quarantine":

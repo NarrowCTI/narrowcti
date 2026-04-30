@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from connectors.otx.processor import OTXProcessor
 from connectors.otx.settings import load_settings
-from core.policy import should_ingest
+from core.policy import PolicyConfig, should_ingest
 from core.state_repository import PulseStateRepository
 from exporters.stix_builder import build_report_bundle, indicator_pattern
 
@@ -19,12 +19,14 @@ class PolicyTests(unittest.TestCase):
         decision, reason = should_ingest(
             pulse,
             score=90,
-            quarantine_score_threshold=50,
-            enable_quarantine=True,
-            min_score_to_ingest=60,
-            max_days_old=1095,
-            min_score_for_old_pulse=80,
-            max_days_hard_filter=365,
+            config=PolicyConfig(
+                quarantine_score_threshold=50,
+                enable_quarantine=True,
+                min_score_to_ingest=60,
+                max_days_old=1095,
+                min_score_for_old_pulse=80,
+                max_days_hard_filter=365,
+            ),
         )
 
         self.assertFalse(decision)
@@ -36,12 +38,14 @@ class PolicyTests(unittest.TestCase):
         decision, reason = should_ingest(
             pulse,
             score=85,
-            quarantine_score_threshold=50,
-            enable_quarantine=True,
-            min_score_to_ingest=60,
-            max_days_old=1095,
-            min_score_for_old_pulse=80,
-            max_days_hard_filter=0,
+            config=PolicyConfig(
+                quarantine_score_threshold=50,
+                enable_quarantine=True,
+                min_score_to_ingest=60,
+                max_days_old=1095,
+                min_score_for_old_pulse=80,
+                max_days_hard_filter=0,
+            ),
         )
 
         self.assertTrue(decision)
@@ -87,7 +91,15 @@ class SettingsTests(unittest.TestCase):
 
 class ProcessorTests(unittest.TestCase):
     def test_prepare_candidate_limits_exported_indicators_but_keeps_original_count(self):
-        settings = SimpleNamespace(max_iocs_per_pulse=1)
+        settings = SimpleNamespace(
+            max_iocs_per_pulse=1,
+            quarantine_score_threshold=50,
+            enable_quarantine=True,
+            min_score_to_ingest=60,
+            max_days_old=1095,
+            min_score_for_old_pulse=80,
+            max_days_hard_filter=0,
+        )
         processor = OTXProcessor(settings, otx_client=None, api_client=None, logger=None)
 
         candidate = processor.prepare_candidate(
