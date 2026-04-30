@@ -37,7 +37,7 @@ OTX_API_KEY = env_required("OTX_API_KEY")
 OTX_QUERIES = env_list("OTX_QUERIES")
 CONNECTOR_RUN_INTERVAL = env_int("CONNECTOR_RUN_INTERVAL", 3600)
 MAX_DAYS_OLD = env_int("MAX_DAYS_OLD", 1095)
-MAX_DAYS_HARD_FILTER = env_int("MAX_DAYS_HARD_FILTER", 365)
+MAX_DAYS_HARD_FILTER = env_int("MAX_DAYS_HARD_FILTER", 0)
 MAX_PULSES_PER_QUERY = env_int("MAX_PULSES_PER_QUERY", 5)
 MAX_IOCS_PER_PULSE = env_int("MAX_IOCS_PER_PULSE", 2000)
 MIN_SCORE_FOR_OLD_PULSE = env_int("MIN_SCORE_FOR_OLD_PULSE", 80)
@@ -51,6 +51,12 @@ api = OpenCTIApiClient(OPENCTI_URL, OPENCTI_TOKEN)
 
 def log(msg):
     print(f"[INFO] {msg}", flush=True)
+
+
+def age_label(age):
+    if age is None:
+        return "unknown"
+    return f"{age}d"
 
 
 def safe_request(url, headers=None, params=None, retries=3):
@@ -127,14 +133,14 @@ def run():
             ioc_count = len(indicators)
             age = age_days(full.get("created"))
 
-            if age and age > MAX_DAYS_HARD_FILTER:
-                log(f"Drop old: {name}")
-                continue
-
             if ioc_count > MAX_IOCS_PER_PULSE:
                 indicators = indicators[:MAX_IOCS_PER_PULSE]
 
             score = calculate_score(full, query)
+            log(
+                f"Candidate: {name} age={age_label(age)} "
+                f"iocs={ioc_count} score={score}"
+            )
             decision, reason = should_ingest(
                 full,
                 score,
@@ -143,17 +149,18 @@ def run():
                 MIN_SCORE_TO_INGEST,
                 MAX_DAYS_OLD,
                 MIN_SCORE_FOR_OLD_PULSE,
+                MAX_DAYS_HARD_FILTER,
             )
 
             if decision == "quarantine":
-                log(f"Quarantine: {name} score={score}")
+                log(f"Quarantine: {name} score={score} reason={reason}")
                 continue
 
             if decision is False:
-                log(f"Drop: {name} reason={reason}")
+                log(f"Drop: {name} score={score} reason={reason}")
                 continue
 
-            log(f"Ingest: {name} score={score}")
+            log(f"Ingest: {name} score={score} reason={reason}")
             send_bundle(api, name, full.get("description", ""), score)
 
             state["pulses"].append(pid)

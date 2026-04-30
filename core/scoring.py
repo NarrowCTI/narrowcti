@@ -3,9 +3,16 @@ from dateutil.parser import parse
 
 
 def age_days(date_str):
+    if not date_str:
+        return None
+
     try:
         dt = parse(date_str)
-        return (datetime.now(timezone.utc) - dt.replace(tzinfo=timezone.utc)).days
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        return max(0, (datetime.now(timezone.utc) - dt).days)
     except Exception:
         return None
 
@@ -34,7 +41,7 @@ def calculate_score(pulse, query):
     elif ioc_count > 2000:
         score -= 10
 
-    if age:
+    if age is not None:
         if age < 30:
             score += 20
         elif age < 90:
