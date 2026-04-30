@@ -2,7 +2,7 @@ import time
 
 from core.policy import should_ingest
 from core.scoring import age_days, calculate_score
-from core.state_repository import load_state, save_state
+from core.state_repository import PulseStateRepository
 from exporters.opencti import send_bundle
 
 
@@ -20,7 +20,7 @@ class OTXProcessor:
         self.log = logger
 
     def run_once(self):
-        state = load_state(self.settings.state_file)
+        state = PulseStateRepository(self.settings.state_file)
 
         for query in self.settings.otx_queries:
             self.process_query(query, state)
@@ -48,7 +48,7 @@ class OTXProcessor:
     def process_pulse(self, query, pulse, state):
         pulse_id = pulse.get("id")
 
-        if pulse_id in state["pulses"]:
+        if state.has_pulse(pulse_id):
             self.log(f"Skip state: {pulse.get('name')}")
             return False
 
@@ -104,6 +104,5 @@ class OTXProcessor:
             return False
 
         self.log(f"Ingest complete: {name} indicators={imported_iocs}")
-        state["pulses"].append(pulse_id)
-        save_state(self.settings.state_file, state)
+        state.mark_pulse(pulse_id)
         return True
