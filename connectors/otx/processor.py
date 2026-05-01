@@ -97,21 +97,8 @@ class OTXProcessor:
         if not candidate:
             return False
 
-        decision, reason = should_ingest(
-            candidate.pulse,
-            candidate.score,
-            self.policy_config,
-        )
-
-        if decision == "quarantine":
-            self.log(
-                f"Quarantine: {candidate.name} "
-                f"score={candidate.score} reason={reason}"
-            )
-            return False
-
-        if decision is False:
-            self.log(f"Drop: {candidate.name} score={candidate.score} reason={reason}")
+        should_ingest_candidate, reason = self.evaluate_candidate_policy(candidate)
+        if not should_ingest_candidate:
             return False
 
         if not self.ingest_candidate(candidate, reason):
@@ -132,6 +119,26 @@ class OTXProcessor:
             f"iocs={candidate.ioc_count} score={candidate.score}"
         )
         return candidate
+
+    def evaluate_candidate_policy(self, candidate):
+        decision, reason = should_ingest(
+            candidate.pulse,
+            candidate.score,
+            self.policy_config,
+        )
+
+        if decision == "quarantine":
+            self.log(
+                f"Quarantine: {candidate.name} "
+                f"score={candidate.score} reason={reason}"
+            )
+            return False, reason
+
+        if decision is False:
+            self.log(f"Drop: {candidate.name} score={candidate.score} reason={reason}")
+            return False, reason
+
+        return True, reason
 
     def ingest_candidate(self, candidate, reason):
         self.log(f"Ingest: {candidate.name} score={candidate.score} reason={reason}")

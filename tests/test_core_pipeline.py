@@ -5,7 +5,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from connectors.otx.models import QuerySummary
+from connectors.otx.models import PulseCandidate, QuerySummary
 from connectors.otx.processor import OTXProcessor
 from connectors.otx.runtime import run_processor_loop
 from connectors.otx.settings import load_settings
@@ -250,6 +250,35 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertFalse(processed)
         self.assertIn("Skip enrich failed: Search result", logs)
+
+    def test_evaluate_candidate_policy_logs_drop(self):
+        logs = []
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=None,
+            api_client=None,
+            logger=logs.append,
+        )
+        candidate = PulseCandidate(
+            pulse={"created": "2026-04-01T00:00:00Z"},
+            name="Low score pulse",
+            description="description",
+            indicators=[],
+            ioc_count=0,
+            age=30,
+            score=55,
+        )
+
+        should_ingest_candidate, reason = processor.evaluate_candidate_policy(
+            candidate
+        )
+
+        self.assertFalse(should_ingest_candidate)
+        self.assertEqual("below minimum score", reason)
+        self.assertIn(
+            "Drop: Low score pulse score=55 reason=below minimum score",
+            logs,
+        )
 
     def test_process_pulse_uses_exporter_and_marks_state_after_success(self):
         logs = []
