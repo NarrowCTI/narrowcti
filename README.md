@@ -1,6 +1,6 @@
-# CTI Gateway
+# NarrowCTI
 
-CTI Gateway is a modular threat intelligence ingestion layer designed to collect,
+NarrowCTI is a modular threat intelligence ingestion layer designed to collect,
 score, deduplicate and export intelligence into OpenCTI.
 
 The current release focuses on a custom AlienVault OTX connector that turns OTX
@@ -50,7 +50,7 @@ docs/                Release and implementation documentation
 
 ## Product Positioning
 
-CTI Gateway is designed as a pre-ingestion intelligence decision layer for
+NarrowCTI is designed as a pre-ingestion intelligence decision layer for
 OpenCTI. Its role is to reduce feed noise before data reaches the OpenCTI graph
 by applying source-specific enrichment, scoring, deduplication and policy.
 
@@ -90,7 +90,7 @@ This repository is expected to sit next to the OpenCTI Compose workspace:
 
 ```text
 <lab-root>/
-  cti-gateway/
+  narrowcti/
   opencti/
 ```
 
@@ -117,9 +117,9 @@ Run validation from the repository root after building the Docker image:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\cti-gateway"
+cd "$LAB_ROOT\narrowcti"
 docker run --rm opencti-connector-otx-custom python -m py_compile connector.py models.py processor.py runtime.py settings.py otx_client.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
-docker run --rm -v "${LAB_ROOT}\cti-gateway:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
+docker run --rm -v "${LAB_ROOT}\narrowcti:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
 ```
 
 ## Release Flow
@@ -172,7 +172,7 @@ docs/licensing-strategy.md
 
 ## License
 
-CTI Gateway is being prepared as proprietary commercial software. See:
+NarrowCTI is being prepared as proprietary commercial software. See:
 
 ```text
 LICENSE

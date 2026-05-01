@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the refactored version of the CTI Gateway custom OTX
+This document describes the refactored version of the NarrowCTI custom OTX
 connector. The goal of this version is to turn the connector into a modular,
 testable and safer foundation for future development while preserving
 compatibility with the Docker/OpenCTI lab runtime.
@@ -114,7 +114,7 @@ The state is stored in a JSON file. The default container path is:
 In Docker Compose, that path is mounted from the local workspace:
 
 ```text
-../cti-gateway/state:/app/state
+../narrowcti/state:/app/state
 ```
 
 This prevents the connector from reprocessing pulses that were already handled.
@@ -174,7 +174,7 @@ Expected local lab layout:
 
 ```text
 <lab-root>/
-  cti-gateway/
+  narrowcti/
   opencti/
 ```
 
@@ -251,8 +251,8 @@ Main validation command:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\cti-gateway"
-docker run --rm -v "${LAB_ROOT}\cti-gateway:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
+cd "$LAB_ROOT\narrowcti"
+docker run --rm -v "${LAB_ROOT}\narrowcti:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
 ```
 
 Final validation for this version on 2026-05-01 passed with:
@@ -276,7 +276,7 @@ Python syntax:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\cti-gateway"
+cd "$LAB_ROOT\narrowcti"
 docker run --rm opencti-connector-otx-custom python -m py_compile connector.py models.py processor.py runtime.py settings.py otx_client.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
 ```
 
@@ -341,13 +341,13 @@ Before opening the PR to `main`, validate from `dev`:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\cti-gateway"
+cd "$LAB_ROOT\narrowcti"
 git status
 cd "$LAB_ROOT\opencti"
 docker compose --profile otx-custom build connector-otx-custom
-cd "$LAB_ROOT\cti-gateway"
+cd "$LAB_ROOT\narrowcti"
 docker run --rm opencti-connector-otx-custom python -m py_compile connector.py models.py processor.py runtime.py settings.py otx_client.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
-docker run --rm -v "${LAB_ROOT}\cti-gateway:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
+docker run --rm -v "${LAB_ROOT}\narrowcti:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
 ```
 
 Suggested PR title:
@@ -359,7 +359,7 @@ release: promote v0.2.0 to main
 Suggested summary:
 
 ```text
-This PR promotes CTI Gateway v0.2.0 to main. It includes the modular custom OTX
+This PR promotes NarrowCTI v0.2.0 to main. It includes the modular custom OTX
 connector foundation, focused unit coverage, Docker validation, runtime
 documentation and a safe environment example for local deployment.
 ```

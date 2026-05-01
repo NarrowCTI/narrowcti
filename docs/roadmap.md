@@ -1,8 +1,8 @@
-# CTI Gateway Roadmap
+# NarrowCTI Roadmap
 
 ## Branching And Release Model
 
-CTI Gateway uses this flow:
+NarrowCTI uses this flow:
 
 ```text
 work branch -> dev -> main -> version tag
@@ -45,7 +45,7 @@ Expected outcomes:
 Purpose:
 
 - Add a second real feed, with MISP as the likely candidate.
-- Prove that CTI Gateway is a reusable intelligence gateway.
+- Prove that NarrowCTI is a reusable intelligence gateway.
 - Reuse the shared feed contract instead of duplicating OTX-specific logic.
 
 Expected outcomes:
@@ -127,5 +127,5 @@ Purpose:
 
 Expected outcomes:
 
-- CTI Gateway is ready for controlled commercial delivery.
+- NarrowCTI is ready for controlled commercial delivery.
 - Product, engineering, licensing and operations are aligned.

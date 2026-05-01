@@ -1,11 +1,11 @@
-# CTI Gateway Product Foundation - v0.3.0
+# NarrowCTI Product Foundation - v0.3.0
 
 ## Purpose
 
-The v0.3.0 track moves CTI Gateway from a single functional connector toward a
+The v0.3.0 track moves NarrowCTI from a single functional connector toward a
 commercial product foundation.
 
-The product vision is not to replace OpenCTI. CTI Gateway is designed to sit in
+The product vision is not to replace OpenCTI. NarrowCTI is designed to sit in
 front of OpenCTI as a pre-ingestion intelligence decision layer. Its purpose is
 to reduce analyst workload by ensuring that raw feeds are enriched, scored,
 deduplicated and evaluated before they enter the OpenCTI graph.
@@ -17,11 +17,11 @@ much time validating low-context indicators, removing duplicates, pivoting
 manually and deciding whether a pulse, event or indicator deserves operational
 attention.
 
-CTI Gateway addresses this gap by controlling the ingestion path:
+NarrowCTI addresses this gap by controlling the ingestion path:
 
 ```text
 External and internal feeds
-  -> CTI Gateway
+  -> NarrowCTI
   -> enrichment, scoring, policy and deduplication
   -> OpenCTI
   -> analyst-ready intelligence
@@ -36,7 +36,7 @@ Curated intelligence before it reaches your graph.
 ## Market Position
 
 The market already has threat intelligence platforms, feed providers and
-automation tools. CTI Gateway should be positioned more specifically:
+automation tools. NarrowCTI should be positioned more specifically:
 
 ```text
 An OpenCTI-native intelligence gateway for teams that need better control over
@@ -55,7 +55,7 @@ This keeps the product complementary to OpenCTI instead of competing with it.
 
 ## Core Value
 
-CTI Gateway should deliver value through:
+NarrowCTI should deliver value through:
 
 - Pre-ingestion decisions before OpenCTI is polluted by low-value data.
 - Explainable drop, quarantine and ingest outcomes.

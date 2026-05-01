@@ -1,8 +1,8 @@
-# CTI Gateway Licensing Strategy
+# NarrowCTI Licensing Strategy
 
 ## Purpose
 
-This document defines the initial licensing direction for CTI Gateway as it moves
+This document defines the initial licensing direction for NarrowCTI as it moves
 toward commercial distribution.
 
 It is not a final EULA and it is not legal advice. It is a product and
@@ -11,7 +11,7 @@ the product is sold, distributed or deployed for customers.
 
 ## Licensing Posture
 
-CTI Gateway is being prepared as proprietary commercial software.
+NarrowCTI is being prepared as proprietary commercial software.
 
 The current repository license notice is intentionally restrictive:
 

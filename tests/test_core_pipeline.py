@@ -142,7 +142,7 @@ class SettingsTests(unittest.TestCase):
             settings = load_settings()
 
         self.assertEqual(["lummac2", "stealc"], settings.otx_queries)
-        self.assertEqual("OTX Gateway", settings.connector_name)
+        self.assertEqual("NarrowCTI OTX Connector", settings.connector_name)
         self.assertEqual(5, settings.max_pulses_per_query)
         self.assertEqual(5, settings.max_search_results_per_query)
         self.assertEqual(3, settings.otx_retries)
@@ -197,7 +197,7 @@ class StixBuilderTests(unittest.TestCase):
         ]
         reports = [item for item in data["objects"] if item["type"] == "report"]
 
-        self.assertEqual("OTX Gateway", identities[0]["name"])
+        self.assertEqual("NarrowCTI OTX Connector", identities[0]["name"])
         self.assertEqual(2, indicator_count)
         self.assertEqual(2, len(indicator_objects))
         self.assertEqual(2, len(reports[0]["object_refs"]))

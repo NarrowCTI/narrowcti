@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-CTI Gateway depends on third-party open source packages. Each dependency remains
+NarrowCTI depends on third-party open source packages. Each dependency remains
 governed by its own license terms.
 
 ## Runtime Dependencies
@@ -23,7 +23,7 @@ connectors/otx/requirements.txt
 
 ## External Platforms
 
-CTI Gateway is designed to integrate with OpenCTI and external threat
+NarrowCTI is designed to integrate with OpenCTI and external threat
 intelligence feeds. OpenCTI, OTX and any other integrated feed or platform remain
 separate products governed by their own licenses, terms and API policies.
 
@@ -38,4 +38,4 @@ Before commercial distribution, verify and archive:
 - Feed provider terms for each supported connector.
 
 This file is not a legal opinion. It is a release engineering control to ensure
-license review is explicit before packaging CTI Gateway for customers.
+license review is explicit before packaging NarrowCTI for customers.

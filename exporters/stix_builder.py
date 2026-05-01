@@ -59,7 +59,7 @@ def build_report_bundle(
     description,
     score,
     indicators=None,
-    identity_name="OTX Gateway",
+    identity_name="NarrowCTI OTX Connector",
 ):
     now = datetime.now(timezone.utc)
     identity = Identity(name=identity_name, identity_class="organization")
