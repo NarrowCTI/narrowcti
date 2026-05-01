@@ -277,6 +277,46 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("Test Connector", export_calls[0]["identity_name"])
         self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)
 
+    def test_process_pulse_does_not_mark_state_when_export_fails(self):
+        logs = []
+        marked = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "LummaC2 fresh",
+                "description": "description",
+                "created": "2026-04-01T00:00:00Z",
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: marked.append(pulse_id),
+        )
+
+        def exporter(*args, **kwargs):
+            raise RuntimeError("OpenCTI unavailable")
+
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=otx_client,
+            api_client="api",
+            logger=logs.append,
+            exporter=exporter,
+        )
+
+        processed = processor.process_pulse(
+            "lummac2",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertFalse(processed)
+        self.assertEqual([], marked)
+        self.assertIn(
+            "Ingest failed: LummaC2 fresh error=OpenCTI unavailable",
+            logs,
+        )
+
 
 class RuntimeTests(unittest.TestCase):
     def test_run_processor_loop_runs_cycle_and_sleeps(self):

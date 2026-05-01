@@ -136,6 +136,13 @@ class OTXProcessor:
             self.log(f"Drop: {candidate.name} score={candidate.score} reason={reason}")
             return False
 
+        if not self.ingest_candidate(candidate, reason):
+            return False
+
+        state.mark_pulse(pulse_id)
+        return True
+
+    def ingest_candidate(self, candidate, reason):
         self.log(f"Ingest: {candidate.name} score={candidate.score} reason={reason}")
         try:
             imported_iocs = self.exporter(
@@ -151,7 +158,6 @@ class OTXProcessor:
             return False
 
         self.log(f"Ingest complete: {candidate.name} indicators={imported_iocs}")
-        state.mark_pulse(pulse_id)
         return True
 
     def prepare_candidate(self, query, pulse):
