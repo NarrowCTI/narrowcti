@@ -1,6 +1,8 @@
 FROM python:3.11-slim
 
 WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -9,9 +11,11 @@ RUN apt-get update && apt-get install -y \
     libmagic-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/
+COPY connectors/otx/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY connector.py /app/
+COPY connectors/otx/*.py /app/
+COPY core /app/core
+COPY exporters /app/exporters
 
 CMD ["python", "connector.py"]

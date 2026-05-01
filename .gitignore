@@ -7,6 +7,7 @@ __pycache__/
 # Env
 .env
 .env.*
+!.env.example
 
 # State (NUNCA versionar)
 state/*
