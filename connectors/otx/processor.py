@@ -63,9 +63,12 @@ class OTXProcessor:
 
     def run_once(self):
         state = self.state_repository_factory(self.settings.state_file)
+        summaries = []
 
         for query in self.settings.otx_queries:
-            self.process_query(query, state)
+            summaries.append(self.process_query(query, state))
+
+        return summaries
 
     def process_query(self, query, state):
         self.log(f"Query: {query}")

@@ -123,16 +123,25 @@ class ProcessorTests(unittest.TestCase):
             logger=None,
             state_repository_factory=state_repository_factory,
         )
-        processor.process_query = lambda query, state: processed_queries.append(
-            (query, state.path)
-        )
+        def process_query(query, state):
+            processed_queries.append((query, state.path))
+            return QuerySummary(query, 1, 0, 2)
 
-        processor.run_once()
+        processor.process_query = process_query
+
+        summaries = processor.run_once()
 
         self.assertEqual(["state.json"], [state.path for state in states])
         self.assertEqual(
             [("lummac2", "state.json"), ("stealc", "state.json")],
             processed_queries,
+        )
+        self.assertEqual(
+            [
+                QuerySummary("lummac2", 1, 0, 2),
+                QuerySummary("stealc", 1, 0, 2),
+            ],
+            summaries,
         )
 
     def test_prepare_candidate_limits_exported_indicators_but_keeps_original_count(self):
