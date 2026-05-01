@@ -108,9 +108,9 @@ class ProcessorTests(unittest.TestCase):
             sleeper=sleeps.append,
             ingest_pause_seconds=7,
         )
-        processor.process_pulse = lambda query, pulse, state: processed.append(
+        processor.process_pulse_outcome = lambda query, pulse, state: processed.append(
             pulse.external_id
-        ) or True
+        ) or "ingest"
 
         summary = processor.process_query("lummac2", state="state")
 
@@ -118,9 +118,65 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual([7], sleeps)
         self.assertEqual(QuerySummary("lummac2", 1, 1, 3), summary)
         self.assertIn(
-            "Query summary: lummac2 reviewed=1 ingested=1 available=3",
+            "Query summary: lummac2 reviewed=1 ingested=1 dropped=0 "
+            "quarantined=0 skipped=0 errors=0 available=3",
             logs,
         )
+
+    def test_process_query_counts_operational_outcomes(self):
+        logs = []
+        sleeps = []
+        processed = []
+        outcomes = ["drop", "quarantine", "skip", "error", "ingest"]
+        otx_client = SimpleNamespace(
+            search_pulses=lambda query: [
+                {"id": "pulse-1"},
+                {"id": "pulse-2"},
+                {"id": "pulse-3"},
+                {"id": "pulse-4"},
+                {"id": "pulse-5"},
+            ]
+        )
+        settings = self.settings()
+        settings.max_search_results_per_query = 5
+        settings.max_pulses_per_query = 5
+
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client=None,
+            logger=logs.append,
+            sleeper=sleeps.append,
+            ingest_pause_seconds=7,
+        )
+
+        def process_pulse_outcome(query, pulse, state):
+            processed.append(pulse.external_id)
+            return outcomes.pop(0)
+
+        processor.process_pulse_outcome = process_pulse_outcome
+
+        summary = processor.process_query("stealc", state="state")
+
+        self.assertEqual(
+            ["pulse-1", "pulse-2", "pulse-3", "pulse-4", "pulse-5"],
+            processed,
+        )
+        self.assertEqual([7], sleeps)
+        self.assertEqual(
+            QuerySummary(
+                query="stealc",
+                reviewed=5,
+                ingested=1,
+                available=5,
+                dropped=1,
+                quarantined=1,
+                skipped=1,
+                errors=1,
+            ),
+            summary,
+        )
+        self.assertEqual(5, summary.handled)
 
     def test_process_pulse_skips_missing_id(self):
         logs = []

@@ -23,6 +23,8 @@ foundation track.
 - Calculates contextual scores before ingestion.
 - Applies ingestion policy for drop, quarantine and export decisions.
 - Optionally writes structured decision audit records for operational review.
+- Logs per-query operational summaries for reviewed, ingested, dropped,
+  quarantined, skipped and failed candidates.
 - Deduplicates processed pulses with persistent local state.
 - Builds STIX bundles for OpenCTI ingestion.
 - Runs as a Dockerized connector inside an OpenCTI lab environment.

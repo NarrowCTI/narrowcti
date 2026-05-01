@@ -76,6 +76,7 @@ This version should establish:
 - OTX feed adapter as the reference implementation of the shared contract.
 - Structured decision audit records for ingest, drop, quarantine and skip
   outcomes.
+- Per-query operational summaries for feed-noise reduction review.
 - Roadmap from product foundation to commercial-ready release.
 - OTX remains the reference implementation.
 
@@ -98,5 +99,7 @@ v0.3.0 is successful when:
 - Future feeds have a common contract to implement.
 - OTX has an adapter that maps source data into the common feed model.
 - Decisions can be captured as structured operational evidence.
+- Query summaries show reviewed, ingested, dropped, quarantined, skipped and
+  failed candidates.
 - The OTX connector still passes all validation.
 - The next feed can be added without copying OTX-specific pipeline assumptions.

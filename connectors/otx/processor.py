@@ -65,6 +65,13 @@ class OTXProcessor:
     def process_query(self, query, state):
         self.log(f"Query: {query}")
         candidates = self.feed_adapter.search(query)
+        outcomes = {
+            "ingest": 0,
+            "drop": 0,
+            "quarantine": 0,
+            "skip": 0,
+            "error": 0,
+        }
         ingested = 0
         reviewed = 0
 
@@ -73,7 +80,11 @@ class OTXProcessor:
                 break
 
             reviewed += 1
-            if self.process_pulse(query, candidate, state):
+            action = self.process_pulse_outcome(query, candidate, state)
+            if action in outcomes:
+                outcomes[action] += 1
+
+            if action == "ingest":
                 ingested += 1
                 self.sleeper(self.ingest_pause_seconds)
 
@@ -82,14 +93,23 @@ class OTXProcessor:
             reviewed=reviewed,
             ingested=ingested,
             available=len(candidates),
+            dropped=outcomes["drop"],
+            quarantined=outcomes["quarantine"],
+            skipped=outcomes["skip"],
+            errors=outcomes["error"],
         )
         self.log(
             f"Query summary: {summary.query} reviewed={summary.reviewed} "
-            f"ingested={summary.ingested} available={summary.available}"
+            f"ingested={summary.ingested} dropped={summary.dropped} "
+            f"quarantined={summary.quarantined} skipped={summary.skipped} "
+            f"errors={summary.errors} available={summary.available}"
         )
         return summary
 
     def process_pulse(self, query, pulse, state):
+        return self.process_pulse_outcome(query, pulse, state) == "ingest"
+
+    def process_pulse_outcome(self, query, pulse, state):
         candidate_ref = self.normalize_feed_candidate(pulse)
         pulse_id = candidate_ref.external_id
 
@@ -101,7 +121,7 @@ class OTXProcessor:
                 action="skip",
                 reason="missing external id",
             )
-            return False
+            return "skip"
 
         if state.has_pulse(pulse_id):
             self.log(f"Skip state: {candidate_ref.title}")
@@ -111,7 +131,7 @@ class OTXProcessor:
                 action="skip",
                 reason="already processed",
             )
-            return False
+            return "skip"
 
         candidate = self.enrich_candidate(query, candidate_ref)
         if not candidate:
@@ -121,12 +141,12 @@ class OTXProcessor:
                 action="skip",
                 reason="enrichment failed",
             )
-            return False
+            return "skip"
 
         action, reason = self.candidate_policy_decision(candidate)
         if action != "ingest":
             self.record_decision(query, candidate_ref, action, reason, candidate)
-            return False
+            return action
 
         if not self.ingest_candidate(candidate, reason):
             self.record_decision(
@@ -136,11 +156,11 @@ class OTXProcessor:
                 reason="export failed",
                 candidate=candidate,
             )
-            return False
+            return "error"
 
         state.mark_pulse(pulse_id)
         self.record_decision(query, candidate_ref, "ingest", reason, candidate)
-        return True
+        return "ingest"
 
     def normalize_feed_candidate(self, pulse):
         if hasattr(pulse, "external_id") and hasattr(pulse, "raw"):
