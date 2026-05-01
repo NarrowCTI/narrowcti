@@ -101,6 +101,36 @@ class ProcessorTests(unittest.TestCase):
             min_score_for_old_pulse=80,
             max_days_hard_filter=0,
             connector_name="Test Connector",
+            state_file="state.json",
+            otx_queries=["lummac2", "stealc"],
+        )
+
+    def test_run_once_builds_state_repository_and_processes_queries(self):
+        states = []
+        processed_queries = []
+
+        def state_repository_factory(path):
+            state = SimpleNamespace(path=path)
+            states.append(state)
+            return state
+
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=None,
+            api_client=None,
+            logger=None,
+            state_repository_factory=state_repository_factory,
+        )
+        processor.process_query = lambda query, state: processed_queries.append(
+            (query, state.path)
+        )
+
+        processor.run_once()
+
+        self.assertEqual(["state.json"], [state.path for state in states])
+        self.assertEqual(
+            [("lummac2", "state.json"), ("stealc", "state.json")],
+            processed_queries,
         )
 
     def test_prepare_candidate_limits_exported_indicators_but_keeps_original_count(self):

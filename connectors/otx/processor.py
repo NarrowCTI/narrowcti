@@ -25,12 +25,21 @@ class PulseCandidate:
 
 
 class OTXProcessor:
-    def __init__(self, settings, otx_client, api_client, logger, exporter=send_bundle):
+    def __init__(
+        self,
+        settings,
+        otx_client,
+        api_client,
+        logger,
+        exporter=send_bundle,
+        state_repository_factory=PulseStateRepository,
+    ):
         self.settings = settings
         self.otx_client = otx_client
         self.api_client = api_client
         self.log = logger
         self.exporter = exporter
+        self.state_repository_factory = state_repository_factory
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -41,7 +50,7 @@ class OTXProcessor:
         )
 
     def run_once(self):
-        state = PulseStateRepository(self.settings.state_file)
+        state = self.state_repository_factory(self.settings.state_file)
 
         for query in self.settings.otx_queries:
             self.process_query(query, state)
