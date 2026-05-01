@@ -19,6 +19,7 @@ class Settings:
     max_pulses_per_query: int
     max_search_results_per_query: int
     max_iocs_per_pulse: int
+    ingest_pause_seconds: int
     min_score_for_old_pulse: int
     min_score_to_ingest: int
     enable_quarantine: bool
@@ -75,6 +76,7 @@ def load_settings():
         max_pulses_per_query=max_pulses_per_query,
         max_search_results_per_query=max_search_results_per_query,
         max_iocs_per_pulse=env_int("MAX_IOCS_PER_PULSE", 2000),
+        ingest_pause_seconds=env_int("INGEST_PAUSE_SECONDS", 2),
         min_score_for_old_pulse=env_int("MIN_SCORE_FOR_OLD_PULSE", 80),
         min_score_to_ingest=env_int("MIN_SCORE_TO_INGEST", 60),
         enable_quarantine=env_bool("ENABLE_QUARANTINE", True),

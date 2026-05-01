@@ -78,6 +78,7 @@ class SettingsTests(unittest.TestCase):
             "OTX_QUERIES": "lummac2, stealc",
             "MAX_PULSES_PER_QUERY": "5",
             "MAX_SEARCH_RESULTS_PER_QUERY": "2",
+            "INGEST_PAUSE_SECONDS": "4",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -88,6 +89,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(5, settings.max_pulses_per_query)
         self.assertEqual(5, settings.max_search_results_per_query)
         self.assertEqual(3, settings.otx_retries)
+        self.assertEqual(4, settings.ingest_pause_seconds)
 
 
 class ProcessorTests(unittest.TestCase):

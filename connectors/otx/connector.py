@@ -20,7 +20,13 @@ def build_processor(settings):
         retry_backoff_seconds=settings.otx_retry_backoff_seconds,
         logger=log,
     )
-    return OTXProcessor(settings, otx, api, log)
+    return OTXProcessor(
+        settings,
+        otx,
+        api,
+        log,
+        ingest_pause_seconds=settings.ingest_pause_seconds,
+    )
 
 
 def main():
