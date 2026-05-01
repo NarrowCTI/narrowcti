@@ -228,6 +228,29 @@ class ProcessorTests(unittest.TestCase):
         self.assertFalse(processed)
         self.assertIn("Skip pulse without id: No ID", logs)
 
+    def test_process_pulse_skips_failed_enrich(self):
+        logs = []
+        otx_client = SimpleNamespace(enrich_pulse=lambda pulse_id: None)
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: self.fail("state should not be marked"),
+        )
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=otx_client,
+            api_client=None,
+            logger=logs.append,
+        )
+
+        processed = processor.process_pulse(
+            "lummac2",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertFalse(processed)
+        self.assertIn("Skip enrich failed: Search result", logs)
+
     def test_process_pulse_uses_exporter_and_marks_state_after_success(self):
         logs = []
         marked = []

@@ -93,16 +93,9 @@ class OTXProcessor:
             self.log(f"Skip state: {pulse.get('name')}")
             return False
 
-        full = self.otx_client.enrich_pulse(pulse_id)
-        if not full:
-            self.log(f"Skip enrich failed: {pulse.get('name')}")
+        candidate = self.enrich_candidate(query, pulse)
+        if not candidate:
             return False
-
-        candidate = self.prepare_candidate(query, full)
-        self.log(
-            f"Candidate: {candidate.name} age={age_label(candidate.age)} "
-            f"iocs={candidate.ioc_count} score={candidate.score}"
-        )
 
         decision, reason = should_ingest(
             candidate.pulse,
@@ -126,6 +119,19 @@ class OTXProcessor:
 
         state.mark_pulse(pulse_id)
         return True
+
+    def enrich_candidate(self, query, pulse):
+        full = self.otx_client.enrich_pulse(pulse["id"])
+        if not full:
+            self.log(f"Skip enrich failed: {pulse.get('name')}")
+            return None
+
+        candidate = self.prepare_candidate(query, full)
+        self.log(
+            f"Candidate: {candidate.name} age={age_label(candidate.age)} "
+            f"iocs={candidate.ioc_count} score={candidate.score}"
+        )
+        return candidate
 
     def ingest_candidate(self, candidate, reason):
         self.log(f"Ingest: {candidate.name} score={candidate.score} reason={reason}")
