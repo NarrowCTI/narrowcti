@@ -6,8 +6,10 @@ from core.state_repository import PulseStateRepository
 from exporters.opencti import send_bundle
 
 try:
+    from .feed_adapter import OTXFeedAdapter, pulse_to_feed_candidate
     from .models import PulseCandidate, QuerySummary
 except ImportError:
+    from feed_adapter import OTXFeedAdapter, pulse_to_feed_candidate
     from models import PulseCandidate, QuerySummary
 
 
@@ -28,9 +30,11 @@ class OTXProcessor:
         state_repository_factory=PulseStateRepository,
         sleeper=time.sleep,
         ingest_pause_seconds=2,
+        feed_adapter=None,
     ):
         self.settings = settings
         self.otx_client = otx_client
+        self.feed_adapter = feed_adapter or OTXFeedAdapter(otx_client)
         self.api_client = api_client
         self.log = logger
         self.exporter = exporter
@@ -57,16 +61,16 @@ class OTXProcessor:
 
     def process_query(self, query, state):
         self.log(f"Query: {query}")
-        pulses = self.otx_client.search_pulses(query)
+        candidates = self.feed_adapter.search(query)
         ingested = 0
         reviewed = 0
 
-        for pulse in pulses[: self.settings.max_search_results_per_query]:
+        for candidate in candidates[: self.settings.max_search_results_per_query]:
             if ingested >= self.settings.max_pulses_per_query:
                 break
 
             reviewed += 1
-            if self.process_pulse(query, pulse, state):
+            if self.process_pulse(query, candidate, state):
                 ingested += 1
                 self.sleeper(self.ingest_pause_seconds)
 
@@ -74,7 +78,7 @@ class OTXProcessor:
             query=query,
             reviewed=reviewed,
             ingested=ingested,
-            available=len(pulses),
+            available=len(candidates),
         )
         self.log(
             f"Query summary: {summary.query} reviewed={summary.reviewed} "
@@ -83,17 +87,18 @@ class OTXProcessor:
         return summary
 
     def process_pulse(self, query, pulse, state):
-        pulse_id = pulse.get("id")
+        candidate_ref = self.normalize_feed_candidate(pulse)
+        pulse_id = candidate_ref.external_id
 
         if not pulse_id:
-            self.log(f"Skip pulse without id: {pulse.get('name')}")
+            self.log(f"Skip pulse without id: {candidate_ref.title}")
             return False
 
         if state.has_pulse(pulse_id):
-            self.log(f"Skip state: {pulse.get('name')}")
+            self.log(f"Skip state: {candidate_ref.title}")
             return False
 
-        candidate = self.enrich_candidate(query, pulse)
+        candidate = self.enrich_candidate(query, candidate_ref)
         if not candidate:
             return False
 
@@ -107,13 +112,18 @@ class OTXProcessor:
         state.mark_pulse(pulse_id)
         return True
 
-    def enrich_candidate(self, query, pulse):
-        full = self.otx_client.enrich_pulse(pulse["id"])
-        if not full:
-            self.log(f"Skip enrich failed: {pulse.get('name')}")
+    def normalize_feed_candidate(self, pulse):
+        if hasattr(pulse, "external_id") and hasattr(pulse, "raw"):
+            return pulse
+        return pulse_to_feed_candidate(pulse)
+
+    def enrich_candidate(self, query, candidate_ref):
+        enriched = self.feed_adapter.enrich(candidate_ref)
+        if not enriched:
+            self.log(f"Skip enrich failed: {candidate_ref.title}")
             return None
 
-        candidate = self.prepare_candidate(query, full)
+        candidate = self.prepare_candidate(query, enriched.raw)
         self.log(
             f"Candidate: {candidate.name} age={age_label(candidate.age)} "
             f"iocs={candidate.ioc_count} score={candidate.score}"

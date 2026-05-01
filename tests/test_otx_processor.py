@@ -108,7 +108,7 @@ class ProcessorTests(unittest.TestCase):
             ingest_pause_seconds=7,
         )
         processor.process_pulse = lambda query, pulse, state: processed.append(
-            pulse["id"]
+            pulse.external_id
         ) or True
 
         summary = processor.process_query("lummac2", state="state")

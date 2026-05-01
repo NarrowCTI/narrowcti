@@ -32,6 +32,7 @@ Purpose:
 - Add initial proprietary licensing foundation.
 - Track third-party dependency notices.
 - Introduce a shared feed contract for multi-feed development.
+- Add an OTX feed adapter as the reference contract implementation.
 - Keep OTX as the reference implementation while preparing for additional feeds.
 
 Expected outcomes:
@@ -39,6 +40,7 @@ Expected outcomes:
 - The project reads as a product, not only a lab connector.
 - Licensing and distribution boundaries are explicit.
 - Future feed adapters have a stable contract to follow.
+- The OTX feed can be normalized through the shared feed contract.
 
 ## v0.4.0 - Multi-Feed Expansion
 

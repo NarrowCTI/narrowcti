@@ -73,6 +73,7 @@ This version should establish:
 - Initial proprietary licensing foundation.
 - Third-party dependency notice tracking.
 - Shared feed contract for future connectors.
+- OTX feed adapter as the reference implementation of the shared contract.
 - Roadmap from product foundation to commercial-ready release.
 - OTX remains the reference implementation.
 
@@ -93,5 +94,6 @@ v0.3.0 is successful when:
 - The repository clearly communicates product direction.
 - The licensing posture is explicit enough for private/commercial planning.
 - Future feeds have a common contract to implement.
+- OTX has an adapter that maps source data into the common feed model.
 - The OTX connector still passes all validation.
 - The next feed can be added without copying OTX-specific pipeline assumptions.

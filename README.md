@@ -41,7 +41,7 @@ OTX API
 Main modules:
 
 ```text
-connectors/otx/      OTX connector runtime, settings, client and processor
+connectors/otx/      OTX connector runtime, feed adapter, settings and processor
 core/                Feed contracts, scoring, policy and persistent state handling
 exporters/           OpenCTI export and STIX bundle construction
 tests/               Unit coverage for the processor and shared pipeline logic
