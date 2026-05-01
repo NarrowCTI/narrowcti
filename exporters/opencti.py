@@ -1,18 +1,20 @@
-from datetime import datetime, timezone
-from stix2 import Bundle, Report, Identity
+from exporters.stix_builder import build_report_bundle
 
 
-def send_bundle(api_client, name, description, score):
-    identity = Identity(name="OTX Gateway", identity_class="organization")
-
-    report = Report(
-        name=name,
-        description=description,
-        report_types=["threat-report"],
-        confidence=score,
-        created=datetime.now(timezone.utc),
-        modified=datetime.now(timezone.utc),
+def send_bundle(
+    api_client,
+    name,
+    description,
+    score,
+    indicators=None,
+    identity_name="OTX Gateway",
+):
+    bundle, indicator_count = build_report_bundle(
+        name,
+        description,
+        score,
+        indicators,
+        identity_name=identity_name,
     )
-
-    bundle = Bundle(objects=[identity, report], allow_custom=True)
     api_client.stix2.import_bundle_from_json(bundle.serialize(), update=True)
+    return indicator_count
