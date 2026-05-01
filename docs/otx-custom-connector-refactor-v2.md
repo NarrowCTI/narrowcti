@@ -1,97 +1,98 @@
-# OTX Custom Connector - Documentacao Geral
+# OTX Custom Connector - v0.2.0 Refactor Notes
 
-## Objetivo
+## Purpose
 
-Este documento descreve a versao refatorada do conector OTX customizado do CTI
-Gateway. O foco desta versao foi transformar o conector em uma base modular,
-testavel e mais segura para evolucao, mantendo compatibilidade com o ambiente
-Docker/OpenCTI usado no laboratorio.
+This document describes the refactored version of the CTI Gateway custom OTX
+connector. The goal of this version is to turn the connector into a modular,
+testable and safer foundation for future development while preserving
+compatibility with the Docker/OpenCTI lab runtime.
 
-## Escopo Da Versao
+## Version Scope
 
-Esta versao cobre:
+This version covers:
 
-- Ingestao de pulses do OTX por queries configuraveis.
-- Enriquecimento de pulses via API OTX.
-- Scoring contextual antes da ingestao.
-- Politica de ingestao com suporte a drop e quarantine.
-- Deduplicacao persistente por pulse id.
-- Exportacao para OpenCTI usando bundle STIX.
-- Configuracao por variaveis de ambiente.
-- Validacao automatizada por testes unitarios em Docker.
+- OTX pulse ingestion through configurable queries.
+- OTX pulse enrichment through the OTX API.
+- Contextual scoring before ingestion.
+- Ingestion policy with drop and quarantine support.
+- Persistent deduplication by pulse id.
+- OpenCTI export through STIX bundles.
+- Runtime configuration through environment variables.
+- Docker-based syntax, unit and runtime validation.
 
-Esta versao nao implementa ainda:
+This version does not implement yet:
 
-- Correlacao avancada entre feeds.
-- Suporte completo a multiplos conectores alem do OTX custom.
-- Pipeline assincrono ou fila dedicada para ingestao.
-- Interface administrativa para ajuste dinamico de policy.
+- Advanced correlation across feeds.
+- Complete support for connectors beyond the custom OTX connector.
+- An asynchronous pipeline or dedicated ingestion queue.
+- An administrative interface for dynamic policy tuning.
 
-## Arquitetura
+## Architecture
 
-O conector foi separado em modulos com responsabilidades pequenas:
+The connector was split into modules with focused responsibilities:
 
 ```text
 connectors/otx/connector.py
-  Entrada do processo. Carrega settings, monta clientes e chama o runtime.
+  Process entrypoint. Loads settings, builds clients and starts the runtime.
 
 connectors/otx/runtime.py
-  Loop principal do processo. Executa o processor e aguarda o intervalo
-  configurado.
+  Main process loop. Runs the processor and waits for the configured interval.
 
 connectors/otx/settings.py
-  Leitura e normalizacao das variaveis de ambiente.
+  Environment variable loading and normalization.
 
 connectors/otx/otx_client.py
-  Cliente HTTP do OTX, com timeout, retries e backoff.
+  OTX HTTP client with timeout, retries and backoff.
 
 connectors/otx/processor.py
-  Orquestracao da ingestao: queries, state, enrich, policy e exportacao.
+  Ingestion orchestration: queries, state, enrichment, policy and export.
 
 connectors/otx/models.py
-  DTOs internos do processor, como PulseCandidate e QuerySummary.
+  Internal processor DTOs, including PulseCandidate and QuerySummary.
 
 core/scoring.py
-  Calculo de score e idade do pulse.
+  Pulse score and age calculations.
 
 core/policy.py
-  Regras de decisao de ingestao, drop e quarantine.
+  Ingestion decision rules for drop, quarantine and export.
 
 core/state_repository.py
-  Estado persistente para evitar reprocessamento do mesmo pulse.
+  Persistent state used to avoid reprocessing the same pulse.
 
 exporters/opencti.py
-  Integracao de exportacao para OpenCTI.
+  OpenCTI export integration.
 
 exporters/stix_builder.py
-  Criacao do bundle STIX, incluindo identity, report e indicators.
+  STIX bundle creation, including identity, report and indicators.
 ```
 
-## Fluxo De Execucao
+## Runtime Flow
 
-1. `connector.py` carrega as variaveis de ambiente com `load_settings()`.
-2. `connector.py` cria o `OpenCTIApiClient` e o `OTXClient`.
-3. `connector.py` monta o `OTXProcessor`.
-4. `runtime.py` executa `processor.run_once()` dentro de loop continuo.
-5. `run_once()` cria o state repository e processa cada query configurada.
-6. `process_query()` busca pulses no OTX e aplica limites de revisao/ingestao.
-7. `process_pulse()` valida id, verifica state, enriquece, avalia policy e ingere.
-8. Apos ingestao bem-sucedida, o pulse id e marcado no state.
-9. Ao fim da query, um `QuerySummary` e retornado e o resumo e registrado em log.
+1. `connector.py` loads environment variables through `load_settings()`.
+2. `connector.py` creates the `OpenCTIApiClient` and `OTXClient`.
+3. `connector.py` builds the `OTXProcessor`.
+4. `runtime.py` runs `processor.run_once()` inside the continuous loop.
+5. `run_once()` creates the state repository and processes each configured
+   query.
+6. `process_query()` searches OTX pulses and applies review/ingestion limits.
+7. `process_pulse()` validates the pulse id, checks state, enriches the pulse,
+   evaluates policy and exports accepted candidates.
+8. After a successful export, the pulse id is marked in state.
+9. At the end of each query, a `QuerySummary` is returned and logged.
 
-## Politica De Ingestao
+## Ingestion Policy
 
-A decisao de ingestao fica em `core/policy.py` e recebe um `PolicyConfig`.
+The ingestion decision lives in `core/policy.py` and receives a `PolicyConfig`.
 
-Regras principais:
+Main rules:
 
-- Pulses sem data valida seguem com idade desconhecida.
-- Pulses com score muito baixo podem ir para quarantine quando habilitado.
-- Pulses abaixo de `MIN_SCORE_TO_INGEST` sao descartados.
-- Pulses antigos precisam atingir `MIN_SCORE_FOR_OLD_PULSE`.
-- `MAX_DAYS_HARD_FILTER` pode ser usado como corte absoluto de idade.
+- Pulses without a valid date continue with unknown age.
+- Low-score pulses can be sent to quarantine when quarantine is enabled.
+- Pulses below `MIN_SCORE_TO_INGEST` are dropped.
+- Old pulses must reach `MIN_SCORE_FOR_OLD_PULSE`.
+- `MAX_DAYS_HARD_FILTER` can enforce an absolute age cutoff.
 
-Parametros relevantes:
+Relevant parameters:
 
 ```text
 MIN_SCORE_TO_INGEST=60
@@ -102,42 +103,41 @@ ENABLE_QUARANTINE=true
 QUARANTINE_SCORE_THRESHOLD=50
 ```
 
-## Estado E Deduplicacao
+## State And Deduplication
 
-O state fica em arquivo JSON, por padrao:
+The state is stored in a JSON file. The default container path is:
 
 ```text
 /app/state/state.json
 ```
 
-No Docker Compose, esse caminho e montado a partir do workspace local:
+In Docker Compose, that path is mounted from the local workspace:
 
 ```text
 ../cti-gateway/state:/app/state
 ```
 
-Com isso, o conector evita reprocessar pulses ja vistos. O state so e marcado
-depois que a exportacao para OpenCTI conclui com sucesso. Se a exportacao
-falhar, o pulse nao e marcado e pode ser tentado novamente em uma execucao
-futura.
+This prevents the connector from reprocessing pulses that were already handled.
+The state is marked only after the OpenCTI export succeeds. If export fails, the
+pulse is not marked and can be retried in a future run.
 
-## Variaveis De Ambiente
+## Environment Variables
 
-O exemplo versionado fica em:
+The versioned example lives at:
 
 ```text
 connectors/otx/.env.example
 ```
 
-O arquivo real usado pelo container deve ficar em:
+The real runtime file should be created locally at:
 
 ```text
 connectors/otx/.env
 ```
 
-O arquivo `.env` real contem segredos e nao deve ser versionado.
+The real `.env` file contains secrets and must not be committed.
 
-Variaveis obrigatorias:
+Required variables:
 
 ```text
 OPENCTI_URL
@@ -146,7 +146,7 @@ OTX_API_KEY
 OTX_QUERIES
 ```
 
-Variaveis operacionais principais:
+Main operational variables:
 
 ```text
 CONNECTOR_NAME
@@ -164,13 +164,13 @@ INGEST_PAUSE_SECONDS
 
 ## Docker
 
-O Docker Compose principal fica fora deste repositorio:
+The main Docker Compose file lives outside this repository:
 
 ```text
 <lab-root>/opencti/docker-compose.yml
 ```
 
-Layout esperado do ambiente local:
+Expected local lab layout:
 
 ```text
 <lab-root>/
@@ -178,19 +178,19 @@ Layout esperado do ambiente local:
   opencti/
 ```
 
-O servico do conector e:
+Connector service:
 
 ```text
 connector-otx-custom
 ```
 
-O container criado e:
+Container name:
 
 ```text
 otx-custom-connector
 ```
 
-Comandos principais:
+Main commands:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
@@ -201,53 +201,53 @@ docker compose --profile otx-custom logs --tail 120 connector-otx-custom
 docker compose --profile otx-custom ps connector-otx-custom
 ```
 
-O aviso abaixo pode aparecer no Compose atual:
+The current Compose file may show this warning:
 
 ```text
 the attribute `version` is obsolete
 ```
 
-Esse aviso nao bloqueia a execucao. Ele indica apenas que o campo `version` do
-arquivo Compose pode ser removido em uma limpeza futura.
+This warning does not block runtime. It only means the `version` field can be
+removed from the Compose file in a future cleanup.
 
-## Desenvolvimento Desta Versao
+## Development Summary
 
-O desenvolvimento desta versao foi feito em fatias pequenas e validadas.
+This version was developed in small, validated slices.
 
-Principais mudancas:
+Main changes:
 
-- Ajuste do build Docker para copiar `core` e `exporters` para dentro da imagem.
-- Separacao de configuracao em `settings.py`.
-- Extracao do cliente OTX para `otx_client.py`.
-- Extracao do processor principal para `processor.py`.
-- Criacao de `runtime.py` para isolar o loop continuo.
-- Criacao de `models.py` para `PulseCandidate` e `QuerySummary`.
-- Criacao de `PolicyConfig` em `core/policy.py`.
-- Criacao de `PulseStateRepository` em `core/state_repository.py`.
-- Separacao do builder STIX em `exporters/stix_builder.py`.
-- Injecao de dependencias no processor:
+- Adjusted the Docker build so `core` and `exporters` are copied into the image.
+- Extracted configuration handling into `settings.py`.
+- Extracted OTX HTTP access into `otx_client.py`.
+- Extracted the main processing flow into `processor.py`.
+- Added `runtime.py` to isolate the continuous process loop.
+- Added `models.py` for `PulseCandidate` and `QuerySummary`.
+- Added `PolicyConfig` in `core/policy.py`.
+- Added `PulseStateRepository` in `core/state_repository.py`.
+- Split STIX construction into `exporters/stix_builder.py`.
+- Added dependency injection points to the processor:
   - exporter
   - state repository factory
   - sleeper
   - ingest pause
-- Retorno de summaries estruturados por query e por execucao.
-- Protecao contra pulses sem id.
-- Protecao contra falha de enrich.
-- Protecao para nao marcar state quando a exportacao falhar.
-- Configuracao de identity STIX por `CONNECTOR_NAME`.
-- Criacao de `.env.example` sem segredos.
-- Separacao dos testes do processor em arquivo dedicado.
+- Added structured summaries per query and per run.
+- Added protection for pulses without ids.
+- Added protection for enrichment failures.
+- Prevented state marking when export fails.
+- Configured STIX identity through `CONNECTOR_NAME`.
+- Added `.env.example` without secrets.
+- Split processor-focused tests into a dedicated test file.
 
-## Testes
+## Tests
 
-Os testes ficam em:
+Test files:
 
 ```text
 tests/test_core_pipeline.py
 tests/test_otx_processor.py
 ```
 
-O comando principal de validacao e:
+Main validation command:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
@@ -255,14 +255,14 @@ cd "$LAB_ROOT\cti-gateway"
 docker run --rm -v "${LAB_ROOT}\cti-gateway:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
 ```
 
-A validacao final desta versao em 2026-05-01 passou com:
+Final validation for this version on 2026-05-01 passed with:
 
 ```text
 Ran 16 tests
 OK
 ```
 
-## Validacao Final Da Imagem
+## Final Image Validation
 
 Build:
 
@@ -272,7 +272,7 @@ cd "$LAB_ROOT\opencti"
 docker compose --profile otx-custom build connector-otx-custom
 ```
 
-Sintaxe Python:
+Python syntax:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
@@ -289,7 +289,7 @@ docker compose --profile otx-custom up -d --force-recreate connector-otx-custom
 docker compose --profile otx-custom logs --tail 120 connector-otx-custom
 ```
 
-Sinais esperados nos logs:
+Expected log signals:
 
 ```text
 INFO:api:Health check (platform version)...
@@ -300,11 +300,11 @@ INFO:api:Health check (platform version)...
 [INFO] Query summary: ... reviewed=... ingested=... available=...
 ```
 
-## Operacao
+## Operations
 
-Para ajustar escopo de busca, edite `OTX_QUERIES` no `.env` real.
+To adjust search scope, edit `OTX_QUERIES` in the real local `.env` file.
 
-Para reduzir chamadas ao OTX:
+To reduce OTX API calls:
 
 ```text
 MAX_SEARCH_RESULTS_PER_QUERY
@@ -312,7 +312,7 @@ MAX_PULSES_PER_QUERY
 CONNECTOR_RUN_INTERVAL
 ```
 
-Para endurecer a politica contra dados antigos:
+To enforce a stricter policy against old intelligence:
 
 ```text
 MAX_DAYS_OLD
@@ -320,23 +320,24 @@ MAX_DAYS_HARD_FILTER
 MIN_SCORE_FOR_OLD_PULSE
 ```
 
-Para reduzir volume de indicators exportados por pulse:
+To reduce exported indicator volume per pulse:
 
 ```text
 MAX_IOCS_PER_PULSE
 ```
 
-## Cuidados
+## Safety Notes
 
-- Nao versionar `connectors/otx/.env`.
-- Nao apagar `state/state.json` sem querer reprocessar pulses antigos.
-- Nao executar `docker compose down -v` no ambiente OpenCTI/MISP sem backup.
-- Nao executar `docker volume prune` se houver volumes persistentes importantes.
-- Ao limpar disco, preferir primeiro `docker builder prune` e `docker image prune`.
+- Do not commit `connectors/otx/.env`.
+- Do not delete `state/state.json` unless reprocessing old pulses is intended.
+- Do not run `docker compose down -v` against OpenCTI or MISP without backups.
+- Do not run `docker volume prune` when important persistent volumes exist.
+- For disk cleanup, prefer `docker builder prune` and `docker image prune`
+  before any volume-related operation.
 
-## Preparacao Para PR
+## PR Preparation
 
-Antes de abrir o PR para `dev`, validar:
+Before opening the PR to `main`, validate from `dev`:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
@@ -349,17 +350,16 @@ docker run --rm opencti-connector-otx-custom python -m py_compile connector.py m
 docker run --rm -v "${LAB_ROOT}\cti-gateway:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
 ```
 
-Sugestao de titulo:
+Suggested PR title:
 
 ```text
-refactor: modularize OTX connector pipeline foundation
+release: promote v0.2.0 to main
 ```
 
-Resumo sugerido:
+Suggested summary:
 
 ```text
-This PR modularizes the custom OTX connector foundation, separating settings,
-OTX client access, processing flow, policy, state repository and STIX export.
-It also adds focused unit coverage, Docker validation, runtime documentation
-and a safe env example for local deployment.
+This PR promotes CTI Gateway v0.2.0 to main. It includes the modular custom OTX
+connector foundation, focused unit coverage, Docker validation, runtime
+documentation and a safe environment example for local deployment.
 ```
