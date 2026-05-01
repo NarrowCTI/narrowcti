@@ -7,9 +7,67 @@ from unittest.mock import patch
 
 from connectors.otx.runtime import run_processor_loop
 from connectors.otx.settings import load_settings
+from core.feed_contract import (
+    FeedAdapter,
+    FeedCandidate,
+    FeedRunSummary,
+    FeedSource,
+)
 from core.policy import PolicyConfig, should_ingest
 from core.state_repository import PulseStateRepository
 from exporters.stix_builder import build_report_bundle, indicator_pattern
+
+
+class FeedContractTests(unittest.TestCase):
+    def test_feed_source_builds_stable_key(self):
+        source = FeedSource(
+            name="OTX Custom",
+            source_type="external_import",
+            provider="AlienVault",
+        )
+
+        self.assertEqual("alienvault:otx-custom", source.key)
+
+    def test_feed_candidate_normalizes_collections(self):
+        source = FeedSource(name="MISP Feed", source_type="external_import")
+        candidate = FeedCandidate(
+            source=source,
+            external_id="event-1",
+            title="Suspicious infrastructure",
+            indicators=[{"type": "domain", "indicator": "example.com"}],
+            tags=["misp", "infrastructure"],
+        )
+
+        self.assertEqual("local:misp-feed", candidate.source.key)
+        self.assertIsInstance(candidate.indicators, tuple)
+        self.assertIsInstance(candidate.tags, tuple)
+        self.assertEqual(1, len(candidate.indicators))
+
+    def test_feed_run_summary_counts_handled_candidates(self):
+        source = FeedSource(name="OTX Custom", source_type="external_import")
+        summary = FeedRunSummary(
+            source=source,
+            query="stealc",
+            available=10,
+            reviewed=5,
+            ingested=2,
+            dropped=2,
+            quarantined=1,
+        )
+
+        self.assertEqual(5, summary.handled)
+
+    def test_feed_adapter_protocol_accepts_matching_adapter(self):
+        class DummyAdapter:
+            source = FeedSource(name="Dummy", source_type="test")
+
+            def search(self, query):
+                return []
+
+            def enrich(self, candidate):
+                return candidate
+
+        self.assertIsInstance(DummyAdapter(), FeedAdapter)
 
 
 class PolicyTests(unittest.TestCase):

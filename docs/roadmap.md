@@ -1,0 +1,131 @@
+# CTI Gateway Roadmap
+
+## Branching And Release Model
+
+CTI Gateway uses this flow:
+
+```text
+work branch -> dev -> main -> version tag
+```
+
+`dev` is the integration branch. `main` is the stable branch. Official versions
+are marked with tags.
+
+## v0.2.0 - Modular OTX Foundation
+
+Status: released.
+
+Purpose:
+
+- Establish a modular custom OTX connector.
+- Split settings, OTX API access, processing, policy, state and STIX export.
+- Validate the connector through Docker build, syntax checks and unit tests.
+- Provide safe environment configuration examples.
+
+## v0.3.0 - Product Foundation
+
+Status: in development.
+
+Purpose:
+
+- Define product positioning and commercial direction.
+- Add initial proprietary licensing foundation.
+- Track third-party dependency notices.
+- Introduce a shared feed contract for multi-feed development.
+- Keep OTX as the reference implementation while preparing for additional feeds.
+
+Expected outcomes:
+
+- The project reads as a product, not only a lab connector.
+- Licensing and distribution boundaries are explicit.
+- Future feed adapters have a stable contract to follow.
+
+## v0.4.0 - Multi-Feed Expansion
+
+Purpose:
+
+- Add a second real feed, with MISP as the likely candidate.
+- Prove that CTI Gateway is a reusable intelligence gateway.
+- Reuse the shared feed contract instead of duplicating OTX-specific logic.
+
+Expected outcomes:
+
+- At least two feeds use the same decision foundation.
+- Feed-specific scoring inputs are normalized.
+- OpenCTI export remains consistent across sources.
+
+## v0.5.0 - Intelligence Decision Engine
+
+Purpose:
+
+- Improve scoring beyond the current basic model.
+- Add source-specific weighting.
+- Expand policy reasons and evidence.
+- Improve quarantine behavior and reporting.
+
+Expected outcomes:
+
+- Every ingestion decision is explainable.
+- Analysts can understand why intelligence was dropped, quarantined or ingested.
+- The gateway can prioritize intelligence based on source, age, confidence,
+  indicator type and operational relevance.
+
+## v0.6.0 - Operational Layer
+
+Purpose:
+
+- Add operational metrics and clearer runtime reporting.
+- Add dry-run mode.
+- Improve health checks.
+- Produce value metrics such as reviewed, ingested, dropped and quarantined
+  intelligence by source.
+
+Expected outcomes:
+
+- Operators can tune the gateway safely.
+- Customers can see measurable feed-noise reduction.
+- Runtime behavior is easier to support.
+
+## v0.7.0 - Commercial Licensing
+
+Purpose:
+
+- Add technical license enforcement.
+- Support offline signed license files.
+- Track customer id, expiration and enabled features.
+- Introduce feature gates by feed, environment or capability.
+
+Expected outcomes:
+
+- Product use can be controlled without requiring internet access.
+- Commercial packaging has a technical foundation.
+- Support teams can identify customer and entitlement state.
+
+## v0.8.0 - Deployment Package
+
+Purpose:
+
+- Provide a cleaner installation and upgrade path.
+- Add deployment templates.
+- Harden configuration defaults.
+- Document customer installation procedures.
+
+Expected outcomes:
+
+- The product can be deployed repeatably outside the lab.
+- Upgrade steps are clear.
+- Customer onboarding becomes predictable.
+
+## v1.0.0 - Commercial-Ready Release
+
+Purpose:
+
+- Ship a stable, documented and installable product.
+- Finalize commercial license and support terms.
+- Provide validated deployment guidance.
+- Maintain a clear changelog and upgrade path.
+
+Expected outcomes:
+
+- CTI Gateway is ready for controlled commercial delivery.
+- Product, engineering, licensing and operations are aligned.

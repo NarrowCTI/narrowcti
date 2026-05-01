@@ -10,8 +10,11 @@ decisions before export.
 ## Current Version
 
 ```text
-v0.2.0
+v0.3.0-dev
 ```
+
+`v0.2.0` is the latest stable release. `v0.3.0-dev` is the current product
+foundation track.
 
 ## What It Does
 
@@ -39,11 +42,21 @@ Main modules:
 
 ```text
 connectors/otx/      OTX connector runtime, settings, client and processor
-core/                Scoring, policy and persistent state handling
+core/                Feed contracts, scoring, policy and persistent state handling
 exporters/           OpenCTI export and STIX bundle construction
 tests/               Unit coverage for the processor and shared pipeline logic
 docs/                Release and implementation documentation
 ```
+
+## Product Positioning
+
+CTI Gateway is designed as a pre-ingestion intelligence decision layer for
+OpenCTI. Its role is to reduce feed noise before data reaches the OpenCTI graph
+by applying source-specific enrichment, scoring, deduplication and policy.
+
+The long-term product direction is multi-feed support with a shared decision
+engine, so OTX, MISP, commercial feeds and internal sources can be evaluated
+through the same explainable ingestion model.
 
 ## OTX Connector
 
@@ -132,8 +145,17 @@ Detailed implementation notes for this release are available in:
 docs/otx-custom-connector-refactor-v2.md
 ```
 
+Product foundation documents:
+
+```text
+docs/product-foundation-v0.3.md
+docs/roadmap.md
+docs/licensing-strategy.md
+```
+
 ## Roadmap
 
+- Product foundation and commercial licensing structure.
 - Multi-feed support beyond the custom OTX connector.
 - Advanced correlation across sources.
 - Richer scoring model with source-specific weighting.
@@ -150,4 +172,12 @@ docs/otx-custom-connector-refactor-v2.md
 
 ## License
 
-TBD.
+CTI Gateway is being prepared as proprietary commercial software. See:
+
+```text
+LICENSE
+THIRD_PARTY_NOTICES.md
+```
+
+The current license notice is an initial product foundation and should be
+reviewed by qualified legal counsel before commercial distribution.
