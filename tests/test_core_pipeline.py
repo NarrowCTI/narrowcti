@@ -5,7 +5,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from connectors.otx.processor import OTXProcessor
+from connectors.otx.processor import OTXProcessor, QuerySummary
 from connectors.otx.runtime import run_processor_loop
 from connectors.otx.settings import load_settings
 from core.policy import PolicyConfig, should_ingest
@@ -188,10 +188,11 @@ class ProcessorTests(unittest.TestCase):
             pulse["id"]
         ) or True
 
-        processor.process_query("lummac2", state="state")
+        summary = processor.process_query("lummac2", state="state")
 
         self.assertEqual(["pulse-1"], processed)
         self.assertEqual([7], sleeps)
+        self.assertEqual(QuerySummary("lummac2", 1, 1, 3), summary)
         self.assertIn(
             "Query summary: lummac2 reviewed=1 ingested=1 available=3",
             logs,

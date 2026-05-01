@@ -24,6 +24,14 @@ class PulseCandidate:
     score: int
 
 
+@dataclass(frozen=True)
+class QuerySummary:
+    query: str
+    reviewed: int
+    ingested: int
+    available: int
+
+
 class OTXProcessor:
     def __init__(
         self,
@@ -74,10 +82,17 @@ class OTXProcessor:
                 ingested += 1
                 self.sleeper(self.ingest_pause_seconds)
 
-        self.log(
-            f"Query summary: {query} reviewed={reviewed} "
-            f"ingested={ingested} available={len(pulses)}"
+        summary = QuerySummary(
+            query=query,
+            reviewed=reviewed,
+            ingested=ingested,
+            available=len(pulses),
         )
+        self.log(
+            f"Query summary: {summary.query} reviewed={summary.reviewed} "
+            f"ingested={summary.ingested} available={summary.available}"
+        )
+        return summary
 
     def process_pulse(self, query, pulse, state):
         pulse_id = pulse.get("id")
