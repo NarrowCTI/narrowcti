@@ -1,35 +1,20 @@
 import time
-from dataclasses import dataclass
 
 from core.policy import PolicyConfig, should_ingest
 from core.scoring import age_days, calculate_score
 from core.state_repository import PulseStateRepository
 from exporters.opencti import send_bundle
 
+try:
+    from .models import PulseCandidate, QuerySummary
+except ImportError:
+    from models import PulseCandidate, QuerySummary
+
 
 def age_label(age):
     if age is None:
         return "unknown"
     return f"{age}d"
-
-
-@dataclass(frozen=True)
-class PulseCandidate:
-    pulse: dict
-    name: str
-    description: str
-    indicators: list[dict]
-    ioc_count: int
-    age: int | None
-    score: int
-
-
-@dataclass(frozen=True)
-class QuerySummary:
-    query: str
-    reviewed: int
-    ingested: int
-    available: int
 
 
 class OTXProcessor:

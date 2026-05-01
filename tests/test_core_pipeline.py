@@ -5,7 +5,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from connectors.otx.processor import OTXProcessor, QuerySummary
+from connectors.otx.models import QuerySummary
+from connectors.otx.processor import OTXProcessor
 from connectors.otx.runtime import run_processor_loop
 from connectors.otx.settings import load_settings
 from core.policy import PolicyConfig, should_ingest
