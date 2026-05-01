@@ -33,6 +33,8 @@ class OTXProcessor:
         logger,
         exporter=send_bundle,
         state_repository_factory=PulseStateRepository,
+        sleeper=time.sleep,
+        ingest_pause_seconds=2,
     ):
         self.settings = settings
         self.otx_client = otx_client
@@ -40,6 +42,8 @@ class OTXProcessor:
         self.log = logger
         self.exporter = exporter
         self.state_repository_factory = state_repository_factory
+        self.sleeper = sleeper
+        self.ingest_pause_seconds = ingest_pause_seconds
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -68,7 +72,7 @@ class OTXProcessor:
             reviewed += 1
             if self.process_pulse(query, pulse, state):
                 ingested += 1
-                time.sleep(2)
+                self.sleeper(self.ingest_pause_seconds)
 
         self.log(
             f"Query summary: {query} reviewed={reviewed} "

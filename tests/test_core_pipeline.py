@@ -159,6 +159,42 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(1, len(candidate.indicators))
         self.assertGreaterEqual(candidate.score, 60)
 
+    def test_process_query_respects_limits_and_sleeps_after_ingest(self):
+        logs = []
+        sleeps = []
+        processed = []
+        otx_client = SimpleNamespace(
+            search_pulses=lambda query: [
+                {"id": "pulse-1"},
+                {"id": "pulse-2"},
+                {"id": "pulse-3"},
+            ]
+        )
+        settings = self.settings()
+        settings.max_search_results_per_query = 3
+        settings.max_pulses_per_query = 1
+
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client=None,
+            logger=logs.append,
+            sleeper=sleeps.append,
+            ingest_pause_seconds=7,
+        )
+        processor.process_pulse = lambda query, pulse, state: processed.append(
+            pulse["id"]
+        ) or True
+
+        processor.process_query("lummac2", state="state")
+
+        self.assertEqual(["pulse-1"], processed)
+        self.assertEqual([7], sleeps)
+        self.assertIn(
+            "Query summary: lummac2 reviewed=1 ingested=1 available=3",
+            logs,
+        )
+
     def test_process_pulse_skips_missing_id(self):
         logs = []
         otx_client = SimpleNamespace(
