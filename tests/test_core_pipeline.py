@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from connectors.otx.runtime import run_processor_loop
 from connectors.otx.settings import load_settings
+from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.feed_contract import (
     FeedAdapter,
     FeedCandidate,
@@ -126,6 +127,60 @@ class StateRepositoryTests(unittest.TestCase):
             self.assertTrue(PulseStateRepository(state_file).has_pulse("pulse-1"))
 
 
+class DecisionAuditTests(unittest.TestCase):
+    def test_decision_record_serializes_core_fields(self):
+        record = DecisionRecord(
+            action="drop",
+            reason="below minimum score",
+            source_key="alienvault:otx-custom",
+            external_id="pulse-1",
+            title="Suspicious infrastructure",
+            query="stealc",
+            score=55,
+            age_days=12,
+            indicator_count=4,
+            recorded_at="2026-05-01T00:00:00Z",
+            metadata={"policy": "default"},
+        )
+
+        data = record.to_dict()
+
+        self.assertEqual("drop", data["action"])
+        self.assertEqual("alienvault:otx-custom", data["source_key"])
+        self.assertEqual({"policy": "default"}, data["metadata"])
+
+    def test_decision_audit_log_writes_jsonl_when_configured(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audit_file = os.path.join(tmpdir, "decisions.jsonl")
+            record = DecisionRecord(
+                action="ingest",
+                reason="ok",
+                source_key="alienvault:otx-custom",
+                external_id="pulse-1",
+                title="Fresh pulse",
+                recorded_at="2026-05-01T00:00:00Z",
+            )
+
+            DecisionAuditLog(audit_file).record(record)
+
+            with open(audit_file, "r", encoding="utf-8") as f:
+                data = json.loads(f.readline())
+
+            self.assertEqual("ingest", data["action"])
+            self.assertEqual("Fresh pulse", data["title"])
+
+    def test_decision_audit_log_is_noop_without_file(self):
+        record = DecisionRecord(
+            action="skip",
+            reason="already processed",
+            source_key="alienvault:otx-custom",
+            external_id="pulse-1",
+            title="Existing pulse",
+        )
+
+        self.assertIs(record, DecisionAuditLog().record(record))
+
+
 class SettingsTests(unittest.TestCase):
     def test_load_settings_normalizes_search_limit(self):
         env = {
@@ -136,6 +191,7 @@ class SettingsTests(unittest.TestCase):
             "MAX_PULSES_PER_QUERY": "5",
             "MAX_SEARCH_RESULTS_PER_QUERY": "2",
             "INGEST_PAUSE_SECONDS": "4",
+            "DECISION_AUDIT_FILE": "/app/state/decisions.jsonl",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -147,6 +203,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(5, settings.max_search_results_per_query)
         self.assertEqual(3, settings.otx_retries)
         self.assertEqual(4, settings.ingest_pause_seconds)
+        self.assertEqual("/app/state/decisions.jsonl", settings.decision_audit_file)
 
 
 class RuntimeTests(unittest.TestCase):

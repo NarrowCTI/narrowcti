@@ -22,6 +22,7 @@ foundation track.
 - Enriches candidate pulses through the OTX API.
 - Calculates contextual scores before ingestion.
 - Applies ingestion policy for drop, quarantine and export decisions.
+- Optionally writes structured decision audit records for operational review.
 - Deduplicates processed pulses with persistent local state.
 - Builds STIX bundles for OpenCTI ingestion.
 - Runs as a Dockerized connector inside an OpenCTI lab environment.
@@ -118,7 +119,7 @@ Run validation from the repository root after building the Docker image:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\narrowcti"
-docker run --rm opencti-connector-otx-custom python -m py_compile connector.py models.py processor.py runtime.py settings.py otx_client.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
+docker run --rm opencti-connector-otx-custom python -m py_compile connector.py feed_adapter.py models.py processor.py runtime.py settings.py otx_client.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
 docker run --rm -v "${LAB_ROOT}\narrowcti:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
 ```
 

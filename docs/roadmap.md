@@ -33,6 +33,7 @@ Purpose:
 - Track third-party dependency notices.
 - Introduce a shared feed contract for multi-feed development.
 - Add an OTX feed adapter as the reference contract implementation.
+- Add structured decision audit records for operational review.
 - Keep OTX as the reference implementation while preparing for additional feeds.
 
 Expected outcomes:
@@ -41,6 +42,7 @@ Expected outcomes:
 - Licensing and distribution boundaries are explicit.
 - Future feed adapters have a stable contract to follow.
 - The OTX feed can be normalized through the shared feed contract.
+- Ingest, drop, quarantine and skip outcomes can be audited.
 
 ## v0.4.0 - Multi-Feed Expansion
 

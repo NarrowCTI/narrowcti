@@ -1,5 +1,6 @@
 import time
 
+from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.policy import PolicyConfig, should_ingest
 from core.scoring import age_days, calculate_score
 from core.state_repository import PulseStateRepository
@@ -31,6 +32,7 @@ class OTXProcessor:
         sleeper=time.sleep,
         ingest_pause_seconds=2,
         feed_adapter=None,
+        decision_audit=None,
     ):
         self.settings = settings
         self.otx_client = otx_client
@@ -41,6 +43,7 @@ class OTXProcessor:
         self.state_repository_factory = state_repository_factory
         self.sleeper = sleeper
         self.ingest_pause_seconds = ingest_pause_seconds
+        self.decision_audit = decision_audit or DecisionAuditLog()
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -92,24 +95,51 @@ class OTXProcessor:
 
         if not pulse_id:
             self.log(f"Skip pulse without id: {candidate_ref.title}")
+            self.record_decision(
+                query,
+                candidate_ref,
+                action="skip",
+                reason="missing external id",
+            )
             return False
 
         if state.has_pulse(pulse_id):
             self.log(f"Skip state: {candidate_ref.title}")
+            self.record_decision(
+                query,
+                candidate_ref,
+                action="skip",
+                reason="already processed",
+            )
             return False
 
         candidate = self.enrich_candidate(query, candidate_ref)
         if not candidate:
+            self.record_decision(
+                query,
+                candidate_ref,
+                action="skip",
+                reason="enrichment failed",
+            )
             return False
 
-        should_ingest_candidate, reason = self.evaluate_candidate_policy(candidate)
-        if not should_ingest_candidate:
+        action, reason = self.candidate_policy_decision(candidate)
+        if action != "ingest":
+            self.record_decision(query, candidate_ref, action, reason, candidate)
             return False
 
         if not self.ingest_candidate(candidate, reason):
+            self.record_decision(
+                query,
+                candidate_ref,
+                action="error",
+                reason="export failed",
+                candidate=candidate,
+            )
             return False
 
         state.mark_pulse(pulse_id)
+        self.record_decision(query, candidate_ref, "ingest", reason, candidate)
         return True
 
     def normalize_feed_candidate(self, pulse):
@@ -131,6 +161,10 @@ class OTXProcessor:
         return candidate
 
     def evaluate_candidate_policy(self, candidate):
+        action, reason = self.candidate_policy_decision(candidate)
+        return action == "ingest", reason
+
+    def candidate_policy_decision(self, candidate):
         decision, reason = should_ingest(
             candidate.pulse,
             candidate.score,
@@ -142,13 +176,36 @@ class OTXProcessor:
                 f"Quarantine: {candidate.name} "
                 f"score={candidate.score} reason={reason}"
             )
-            return False, reason
+            return "quarantine", reason
 
         if decision is False:
             self.log(f"Drop: {candidate.name} score={candidate.score} reason={reason}")
-            return False, reason
+            return "drop", reason
 
-        return True, reason
+        return "ingest", reason
+
+    def record_decision(self, query, candidate_ref, action, reason, candidate=None):
+        title = candidate.name if candidate and candidate.name else candidate_ref.title
+        indicator_count = candidate.ioc_count if candidate else 0
+        score = candidate.score if candidate else None
+        candidate_age = candidate.age if candidate else None
+
+        decision = DecisionRecord(
+            action=action,
+            reason=reason,
+            source_key=candidate_ref.source.key,
+            external_id=candidate_ref.external_id,
+            title=title,
+            query=query,
+            score=score,
+            age_days=candidate_age,
+            indicator_count=indicator_count,
+        )
+
+        try:
+            self.decision_audit.record(decision)
+        except Exception as exc:
+            self.log(f"Decision audit failed: {title} error={exc}")
 
     def ingest_candidate(self, candidate, reason):
         self.log(f"Ingest: {candidate.name} score={candidate.score} reason={reason}")

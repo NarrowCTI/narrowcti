@@ -25,6 +25,7 @@ class Settings:
     enable_quarantine: bool
     quarantine_score_threshold: int
     state_file: str
+    decision_audit_file: str
 
 
 def env_required(name):
@@ -82,4 +83,5 @@ def load_settings():
         enable_quarantine=env_bool("ENABLE_QUARANTINE", True),
         quarantine_score_threshold=env_int("QUARANTINE_SCORE_THRESHOLD", 50),
         state_file=os.getenv("STATE_FILE", "/app/state/state.json"),
+        decision_audit_file=os.getenv("DECISION_AUDIT_FILE", ""),
     )

@@ -17,6 +17,7 @@ class ProcessorTests(unittest.TestCase):
             max_days_hard_filter=0,
             connector_name="Test Connector",
             state_file="state.json",
+            decision_audit_file="",
             otx_queries=["lummac2", "stealc"],
         )
 
@@ -192,6 +193,81 @@ class ProcessorTests(unittest.TestCase):
             "Drop: Low score pulse score=55 reason=below minimum score",
             logs,
         )
+
+    def test_process_pulse_records_policy_decision(self):
+        records = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "Low score pulse",
+                "description": "description",
+                "created": "2026-04-01T00:00:00Z",
+                "indicators": [],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: self.fail("state should not be marked"),
+        )
+        settings = self.settings()
+        settings.min_score_to_ingest = 60
+
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client=None,
+            logger=lambda message: None,
+            decision_audit=SimpleNamespace(record=records.append),
+        )
+
+        processed = processor.process_pulse(
+            "unrelated query",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertFalse(processed)
+        self.assertEqual("drop", records[0].action)
+        self.assertEqual("below minimum score", records[0].reason)
+        self.assertEqual("alienvault:otx-custom", records[0].source_key)
+        self.assertEqual("pulse-1", records[0].external_id)
+        self.assertEqual("Low score pulse", records[0].title)
+
+    def test_process_pulse_records_successful_ingest(self):
+        records = []
+        marked = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "LummaC2 fresh",
+                "description": "description",
+                "created": "2026-04-01T00:00:00Z",
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: marked.append(pulse_id),
+        )
+
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=otx_client,
+            api_client="api",
+            logger=lambda message: None,
+            exporter=lambda *args, **kwargs: 1,
+            decision_audit=SimpleNamespace(record=records.append),
+        )
+
+        processed = processor.process_pulse(
+            "lummac2",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertTrue(processed)
+        self.assertEqual(["pulse-1"], marked)
+        self.assertEqual("ingest", records[0].action)
+        self.assertEqual("ok", records[0].reason)
+        self.assertEqual(1, records[0].indicator_count)
 
     def test_process_pulse_uses_exporter_and_marks_state_after_success(self):
         logs = []

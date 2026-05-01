@@ -1,5 +1,6 @@
 from pycti import OpenCTIApiClient
 
+from core.decision_audit import DecisionAuditLog
 from otx_client import OTXClient
 from processor import OTXProcessor
 from runtime import run_processor_loop
@@ -26,6 +27,7 @@ def build_processor(settings):
         api,
         log,
         ingest_pause_seconds=settings.ingest_pause_seconds,
+        decision_audit=DecisionAuditLog(settings.decision_audit_file),
     )
 
 
