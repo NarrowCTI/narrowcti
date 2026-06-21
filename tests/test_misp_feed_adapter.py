@@ -87,6 +87,28 @@ class MISPFeedAdapterTests(unittest.TestCase):
         self.assertEqual("ipv4", ip_port[0]["type"])
         self.assertEqual("192.0.2.10", ip_port[0]["indicator"])
 
+    def test_attribute_to_indicators_maps_host_port_and_malware_sample(self):
+        hostname_port = attribute_to_indicators(
+            {"type": "hostname|port", "value": "c2.example.net|8443", "to_ids": True}
+        )
+        domain_port = attribute_to_indicators(
+            {"type": "domain|port", "value": "198.51.100.10|443", "to_ids": True}
+        )
+        malware_sample = attribute_to_indicators(
+            {
+                "type": "malware-sample",
+                "value": "payload.exe|" + "b" * 64,
+                "to_ids": True,
+            }
+        )
+
+        self.assertEqual("hostname", hostname_port[0]["type"])
+        self.assertEqual("c2.example.net", hostname_port[0]["indicator"])
+        self.assertEqual("ipv4", domain_port[0]["type"])
+        self.assertEqual("198.51.100.10", domain_port[0]["indicator"])
+        self.assertEqual("filehash-sha256", malware_sample[0]["type"])
+        self.assertEqual("b" * 64, malware_sample[0]["indicator"])
+
     def test_adapter_matches_feed_adapter_protocol(self):
         adapter = MISPFeedAdapter(misp_client=SimpleNamespace())
 

@@ -1,4 +1,5 @@
 import ipaddress
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -37,6 +38,17 @@ IP_PORT_TYPES = {
     "ip-src|port",
     "ip-dst|port",
     "ip|port",
+}
+
+HOST_PORT_TYPES = {
+    "domain|port",
+    "hostname|port",
+}
+
+HASH_LENGTH_TYPES = {
+    32: "filehash-md5",
+    40: "filehash-sha1",
+    64: "filehash-sha256",
 }
 
 OVERSIZED_EVENT_ACTIONS = {"skip", "truncate"}
@@ -147,6 +159,20 @@ def ip_indicator_type(value):
     return "ipv4" if ip.version == 4 else "ipv6"
 
 
+def host_indicator_type(value):
+    ip_type = ip_indicator_type(value)
+    if ip_type:
+        return ip_type
+    return "hostname" if value else None
+
+
+def hash_indicator_type(value):
+    normalized = str(value).strip().lower()
+    if not re.fullmatch(r"[a-f0-9]+", normalized):
+        return None
+    return HASH_LENGTH_TYPES.get(len(normalized))
+
+
 def indicator(indicator_type, value, attribute):
     return {
         "type": indicator_type,
@@ -189,6 +215,14 @@ def attribute_to_indicators(attribute):
                     indicators.append(indicator(normalized_type, parts[0], attribute))
             continue
 
+        if attribute_type in HOST_PORT_TYPES:
+            parts = [part.strip() for part in value.rsplit("|", 1)]
+            if len(parts) == 2:
+                normalized_type = host_indicator_type(parts[0])
+                if normalized_type:
+                    indicators.append(indicator(normalized_type, parts[0], attribute))
+            continue
+
         if attribute_type == "domain|ip":
             parts = [part.strip() for part in value.split("|", 1)]
             if len(parts) == 2:
@@ -206,6 +240,14 @@ def attribute_to_indicators(attribute):
                 indicators.append(
                     indicator(HASH_COMPOSITE_TYPES[attribute_type], parts[1], attribute)
                 )
+            continue
+
+        if attribute_type == "malware-sample":
+            parts = [part.strip() for part in value.rsplit("|", 1)]
+            hash_value = parts[-1] if parts else ""
+            normalized_type = hash_indicator_type(hash_value)
+            if normalized_type:
+                indicators.append(indicator(normalized_type, hash_value, attribute))
             continue
 
         normalized_type = MISP_TYPE_MAP.get(attribute_type)

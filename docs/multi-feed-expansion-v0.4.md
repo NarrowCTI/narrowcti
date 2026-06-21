@@ -98,13 +98,13 @@ Implemented foundation controls:
   would-ingest decision without exporting to OpenCTI or marking state.
 - MISP decision audit metadata captures collector, original source, MISP event
   identifiers, event tags and guardrail context.
+- Attribute normalization covers direct IoCs plus safe composite values such as
+  IP/port, host/port, domain/IP, filename/hash and `malware-sample`.
 
 Remaining controls before runtime integration:
 
 - Keep validating the dedicated MISP runtime with additional conservative
   queries after the first local `MISP_DRY_RUN=true` validation succeeded.
-- Expand attribute-level normalization based on `type`, `category`, `to_ids`,
-  tags and first/last seen fields.
 - Define a safe historical backfill workflow for resource-limited labs.
 - Add an opt-in Docker Compose service/profile for the MISP runtime when the
   local validation is complete.
