@@ -25,7 +25,9 @@ param(
     [string]$ComposeProfile = 'narrowcti-misp',
 
     [ValidateNotNullOrEmpty()]
-    [string]$Service = 'connector-narrowcti-misp'
+    [string]$Service = 'connector-narrowcti-misp',
+
+    [switch]$Preview
 )
 
 $ErrorActionPreference = 'Stop'
@@ -85,6 +87,9 @@ Write-Host 'NarrowCTI MISP safe backfill window'
 Write-Host ('  from={0} to={1} tags={2}' -f $FromDate, $toLabel, $Tags)
 Write-Host ('  max_events={0} max_attributes={1} max_iocs={2}' -f $MaxEvents, $MaxAttributes, $MaxIocs)
 Write-Host '  dry_run=true run_once=true state=ephemeral'
+if ($Preview) {
+    Write-Host '  preview=true docker will not be executed'
+}
 
 $composeArgs = @(
     'compose',
@@ -105,6 +110,12 @@ $composeArgs = @(
     '-e', ('MISP_MAX_IOCS_PER_EVENT={0}' -f $MaxIocs),
     $Service
 )
+
+if ($Preview) {
+    Write-Host ('Compose directory: {0}' -f $openctiDir)
+    Write-Host ('Docker command: docker {0}' -f ($composeArgs -join ' '))
+    return
+}
 
 Push-Location $openctiDir
 try {
