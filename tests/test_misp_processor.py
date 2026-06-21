@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from connectors.misp.processor import MISPProcessor
+from connectors.misp.processor import MISPProcessor, decision_metadata
 from core.feed_contract import FeedCandidate, FeedRunSummary, FeedSource
 
 
@@ -29,6 +29,18 @@ def enriched_event(name="tlp green event", indicator_count=10):
         "created": "2099-01-01T00:00:00Z",
         "tags": ["tlp:green"],
         "indicators": indicators,
+        "provenance": {
+            "collector": "misp",
+            "original_source": "AlienVault",
+            "misp_event_id": "12",
+            "misp_event_uuid": "event-1",
+        },
+        "narrowcti_controls": {
+            "attribute_count": 10,
+            "max_attributes_per_event": 1000,
+            "oversized": False,
+            "oversized_event_action": "skip",
+        },
     }
 
 
@@ -168,6 +180,30 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("already processed", records[0].reason)
         self.assertEqual("misp:misp", records[0].source_key)
 
+    def test_decision_metadata_prefers_enriched_provenance(self):
+        candidate_ref = candidate(
+            external_id="event-1",
+            raw={
+                "provenance": {
+                    "collector": "misp",
+                    "original_source": "Search Metadata",
+                    "misp_event_id": "search-id",
+                    "misp_event_uuid": "event-1",
+                },
+                "tags": ["tlp:green"],
+            },
+        )
+        prepared = SimpleNamespace(event=enriched_event())
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual("misp", metadata["collector"])
+        self.assertEqual("AlienVault", metadata["original_source"])
+        self.assertEqual("12", metadata["misp_event_id"])
+        self.assertEqual("event-1", metadata["misp_event_uuid"])
+        self.assertEqual(["tlp:green"], metadata["tags"])
+        self.assertFalse(metadata["guardrails"]["oversized"])
+
     def test_process_event_dry_run_records_decision_without_export_or_state(self):
         records = []
         marked = []
@@ -198,6 +234,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual([], marked)
         self.assertEqual("dry_run", records[0].action)
         self.assertEqual("ok", records[0].reason)
+        self.assertEqual("AlienVault", records[0].metadata["original_source"])
         self.assertIn("MISP dry-run: tlp green event score=100 reason=ok", logs)
 
     def test_process_event_records_successful_ingest_and_marks_state(self):
@@ -238,6 +275,8 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(["event-1"], marked)
         self.assertEqual("ingest", records[0].action)
         self.assertEqual("ok", records[0].reason)
+        self.assertEqual("misp", records[0].metadata["collector"])
+        self.assertEqual("AlienVault", records[0].metadata["original_source"])
         self.assertEqual(10, records[0].indicator_count)
         self.assertEqual("tlp green event", export_calls[0]["name"])
         self.assertEqual("Test Connector", export_calls[0]["identity_name"])

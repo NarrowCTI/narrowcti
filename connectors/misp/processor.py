@@ -1,4 +1,5 @@
 import time
+from collections.abc import Mapping
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.feed_contract import FeedRunSummary
@@ -15,6 +16,30 @@ def age_label(age):
     if age is None:
         return "unknown"
     return f"{age}d"
+
+
+def compact_mapping(value):
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def decision_metadata(candidate_ref, candidate=None):
+    event = compact_mapping(candidate.event if candidate else {})
+    reference = compact_mapping(candidate_ref.raw)
+    source = event or reference
+    provenance = compact_mapping(source.get("provenance"))
+    controls = compact_mapping(source.get("narrowcti_controls"))
+    tags = source.get("tags") or candidate_ref.tags or []
+
+    metadata = {
+        "collector": provenance.get("collector") or candidate_ref.source.name,
+        "original_source": provenance.get("original_source", ""),
+        "misp_event_id": provenance.get("misp_event_id") or source.get("id", ""),
+        "misp_event_uuid": provenance.get("misp_event_uuid") or candidate_ref.external_id,
+        "tags": list(tags),
+    }
+    if controls:
+        metadata["guardrails"] = controls
+    return metadata
 
 
 class MISPProcessor:
@@ -236,6 +261,7 @@ class MISPProcessor:
             score=score,
             age_days=candidate_age,
             indicator_count=indicator_count,
+            metadata=decision_metadata(candidate_ref, candidate),
         )
 
         try:

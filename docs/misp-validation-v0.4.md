@@ -168,6 +168,8 @@ by the runtime validation:
 - Dry-run validation is the default through `MISP_DRY_RUN=true`, preventing
   OpenCTI export and state marking while still exercising MISP search,
   enrichment, scoring, policy and audit paths.
+- Decision-audit records now include MISP provenance metadata for collector,
+  original source, event identifiers, tags and guardrail context.
 
 Default foundation limits:
 
@@ -242,6 +244,29 @@ Observed result:
 - No MISP event state was marked because the validation used ephemeral `/tmp`
   state inside a one-shot container.
 - Summary: `reviewed=1 ingested=0 dropped=0 quarantined=0 skipped=0 errors=0 dry_run=1 available=1`.
+
+Provenance audit validation was repeated after adding audit metadata. The same
+bounded dry-run path produced an audit record with:
+
+```json
+{
+  "collector": "misp",
+  "original_source": "CIRCL",
+  "misp_event_id": "12",
+  "misp_event_uuid": "56d4b32d-664c-4647-a748-1362950d210f",
+  "tags": ["type:OSINT", "circl:incident-classification=\"malware\"", "tlp:green"],
+  "guardrails": {
+    "attribute_count": 10,
+    "max_attributes_per_event": 1000,
+    "oversized": false,
+    "oversized_event_action": "skip"
+  }
+}
+```
+
+This confirms the audit trail can distinguish the collector (`MISP`) from the
+original event source (`CIRCL`) while preserving event identifiers and guardrail
+context.
 
 Post-validation stack signals:
 
