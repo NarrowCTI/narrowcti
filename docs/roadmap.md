@@ -61,6 +61,7 @@ Purpose:
 Expected outcomes:
 
 - At least two feeds use the same decision foundation.
+- MISP payload and official connector behavior are validated against real local data.
 - Feed-specific scoring inputs are normalized.
 - OpenCTI export remains consistent across sources.
 

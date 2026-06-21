@@ -15,6 +15,7 @@ COPY connectors/otx/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY connectors/otx/*.py /app/
+COPY connectors /app/connectors
 COPY core /app/core
 COPY exporters /app/exporters
 

@@ -46,6 +46,37 @@ MISP and adapter contract validation.
 - Adding advanced correlation before the second adapter is stable.
 - Adding runtime license enforcement.
 
+
+## Runtime Validation Findings
+
+A local runtime validation was performed on 2026-06-21 with OpenCTI 6.9.4,
+MISP and `opencti/connector-misp:6.9.4`.
+
+Key findings:
+
+- MISP event shape is event-centric, with `Event`, `Attribute`, `Object`, `Tag`,
+  `Galaxy`, `Org` and `Orgc` fields.
+- One MISP event can be tiny or enormous. The local MISP returned one URLHaus
+  event with 16922 attributes and one small OSINT event with 10 attributes.
+- The official OpenCTI MISP connector does not support `MISP_IMPORT_LIMIT` in
+  version 6.9.4. Its client hardcodes a page limit of 10 and paginates until no
+  more matching events are returned.
+- The official connector is useful as a reference and for OpenCTI-native import,
+  but it is not enough for NarrowCTI's controlled curation/backfill model.
+
+Detailed evidence is documented in `docs/misp-validation-v0.4.md`.
+
+## MISP Adapter Guardrails
+
+The NarrowCTI MISP adapter must enforce controls before exporting to OpenCTI:
+
+- Maximum events per run.
+- Maximum attributes per event.
+- Oversized event skip or quarantine behavior.
+- Explicit source provenance for collector and original source.
+- Attribute-level normalization based on `type`, `category`, `to_ids`, tags and
+  first/last seen fields.
+
 ## Success Criteria
 
 - OTX and MISP can both produce normalized feed candidates.

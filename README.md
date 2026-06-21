@@ -53,6 +53,7 @@ Main modules:
 
 ```text
 connectors/otx/      OTX connector runtime, feed adapter, settings and processor
+connectors/misp/     MISP client and feed adapter foundation
 core/                Feed contracts, scoring, policy and persistent state handling
 exporters/           OpenCTI export and STIX bundle construction
 tests/               Unit coverage for the processor and shared pipeline logic
@@ -87,6 +88,12 @@ AlienVault OTX and other feeds
 NarrowCTI should preserve both the collector context, such as MISP, and the
 original intelligence source, such as AlienVault OTX, when that information is
 available.
+
+A 2026-06-21 local validation confirmed that one MISP event can contain tens
+of thousands of attributes, and that `opencti/connector-misp:6.9.4` does not
+support `MISP_IMPORT_LIMIT`. NarrowCTI therefore needs first-class per-run and
+per-event safety controls instead of relying on the official connector for
+controlled backfill.
 
 ## NarrowCTI Gateway Runtime
 
@@ -149,7 +156,7 @@ Run validation from the repository root after building the Docker image:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\NarrowCTI"
-docker run --rm opencti-connector-narrowcti python -m py_compile connector.py feed_adapter.py models.py processor.py runtime.py settings.py otx_client.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/feed_adapter.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
 
@@ -181,6 +188,7 @@ Product and expansion documents:
 ```text
 docs/product-foundation-v0.3.md
 docs/multi-feed-expansion-v0.4.md
+docs/misp-validation-v0.4.md
 docs/roadmap.md
 docs/licensing-strategy.md
 ```
