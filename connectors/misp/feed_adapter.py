@@ -314,17 +314,26 @@ def event_to_feed_candidate(
 class MISPFeedAdapter:
     source = MISP_SOURCE
 
-    def __init__(self, misp_client, source=MISP_SOURCE, limits=None, logger=None):
+    def __init__(
+        self,
+        misp_client,
+        source=MISP_SOURCE,
+        limits=None,
+        logger=None,
+        search_filters=None,
+    ):
         self.misp_client = misp_client
         self.source = source
         self.limits = limits or MISPAdapterLimits()
         self.log = logger or (lambda msg: None)
+        self.search_filters = dict(search_filters or {})
 
     def search(self, query):
         events = self.misp_client.search_events(
             query,
             limit=self.limits.max_events_per_run,
             metadata=True,
+            filters=self.search_filters,
         )
         candidates = []
         for event in events[: self.limits.max_events_per_run]:

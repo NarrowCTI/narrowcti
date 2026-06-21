@@ -18,6 +18,11 @@ class MISPSettingsTests(unittest.TestCase):
             "MISP_MAX_ATTRIBUTES_PER_EVENT": "500",
             "MISP_MAX_IOCS_PER_EVENT": "250",
             "MISP_OVERSIZED_EVENT_ACTION": "truncate",
+            "MISP_RUN_ONCE": "true",
+            "MISP_FROM_DATE": "2026-01-01",
+            "MISP_TO_DATE": "2026-01-31",
+            "MISP_TAGS": "tlp:green, type:OSINT",
+            "MISP_PUBLISHED_ONLY": "true",
             "INGEST_PAUSE_SECONDS": "5",
             "MIN_SCORE_TO_INGEST": "70",
             "MIN_SCORE_FOR_OLD_EVENT": "85",
@@ -35,6 +40,16 @@ class MISPSettingsTests(unittest.TestCase):
         self.assertEqual(500, settings.adapter_limits.max_attributes_per_event)
         self.assertEqual("truncate", settings.adapter_limits.oversized_event_action)
         self.assertEqual(250, settings.max_iocs_per_event)
+        self.assertTrue(settings.run_once)
+        self.assertEqual(
+            {
+                "from": "2026-01-01",
+                "to": "2026-01-31",
+                "tags": ["tlp:green", "type:OSINT"],
+                "published": True,
+            },
+            settings.search_filters,
+        )
         self.assertEqual(5, settings.ingest_pause_seconds)
         self.assertEqual(70, settings.min_score_to_ingest)
         self.assertEqual(85, settings.min_score_for_old_event)

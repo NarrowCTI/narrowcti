@@ -149,8 +149,8 @@ Required NarrowCTI controls for the MISP adapter:
 The v0.4 adapter foundation now implements the first direct safeguards required
 by the runtime validation:
 
-- `MISPClient.search_events()` supports metadata searches and an explicit API
-  limit payload.
+- `MISPClient.search_events()` supports metadata searches, explicit API
+  limit payloads and bounded restSearch filters.
 - `MISPFeedAdapter.search()` requests metadata first and caps normalized search
   candidates with `max_events_per_run`.
 - `MISPFeedAdapter` checks MISP `attribute_count` before normalizing attributes.
@@ -165,6 +165,11 @@ by the runtime validation:
   decision audit and OpenCTI export flow.
 - A dedicated MISP entrypoint exists for explicit validation with
   `python -m connectors.misp.connector`; it is not the Docker default.
+- `MISP_RUN_ONCE=true` performs one bounded pass and exits instead of entering
+  the scheduled loop.
+- `MISP_FROM_DATE`, `MISP_TO_DATE`, `MISP_TAGS` and
+  `MISP_PUBLISHED_ONLY` map to MISP restSearch filters for controlled
+  historical backfill.
 - Dry-run validation is the default through `MISP_DRY_RUN=true`, preventing
   OpenCTI export and state marking while still exercising MISP search,
   enrichment, scoring, policy and audit paths.
@@ -182,6 +187,47 @@ oversized_event_action=skip
 These controls do not yet make MISP a production-ready runtime path. They
 establish the controlled runtime foundation needed before local stack
 validation and an opt-in Compose service are added.
+
+
+## Safe Historical Backfill Workflow
+
+Resource-limited labs should backfill MISP through small, observable batches.
+Start with dry-run and one-shot execution, review the decision audit, then enable
+real export only after the sampled window is safe.
+
+Recommended first pass:
+
+```text
+MISP_DRY_RUN=true
+MISP_RUN_ONCE=true
+MISP_MAX_EVENTS_PER_RUN=1
+MISP_MAX_ATTRIBUTES_PER_EVENT=1000
+MISP_MAX_IOCS_PER_EVENT=1000
+MISP_OVERSIZED_EVENT_ACTION=skip
+MISP_QUERIES=*
+MISP_FROM_DATE=YYYY-MM-DD
+MISP_TO_DATE=YYYY-MM-DD
+MISP_TAGS=tlp:green
+MISP_PUBLISHED_ONLY=true
+```
+
+Operational guidance:
+
+- Prefer short historical windows first, such as one day or a few days.
+- Use `MISP_QUERIES=*` when the backfill should be driven by date/tag filters
+  instead of a free-text `searchall` term.
+- Keep `MISP_MAX_EVENTS_PER_RUN` between 1 and 5 until local Elasticsearch and
+  OpenCTI worker behavior is known.
+- Keep `MISP_DRY_RUN=true` while discovering event volume and attribute count.
+- Review `MISP_DECISION_AUDIT_FILE` before switching `MISP_DRY_RUN=false`.
+- Use `MISP_STATE_FILE` deliberately. Reusing state prevents repeated event
+  processing; clearing state is only for intentional replay of the same window.
+- Increase the date range gradually only after CPU, memory and queues remain
+  healthy.
+
+This workflow is intentionally separate from the official OpenCTI MISP connector.
+NarrowCTI owns the curation controls so historical import can be reviewed before
+anything reaches OpenCTI.
 
 ## Mapping Decision
 

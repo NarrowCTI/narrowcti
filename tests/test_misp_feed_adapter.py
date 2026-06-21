@@ -117,8 +117,15 @@ class MISPFeedAdapterTests(unittest.TestCase):
     def test_search_uses_metadata_and_guardrail_limits(self):
         calls = []
 
-        def search_events(query, limit=None, metadata=False):
-            calls.append({"query": query, "limit": limit, "metadata": metadata})
+        def search_events(query, limit=None, metadata=False, filters=None):
+            calls.append(
+                {
+                    "query": query,
+                    "limit": limit,
+                    "metadata": metadata,
+                    "filters": filters,
+                }
+            )
             return [
                 {"uuid": "event-1", "info": "One", "attribute_count": 1},
                 {"uuid": "event-2", "info": "Two", "attribute_count": 1},
@@ -129,17 +136,28 @@ class MISPFeedAdapterTests(unittest.TestCase):
         adapter = MISPFeedAdapter(
             misp_client,
             limits=MISPAdapterLimits(max_events_per_run=2, max_attributes_per_event=10),
+            search_filters={"from": "2026-01-01", "tags": ["tlp:green"]},
         )
 
         candidates = adapter.search("stealc")
 
-        self.assertEqual([{"query": "stealc", "limit": 2, "metadata": True}], calls)
+        self.assertEqual(
+            [
+                {
+                    "query": "stealc",
+                    "limit": 2,
+                    "metadata": True,
+                    "filters": {"from": "2026-01-01", "tags": ["tlp:green"]},
+                }
+            ],
+            calls,
+        )
         self.assertEqual(["event-1", "event-2"], [c.external_id for c in candidates])
 
     def test_search_skips_oversized_metadata_event_by_default(self):
         logs = []
         misp_client = SimpleNamespace(
-            search_events=lambda query, limit=None, metadata=False: [
+            search_events=lambda query, limit=None, metadata=False, filters=None: [
                 {"uuid": "big-event", "info": "Big", "attribute_count": 16922},
                 {"uuid": "small-event", "info": "Small", "attribute_count": 10},
             ]
@@ -246,7 +264,7 @@ class MISPFeedAdapterTests(unittest.TestCase):
             default_confidence=75,
         )
         misp_client = SimpleNamespace(
-            search_events=lambda query, limit=None, metadata=False: [{"uuid": "event-1"}]
+            search_events=lambda query, limit=None, metadata=False, filters=None: [{"uuid": "event-1"}]
         )
         adapter = MISPFeedAdapter(misp_client, source=source)
 
@@ -277,6 +295,22 @@ class MISPClientTests(unittest.TestCase):
 
         self.assertEqual(["event-1", "event-2"], [event["uuid"] for event in events])
 
+    def test_search_events_omits_searchall_for_backfill_wildcard(self):
+        calls = []
+
+        def request_json(method, path, payload=None, timeout_seconds=30):
+            calls.append({"method": method, "path": path, "payload": payload})
+            return {"response": [{"Event": {"uuid": "event-1"}}]}
+
+        client = MISPClient("http://misp.local", "key")
+        client.request_json = request_json
+
+        events = client.search_events("*", limit=1, metadata=True, filters={"tags": ["tlp:green"]})
+
+        self.assertEqual([{"uuid": "event-1"}], events)
+        self.assertNotIn("searchall", calls[0]["payload"])
+        self.assertEqual(["tlp:green"], calls[0]["payload"]["tags"])
+
     def test_search_events_sends_metadata_and_limit_payload(self):
         calls = []
         client = MISPClient("http://misp.local", "key")
@@ -294,7 +328,12 @@ class MISPClientTests(unittest.TestCase):
 
         client.request_json = request_json
 
-        events = client.search_events("stealc", limit=5, metadata=True)
+        events = client.search_events(
+            "stealc",
+            limit=5,
+            metadata=True,
+            filters={"from": "2026-01-01", "tags": ["tlp:green"], "published": True},
+        )
 
         self.assertEqual([{"uuid": "event-1"}], events)
         self.assertEqual("POST", calls[0]["method"])
@@ -302,6 +341,9 @@ class MISPClientTests(unittest.TestCase):
         self.assertEqual("stealc", calls[0]["payload"]["searchall"])
         self.assertEqual(5, calls[0]["payload"]["limit"])
         self.assertTrue(calls[0]["payload"]["metadata"])
+        self.assertEqual("2026-01-01", calls[0]["payload"]["from"])
+        self.assertEqual(["tlp:green"], calls[0]["payload"]["tags"])
+        self.assertTrue(calls[0]["payload"]["published"])
 
 
 if __name__ == "__main__":

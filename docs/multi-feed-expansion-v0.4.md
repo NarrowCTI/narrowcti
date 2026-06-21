@@ -100,12 +100,13 @@ Implemented foundation controls:
   identifiers, event tags and guardrail context.
 - Attribute normalization covers direct IoCs plus safe composite values such as
   IP/port, host/port, domain/IP, filename/hash and `malware-sample`.
+- Safe historical backfill controls are externalized through run-once execution,
+  dry-run mode, date filters, tag filters and published-only filtering.
 
 Remaining controls before runtime integration:
 
 - Keep validating the dedicated MISP runtime with additional conservative
   queries after the first local `MISP_DRY_RUN=true` validation succeeded.
-- Define a safe historical backfill workflow for resource-limited labs.
 - Add an opt-in Docker Compose service/profile for the MISP runtime when the
   local validation is complete.
 

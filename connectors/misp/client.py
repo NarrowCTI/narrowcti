@@ -98,17 +98,20 @@ class MISPClient:
 
         return []
 
-    def search_events(self, query=None, limit=None, metadata=False):
+    def search_events(self, query=None, limit=None, metadata=False, filters=None):
         payload = {
             "returnFormat": "json",
             "metadata": metadata,
             "includeEventTags": True,
             "includeAttributeTags": True,
         }
-        if query:
+        if query and str(query).strip() not in ("*", "__all__"):
             payload["searchall"] = query
         if limit:
             payload["limit"] = limit
+        for key, value in (filters or {}).items():
+            if value not in (None, "", []):
+                payload[key] = value
 
         data = self.request_json(
             "POST",

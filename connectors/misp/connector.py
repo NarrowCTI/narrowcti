@@ -28,6 +28,7 @@ def build_processor(settings):
         misp,
         limits=settings.adapter_limits,
         logger=log,
+        search_filters=settings.search_filters,
     )
     return MISPProcessor(
         settings,
@@ -43,6 +44,9 @@ def build_processor(settings):
 def main():
     settings = load_settings()
     processor = build_processor(settings)
+    if settings.run_once:
+        processor.run_once()
+        return
     run_processor_loop(processor, settings, log)
 
 

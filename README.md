@@ -34,7 +34,8 @@ second real feed, with MISP as the first strategic candidate.
 - Logs per-query operational summaries for reviewed, ingested, dropped,
   quarantined, skipped and failed candidates.
 - Deduplicates processed pulses with persistent local state.
-- Provides a MISP adapter foundation with independent state and safety limits.
+- Provides a MISP adapter foundation with independent state, dry-run mode,
+  run-once execution and safe backfill filters.
 - Builds STIX bundles for OpenCTI ingestion.
 - Runs as a Dockerized connector inside an OpenCTI lab environment.
 
@@ -99,8 +100,10 @@ controlled backfill.
 The MISP adapter foundation now includes explicit guardrails for maximum events
 per run and maximum attributes per event. Oversized events are skipped by
 default, with an explicit truncate mode available for controlled experiments.
-The adapter also has dedicated settings, MISP event state and a processor
-foundation so it can evolve without sharing OTX pulse processing state.
+The adapter also supports dry-run validation, one-shot execution and bounded
+historical backfill filters for date ranges, tags and published-only imports.
+The adapter has dedicated settings, MISP event state and a processor foundation
+so it can evolve without sharing OTX pulse processing state.
 
 ## NarrowCTI Gateway Runtime
 
@@ -144,6 +147,21 @@ OPENCTI_TOKEN
 MISP_URL
 MISP_KEY
 MISP_QUERIES
+```
+
+Recommended safe MISP validation controls for limited local machines:
+
+```text
+MISP_DRY_RUN=true
+MISP_RUN_ONCE=true
+MISP_MAX_EVENTS_PER_RUN=1
+MISP_MAX_ATTRIBUTES_PER_EVENT=1000
+MISP_QUERIES=*
+MISP_FROM_DATE=YYYY-MM-DD
+MISP_TO_DATE=YYYY-MM-DD
+MISP_TAGS=tlp:green
+MISP_PUBLISHED_ONLY=true
+MISP_OVERSIZED_EVENT_ACTION=skip
 ```
 
 ## Docker Runtime

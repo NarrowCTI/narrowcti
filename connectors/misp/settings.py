@@ -20,10 +20,15 @@ class MISPSettings:
     connector_run_interval: int
     ingest_pause_seconds: int
     dry_run: bool
+    run_once: bool
     max_events_per_run: int
     max_attributes_per_event: int
     max_iocs_per_event: int
     oversized_event_action: str
+    misp_from_date: str
+    misp_to_date: str
+    misp_tags: list[str]
+    misp_published_only: bool
     min_score_to_ingest: int
     max_days_old: int
     min_score_for_old_event: int
@@ -40,6 +45,19 @@ class MISPSettings:
             max_attributes_per_event=self.max_attributes_per_event,
             oversized_event_action=self.oversized_event_action,
         )
+
+    @property
+    def search_filters(self):
+        filters = {}
+        if self.misp_from_date:
+            filters["from"] = self.misp_from_date
+        if self.misp_to_date:
+            filters["to"] = self.misp_to_date
+        if self.misp_tags:
+            filters["tags"] = self.misp_tags
+        if self.misp_published_only:
+            filters["published"] = True
+        return filters
 
 
 def env_required(name):
@@ -84,10 +102,15 @@ def load_settings():
         connector_run_interval=env_int("CONNECTOR_RUN_INTERVAL", 3600),
         ingest_pause_seconds=env_int("INGEST_PAUSE_SECONDS", 2),
         dry_run=env_bool("MISP_DRY_RUN", True),
+        run_once=env_bool("MISP_RUN_ONCE", False),
         max_events_per_run=env_int("MISP_MAX_EVENTS_PER_RUN", 10),
         max_attributes_per_event=env_int("MISP_MAX_ATTRIBUTES_PER_EVENT", 1000),
         max_iocs_per_event=env_int("MISP_MAX_IOCS_PER_EVENT", 1000),
         oversized_event_action=os.getenv("MISP_OVERSIZED_EVENT_ACTION", "skip"),
+        misp_from_date=os.getenv("MISP_FROM_DATE", ""),
+        misp_to_date=os.getenv("MISP_TO_DATE", ""),
+        misp_tags=env_list("MISP_TAGS"),
+        misp_published_only=env_bool("MISP_PUBLISHED_ONLY", False),
         min_score_to_ingest=env_int("MIN_SCORE_TO_INGEST", 60),
         max_days_old=env_int("MAX_DAYS_OLD", 1095),
         min_score_for_old_event=env_int("MIN_SCORE_FOR_OLD_EVENT", 80),
