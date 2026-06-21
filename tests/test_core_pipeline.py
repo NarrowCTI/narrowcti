@@ -22,12 +22,12 @@ from exporters.stix_builder import build_report_bundle, indicator_pattern
 class FeedContractTests(unittest.TestCase):
     def test_feed_source_builds_stable_key(self):
         source = FeedSource(
-            name="OTX Custom",
+            name="OTX",
             source_type="external_import",
             provider="AlienVault",
         )
 
-        self.assertEqual("alienvault:otx-custom", source.key)
+        self.assertEqual("alienvault:otx", source.key)
 
     def test_feed_candidate_normalizes_collections(self):
         source = FeedSource(name="MISP Feed", source_type="external_import")
@@ -45,7 +45,7 @@ class FeedContractTests(unittest.TestCase):
         self.assertEqual(1, len(candidate.indicators))
 
     def test_feed_run_summary_counts_handled_candidates(self):
-        source = FeedSource(name="OTX Custom", source_type="external_import")
+        source = FeedSource(name="OTX", source_type="external_import")
         summary = FeedRunSummary(
             source=source,
             query="stealc",
@@ -132,7 +132,7 @@ class DecisionAuditTests(unittest.TestCase):
         record = DecisionRecord(
             action="drop",
             reason="below minimum score",
-            source_key="alienvault:otx-custom",
+            source_key="alienvault:otx",
             external_id="pulse-1",
             title="Suspicious infrastructure",
             query="stealc",
@@ -146,7 +146,7 @@ class DecisionAuditTests(unittest.TestCase):
         data = record.to_dict()
 
         self.assertEqual("drop", data["action"])
-        self.assertEqual("alienvault:otx-custom", data["source_key"])
+        self.assertEqual("alienvault:otx", data["source_key"])
         self.assertEqual({"policy": "default"}, data["metadata"])
 
     def test_decision_audit_log_writes_jsonl_when_configured(self):
@@ -155,7 +155,7 @@ class DecisionAuditTests(unittest.TestCase):
             record = DecisionRecord(
                 action="ingest",
                 reason="ok",
-                source_key="alienvault:otx-custom",
+                source_key="alienvault:otx",
                 external_id="pulse-1",
                 title="Fresh pulse",
                 recorded_at="2026-05-01T00:00:00Z",
@@ -173,7 +173,7 @@ class DecisionAuditTests(unittest.TestCase):
         record = DecisionRecord(
             action="skip",
             reason="already processed",
-            source_key="alienvault:otx-custom",
+            source_key="alienvault:otx",
             external_id="pulse-1",
             title="Existing pulse",
         )
@@ -198,7 +198,7 @@ class SettingsTests(unittest.TestCase):
             settings = load_settings()
 
         self.assertEqual(["lummac2", "stealc"], settings.otx_queries)
-        self.assertEqual("NarrowCTI OTX Connector", settings.connector_name)
+        self.assertEqual("NarrowCTI Gateway", settings.connector_name)
         self.assertEqual(5, settings.max_pulses_per_query)
         self.assertEqual(5, settings.max_search_results_per_query)
         self.assertEqual(3, settings.otx_retries)
@@ -254,7 +254,7 @@ class StixBuilderTests(unittest.TestCase):
         ]
         reports = [item for item in data["objects"] if item["type"] == "report"]
 
-        self.assertEqual("NarrowCTI OTX Connector", identities[0]["name"])
+        self.assertEqual("NarrowCTI Gateway", identities[0]["name"])
         self.assertEqual(2, indicator_count)
         self.assertEqual(2, len(indicator_objects))
         self.assertEqual(2, len(reports[0]["object_refs"]))

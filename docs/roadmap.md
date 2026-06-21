@@ -17,7 +17,7 @@ Status: released.
 
 Purpose:
 
-- Establish a modular custom OTX connector.
+- Establish a modular OTX connector foundation.
 - Split settings, OTX API access, processing, policy, state and STIX export.
 - Validate the connector through Docker build, syntax checks and unit tests.
 - Provide safe environment configuration examples.
@@ -35,11 +35,12 @@ Purpose:
 - Add an OTX feed adapter as the reference contract implementation.
 - Add structured decision audit records for operational review.
 - Add per-query operational summaries for reviewed and handled candidates.
-- Keep OTX as the reference implementation while preparing for additional feeds.
+- Rename runtime identity from OTX-specific naming to NarrowCTI Gateway.
+- Keep OTX as the reference adapter while preparing for additional feeds.
 
 Expected outcomes:
 
-- The project reads as a product, not only a lab connector.
+- The project reads as NarrowCTI Gateway, not an OTX custom connector.
 - Licensing and distribution boundaries are explicit.
 - Future feed adapters have a stable contract to follow.
 - The OTX feed can be normalized through the shared feed contract.
@@ -52,7 +53,7 @@ Expected outcomes:
 Purpose:
 
 - Add a second real feed, with MISP as the likely candidate.
-- Prove that NarrowCTI is a reusable intelligence gateway.
+- Prove that NarrowCTI Gateway is a reusable multi-feed intelligence gateway.
 - Reuse the shared feed contract instead of duplicating OTX-specific logic.
 
 Expected outcomes:

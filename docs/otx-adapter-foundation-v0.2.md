@@ -1,9 +1,9 @@
-# OTX Custom Connector - v0.2.0 Refactor Notes
+# NarrowCTI Gateway OTX Adapter - v0.2.0 Foundation Notes
 
 ## Purpose
 
-This document describes the refactored version of the NarrowCTI custom OTX
-connector. The goal of this version is to turn the connector into a modular,
+This document describes the refactored OTX adapter foundation used by
+NarrowCTI Gateway. The goal of this version is to turn the OTX adapter into a modular,
 testable and safer foundation for future development while preserving
 compatibility with the Docker/OpenCTI lab runtime.
 
@@ -23,7 +23,7 @@ This version covers:
 This version does not implement yet:
 
 - Advanced correlation across feeds.
-- Complete support for connectors beyond the custom OTX connector.
+- Complete support for feed adapters beyond OTX.
 - An asynchronous pipeline or dedicated ingestion queue.
 - An administrative interface for dynamic policy tuning.
 
@@ -114,7 +114,7 @@ The state is stored in a JSON file. The default container path is:
 In Docker Compose, that path is mounted from the local workspace:
 
 ```text
-../narrowcti/state:/app/state
+../NarrowCTI/state:/app/state
 ```
 
 This prevents the connector from reprocessing pulses that were already handled.
@@ -174,20 +174,20 @@ Expected local lab layout:
 
 ```text
 <lab-root>/
-  narrowcti/
+  NarrowCTI/
   opencti/
 ```
 
 Connector service:
 
 ```text
-connector-otx-custom
+connector-narrowcti
 ```
 
 Container name:
 
 ```text
-otx-custom-connector
+narrowcti-connector
 ```
 
 Main commands:
@@ -195,10 +195,10 @@ Main commands:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\opencti"
-docker compose --profile otx-custom build connector-otx-custom
-docker compose --profile otx-custom up -d --force-recreate connector-otx-custom
-docker compose --profile otx-custom logs --tail 120 connector-otx-custom
-docker compose --profile otx-custom ps connector-otx-custom
+docker compose --profile narrowcti build connector-narrowcti
+docker compose --profile narrowcti up -d --force-recreate connector-narrowcti
+docker compose --profile narrowcti logs --tail 120 connector-narrowcti
+docker compose --profile narrowcti ps connector-narrowcti
 ```
 
 The current Compose file may show this warning:
@@ -251,14 +251,14 @@ Main validation command:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\narrowcti"
-docker run --rm -v "${LAB_ROOT}\narrowcti:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
+cd "$LAB_ROOT\NarrowCTI"
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
 
 Final validation for this version on 2026-05-01 passed with:
 
 ```text
-Ran 16 tests
+Ran 34 tests
 OK
 ```
 
@@ -269,15 +269,15 @@ Build:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\opencti"
-docker compose --profile otx-custom build connector-otx-custom
+docker compose --profile narrowcti build connector-narrowcti
 ```
 
 Python syntax:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\narrowcti"
-docker run --rm opencti-connector-otx-custom python -m py_compile connector.py models.py processor.py runtime.py settings.py otx_client.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
+cd "$LAB_ROOT\NarrowCTI"
+docker run --rm opencti-connector-narrowcti python -m py_compile connector.py feed_adapter.py models.py processor.py runtime.py settings.py otx_client.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
 ```
 
 Runtime:
@@ -285,8 +285,8 @@ Runtime:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\opencti"
-docker compose --profile otx-custom up -d --force-recreate connector-otx-custom
-docker compose --profile otx-custom logs --tail 120 connector-otx-custom
+docker compose --profile narrowcti up -d --force-recreate connector-narrowcti
+docker compose --profile narrowcti logs --tail 120 connector-narrowcti
 ```
 
 Expected log signals:
@@ -341,25 +341,25 @@ Before opening the PR to `main`, validate from `dev`:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\narrowcti"
+cd "$LAB_ROOT\NarrowCTI"
 git status
 cd "$LAB_ROOT\opencti"
-docker compose --profile otx-custom build connector-otx-custom
-cd "$LAB_ROOT\narrowcti"
-docker run --rm opencti-connector-otx-custom python -m py_compile connector.py models.py processor.py runtime.py settings.py otx_client.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
-docker run --rm -v "${LAB_ROOT}\narrowcti:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
+docker compose --profile narrowcti build connector-narrowcti
+cd "$LAB_ROOT\NarrowCTI"
+docker run --rm opencti-connector-narrowcti python -m py_compile connector.py feed_adapter.py models.py processor.py runtime.py settings.py otx_client.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
 
 Suggested PR title:
 
 ```text
-release: promote v0.2.0 to main
+release: promote v0.3.0 product foundation
 ```
 
 Suggested summary:
 
 ```text
-This PR promotes NarrowCTI v0.2.0 to main. It includes the modular custom OTX
-connector foundation, focused unit coverage, Docker validation, runtime
-documentation and a safe environment example for local deployment.
+This PR promotes NarrowCTI v0.3.0 product foundation. It keeps OTX as the
+reference adapter while aligning runtime identity, documentation and Compose
+naming to NarrowCTI Gateway.
 ```

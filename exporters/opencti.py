@@ -7,7 +7,7 @@ def send_bundle(
     description,
     score,
     indicators=None,
-    identity_name="OTX Gateway",
+    identity_name="NarrowCTI Gateway",
 ):
     bundle, indicator_count = build_report_bundle(
         name,

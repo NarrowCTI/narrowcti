@@ -2,7 +2,7 @@ from core.feed_contract import FeedCandidate, FeedSource
 
 
 OTX_SOURCE = FeedSource(
-    name="OTX Custom",
+    name="OTX",
     source_type="external_import",
     provider="AlienVault",
     default_confidence=50,

@@ -13,6 +13,10 @@ __pycache__/
 state/*
 !state/.gitkeep
 
+# Local agent instructions
+AGENTS.md
+agents.md
+
 # Docker
 *.log
 

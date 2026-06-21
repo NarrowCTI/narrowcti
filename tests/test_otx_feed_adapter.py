@@ -11,7 +11,7 @@ from connectors.otx.feed_adapter import (
 
 class OTXFeedAdapterTests(unittest.TestCase):
     def test_otx_source_has_stable_identity(self):
-        self.assertEqual("alienvault:otx-custom", OTX_SOURCE.key)
+        self.assertEqual("alienvault:otx", OTX_SOURCE.key)
         self.assertEqual("external_import", OTX_SOURCE.source_type)
 
     def test_pulse_to_feed_candidate_maps_otx_fields(self):

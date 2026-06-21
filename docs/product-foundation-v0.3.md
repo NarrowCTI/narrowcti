@@ -2,8 +2,12 @@
 
 ## Purpose
 
-The v0.3.0 track moves NarrowCTI from a single functional connector toward a
-commercial product foundation.
+The v0.3.0 track moves NarrowCTI from a single functional OTX connector toward a
+commercial gateway product foundation.
+
+The v0.3.0 naming decision is explicit: the product is NarrowCTI Gateway, while
+OTX is only the first reference feed adapter. The v0.2 line can still be described
+as an OTX connector foundation, but v0.3 is the product identity transition.
 
 The product vision is not to replace OpenCTI. NarrowCTI is designed to sit in
 front of OpenCTI as a pre-ingestion intelligence decision layer. Its purpose is
@@ -78,7 +82,8 @@ This version should establish:
   outcomes.
 - Per-query operational summaries for feed-noise reduction review.
 - Roadmap from product foundation to commercial-ready release.
-- OTX remains the reference implementation.
+- Runtime, Compose service and documentation naming aligned to NarrowCTI Gateway.
+- OTX remains the reference implementation, not the product name.
 
 ## Non-Goals
 
@@ -101,5 +106,6 @@ v0.3.0 is successful when:
 - Decisions can be captured as structured operational evidence.
 - Query summaries show reviewed, ingested, dropped, quarantined, skipped and
   failed candidates.
-- The OTX connector still passes all validation.
+- The NarrowCTI Gateway runtime with the OTX adapter still passes all validation.
 - The next feed can be added without copying OTX-specific pipeline assumptions.
+- Operators see NarrowCTI Gateway as the connector/runtime identity in OpenCTI and Compose.

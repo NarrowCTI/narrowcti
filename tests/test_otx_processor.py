@@ -284,7 +284,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertFalse(processed)
         self.assertEqual("drop", records[0].action)
         self.assertEqual("below minimum score", records[0].reason)
-        self.assertEqual("alienvault:otx-custom", records[0].source_key)
+        self.assertEqual("alienvault:otx", records[0].source_key)
         self.assertEqual("pulse-1", records[0].external_id)
         self.assertEqual("Low score pulse", records[0].title)
 

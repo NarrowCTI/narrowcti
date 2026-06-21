@@ -3,9 +3,9 @@
 NarrowCTI is a modular threat intelligence ingestion layer designed to collect,
 score, deduplicate and export intelligence into OpenCTI.
 
-The current release focuses on a custom AlienVault OTX connector that turns OTX
-pulses into controlled OpenCTI ingestion candidates, with explicit policy
-decisions before export.
+NarrowCTI Gateway currently uses AlienVault OTX as its first reference feed
+adapter. OTX pulses are normalized into controlled ingestion candidates, scored,
+deduplicated and evaluated before export to OpenCTI.
 
 ## Current Version
 
@@ -15,6 +15,14 @@ v0.3.0-dev
 
 `v0.2.0` is the latest stable release. `v0.3.0-dev` is the current product
 foundation track.
+
+## Product Identity
+
+The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
+transition from an OTX-specific connector into NarrowCTI Gateway, an OpenCTI-native
+pre-ingestion intelligence gateway. OTX remains the first source adapter; it is no
+longer the product identity. v0.4 is expected to validate the gateway model with a
+second real feed.
 
 ## What It Does
 
@@ -61,9 +69,10 @@ The long-term product direction is multi-feed support with a shared decision
 engine, so OTX, MISP, commercial feeds and internal sources can be evaluated
 through the same explainable ingestion model.
 
-## OTX Connector
+## NarrowCTI Gateway Runtime
 
-The OTX connector is configured through environment variables. A safe template is
+The NarrowCTI Gateway runtime is configured through environment variables. The
+current runtime uses the OTX adapter, and a safe template is
 provided at:
 
 ```text
@@ -93,7 +102,7 @@ This repository is expected to sit next to the OpenCTI Compose workspace:
 
 ```text
 <lab-root>/
-  narrowcti/
+  NarrowCTI/
   opencti/
 ```
 
@@ -101,7 +110,7 @@ The OpenCTI Compose file owns the connector service definition. The connector
 service name is:
 
 ```text
-connector-otx-custom
+connector-narrowcti
 ```
 
 Common commands:
@@ -109,9 +118,9 @@ Common commands:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\opencti"
-docker compose --profile otx-custom build connector-otx-custom
-docker compose --profile otx-custom up -d --force-recreate connector-otx-custom
-docker compose --profile otx-custom logs --tail 120 connector-otx-custom
+docker compose --profile narrowcti build connector-narrowcti
+docker compose --profile narrowcti up -d --force-recreate connector-narrowcti
+docker compose --profile narrowcti logs --tail 120 connector-narrowcti
 ```
 
 ## Validation
@@ -120,9 +129,9 @@ Run validation from the repository root after building the Docker image:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\narrowcti"
-docker run --rm opencti-connector-otx-custom python -m py_compile connector.py feed_adapter.py models.py processor.py runtime.py settings.py otx_client.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
-docker run --rm -v "${LAB_ROOT}\narrowcti:/repo" -w /repo opencti-connector-otx-custom python -m unittest discover -s tests -v
+cd "$LAB_ROOT\NarrowCTI"
+docker run --rm opencti-connector-narrowcti python -m py_compile connector.py feed_adapter.py models.py processor.py runtime.py settings.py otx_client.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
 
 ## Release Flow
@@ -134,10 +143,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-For this release:
+For this development track:
 
 ```text
-v0.2.0
+v0.3.0-dev
 ```
 
 ## Documentation
@@ -145,7 +154,7 @@ v0.2.0
 Detailed implementation notes for this release are available in:
 
 ```text
-docs/otx-custom-connector-refactor-v2.md
+docs/otx-adapter-foundation-v0.2.md
 ```
 
 Product foundation documents:
@@ -159,7 +168,7 @@ docs/licensing-strategy.md
 ## Roadmap
 
 - Product foundation and commercial licensing structure.
-- Multi-feed support beyond the custom OTX connector.
+- Multi-feed support beyond the reference OTX adapter.
 - Advanced correlation across sources.
 - Richer scoring model with source-specific weighting.
 - Sigma or detection-rule generation.
