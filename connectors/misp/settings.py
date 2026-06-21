@@ -38,6 +38,10 @@ class MISPSettings:
     state_file: str
     decision_audit_file: str
 
+    def __post_init__(self):
+        if self.max_iocs_per_event < 1:
+            raise ValueError("max_iocs_per_event must be greater than zero")
+
     @property
     def adapter_limits(self):
         return MISPAdapterLimits(

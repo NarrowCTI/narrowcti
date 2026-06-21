@@ -104,11 +104,12 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(2, len(summaries))
 
     def test_prepare_candidate_limits_exported_indicators_but_keeps_original_count(self):
+        logs = []
         processor = MISPProcessor(
             self.settings(),
             misp_client=None,
             api_client=None,
-            logger=lambda message: None,
+            logger=logs.append,
             feed_adapter=self.adapter(),
         )
 
@@ -118,6 +119,24 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(10, prepared.ioc_count)
         self.assertEqual(1, len(prepared.indicators))
         self.assertGreaterEqual(prepared.score, 60)
+        self.assertEqual(
+            {
+                "attribute_count": 10,
+                "max_attributes_per_event": 1000,
+                "oversized": False,
+                "oversized_event_action": "skip",
+                "indicator_count": 10,
+                "max_iocs_per_event": 1,
+                "exported_indicator_count": 1,
+                "iocs_truncated": True,
+            },
+            prepared.event["narrowcti_controls"],
+        )
+        self.assertIn(
+            "MISP event exceeds IOC guardrail: event=event-1 "
+            "iocs=10 limit=1 action=truncate",
+            logs,
+        )
 
     def test_process_query_counts_operational_outcomes(self):
         logs = []

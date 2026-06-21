@@ -97,6 +97,20 @@ class MISPSettingsTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "oversized_event_action"):
                 load_settings()
 
+    def test_load_settings_rejects_invalid_max_iocs(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "MISP_URL": "http://misp.local",
+            "MISP_KEY": "misp-key",
+            "MISP_QUERIES": "tlp:green",
+            "MISP_MAX_IOCS_PER_EVENT": "0",
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaisesRegex(ValueError, "max_iocs_per_event"):
+                load_settings()
+
 
 if __name__ == "__main__":
     unittest.main()

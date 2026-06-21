@@ -106,6 +106,8 @@ Implemented foundation controls:
   the MISP runtime separately from the OTX reference runtime.
 - MISP operational summaries count adapter-level guardrail skips before event
   enrichment, making oversized backfill attempts visible as skipped work.
+- MISP decision audit metadata records IoC truncation when
+  `MISP_MAX_IOCS_PER_EVENT` limits the export payload.
 
 Remaining controls before broader runtime use:
 

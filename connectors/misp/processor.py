@@ -289,12 +289,37 @@ class MISPProcessor:
         self.log(f"MISP ingest complete: {candidate.name} indicators={imported_iocs}")
         return True
 
-    def prepare_candidate(self, query, event):
-        indicators = list(event.get("indicators", []))
+    def apply_ioc_guardrail(self, event, indicators):
         ioc_count = len(indicators)
+        exported_ioc_count = min(ioc_count, self.settings.max_iocs_per_event)
+        controls = compact_mapping(event.get("narrowcti_controls"))
+        controls.update(
+            {
+                "indicator_count": ioc_count,
+                "max_iocs_per_event": self.settings.max_iocs_per_event,
+                "exported_indicator_count": exported_ioc_count,
+                "iocs_truncated": ioc_count > self.settings.max_iocs_per_event,
+            }
+        )
+        event["narrowcti_controls"] = controls
 
-        if ioc_count > self.settings.max_iocs_per_event:
-            indicators = indicators[: self.settings.max_iocs_per_event]
+        if controls["iocs_truncated"]:
+            self.log(
+                "MISP event exceeds IOC guardrail: "
+                f"event={event.get('id') or event.get('uuid')} "
+                f"iocs={ioc_count} "
+                f"limit={self.settings.max_iocs_per_event} "
+                "action=truncate"
+            )
+            return indicators[: self.settings.max_iocs_per_event], ioc_count
+
+        return indicators, ioc_count
+
+    def prepare_candidate(self, query, event):
+        indicators, ioc_count = self.apply_ioc_guardrail(
+            event,
+            list(event.get("indicators", [])),
+        )
 
         return MISPEventCandidate(
             event=event,

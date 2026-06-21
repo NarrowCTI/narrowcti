@@ -175,12 +175,15 @@ by the runtime validation:
   enrichment, scoring, policy and audit paths.
 - Decision-audit records now include MISP provenance metadata for collector,
   original source, event identifiers, tags and guardrail context.
+- `MISP_MAX_IOCS_PER_EVENT` truncates the export payload when needed and records
+  the original count, export count and truncation flag in guardrail metadata.
 
 Default foundation limits:
 
 ```text
 max_events_per_run=10
 max_attributes_per_event=1000
+max_iocs_per_event=1000
 oversized_event_action=skip
 ```
 

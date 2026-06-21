@@ -98,8 +98,9 @@ per-event safety controls instead of relying on the official connector for
 controlled backfill.
 
 The MISP adapter foundation now includes explicit guardrails for maximum events
-per run and maximum attributes per event. Oversized events are skipped by
-default, with an explicit truncate mode available for controlled experiments.
+per run, maximum attributes per event and maximum exported IoCs per event.
+Oversized events are skipped by default, with an explicit truncate mode available
+for controlled experiments.
 The adapter also supports dry-run validation, one-shot execution and bounded
 historical backfill filters for date ranges, tags and published-only imports.
 The adapter has dedicated settings, MISP event state and a processor foundation
@@ -169,6 +170,7 @@ MISP_DRY_RUN=true
 MISP_RUN_ONCE=true
 MISP_MAX_EVENTS_PER_RUN=1
 MISP_MAX_ATTRIBUTES_PER_EVENT=1000
+MISP_MAX_IOCS_PER_EVENT=1000
 MISP_QUERIES=*
 MISP_FROM_DATE=YYYY-MM-DD
 MISP_TO_DATE=YYYY-MM-DD
