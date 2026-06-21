@@ -50,6 +50,8 @@ Expected outcomes:
 
 ## v0.4.0 - Multi-Feed Expansion
 
+Status: in development.
+
 Purpose:
 
 - Add a second real feed, with MISP as the likely candidate.

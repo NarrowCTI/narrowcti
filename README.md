@@ -10,19 +10,19 @@ deduplicated and evaluated before export to OpenCTI.
 ## Current Version
 
 ```text
-v0.3.0
+v0.4.0-dev
 ```
 
-`v0.3.0` is the current stable product foundation release. `v0.2.0` remains
-the previous stable OTX connector foundation release.
+`v0.4.0-dev` is the current multi-feed expansion track. `v0.3.0` remains
+the latest stable product foundation release.
 
 ## Product Identity
 
 The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
 transition from an OTX-specific connector into NarrowCTI Gateway, an OpenCTI-native
 pre-ingestion intelligence gateway. OTX remains the first source adapter; it is no
-longer the product identity. v0.4 is expected to validate the gateway model with a
-second real feed.
+longer the product identity. The v0.4 track validates the gateway model with a
+second real feed, with MISP as the first strategic candidate.
 
 ## What It Does
 
@@ -68,6 +68,25 @@ by applying source-specific enrichment, scoring, deduplication and policy.
 The long-term product direction is multi-feed support with a shared decision
 engine, so OTX, MISP, commercial feeds and internal sources can be evaluated
 through the same explainable ingestion model.
+
+## v0.4 Development Track
+
+The v0.4 track starts the multi-feed expansion. OTX remains the reference
+adapter, while MISP becomes the likely second adapter because many operations
+use MISP as the central IoC and event hub.
+
+The intended flow for MISP-backed environments is:
+
+```text
+AlienVault OTX and other feeds
+  -> MISP
+  -> NarrowCTI Gateway
+  -> OpenCTI
+```
+
+NarrowCTI should preserve both the collector context, such as MISP, and the
+original intelligence source, such as AlienVault OTX, when that information is
+available.
 
 ## NarrowCTI Gateway Runtime
 
@@ -143,10 +162,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-For this release:
+For this development track:
 
 ```text
-v0.3.0
+v0.4.0-dev
 ```
 
 ## Documentation
@@ -157,10 +176,11 @@ Detailed implementation notes for this release are available in:
 docs/otx-adapter-foundation-v0.2.md
 ```
 
-Product foundation documents:
+Product and expansion documents:
 
 ```text
 docs/product-foundation-v0.3.md
+docs/multi-feed-expansion-v0.4.md
 docs/roadmap.md
 docs/licensing-strategy.md
 ```
