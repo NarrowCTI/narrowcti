@@ -10,11 +10,11 @@ deduplicated and evaluated before export to OpenCTI.
 ## Current Version
 
 ```text
-v0.3.0-dev
+v0.3.0
 ```
 
-`v0.2.0` is the latest stable release. `v0.3.0-dev` is the current product
-foundation track.
+`v0.3.0` is the current stable product foundation release. `v0.2.0` remains
+the previous stable OTX connector foundation release.
 
 ## Product Identity
 
@@ -143,10 +143,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-For this development track:
+For this release:
 
 ```text
-v0.3.0-dev
+v0.3.0
 ```
 
 ## Documentation

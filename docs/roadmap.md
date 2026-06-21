@@ -24,7 +24,7 @@ Purpose:
 
 ## v0.3.0 - Product Foundation
 
-Status: in development.
+Status: released.
 
 Purpose:
 
