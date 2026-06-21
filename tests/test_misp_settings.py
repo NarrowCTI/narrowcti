@@ -42,6 +42,20 @@ class MISPSettingsTests(unittest.TestCase):
         self.assertEqual("/app/state/misp.json", settings.state_file)
         self.assertEqual("/app/state/misp-decisions.jsonl", settings.decision_audit_file)
 
+    def test_load_settings_defaults_to_dry_run(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "MISP_URL": "http://misp.local",
+            "MISP_KEY": "misp-key",
+            "MISP_QUERIES": "tlp:green",
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            settings = load_settings()
+
+        self.assertTrue(settings.dry_run)
+
     def test_load_settings_requires_queries(self):
         env = {
             "OPENCTI_URL": "http://opencti:8080",

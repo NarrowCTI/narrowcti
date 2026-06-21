@@ -64,6 +64,8 @@ Expected outcomes:
 - MISP payload and official connector behavior are validated against real local data.
 - Feed-specific scoring inputs are normalized.
 - MISP runtime foundation uses shared state, policy, audit and export paths.
+- Local MISP dry-run validation proves search, enrichment, policy and audit
+  without OpenCTI export.
 - OpenCTI export remains consistent across sources.
 
 ## v0.5.0 - Intelligence Decision Engine

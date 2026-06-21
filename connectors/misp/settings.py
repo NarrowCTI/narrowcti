@@ -19,6 +19,7 @@ class MISPSettings:
     misp_retry_backoff_seconds: int
     connector_run_interval: int
     ingest_pause_seconds: int
+    dry_run: bool
     max_events_per_run: int
     max_attributes_per_event: int
     max_iocs_per_event: int
@@ -82,6 +83,7 @@ def load_settings():
         misp_retry_backoff_seconds=env_int("MISP_RETRY_BACKOFF_SECONDS", 3),
         connector_run_interval=env_int("CONNECTOR_RUN_INTERVAL", 3600),
         ingest_pause_seconds=env_int("INGEST_PAUSE_SECONDS", 2),
+        dry_run=env_bool("MISP_DRY_RUN", True),
         max_events_per_run=env_int("MISP_MAX_EVENTS_PER_RUN", 10),
         max_attributes_per_event=env_int("MISP_MAX_ATTRIBUTES_PER_EVENT", 1000),
         max_iocs_per_event=env_int("MISP_MAX_IOCS_PER_EVENT", 1000),

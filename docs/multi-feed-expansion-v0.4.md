@@ -66,6 +66,11 @@ Key findings:
 
 Detailed evidence is documented in `docs/misp-validation-v0.4.md`.
 
+The first local MISP dry-run runtime validation succeeded on 2026-06-21 with
+`MISP_MAX_EVENTS_PER_RUN=1`. Default policy quarantined the sampled event,
+and a policy-relaxed validation reached `dry_run=1` without OpenCTI export or
+persistent state marking.
+
 ## MISP Adapter Guardrails
 
 The NarrowCTI MISP adapter must enforce controls before exporting to OpenCTI:
@@ -86,13 +91,15 @@ Implemented foundation controls:
   state while preserving the shared repository pattern.
 - `MISPProcessor` wires MISP search, enrichment, state, policy, decision
   audit and OpenCTI export through a dedicated runtime path.
-- `FeedRunSummary` now tracks skipped and error outcomes for multi-feed
-  operational summaries.
+- `FeedRunSummary` now tracks skipped, error and dry-run outcomes for
+  multi-feed operational summaries.
+- `MISP_DRY_RUN=true` is the default validation mode; it records the
+  would-ingest decision without exporting to OpenCTI or marking state.
 
 Remaining controls before runtime integration:
 
-- Validate the dedicated MISP runtime against the local stack with a conservative
-  query and low event limits.
+- Keep validating the dedicated MISP runtime with additional conservative
+  queries after the first local `MISP_DRY_RUN=true` validation succeeded.
 - Add decision-audit provenance beyond `source_key` when collector and original
   source are both available.
 - Expand attribute-level normalization based on `type`, `category`, `to_ids`,

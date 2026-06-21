@@ -72,6 +72,7 @@ class MISPProcessor:
             "quarantine": 0,
             "skip": 0,
             "error": 0,
+            "dry_run": 0,
         }
         reviewed = 0
 
@@ -94,12 +95,14 @@ class MISPProcessor:
             quarantined=outcomes["quarantine"],
             skipped=outcomes["skip"],
             errors=outcomes["error"],
+            dry_run=outcomes["dry_run"],
         )
         self.log(
             f"MISP query summary: {summary.query} reviewed={summary.reviewed} "
             f"ingested={summary.ingested} dropped={summary.dropped} "
             f"quarantined={summary.quarantined} skipped={summary.skipped} "
-            f"errors={summary.errors} available={summary.available}"
+            f"errors={summary.errors} dry_run={summary.dry_run} "
+            f"available={summary.available}"
         )
         return summary
 
@@ -144,6 +147,20 @@ class MISPProcessor:
         if action != "ingest":
             self.record_decision(query, candidate_ref, action, reason, candidate)
             return action
+
+        if self.settings.dry_run:
+            self.log(
+                f"MISP dry-run: {candidate.name} score={candidate.score} "
+                f"reason={reason}"
+            )
+            self.record_decision(
+                query,
+                candidate_ref,
+                action="dry_run",
+                reason=reason,
+                candidate=candidate,
+            )
+            return "dry_run"
 
         if not self.ingest_candidate(candidate, reason):
             self.record_decision(

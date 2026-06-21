@@ -48,6 +48,7 @@ class MISPProcessorTests(unittest.TestCase):
             decision_audit_file="",
             misp_queries=["tlp:green", "ransomware"],
             adapter_limits=None,
+            dry_run=False,
         )
 
     def adapter(self, search_candidates=None, enriched=None):
@@ -141,7 +142,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(3, summary.handled)
         self.assertIn(
             "MISP query summary: tlp:green reviewed=3 ingested=1 dropped=1 "
-            "quarantined=0 skipped=1 errors=0 available=3",
+            "quarantined=0 skipped=1 errors=0 dry_run=0 available=3",
             logs,
         )
 
@@ -166,6 +167,38 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("skip", records[0].action)
         self.assertEqual("already processed", records[0].reason)
         self.assertEqual("misp:misp", records[0].source_key)
+
+    def test_process_event_dry_run_records_decision_without_export_or_state(self):
+        records = []
+        marked = []
+        logs = []
+        settings = self.settings()
+        settings.dry_run = True
+        state = SimpleNamespace(
+            has_event=lambda event_id: False,
+            mark_event=lambda event_id: marked.append(event_id),
+        )
+
+        def exporter(*args, **kwargs):
+            self.fail("exporter should not be called in dry-run")
+
+        processor = MISPProcessor(
+            settings,
+            misp_client=None,
+            api_client="api",
+            logger=logs.append,
+            exporter=exporter,
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=self.adapter(enriched=candidate(raw=enriched_event())),
+        )
+
+        outcome = processor.process_event_outcome("tlp:green", candidate(), state)
+
+        self.assertEqual("dry_run", outcome)
+        self.assertEqual([], marked)
+        self.assertEqual("dry_run", records[0].action)
+        self.assertEqual("ok", records[0].reason)
+        self.assertIn("MISP dry-run: tlp green event score=100 reason=ok", logs)
 
     def test_process_event_records_successful_ingest_and_marks_state(self):
         records = []

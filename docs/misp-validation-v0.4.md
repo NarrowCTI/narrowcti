@@ -165,6 +165,9 @@ by the runtime validation:
   decision audit and OpenCTI export flow.
 - A dedicated MISP entrypoint exists for explicit validation with
   `python -m connectors.misp.connector`; it is not the Docker default.
+- Dry-run validation is the default through `MISP_DRY_RUN=true`, preventing
+  OpenCTI export and state marking while still exercising MISP search,
+  enrichment, scoring, policy and audit paths.
 
 Default foundation limits:
 
@@ -194,3 +197,56 @@ Initial supported MISP attribute families:
 
 Context fields such as `link` attributes with `to_ids=false` should remain in
 raw event context and not become indicators.
+
+## NarrowCTI Dry-Run Runtime Validation
+
+A dedicated NarrowCTI MISP dry-run validation was performed on 2026-06-21 after
+adding the MISP processor foundation.
+
+Validation controls:
+
+```text
+MISP_QUERIES=tlp:green
+MISP_MAX_EVENTS_PER_RUN=1
+MISP_MAX_ATTRIBUTES_PER_EVENT=1000
+MISP_MAX_IOCS_PER_EVENT=20
+MISP_DRY_RUN=true
+```
+
+Observed result with the default policy:
+
+- MISP `/events/restSearch` returned HTTP 200.
+- MISP `/events/view/56d4b32d-664c-4647-a748-1362950d210f` returned HTTP 200.
+- NarrowCTI normalized `OSINT - New Hacking team samples (OSX)`.
+- The event produced 7 actionable IoCs after normalization.
+- Score was 40 with age around 3765 days.
+- Default policy quarantined the event as `low score`.
+- Summary: `reviewed=1 ingested=0 dropped=0 quarantined=1 skipped=0 errors=0 dry_run=0 available=1`.
+
+A second validation intentionally relaxed policy thresholds only to prove the
+non-exporting dry-run path:
+
+```text
+MIN_SCORE_TO_INGEST=0
+ENABLE_QUARANTINE=false
+QUARANTINE_SCORE_THRESHOLD=0
+MAX_DAYS_OLD=9999
+MISP_DRY_RUN=true
+```
+
+Observed result:
+
+- Same MISP search and enrichment calls returned HTTP 200.
+- NarrowCTI reached the would-ingest path and returned `dry_run=1`.
+- No OpenCTI export was attempted.
+- No MISP event state was marked because the validation used ephemeral `/tmp`
+  state inside a one-shot container.
+- Summary: `reviewed=1 ingested=0 dropped=0 quarantined=0 skipped=0 errors=0 dry_run=1 available=1`.
+
+Post-validation stack signals:
+
+- OpenCTI HTTP on `localhost:8080` returned 200.
+- MISP browser entrypoint on `localhost:8081` returned 302, expected for login
+  redirect.
+- OpenCTI and MISP Compose services remained up; Elasticsearch and MISP DB were
+  healthy.
