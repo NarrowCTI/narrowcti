@@ -105,6 +105,19 @@ historical backfill filters for date ranges, tags and published-only imports.
 The adapter has dedicated settings, MISP event state and a processor foundation
 so it can evolve without sharing OTX pulse processing state.
 
+## v0.5 Design Direction
+
+The v0.5 track should introduce the first unified NarrowCTI Gateway runtime.
+Instead of treating each source container as the product shape, the gateway
+runtime should orchestrate enabled sources such as OTX and MISP through a source
+registry while keeping source-level state, audit evidence, guardrails and failure
+isolation intact.
+
+The source-specific OTX and MISP runtimes should remain available for debugging,
+validation and bounded backfill. MISP should stay opt-in and guarded until local
+OpenCTI, queue and Elasticsearch behavior remains stable across repeated bounded
+runs. The detailed v0.5 design is tracked in `docs/gateway-runtime-v0.5.md`.
+
 ## NarrowCTI Gateway Runtime
 
 The NarrowCTI Gateway runtime is configured through environment variables. The
@@ -260,6 +273,7 @@ Product and expansion documents:
 docs/product-foundation-v0.3.md
 docs/multi-feed-expansion-v0.4.md
 docs/misp-validation-v0.4.md
+docs/gateway-runtime-v0.5.md
 docs/roadmap.md
 docs/licensing-strategy.md
 ```

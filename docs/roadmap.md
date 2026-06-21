@@ -68,21 +68,32 @@ Expected outcomes:
   without OpenCTI export.
 - OpenCTI export remains consistent across sources.
 
-## v0.5.0 - Intelligence Decision Engine
+## v0.5.0 - Gateway Runtime And Decision Engine
+
+Status: planned.
 
 Purpose:
 
+- Add the first unified NarrowCTI Gateway runtime.
+- Orchestrate enabled sources through a source registry.
+- Preserve source-level state, audit evidence, safety limits and failure
+  isolation inside the unified runtime.
 - Improve scoring beyond the current basic model.
-- Add source-specific weighting.
-- Expand policy reasons and evidence.
-- Improve quarantine behavior and reporting.
+- Add source-specific weighting, policy reasons and decision evidence.
+- Improve quarantine behavior, summaries and operator reporting.
 
 Expected outcomes:
 
+- One gateway container can run enabled sources such as OTX and MISP.
+- Source-specific OTX and MISP runtimes remain available for debugging,
+  validation and bounded backfill.
+- MISP remains opt-in and guarded until repeated local validations prove stable
+  queue, Elasticsearch and OpenCTI behavior.
 - Every ingestion decision is explainable.
 - Analysts can understand why intelligence was dropped, quarantined or ingested.
 - The gateway can prioritize intelligence based on source, age, confidence,
   indicator type and operational relevance.
+- Gateway design details are documented in `docs/gateway-runtime-v0.5.md`.
 
 ## v0.6.0 - Operational Layer
 
