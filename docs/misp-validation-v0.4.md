@@ -267,6 +267,16 @@ The oversized validation confirms the metadata-first guardrail prevents full
 event enrichment for high-volume MISP events and records that work as a skipped
 outcome in the query summary.
 
+The same windows can be replayed with the safe helper:
+
+```powershell
+.\scripts\misp-backfill-window.ps1 -FromDate 2016-01-01 -ToDate 2016-12-31 -Tags tlp:green
+.\scripts\misp-backfill-window.ps1 -FromDate 2026-01-02 -ToDate 2026-01-02 -Tags type:OSINT
+```
+
+The helper enforces dry-run, run-once execution, ephemeral `/tmp` state and a
+maximum `MaxEvents` value of 5. The default remains `MaxEvents=1`.
+
 ## Safe Historical Backfill Workflow
 
 Resource-limited labs should backfill MISP through small, observable batches.
@@ -292,6 +302,8 @@ MISP_PUBLISHED_ONLY=true
 Operational guidance:
 
 - Prefer short historical windows first, such as one day or a few days.
+- Prefer `scripts/misp-backfill-window.ps1` for local validation so dry-run,
+  run-once execution and ephemeral state are enforced consistently.
 - Use `MISP_QUERIES=*` when the backfill should be driven by date/tag filters
   instead of a free-text `searchall` term.
 - Keep `MISP_MAX_EVENTS_PER_RUN` between 1 and 5 until local Elasticsearch and

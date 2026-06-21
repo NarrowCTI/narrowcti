@@ -202,6 +202,19 @@ docker compose --profile narrowcti-misp up --force-recreate connector-narrowcti-
 docker compose --profile narrowcti-misp logs --tail 120 connector-narrowcti-misp
 ```
 
+Safe MISP backfill helper:
+
+```powershell
+$LAB_ROOT = "<path-to-lab-root>"
+cd "$LAB_ROOT\NarrowCTI"
+.\scripts\misp-backfill-window.ps1 -FromDate 2016-01-01 -ToDate 2016-12-31 -Tags tlp:green
+.\scripts\misp-backfill-window.ps1 -FromDate 2026-01-02 -ToDate 2026-01-02 -Tags type:OSINT
+```
+
+The helper always runs `MISP_DRY_RUN=true`, `MISP_RUN_ONCE=true` and
+ephemeral `/tmp` state. It also caps `MaxEvents` at 5 and defaults to
+`MaxEvents=1`.
+
 When the MISP runtime runs inside the shared Docker network, use
 `MISP_URL=http://misp-core` in `connectors/misp/.env`. Use `misp.local` only
 for host-side browser or API access through Caddy.
