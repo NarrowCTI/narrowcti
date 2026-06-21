@@ -327,6 +327,8 @@ class MISPFeedAdapter:
         self.limits = limits or MISPAdapterLimits()
         self.log = logger or (lambda msg: None)
         self.search_filters = dict(search_filters or {})
+        self.last_search_available = 0
+        self.last_search_skipped = 0
 
     def search(self, query):
         events = self.misp_client.search_events(
@@ -335,11 +337,16 @@ class MISPFeedAdapter:
             metadata=True,
             filters=self.search_filters,
         )
+        limited_events = events[: self.limits.max_events_per_run]
+        self.last_search_available = len(limited_events)
+        self.last_search_skipped = 0
         candidates = []
-        for event in events[: self.limits.max_events_per_run]:
+        for event in limited_events:
             candidate = self.normalize_event(event)
             if candidate:
                 candidates.append(candidate)
+            else:
+                self.last_search_skipped += 1
         return candidates
 
     def enrich(self, candidate):

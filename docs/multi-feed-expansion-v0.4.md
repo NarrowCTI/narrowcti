@@ -104,11 +104,13 @@ Implemented foundation controls:
   dry-run mode, date filters, tag filters and published-only filtering.
 - An opt-in `connector-narrowcti-misp` Docker Compose service/profile validates
   the MISP runtime separately from the OTX reference runtime.
+- MISP operational summaries count adapter-level guardrail skips before event
+  enrichment, making oversized backfill attempts visible as skipped work.
 
 Remaining controls before broader runtime use:
 
-- Keep the MISP runtime opt-in and dry-run by default while additional
-  conservative backfill windows are validated on resource-limited labs.
+- Keep the MISP runtime opt-in and dry-run by default while progressively
+  widening backfill windows on resource-limited labs.
 - Promote scheduled MISP execution only after queue, Elasticsearch and OpenCTI
   worker behavior remain stable across multiple bounded runs.
 

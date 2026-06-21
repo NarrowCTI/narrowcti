@@ -229,6 +229,44 @@ Observed result:
 - Summary: `reviewed=1 ingested=0 dropped=0 quarantined=1 skipped=0 errors=0 dry_run=0 available=1`.
 - The container exited with code 0 after one run.
 
+
+## Conservative Backfill Window Validation
+
+Additional dry-run/run-once windows were validated locally on 2026-06-21 with
+ephemeral `/tmp` state files so the same windows can be replayed without
+touching persistent MISP event state.
+
+Baseline resource snapshot before the runs:
+
+```text
+opencti-elasticsearch-1  CPU 1.62%  memory 922.7MiB
+opencti-opencti-1        CPU 6.48%  memory 268.5MiB
+opencti-worker-1         CPU 0.32%  memory 74MiB
+misp-misp-core-1         CPU 0.04%  memory 138.5MiB
+misp-db-1                CPU 0.01%  memory 174.1MiB
+```
+
+Validated windows:
+
+| Window | Filters | Result |
+| --- | --- | --- |
+| Small OSINT sample | `from=2016-01-01`, `to=2016-12-31`, `tags=tlp:green`, `max_events=1` | Event `OSINT - New Hacking team samples (OSX)` was enriched, scored 30 and quarantined as `low score`; summary `reviewed=1 ingested=0 dropped=0 quarantined=1 skipped=0 errors=0 dry_run=0 available=1`. |
+| Oversized MalwareBazaar sample | `from=2026-01-02`, `to=2026-01-02`, `tags=type:OSINT`, `max_events=1`, `max_attributes=1000` | Event `59ae1aef-33f8-4e20-bfcc-98fea6f32c21` had 7652 attributes and was skipped by metadata guardrail before enrichment; summary `reviewed=0 ingested=0 dropped=0 quarantined=0 skipped=1 errors=0 dry_run=0 available=1`. |
+
+Post-run resource snapshot remained stable:
+
+```text
+opencti-elasticsearch-1  CPU 3.43%  memory 920.8MiB
+opencti-opencti-1        CPU 2.36%  memory 266.4MiB
+opencti-worker-1         CPU 0.26%  memory 73.95MiB
+misp-misp-core-1         CPU 0.04%  memory 137MiB
+misp-db-1                CPU 0.02%  memory 173.7MiB
+```
+
+The oversized validation confirms the metadata-first guardrail prevents full
+event enrichment for high-volume MISP events and records that work as a skipped
+outcome in the query summary.
+
 ## Safe Historical Backfill Workflow
 
 Resource-limited labs should backfill MISP through small, observable batches.

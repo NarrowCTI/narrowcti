@@ -158,6 +158,34 @@ class MISPProcessorTests(unittest.TestCase):
             logs,
         )
 
+    def test_process_query_counts_adapter_guardrail_skips(self):
+        logs = []
+        adapter = self.adapter(search_candidates=[candidate("small-event")])
+        adapter.last_search_available = 2
+        adapter.last_search_skipped = 1
+        processor = MISPProcessor(
+            self.settings(),
+            misp_client=None,
+            api_client=None,
+            logger=logs.append,
+            feed_adapter=adapter,
+        )
+        processor.process_event_outcome = lambda query, event, state: "drop"
+
+        summary = processor.process_query("type:OSINT", state="state")
+
+        self.assertEqual(2, summary.available)
+        self.assertEqual(1, summary.reviewed)
+        self.assertEqual(1, summary.dropped)
+        self.assertEqual(1, summary.skipped)
+        self.assertEqual(2, summary.handled)
+        self.assertIn(
+            "MISP query summary: type:OSINT reviewed=1 ingested=0 dropped=1 "
+            "quarantined=0 skipped=1 errors=0 dry_run=0 available=2",
+            logs,
+        )
+
+
     def test_process_event_skips_existing_state(self):
         records = []
         state = SimpleNamespace(

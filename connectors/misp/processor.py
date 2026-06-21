@@ -91,6 +91,8 @@ class MISPProcessor:
     def process_query(self, query, state):
         self.log(f"MISP query: {query}")
         candidates = self.feed_adapter.search(query)
+        adapter_available = getattr(self.feed_adapter, "last_search_available", len(candidates))
+        adapter_skipped = getattr(self.feed_adapter, "last_search_skipped", 0)
         outcomes = {
             "ingest": 0,
             "drop": 0,
@@ -115,10 +117,10 @@ class MISPProcessor:
             query=query,
             reviewed=reviewed,
             ingested=outcomes["ingest"],
-            available=len(candidates),
+            available=adapter_available,
             dropped=outcomes["drop"],
             quarantined=outcomes["quarantine"],
-            skipped=outcomes["skip"],
+            skipped=outcomes["skip"] + adapter_skipped,
             errors=outcomes["error"],
             dry_run=outcomes["dry_run"],
         )

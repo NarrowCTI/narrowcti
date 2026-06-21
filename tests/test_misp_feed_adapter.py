@@ -171,6 +171,8 @@ class MISPFeedAdapterTests(unittest.TestCase):
         candidates = adapter.search("tlp:green")
 
         self.assertEqual(["small-event"], [c.external_id for c in candidates])
+        self.assertEqual(2, adapter.last_search_available)
+        self.assertEqual(1, adapter.last_search_skipped)
         self.assertIn("big-event", logs[0])
 
     def test_enrich_returns_normalized_candidate(self):
