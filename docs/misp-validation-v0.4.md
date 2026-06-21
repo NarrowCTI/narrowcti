@@ -184,10 +184,50 @@ max_attributes_per_event=1000
 oversized_event_action=skip
 ```
 
-These controls do not yet make MISP a production-ready runtime path. They
-establish the controlled runtime foundation needed before local stack
-validation and an opt-in Compose service are added.
+These controls do not yet make MISP a production-ready scheduled runtime path.
+They establish the controlled runtime foundation needed for opt-in local
+validation and bounded backfill.
 
+
+
+## Opt-In Compose Runtime Validation
+
+A dedicated Compose service/profile was validated locally on 2026-06-21:
+
+```text
+service: connector-narrowcti-misp
+profile: narrowcti-misp
+command: python -m connectors.misp.connector
+env_file: ../NarrowCTI/connectors/misp/.env
+network: threat-net
+restart: "no"
+```
+
+The local `connectors/misp/.env` file is ignored by Git and should keep
+`MISP_DRY_RUN=true`, `MISP_RUN_ONCE=true` and `MISP_MAX_EVENTS_PER_RUN=1`
+for first-pass validation. Inside the Docker network, `MISP_URL` must use the
+MISP service alias:
+
+```text
+MISP_URL=http://misp-core
+```
+
+Validation command:
+
+```powershell
+docker compose --profile narrowcti-misp up --force-recreate connector-narrowcti-misp
+```
+
+Observed result:
+
+- OpenCTI API client health check completed.
+- MISP `/events/restSearch` returned HTTP 200.
+- MISP `/events/view/56d4b32d-664c-4647-a748-1362950d210f` returned HTTP 200.
+- The sampled event was `OSINT - New Hacking team samples (OSX)`.
+- The event produced 7 actionable IoCs and score 30.
+- Default policy quarantined the event as `low score`.
+- Summary: `reviewed=1 ingested=0 dropped=0 quarantined=1 skipped=0 errors=0 dry_run=0 available=1`.
+- The container exited with code 0 after one run.
 
 ## Safe Historical Backfill Workflow
 

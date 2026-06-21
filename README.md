@@ -174,14 +174,15 @@ This repository is expected to sit next to the OpenCTI Compose workspace:
   opencti/
 ```
 
-The OpenCTI Compose file owns the connector service definition. The connector
-service name is:
+The OpenCTI Compose file owns the connector service definitions. Runtime
+services are intentionally split by source:
 
 ```text
-connector-narrowcti
+connector-narrowcti       OTX reference runtime
+connector-narrowcti-misp  MISP dry-run/backfill runtime
 ```
 
-Common commands:
+Common OTX commands:
 
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
@@ -190,6 +191,20 @@ docker compose --profile narrowcti build connector-narrowcti
 docker compose --profile narrowcti up -d --force-recreate connector-narrowcti
 docker compose --profile narrowcti logs --tail 120 connector-narrowcti
 ```
+
+Safe MISP runtime validation commands:
+
+```powershell
+$LAB_ROOT = "<path-to-lab-root>"
+cd "$LAB_ROOT\opencti"
+docker compose --profile narrowcti-misp build connector-narrowcti-misp
+docker compose --profile narrowcti-misp up --force-recreate connector-narrowcti-misp
+docker compose --profile narrowcti-misp logs --tail 120 connector-narrowcti-misp
+```
+
+When the MISP runtime runs inside the shared Docker network, use
+`MISP_URL=http://misp-core` in `connectors/misp/.env`. Use `misp.local` only
+for host-side browser or API access through Caddy.
 
 ## Validation
 
