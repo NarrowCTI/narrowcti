@@ -70,6 +70,19 @@ Detailed evidence is documented in `docs/misp-validation-v0.4.md`.
 
 The NarrowCTI MISP adapter must enforce controls before exporting to OpenCTI:
 
+Implemented foundation controls:
+
+- `MISPAdapterLimits.max_events_per_run` limits search normalization scope.
+- `MISPAdapterLimits.max_attributes_per_event` blocks oversized events before
+  IoC normalization.
+- `oversized_event_action="skip"` is the default safety behavior.
+- `oversized_event_action="truncate"` keeps a bounded sample and records
+  `narrowcti_controls` in raw candidate context.
+- MISP search uses metadata mode first so attribute counts can be checked before
+  full enrichment.
+
+Remaining controls before runtime integration:
+
 - Maximum events per run.
 - Maximum attributes per event.
 - Oversized event skip or quarantine behavior.

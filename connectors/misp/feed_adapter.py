@@ -1,4 +1,5 @@
 import ipaddress
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from core.feed_contract import FeedCandidate, FeedSource
@@ -37,6 +38,23 @@ IP_PORT_TYPES = {
     "ip-dst|port",
     "ip|port",
 }
+
+OVERSIZED_EVENT_ACTIONS = {"skip", "truncate"}
+
+
+@dataclass(frozen=True)
+class MISPAdapterLimits:
+    max_events_per_run: int = 10
+    max_attributes_per_event: int = 1000
+    oversized_event_action: str = "skip"
+
+    def __post_init__(self):
+        if self.max_events_per_run < 1:
+            raise ValueError("max_events_per_run must be greater than zero")
+        if self.max_attributes_per_event < 1:
+            raise ValueError("max_attributes_per_event must be greater than zero")
+        if self.oversized_event_action not in OVERSIZED_EVENT_ACTIONS:
+            raise ValueError("oversized_event_action must be skip or truncate")
 
 
 def unwrap_event(record):
@@ -95,13 +113,22 @@ def original_source(event):
     )
 
 
-def event_attributes(event):
+def event_attributes(event, max_attributes=None):
     attributes = list(event.get("Attribute") or [])
 
     for misp_object in event.get("Object") or []:
         attributes.extend(misp_object.get("Attribute") or [])
 
+    if max_attributes is not None:
+        return attributes[:max_attributes]
     return attributes
+
+
+def event_attribute_count(event):
+    try:
+        return int(event.get("attribute_count"))
+    except (TypeError, ValueError):
+        return len(event_attributes(event))
 
 
 def split_attribute_values(value):
@@ -188,20 +215,26 @@ def attribute_to_indicators(attribute):
     return indicators
 
 
-def event_indicators(event):
+def event_indicators(event, max_attributes=None):
     indicators = []
-    for attribute in event_attributes(event):
+    for attribute in event_attributes(event, max_attributes=max_attributes):
         indicators.extend(attribute_to_indicators(attribute))
     return indicators
 
 
-def event_to_feed_candidate(event, source=MISP_SOURCE, external_id=None):
+def event_to_feed_candidate(
+    event,
+    source=MISP_SOURCE,
+    external_id=None,
+    max_attributes=None,
+    guardrail=None,
+):
     event = unwrap_event(event)
     event_id = external_id or event.get("uuid") or event.get("id") or ""
     title = event.get("info") or event_id or "Untitled MISP event"
     created = event_created(event)
     tags = event_tags(event)
-    indicators = event_indicators(event)
+    indicators = event_indicators(event, max_attributes=max_attributes)
     provenance = {
         "collector": "misp",
         "original_source": original_source(event),
@@ -221,6 +254,8 @@ def event_to_feed_candidate(event, source=MISP_SOURCE, external_id=None):
             "provenance": provenance,
         }
     )
+    if guardrail:
+        raw["narrowcti_controls"] = guardrail
 
     return FeedCandidate(
         source=source,
@@ -237,15 +272,24 @@ def event_to_feed_candidate(event, source=MISP_SOURCE, external_id=None):
 class MISPFeedAdapter:
     source = MISP_SOURCE
 
-    def __init__(self, misp_client, source=MISP_SOURCE):
+    def __init__(self, misp_client, source=MISP_SOURCE, limits=None, logger=None):
         self.misp_client = misp_client
         self.source = source
+        self.limits = limits or MISPAdapterLimits()
+        self.log = logger or (lambda msg: None)
 
     def search(self, query):
-        return [
-            event_to_feed_candidate(event, self.source)
-            for event in self.misp_client.search_events(query)
-        ]
+        events = self.misp_client.search_events(
+            query,
+            limit=self.limits.max_events_per_run,
+            metadata=True,
+        )
+        candidates = []
+        for event in events[: self.limits.max_events_per_run]:
+            candidate = self.normalize_event(event)
+            if candidate:
+                candidates.append(candidate)
+        return candidates
 
     def enrich(self, candidate):
         if not candidate.external_id:
@@ -255,4 +299,39 @@ class MISPFeedAdapter:
         if not event:
             return None
 
-        return event_to_feed_candidate(event, self.source, candidate.external_id)
+        return self.normalize_event(event, external_id=candidate.external_id)
+
+    def normalize_event(self, event, external_id=None):
+        event = unwrap_event(event)
+        attribute_count = event_attribute_count(event)
+        guardrail = {
+            "attribute_count": attribute_count,
+            "max_attributes_per_event": self.limits.max_attributes_per_event,
+            "oversized": attribute_count > self.limits.max_attributes_per_event,
+            "oversized_event_action": self.limits.oversized_event_action,
+        }
+
+        if guardrail["oversized"]:
+            self.log(
+                "MISP event exceeds attribute guardrail: "
+                f"event={event.get('uuid') or event.get('id')} "
+                f"attributes={attribute_count} "
+                f"limit={self.limits.max_attributes_per_event} "
+                f"action={self.limits.oversized_event_action}"
+            )
+            if self.limits.oversized_event_action == "skip":
+                return None
+            return event_to_feed_candidate(
+                event,
+                self.source,
+                external_id,
+                max_attributes=self.limits.max_attributes_per_event,
+                guardrail=guardrail,
+            )
+
+        return event_to_feed_candidate(
+            event,
+            self.source,
+            external_id,
+            guardrail=guardrail,
+        )

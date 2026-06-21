@@ -143,6 +143,33 @@ Required NarrowCTI controls for the MISP adapter:
 - Clear provenance fields for collector (`MISP`) and original source (`Orgc`,
   `Org`, `source` or event tags when available).
 
+
+## Implemented Adapter Safeguards
+
+The v0.4 adapter foundation now implements the first direct safeguards required
+by the runtime validation:
+
+- `MISPClient.search_events()` supports metadata searches and an explicit API
+  limit payload.
+- `MISPFeedAdapter.search()` requests metadata first and caps normalized search
+  candidates with `max_events_per_run`.
+- `MISPFeedAdapter` checks MISP `attribute_count` before normalizing attributes.
+- Oversized events are skipped by default.
+- A bounded `truncate` mode exists for controlled experiments and records the
+  guardrail decision in `raw["narrowcti_controls"]`.
+
+Default foundation limits:
+
+```text
+max_events_per_run=10
+max_attributes_per_event=1000
+oversized_event_action=skip
+```
+
+These controls do not yet make MISP a production runtime path. They establish
+the safe adapter behavior needed before state handling and OpenCTI export are
+wired into a dedicated MISP run loop.
+
 ## Mapping Decision
 
 The v0.4 MISP adapter should normalize `Event` records into `FeedCandidate`

@@ -98,14 +98,15 @@ class MISPClient:
 
         return []
 
-    def search_events(self, query, limit=None):
+    def search_events(self, query=None, limit=None, metadata=False):
         payload = {
             "returnFormat": "json",
-            "searchall": query,
-            "metadata": False,
+            "metadata": metadata,
             "includeEventTags": True,
             "includeAttributeTags": True,
         }
+        if query:
+            payload["searchall"] = query
         if limit:
             payload["limit"] = limit
 

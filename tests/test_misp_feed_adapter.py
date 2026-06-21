@@ -3,9 +3,11 @@ from types import SimpleNamespace
 
 from connectors.misp.client import MISPClient
 from connectors.misp.feed_adapter import (
+    MISPAdapterLimits,
     MISPFeedAdapter,
     MISP_SOURCE,
     attribute_to_indicators,
+    event_attribute_count,
     event_to_feed_candidate,
 )
 from core.feed_contract import FeedAdapter, FeedSource
@@ -63,6 +65,11 @@ class MISPFeedAdapterTests(unittest.TestCase):
         self.assertEqual("2026-06-20T10:00:00Z", candidate.indicators[1]["first_seen"])
         self.assertEqual(["confidence:high"], candidate.indicators[1]["tags"])
 
+    def test_event_attribute_count_prefers_misp_metadata(self):
+        event = {"attribute_count": "16922", "Attribute": [{"type": "domain"}]}
+
+        self.assertEqual(16922, event_attribute_count(event))
+
     def test_attribute_to_indicators_maps_composite_values(self):
         domain_ip = attribute_to_indicators(
             {"type": "domain|ip", "value": "example.org|2001:4860:4860::8888", "to_ids": True}
@@ -85,19 +92,46 @@ class MISPFeedAdapterTests(unittest.TestCase):
 
         self.assertIsInstance(adapter, FeedAdapter)
 
-    def test_search_returns_feed_candidates(self):
-        misp_client = SimpleNamespace(
-            search_events=lambda query: [
-                {"uuid": "event-1", "info": "One"},
-                {"uuid": "event-2", "info": "Two"},
+    def test_search_uses_metadata_and_guardrail_limits(self):
+        calls = []
+
+        def search_events(query, limit=None, metadata=False):
+            calls.append({"query": query, "limit": limit, "metadata": metadata})
+            return [
+                {"uuid": "event-1", "info": "One", "attribute_count": 1},
+                {"uuid": "event-2", "info": "Two", "attribute_count": 1},
+                {"uuid": "event-3", "info": "Three", "attribute_count": 1},
             ]
+
+        misp_client = SimpleNamespace(search_events=search_events)
+        adapter = MISPFeedAdapter(
+            misp_client,
+            limits=MISPAdapterLimits(max_events_per_run=2, max_attributes_per_event=10),
         )
-        adapter = MISPFeedAdapter(misp_client)
 
         candidates = adapter.search("stealc")
 
+        self.assertEqual([{"query": "stealc", "limit": 2, "metadata": True}], calls)
         self.assertEqual(["event-1", "event-2"], [c.external_id for c in candidates])
-        self.assertEqual(["One", "Two"], [c.title for c in candidates])
+
+    def test_search_skips_oversized_metadata_event_by_default(self):
+        logs = []
+        misp_client = SimpleNamespace(
+            search_events=lambda query, limit=None, metadata=False: [
+                {"uuid": "big-event", "info": "Big", "attribute_count": 16922},
+                {"uuid": "small-event", "info": "Small", "attribute_count": 10},
+            ]
+        )
+        adapter = MISPFeedAdapter(
+            misp_client,
+            limits=MISPAdapterLimits(max_events_per_run=10, max_attributes_per_event=1000),
+            logger=logs.append,
+        )
+
+        candidates = adapter.search("tlp:green")
+
+        self.assertEqual(["small-event"], [c.external_id for c in candidates])
+        self.assertIn("big-event", logs[0])
 
     def test_enrich_returns_normalized_candidate(self):
         misp_client = SimpleNamespace(
@@ -115,6 +149,59 @@ class MISPFeedAdapterTests(unittest.TestCase):
         self.assertEqual("event-1", enriched.external_id)
         self.assertEqual("Enriched event", enriched.title)
         self.assertEqual("url", enriched.indicators[0]["type"])
+
+    def test_enrich_skips_oversized_event_by_default(self):
+        misp_client = SimpleNamespace(
+            get_event=lambda event_id: {
+                "uuid": event_id,
+                "info": "Oversized event",
+                "attribute_count": 3,
+                "Attribute": [
+                    {"type": "domain", "value": "one.example", "to_ids": True},
+                    {"type": "domain", "value": "two.example", "to_ids": True},
+                    {"type": "domain", "value": "three.example", "to_ids": True},
+                ],
+            }
+        )
+        adapter = MISPFeedAdapter(
+            misp_client,
+            limits=MISPAdapterLimits(max_events_per_run=10, max_attributes_per_event=2),
+        )
+        candidate = event_to_feed_candidate({"uuid": "event-1", "info": "Search event"})
+
+        self.assertIsNone(adapter.enrich(candidate))
+
+    def test_enrich_can_truncate_oversized_event_when_configured(self):
+        misp_client = SimpleNamespace(
+            get_event=lambda event_id: {
+                "uuid": event_id,
+                "info": "Truncated event",
+                "attribute_count": 3,
+                "Attribute": [
+                    {"type": "domain", "value": "one.example", "to_ids": True},
+                    {"type": "domain", "value": "two.example", "to_ids": True},
+                    {"type": "domain", "value": "three.example", "to_ids": True},
+                ],
+            }
+        )
+        adapter = MISPFeedAdapter(
+            misp_client,
+            limits=MISPAdapterLimits(
+                max_events_per_run=10,
+                max_attributes_per_event=2,
+                oversized_event_action="truncate",
+            ),
+        )
+        candidate = event_to_feed_candidate({"uuid": "event-1", "info": "Search event"})
+
+        enriched = adapter.enrich(candidate)
+
+        self.assertEqual(
+            ["one.example", "two.example"],
+            [ioc["indicator"] for ioc in enriched.indicators],
+        )
+        self.assertTrue(enriched.raw["narrowcti_controls"]["oversized"])
+        self.assertEqual("truncate", enriched.raw["narrowcti_controls"]["oversized_event_action"])
 
     def test_enrich_skips_missing_or_failed_event(self):
         calls = []
@@ -136,13 +223,23 @@ class MISPFeedAdapterTests(unittest.TestCase):
             provider="MISP",
             default_confidence=75,
         )
-        misp_client = SimpleNamespace(search_events=lambda query: [{"uuid": "event-1"}])
+        misp_client = SimpleNamespace(
+            search_events=lambda query, limit=None, metadata=False: [{"uuid": "event-1"}]
+        )
         adapter = MISPFeedAdapter(misp_client, source=source)
 
         candidate = adapter.search("ransomware")[0]
 
         self.assertEqual("misp:misp-customer-a", candidate.source.key)
         self.assertEqual("customer_import", candidate.source.source_type)
+
+    def test_limits_validate_guardrail_values(self):
+        with self.assertRaises(ValueError):
+            MISPAdapterLimits(max_events_per_run=0)
+        with self.assertRaises(ValueError):
+            MISPAdapterLimits(max_attributes_per_event=0)
+        with self.assertRaises(ValueError):
+            MISPAdapterLimits(oversized_event_action="import")
 
 
 class MISPClientTests(unittest.TestCase):
@@ -157,6 +254,32 @@ class MISPClientTests(unittest.TestCase):
         events = MISPClient.event_records(data)
 
         self.assertEqual(["event-1", "event-2"], [event["uuid"] for event in events])
+
+    def test_search_events_sends_metadata_and_limit_payload(self):
+        calls = []
+        client = MISPClient("http://misp.local", "key")
+
+        def request_json(method, path, payload=None, timeout_seconds=30):
+            calls.append(
+                {
+                    "method": method,
+                    "path": path,
+                    "payload": payload,
+                    "timeout_seconds": timeout_seconds,
+                }
+            )
+            return {"response": [{"Event": {"uuid": "event-1"}}]}
+
+        client.request_json = request_json
+
+        events = client.search_events("stealc", limit=5, metadata=True)
+
+        self.assertEqual([{"uuid": "event-1"}], events)
+        self.assertEqual("POST", calls[0]["method"])
+        self.assertEqual("/events/restSearch", calls[0]["path"])
+        self.assertEqual("stealc", calls[0]["payload"]["searchall"])
+        self.assertEqual(5, calls[0]["payload"]["limit"])
+        self.assertTrue(calls[0]["payload"]["metadata"])
 
 
 if __name__ == "__main__":

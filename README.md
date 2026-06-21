@@ -95,6 +95,10 @@ support `MISP_IMPORT_LIMIT`. NarrowCTI therefore needs first-class per-run and
 per-event safety controls instead of relying on the official connector for
 controlled backfill.
 
+The MISP adapter foundation now includes explicit guardrails for maximum events
+per run and maximum attributes per event. Oversized events are skipped by
+default, with an explicit truncate mode available for controlled experiments.
+
 ## NarrowCTI Gateway Runtime
 
 The NarrowCTI Gateway runtime is configured through environment variables. The
