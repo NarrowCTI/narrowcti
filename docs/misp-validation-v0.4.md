@@ -157,6 +157,10 @@ by the runtime validation:
 - Oversized events are skipped by default.
 - A bounded `truncate` mode exists for controlled experiments and records the
   guardrail decision in `raw["narrowcti_controls"]`.
+- `MISPSettings` centralizes required runtime configuration, timeouts and
+  safety limits from environment variables.
+- `MISPEventStateRepository` provides persistent MISP event state independent
+  from OTX pulse state.
 
 Default foundation limits:
 
@@ -167,7 +171,7 @@ oversized_event_action=skip
 ```
 
 These controls do not yet make MISP a production runtime path. They establish
-the safe adapter behavior needed before state handling and OpenCTI export are
+the safe adapter behavior and state foundation needed before OpenCTI export is
 wired into a dedicated MISP run loop.
 
 ## Mapping Decision

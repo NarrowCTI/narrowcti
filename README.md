@@ -34,6 +34,7 @@ second real feed, with MISP as the first strategic candidate.
 - Logs per-query operational summaries for reviewed, ingested, dropped,
   quarantined, skipped and failed candidates.
 - Deduplicates processed pulses with persistent local state.
+- Provides a MISP adapter foundation with independent state and safety limits.
 - Builds STIX bundles for OpenCTI ingestion.
 - Runs as a Dockerized connector inside an OpenCTI lab environment.
 
@@ -98,32 +99,51 @@ controlled backfill.
 The MISP adapter foundation now includes explicit guardrails for maximum events
 per run and maximum attributes per event. Oversized events are skipped by
 default, with an explicit truncate mode available for controlled experiments.
+The adapter also has dedicated settings and MISP event state so it can evolve
+without sharing OTX pulse processing state.
 
 ## NarrowCTI Gateway Runtime
 
 The NarrowCTI Gateway runtime is configured through environment variables. The
-current runtime uses the OTX adapter, and a safe template is
-provided at:
+current stable runtime uses the OTX adapter, and a safe template is provided at:
 
 ```text
 connectors/otx/.env.example
 ```
 
-The real runtime file must be created locally as:
+The MISP adapter foundation has its own configuration template for controlled
+local validation:
+
+```text
+connectors/misp/.env.example
+```
+
+Real runtime files must be created locally as needed:
 
 ```text
 connectors/otx/.env
+connectors/misp/.env
 ```
 
-Do not commit the real `.env` file. It contains OpenCTI and OTX credentials.
+Do not commit real `.env` files. They contain OpenCTI, OTX or MISP credentials.
 
-Required variables:
+Required OTX variables:
 
 ```text
 OPENCTI_URL
 OPENCTI_TOKEN
 OTX_API_KEY
 OTX_QUERIES
+```
+
+Required MISP foundation variables:
+
+```text
+OPENCTI_URL
+OPENCTI_TOKEN
+MISP_URL
+MISP_KEY
+MISP_QUERIES
 ```
 
 ## Docker Runtime
@@ -160,7 +180,7 @@ Run validation from the repository root after building the Docker image:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\NarrowCTI"
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/feed_adapter.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/feed_adapter.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
 

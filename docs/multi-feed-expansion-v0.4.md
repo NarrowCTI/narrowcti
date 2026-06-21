@@ -80,15 +80,19 @@ Implemented foundation controls:
   `narrowcti_controls` in raw candidate context.
 - MISP search uses metadata mode first so attribute counts can be checked before
   full enrichment.
+- `MISPSettings` externalizes required MISP connection, query, timeout and
+  safety-limit configuration.
+- `MISPEventStateRepository` keeps MISP event state separate from OTX pulse
+  state while preserving the shared repository pattern.
 
 Remaining controls before runtime integration:
 
-- Maximum events per run.
-- Maximum attributes per event.
-- Oversized event skip or quarantine behavior.
-- Explicit source provenance for collector and original source.
-- Attribute-level normalization based on `type`, `category`, `to_ids`, tags and
-  first/last seen fields.
+- Wire the dedicated MISP run loop to state, policy, audit and OpenCTI export.
+- Persist one decision record per MISP event evaluation.
+- Add explicit source provenance for collector and original source.
+- Expand attribute-level normalization based on `type`, `category`, `to_ids`,
+  tags and first/last seen fields.
+- Define a safe historical backfill workflow for resource-limited labs.
 
 ## Success Criteria
 

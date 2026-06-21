@@ -15,7 +15,11 @@ from core.feed_contract import (
     FeedSource,
 )
 from core.policy import PolicyConfig, should_ingest
-from core.state_repository import PulseStateRepository
+from core.state_repository import (
+    MISPEventStateRepository,
+    ProcessedItemStateRepository,
+    PulseStateRepository,
+)
 from exporters.stix_builder import build_report_bundle, indicator_pattern
 
 
@@ -125,6 +129,39 @@ class StateRepositoryTests(unittest.TestCase):
 
             self.assertEqual(["pulse-1"], data["pulses"])
             self.assertTrue(PulseStateRepository(state_file).has_pulse("pulse-1"))
+
+    def test_generic_state_repository_uses_independent_keys(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_file = os.path.join(tmpdir, "state.json")
+            pulse_repository = PulseStateRepository(state_file)
+            misp_repository = MISPEventStateRepository(state_file)
+
+            pulse_repository.mark_pulse("pulse-1")
+            misp_repository.mark_event("event-1")
+            misp_repository.mark_event("event-1")
+
+            with open(state_file, "r") as f:
+                data = json.load(f)
+
+            self.assertEqual(["pulse-1"], data["pulses"])
+            self.assertEqual(["event-1"], data["misp_events"])
+            self.assertTrue(MISPEventStateRepository(state_file).has_event("event-1"))
+            self.assertFalse(MISPEventStateRepository(state_file).has_event("pulse-1"))
+
+    def test_processed_item_repository_preserves_existing_state(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_file = os.path.join(tmpdir, "state.json")
+            with open(state_file, "w") as f:
+                json.dump({"pulses": ["pulse-1"]}, f)
+
+            repository = ProcessedItemStateRepository(state_file, "misp_events")
+            repository.mark_item("event-1")
+
+            with open(state_file, "r") as f:
+                data = json.load(f)
+
+            self.assertEqual(["pulse-1"], data["pulses"])
+            self.assertEqual(["event-1"], data["misp_events"])
 
 
 class DecisionAuditTests(unittest.TestCase):
