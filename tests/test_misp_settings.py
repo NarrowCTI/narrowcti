@@ -16,7 +16,12 @@ class MISPSettingsTests(unittest.TestCase):
             "MISP_VERIFY_TLS": "true",
             "MISP_MAX_EVENTS_PER_RUN": "2",
             "MISP_MAX_ATTRIBUTES_PER_EVENT": "500",
+            "MISP_MAX_IOCS_PER_EVENT": "250",
             "MISP_OVERSIZED_EVENT_ACTION": "truncate",
+            "INGEST_PAUSE_SECONDS": "5",
+            "MIN_SCORE_TO_INGEST": "70",
+            "MIN_SCORE_FOR_OLD_EVENT": "85",
+            "ENABLE_QUARANTINE": "false",
             "MISP_STATE_FILE": "/app/state/misp.json",
             "MISP_DECISION_AUDIT_FILE": "/app/state/misp-decisions.jsonl",
         }
@@ -29,6 +34,11 @@ class MISPSettingsTests(unittest.TestCase):
         self.assertEqual(2, settings.adapter_limits.max_events_per_run)
         self.assertEqual(500, settings.adapter_limits.max_attributes_per_event)
         self.assertEqual("truncate", settings.adapter_limits.oversized_event_action)
+        self.assertEqual(250, settings.max_iocs_per_event)
+        self.assertEqual(5, settings.ingest_pause_seconds)
+        self.assertEqual(70, settings.min_score_to_ingest)
+        self.assertEqual(85, settings.min_score_for_old_event)
+        self.assertFalse(settings.enable_quarantine)
         self.assertEqual("/app/state/misp.json", settings.state_file)
         self.assertEqual("/app/state/misp-decisions.jsonl", settings.decision_audit_file)
 

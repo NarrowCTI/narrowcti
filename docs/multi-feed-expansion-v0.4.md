@@ -84,15 +84,22 @@ Implemented foundation controls:
   safety-limit configuration.
 - `MISPEventStateRepository` keeps MISP event state separate from OTX pulse
   state while preserving the shared repository pattern.
+- `MISPProcessor` wires MISP search, enrichment, state, policy, decision
+  audit and OpenCTI export through a dedicated runtime path.
+- `FeedRunSummary` now tracks skipped and error outcomes for multi-feed
+  operational summaries.
 
 Remaining controls before runtime integration:
 
-- Wire the dedicated MISP run loop to state, policy, audit and OpenCTI export.
-- Persist one decision record per MISP event evaluation.
-- Add explicit source provenance for collector and original source.
+- Validate the dedicated MISP runtime against the local stack with a conservative
+  query and low event limits.
+- Add decision-audit provenance beyond `source_key` when collector and original
+  source are both available.
 - Expand attribute-level normalization based on `type`, `category`, `to_ids`,
   tags and first/last seen fields.
 - Define a safe historical backfill workflow for resource-limited labs.
+- Add an opt-in Docker Compose service/profile for the MISP runtime when the
+  local validation is complete.
 
 ## Success Criteria
 

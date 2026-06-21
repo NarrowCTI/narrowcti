@@ -46,10 +46,18 @@ class FeedRunSummary:
     ingested: int = 0
     dropped: int = 0
     quarantined: int = 0
+    skipped: int = 0
+    errors: int = 0
 
     @property
     def handled(self):
-        return self.ingested + self.dropped + self.quarantined
+        return (
+            self.ingested
+            + self.dropped
+            + self.quarantined
+            + self.skipped
+            + self.errors
+        )
 
 
 @runtime_checkable

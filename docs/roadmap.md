@@ -63,6 +63,7 @@ Expected outcomes:
 - At least two feeds use the same decision foundation.
 - MISP payload and official connector behavior are validated against real local data.
 - Feed-specific scoring inputs are normalized.
+- MISP runtime foundation uses shared state, policy, audit and export paths.
 - OpenCTI export remains consistent across sources.
 
 ## v0.5.0 - Intelligence Decision Engine

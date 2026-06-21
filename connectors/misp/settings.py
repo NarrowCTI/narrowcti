@@ -18,9 +18,17 @@ class MISPSettings:
     misp_retries: int
     misp_retry_backoff_seconds: int
     connector_run_interval: int
+    ingest_pause_seconds: int
     max_events_per_run: int
     max_attributes_per_event: int
+    max_iocs_per_event: int
     oversized_event_action: str
+    min_score_to_ingest: int
+    max_days_old: int
+    min_score_for_old_event: int
+    max_days_hard_filter: int
+    enable_quarantine: bool
+    quarantine_score_threshold: int
     state_file: str
     decision_audit_file: str
 
@@ -73,9 +81,17 @@ def load_settings():
         misp_retries=env_int("MISP_RETRIES", 3),
         misp_retry_backoff_seconds=env_int("MISP_RETRY_BACKOFF_SECONDS", 3),
         connector_run_interval=env_int("CONNECTOR_RUN_INTERVAL", 3600),
+        ingest_pause_seconds=env_int("INGEST_PAUSE_SECONDS", 2),
         max_events_per_run=env_int("MISP_MAX_EVENTS_PER_RUN", 10),
         max_attributes_per_event=env_int("MISP_MAX_ATTRIBUTES_PER_EVENT", 1000),
+        max_iocs_per_event=env_int("MISP_MAX_IOCS_PER_EVENT", 1000),
         oversized_event_action=os.getenv("MISP_OVERSIZED_EVENT_ACTION", "skip"),
+        min_score_to_ingest=env_int("MIN_SCORE_TO_INGEST", 60),
+        max_days_old=env_int("MAX_DAYS_OLD", 1095),
+        min_score_for_old_event=env_int("MIN_SCORE_FOR_OLD_EVENT", 80),
+        max_days_hard_filter=env_int("MAX_DAYS_HARD_FILTER", 0),
+        enable_quarantine=env_bool("ENABLE_QUARANTINE", True),
+        quarantine_score_threshold=env_int("QUARANTINE_SCORE_THRESHOLD", 50),
         state_file=os.getenv("MISP_STATE_FILE", "/app/state/misp_state.json"),
         decision_audit_file=os.getenv("MISP_DECISION_AUDIT_FILE", ""),
     )

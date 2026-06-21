@@ -161,6 +161,10 @@ by the runtime validation:
   safety limits from environment variables.
 - `MISPEventStateRepository` provides persistent MISP event state independent
   from OTX pulse state.
+- `MISPProcessor` connects MISP candidates to the shared policy, scoring,
+  decision audit and OpenCTI export flow.
+- A dedicated MISP entrypoint exists for explicit validation with
+  `python -m connectors.misp.connector`; it is not the Docker default.
 
 Default foundation limits:
 
@@ -170,9 +174,9 @@ max_attributes_per_event=1000
 oversized_event_action=skip
 ```
 
-These controls do not yet make MISP a production runtime path. They establish
-the safe adapter behavior and state foundation needed before OpenCTI export is
-wired into a dedicated MISP run loop.
+These controls do not yet make MISP a production-ready runtime path. They
+establish the controlled runtime foundation needed before local stack
+validation and an opt-in Compose service are added.
 
 ## Mapping Decision
 

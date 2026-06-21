@@ -54,7 +54,7 @@ Main modules:
 
 ```text
 connectors/otx/      OTX connector runtime, feed adapter, settings and processor
-connectors/misp/     MISP client and feed adapter foundation
+connectors/misp/     MISP client, feed adapter, settings and processor foundation
 core/                Feed contracts, scoring, policy and persistent state handling
 exporters/           OpenCTI export and STIX bundle construction
 tests/               Unit coverage for the processor and shared pipeline logic
@@ -99,8 +99,8 @@ controlled backfill.
 The MISP adapter foundation now includes explicit guardrails for maximum events
 per run and maximum attributes per event. Oversized events are skipped by
 default, with an explicit truncate mode available for controlled experiments.
-The adapter also has dedicated settings and MISP event state so it can evolve
-without sharing OTX pulse processing state.
+The adapter also has dedicated settings, MISP event state and a processor
+foundation so it can evolve without sharing OTX pulse processing state.
 
 ## NarrowCTI Gateway Runtime
 
@@ -180,7 +180,7 @@ Run validation from the repository root after building the Docker image:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\NarrowCTI"
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/feed_adapter.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/connector.py connectors/misp/feed_adapter.py connectors/misp/models.py connectors/misp/processor.py connectors/misp/runtime.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
 
