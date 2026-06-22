@@ -81,7 +81,8 @@ auditable feed governance instead of raw IoC forwarding. OTX, MISP, commercial
 feeds and internal sources should be evaluated through the same explainable
 ingestion model. The enterprise target is to enrich OpenCTI with actors,
 arsenal, MITRE tactics and techniques, victimology, infrastructure, campaigns,
-vulnerabilities and detection context when source evidence supports it.
+vulnerabilities and detection context when source evidence supports it. The v1.0
+market position is tracked in `docs/market-positioning-v1.0.md`.
 
 ## Deduplication Posture
 
@@ -343,6 +344,7 @@ docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.5.md
 docs/enterprise-intelligence-gateway-v0.5.md
 docs/product-architecture-validation-v0.5.md
+docs/market-positioning-v1.0.md
 docs/roadmap.md
 docs/licensing-strategy.md
 ```

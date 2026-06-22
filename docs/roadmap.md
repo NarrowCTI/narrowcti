@@ -185,8 +185,11 @@ Purpose:
   explainable policy and measurable graph-quality outcomes.
 - Provide validated deployment guidance.
 - Maintain a clear changelog and upgrade path.
+- Carry the v1.0 market position: NarrowCTI as an OpenCTI-native CTI
+  curation gateway.
 
 Expected outcomes:
 
 - NarrowCTI is ready for controlled commercial delivery.
 - Product, engineering, licensing and operations are aligned.
+- Release messaging is aligned with `docs/market-positioning-v1.0.md`.
