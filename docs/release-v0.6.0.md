@@ -141,6 +141,20 @@ dedup_mode=hybrid
 enable_mitre_attack_resolution=true
 mitre_cache_file=/repo/state/mitre_attack_cache.json
 issues=none
+
+controlled OTX dry-run
+query=lummac2 reviewed=1 ingested=0 dropped=1 quarantined=0 skipped=0 errors=0
+
+controlled MISP dry-run
+query=* reviewed=1 ingested=0 dropped=0 quarantined=1 skipped=0 errors=0
+
+quarantine workflow validation
+list_pending=1
+release_audit=ok
+reject_audit=ok
+export_dry_run=ok
+export_execute_dedup_skip=ok
+audit_action_export=ok
 ```
 
 Final release validation should also run:
@@ -171,20 +185,24 @@ docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narr
 - Broad MISP historical backfill remains out of scope by default.
 - License enforcement remains out of scope for this release.
 
-## Final Release Checklist
+## Final Release Checklist Status
 
-- Run full test validation.
-- Run preflight with the intended lab `.env`.
-- Build or refresh the MITRE cache when ATT&CK enrichment is expected.
-- Run one controlled OTX dry-run that produces decision audit evidence.
-- Run one controlled MISP dry-run when MISP is enabled.
-- Confirm at least one quarantine record can be listed and inspected.
-- Confirm release and reject write release audit evidence.
-- Confirm release, reject and export audit events can be inspected with
+- [x] Run full test validation.
+- [x] Run preflight with the intended lab `.env`.
+- [x] Build or refresh the MITRE cache when ATT&CK enrichment is expected.
+- [x] Run one controlled OTX dry-run that produces decision audit evidence.
+- [x] Run one controlled MISP dry-run when MISP is enabled.
+- [x] Confirm at least one quarantine record can be listed and inspected.
+- [x] Confirm release and reject write release audit evidence.
+- [x] Confirm release, reject and export audit events can be inspected with
   `gateway.quarantine audit`.
-- Confirm `export-released` dry-run reports export intent without importing.
-- Confirm one controlled `export-released --execute` only after OpenCTI capacity
-  and deduplication posture are acceptable.
+- [x] Confirm `export-released` dry-run reports export intent without importing.
+- [x] Confirm controlled `export-released --execute` behavior after validating
+  OpenCTI capacity and deduplication posture.
+
+The `export-released --execute` validation used a dedup-skip record so the
+export execution path, exported-state marking and `action=export` audit evidence
+were validated without importing synthetic validation data into OpenCTI.
 
 ## Next Release Direction
 
