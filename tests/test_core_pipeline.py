@@ -328,6 +328,7 @@ class SettingsTests(unittest.TestCase):
             "OTX_SOURCE_CONFIDENCE": "70",
             "NARROWCTI_ALLOWED_TLP": "white, green",
             "NARROWCTI_ALLOWED_INDICATOR_TYPES": "domain, ipv4",
+            "NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION": "false",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -344,6 +345,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(70, settings.source_confidence)
         self.assertEqual(["white", "green"], settings.allowed_tlp)
         self.assertEqual(["domain", "ipv4"], settings.allowed_indicator_types)
+        self.assertFalse(settings.enable_otx_entity_extraction)
 
     def test_load_settings_accepts_gateway_policy_fallbacks(self):
         env = {

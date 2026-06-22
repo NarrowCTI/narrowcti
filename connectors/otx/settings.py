@@ -32,6 +32,7 @@ class Settings:
     decision_audit_file: str
     quarantine_repository_file: str = ""
     quarantine_raw_snapshot_max_bytes: int = 65536
+    enable_otx_entity_extraction: bool = True
 
 
 def env_required(name):
@@ -135,5 +136,9 @@ def load_settings():
         quarantine_raw_snapshot_max_bytes=env_int(
             "NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES",
             65536,
+        ),
+        enable_otx_entity_extraction=env_bool(
+            "NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION",
+            True,
         ),
     )

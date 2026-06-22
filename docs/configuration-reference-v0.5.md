@@ -65,6 +65,7 @@ deployments:
 | `NARROWCTI_MAX_DAYS_OLD` | `MAX_DAYS_OLD` |
 | `NARROWCTI_ALLOWED_TLP` | No legacy equivalent. |
 | `NARROWCTI_ALLOWED_INDICATOR_TYPES` | No legacy equivalent. |
+| `NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION` | No legacy equivalent. |
 
 `NARROWCTI_ALLOWED_TLP` accepts comma-separated values such as
 `white,green`. OTX and MISP candidates with a TLP tag outside the allowed list
@@ -87,6 +88,7 @@ is removed, the candidate is skipped with an auditable reason.
 | `OTX_SOURCE_CONFIDENCE` | Source confidence weight used by scoring; `50` is neutral. |
 | `OTX_DRY_RUN` | Exercises OTX search, enrichment, scoring, policy and audit without OpenCTI export. |
 | `STATE_FILE` | Local OTX processed-pulse state file. |
+| `NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION` | Enables metadata-only extraction of OTX adversary, malware family, ATT&CK ids, industries, targeted countries, TLP, references and tags into decision/quarantine evidence. |
 
 ### MISP Controls
 

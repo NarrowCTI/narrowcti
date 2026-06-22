@@ -14,9 +14,11 @@ from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
 
 try:
+    from .entity_extraction import extract_otx_entities
     from .feed_adapter import OTXFeedAdapter, pulse_to_feed_candidate
     from .models import PulseCandidate, QuerySummary
 except ImportError:
+    from entity_extraction import extract_otx_entities
     from feed_adapter import OTXFeedAdapter, pulse_to_feed_candidate
     from models import PulseCandidate, QuerySummary
 
@@ -27,11 +29,16 @@ def age_label(age):
     return f"{age}d"
 
 
-def decision_metadata(candidate=None):
+def decision_metadata(candidate=None, enable_entity_extraction=True):
     score_details = getattr(candidate, "score_details", None)
-    if not candidate or not score_details:
+    if not candidate:
         return {}
-    return {"scoring": dict(score_details)}
+    metadata = {}
+    if score_details:
+        metadata["scoring"] = dict(score_details)
+    if enable_entity_extraction:
+        metadata["otx_entities"] = extract_otx_entities(candidate.pulse)
+    return metadata
 
 
 class OTXProcessor:
@@ -287,7 +294,10 @@ class OTXProcessor:
             score=score,
             age_days=candidate_age,
             indicator_count=indicator_count,
-            metadata=decision_metadata(candidate),
+            metadata=decision_metadata(
+                candidate,
+                getattr(self.settings, "enable_otx_entity_extraction", True),
+            ),
         )
 
         try:
@@ -309,7 +319,10 @@ class OTXProcessor:
             raw_source,
             getattr(self.settings, "quarantine_raw_snapshot_max_bytes", 65536),
         )
-        metadata = decision_metadata(candidate)
+        metadata = decision_metadata(
+            candidate,
+            getattr(self.settings, "enable_otx_entity_extraction", True),
+        )
         if truncated:
             metadata["raw_snapshot_truncated"] = True
 

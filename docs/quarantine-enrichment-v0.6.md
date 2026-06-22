@@ -145,10 +145,13 @@ Target OTX fields:
 | `references` | External references for report context. |
 | `tags` | Weak labels and extraction candidates. |
 
-The output should be metadata and normalized extraction records first. STIX
-object expansion for actors, malware, attack patterns, sectors and locations is
-a v0.7 responsibility unless a narrow helper is required to validate the v0.6
-cache.
+The current v0.6 implementation writes this output as `otx_entities` metadata
+inside decision audit and quarantine records when
+`NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION=true`. It normalizes source fields into
+structured lists and extraction records with source field and confidence
+evidence. STIX object expansion for actors, malware, attack patterns, sectors
+and locations is a v0.7 responsibility unless a narrow helper is required to
+validate the v0.6 cache.
 
 ## MITRE ATT&CK Cache
 

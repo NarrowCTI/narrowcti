@@ -291,6 +291,54 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("Low score pulse", records[0].title)
         self.assertEqual(50, records[0].metadata["scoring"]["source_confidence"])
 
+    def test_process_pulse_records_otx_entity_metadata(self):
+        records = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "id": pulse_id,
+                "name": "LummaC2 actor pulse",
+                "description": "description",
+                "created": "2026-04-01T00:00:00Z",
+                "adversary": "APT Example",
+                "malware_families": ["LummaC2"],
+                "attack_ids": ["T1059"],
+                "industries": ["Finance"],
+                "targeted_countries": ["BR"],
+                "TLP": "tlp:green",
+                "references": ["https://example.com/report"],
+                "indicators": [],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: self.fail("state should not be marked"),
+        )
+        settings = self.settings()
+        settings.min_score_to_ingest = 60
+
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client=None,
+            logger=lambda message: None,
+            decision_audit=SimpleNamespace(record=records.append),
+        )
+
+        processed = processor.process_pulse(
+            "unrelated query",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertFalse(processed)
+        entities = records[0].metadata["otx_entities"]
+        self.assertEqual(["APT Example"], entities["adversaries"])
+        self.assertEqual(["LummaC2"], entities["malware_families"])
+        self.assertEqual(["T1059"], entities["attack_ids"])
+        self.assertEqual(["Finance"], entities["industries"])
+        self.assertEqual(["BR"], entities["targeted_countries"])
+        self.assertEqual(["green"], entities["tlp"])
+
     def test_process_pulse_writes_quarantine_record(self):
         records = []
         queued = []
@@ -340,6 +388,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("low score", queued[0]["reason"])
         self.assertEqual(1, queued[0]["indicator_count"])
         self.assertEqual("domain", queued[0]["indicators"][0]["type"])
+        self.assertEqual([], queued[0]["metadata"]["otx_entities"]["attack_ids"])
         self.assertTrue(any("Quarantine queued: Old weak pulse" in log for log in logs))
 
     def test_process_pulse_drops_disallowed_tlp(self):
