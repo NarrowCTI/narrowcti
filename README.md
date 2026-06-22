@@ -80,13 +80,16 @@ ingestion model.
 
 NarrowCTI should protect OpenCTI graph hygiene instead of forwarding the same
 artifact repeatedly. The current implementation deduplicates processed source
-items with local state and deduplicates repeated STIX patterns inside each
-bundle. The v0.5 gateway design extends this into layered pre-export
+items with local state, deduplicates repeated STIX patterns inside each bundle
+and can keep a local artifact index with provenance sightings for cross-source
+correlation. The v0.5 gateway design extends this into layered pre-export
 deduplication:
 
 - Source-item deduplication prevents the same OTX pulse or MISP event from being
   processed repeatedly.
 - Artifact deduplication normalizes indicator type and value before export.
+- The local artifact index records source sightings so repeated OTX/MISP
+  evidence can become correlation context instead of duplicate imports.
 - Optional OpenCTI lookup can check existing STIX Indicator patterns before
   import when enabled.
 - Cross-source matches should become provenance and confidence evidence, not
@@ -336,7 +339,7 @@ docs/licensing-strategy.md
 
 - Product foundation and commercial licensing structure.
 - Multi-feed support beyond the reference OTX adapter.
-- Advanced correlation across sources.
+- Advanced correlation scoring and analyst-facing source evidence.
 - Richer scoring model with source-specific weighting.
 - Sigma or detection-rule generation.
 - Administrative controls for policy tuning.

@@ -42,9 +42,15 @@ class OpenCTIArtifactLookupTests(unittest.TestCase):
 
 class CompositeArtifactDeduplicationTests(unittest.TestCase):
     def test_filter_new_indicators_combines_local_and_opencti_duplicates(self):
+        mark_calls = []
+
+        def mark_indicators(indicators, **kwargs):
+            mark_calls.append((indicators, kwargs))
+            return len(indicators)
+
         local = SimpleNamespace(
             filter_new_indicators=lambda indicators: (indicators[1:], 1),
-            mark_indicators=lambda indicators: len(indicators),
+            mark_indicators=mark_indicators,
         )
         lookup = SimpleNamespace(
             has_indicator=lambda indicator: indicator["indicator"] == "opencti.example"
@@ -66,7 +72,18 @@ class CompositeArtifactDeduplicationTests(unittest.TestCase):
 
         self.assertEqual(2, duplicate_count)
         self.assertEqual([{"type": "domain", "indicator": "new.example"}], filtered)
-        self.assertEqual(1, dedup.mark_indicators(filtered))
+        self.assertEqual(
+            1,
+            dedup.mark_indicators(
+                filtered,
+                source_key="misp:misp",
+                external_id="event-1",
+                title="MISP event",
+            ),
+        )
+        self.assertEqual("misp:misp", mark_calls[0][1]["source_key"])
+        self.assertEqual("event-1", mark_calls[0][1]["external_id"])
+        self.assertEqual("MISP event", mark_calls[0][1]["title"])
         self.assertIn("OpenCTI artifact dedup: duplicates=1", logs)
 
     def test_filter_new_indicators_can_run_with_opencti_only(self):

@@ -205,7 +205,7 @@ class MISPProcessor:
             )
             return "error"
 
-        self.mark_artifacts(candidate)
+        self.mark_artifacts(candidate_ref, candidate)
         state.mark_event(event_id)
         self.record_decision(query, candidate_ref, "ingest", reason, candidate)
         return "ingest"
@@ -310,16 +310,22 @@ class MISPProcessor:
             score=candidate.score,
         )
 
-    def mark_artifacts(self, candidate):
+    def mark_artifacts(self, candidate_ref, candidate):
         if not self.artifact_dedup:
             return
         try:
-            added = self.artifact_dedup.mark_indicators(candidate.indicators)
+            added = self.artifact_dedup.mark_indicators(
+                candidate.indicators,
+                source_key=candidate_ref.source.key,
+                external_id=candidate_ref.external_id,
+                title=candidate.name or candidate_ref.title,
+            )
         except Exception as exc:
             self.log(f"MISP artifact dedup mark failed: {candidate.name} error={exc}")
             return
         if added:
             self.log(f"MISP artifact dedup mark: {candidate.name} added={added}")
+
     def ingest_candidate(self, candidate, reason):
         self.log(f"MISP ingest: {candidate.name} score={candidate.score} reason={reason}")
         try:

@@ -56,7 +56,7 @@ The strongest value signals already present are:
 
 - Explainable ingest, drop, quarantine, skip, error and dry-run outcomes.
 - Source-specific normalization with shared policy behavior.
-- Persistent deduplication and source-scoped state.
+- Persistent deduplication, source-scoped state and local artifact sighting records.
 - Graph hygiene through layered deduplication before OpenCTI export.
 - Decision audit evidence for analyst and operator review.
 - Safe handling of high-volume MISP events through metadata-first guardrails.
@@ -98,14 +98,13 @@ a gateway:
 ## Known Gaps To Preserve As Roadmap Items
 
 - Scoring is still basic and must mature into source-specific weighting.
-- There is not yet a unified gateway entrypoint or source registry.
-- OpenCTI-side deduplication lookup and cross-source artifact correlation are
-  not yet implemented.
+- The unified gateway entrypoint and source registry exist; they still need
+  broader operational validation and richer aggregate reporting.
+- OpenCTI-side deduplication lookup and initial local cross-source artifact
+  correlation records are implemented. Analyst-facing enrichment, confidence
+  uplift and reporting from those records remain roadmap items.
 - There is no administrative UI for policy tuning.
 - Metrics are still operational summaries, not full customer-facing value
   reporting.
 - MITRE mapping, Sigma generation and threat-to-detection workflows remain later
   product layers.
-
-These gaps do not break the product direction. They define the next professional
-increments that should make NarrowCTI stronger and more differentiated.

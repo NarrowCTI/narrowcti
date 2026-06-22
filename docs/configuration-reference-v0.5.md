@@ -103,7 +103,7 @@ supported by code.
 | `NARROWCTI_ALLOWED_TLP` | Allowed TLP values before source-specific mapping. |
 | `NARROWCTI_DEDUP_MODE` | Deduplication mode. `source` keeps source-item state only; `artifact` or `hybrid` enables the local artifact fingerprint index. |
 | `NARROWCTI_OPENCTI_DEDUP_LOOKUP` | Enables optional OpenCTI STIX Indicator pattern lookup before export. Lookup errors are logged and fail open. |
-| `NARROWCTI_DEDUP_STATE_FILE` | Local artifact fingerprint index used by `artifact` and `hybrid` modes. |
+| `NARROWCTI_DEDUP_STATE_FILE` | Local artifact index used by `artifact` and `hybrid` modes. It stores `artifact_fingerprints` for skip decisions and `artifact_records` for source sightings/correlation metadata. |
 
 ## Example Safe Local MISP Backfill
 
@@ -148,7 +148,7 @@ The following behavior is intentionally automatic and should remain auditable:
 - Calculate contextual score.
 - Apply policy and produce ingest, drop, quarantine, skip, dry-run or error
   decisions.
-- Deduplicate source items and artifact fingerprints.
+- Deduplicate source items and artifact fingerprints, then record source sightings for exported artifacts when artifact or hybrid deduplication is enabled.
 - Build STIX bundles after curation.
 - Export to OpenCTI only after policy and deduplication pass.
 - Write decision evidence and runtime summaries.

@@ -1,8 +1,10 @@
 import json
 import os
+from datetime import datetime, timezone
 
 
 ARTIFACTS_KEY = "artifact_fingerprints"
+ARTIFACT_RECORDS_KEY = "artifact_records"
 
 TYPE_ALIASES = {
     "domain-name": "domain",
@@ -35,6 +37,10 @@ LOWERCASE_VALUE_TYPES = {
 }
 
 
+def utc_now():
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 def normalize_indicator_type(value):
     indicator_type = str(value or "").strip().lower()
     return TYPE_ALIASES.get(indicator_type, indicator_type)
@@ -60,21 +66,34 @@ def indicator_fingerprint(indicator):
     return f"{indicator_type}:{indicator_value}"
 
 
+def default_artifact_state():
+    return {ARTIFACTS_KEY: [], ARTIFACT_RECORDS_KEY: {}}
+
+
+def normalize_artifact_state(data):
+    if not isinstance(data, dict):
+        return default_artifact_state()
+    if ARTIFACTS_KEY not in data or not isinstance(data[ARTIFACTS_KEY], list):
+        data[ARTIFACTS_KEY] = []
+    if ARTIFACT_RECORDS_KEY not in data or not isinstance(
+        data[ARTIFACT_RECORDS_KEY],
+        dict,
+    ):
+        data[ARTIFACT_RECORDS_KEY] = {}
+    return data
+
+
 def load_artifact_state(state_file):
     if not os.path.exists(state_file):
-        return {ARTIFACTS_KEY: []}
+        return default_artifact_state()
 
     with open(state_file, "r") as f:
         try:
             data = json.load(f)
         except Exception:
-            return {ARTIFACTS_KEY: []}
+            return default_artifact_state()
 
-    if not isinstance(data, dict):
-        return {ARTIFACTS_KEY: []}
-    if ARTIFACTS_KEY not in data or not isinstance(data[ARTIFACTS_KEY], list):
-        data[ARTIFACTS_KEY] = []
-    return data
+    return normalize_artifact_state(data)
 
 
 def save_artifact_state(state_file, state):
@@ -82,7 +101,14 @@ def save_artifact_state(state_file, state):
     if directory:
         os.makedirs(directory, exist_ok=True)
     with open(state_file, "w") as f:
-        json.dump(state, f)
+        json.dump(normalize_artifact_state(state), f)
+
+
+def source_sighting_key(sighting):
+    return (
+        str(sighting.get("source_key") or ""),
+        str(sighting.get("external_id") or ""),
+    )
 
 
 class ArtifactDeduplicationIndex:
@@ -96,6 +122,37 @@ class ArtifactDeduplicationIndex:
     def has_fingerprint(self, fingerprint):
         self.refresh()
         return fingerprint in self.state[ARTIFACTS_KEY]
+
+    def artifact_record(self, fingerprint):
+        self.refresh()
+        record = self.state[ARTIFACT_RECORDS_KEY].get(fingerprint)
+        return dict(record) if isinstance(record, dict) else None
+
+    def correlation_summary(self, indicators):
+        self.refresh()
+        records = self.state[ARTIFACT_RECORDS_KEY]
+        fingerprints = []
+        sources = set()
+
+        for indicator in indicators or []:
+            fingerprint = indicator_fingerprint(indicator)
+            if not fingerprint:
+                continue
+            fingerprints.append(fingerprint)
+            record = records.get(fingerprint) or {}
+            sources.update(record.get("sources") or [])
+
+        known = [
+            fingerprint
+            for fingerprint in fingerprints
+            if fingerprint in self.state[ARTIFACTS_KEY]
+        ]
+        return {
+            "fingerprints": fingerprints,
+            "known_count": len(known),
+            "known_fingerprints": known,
+            "sources": sorted(sources),
+        }
 
     def filter_new_indicators(self, indicators):
         self.refresh()
@@ -112,19 +169,77 @@ class ArtifactDeduplicationIndex:
 
         return filtered, duplicate_count
 
-    def mark_indicators(self, indicators):
+    def mark_indicators(
+        self,
+        indicators,
+        source_key="",
+        external_id="",
+        title="",
+    ):
         self.refresh()
         known = set(self.state[ARTIFACTS_KEY])
+        records = self.state[ARTIFACT_RECORDS_KEY]
         added = 0
+        changed = False
+        now = utc_now()
+        source_key = str(source_key or "").strip()
+        external_id = str(external_id or "").strip()
+        title = str(title or "").strip()
 
         for indicator in indicators:
             fingerprint = indicator_fingerprint(indicator)
-            if not fingerprint or fingerprint in known:
+            if not fingerprint:
                 continue
-            self.state[ARTIFACTS_KEY].append(fingerprint)
-            known.add(fingerprint)
-            added += 1
 
-        if added:
+            if fingerprint not in known:
+                self.state[ARTIFACTS_KEY].append(fingerprint)
+                known.add(fingerprint)
+                added += 1
+                changed = True
+
+            record = records.get(fingerprint)
+            if not isinstance(record, dict):
+                record = {
+                    "fingerprint": fingerprint,
+                    "first_seen": now,
+                    "last_seen": now,
+                    "sources": [],
+                    "sightings": [],
+                }
+                records[fingerprint] = record
+                changed = True
+
+            if not record.get("first_seen"):
+                record["first_seen"] = now
+                changed = True
+            if record.get("last_seen") != now:
+                record["last_seen"] = now
+                changed = True
+
+            sources = record.setdefault("sources", [])
+            if source_key and source_key not in sources:
+                sources.append(source_key)
+                sources.sort()
+                changed = True
+
+            sightings = record.setdefault("sightings", [])
+            if source_key or external_id or title:
+                sighting = {
+                    "source_key": source_key,
+                    "external_id": external_id,
+                    "title": title,
+                    "recorded_at": now,
+                }
+                sighting_key = source_sighting_key(sighting)
+                exists = any(
+                    source_sighting_key(existing) == sighting_key
+                    for existing in sightings
+                    if isinstance(existing, dict)
+                )
+                if not exists:
+                    sightings.append(sighting)
+                    changed = True
+
+        if changed:
             save_artifact_state(self.state_file, self.state)
         return added

@@ -82,7 +82,18 @@ class CompositeArtifactDeduplication:
             )
         return filtered, duplicate_count + opencti_duplicates
 
-    def mark_indicators(self, indicators):
+    def mark_indicators(
+        self,
+        indicators,
+        source_key="",
+        external_id="",
+        title="",
+    ):
         if not self.local_index:
             return 0
-        return self.local_index.mark_indicators(indicators)
+        return self.local_index.mark_indicators(
+            indicators,
+            source_key=source_key,
+            external_id=external_id,
+            title=title,
+        )

@@ -181,7 +181,7 @@ class OTXProcessor:
             )
             return "error"
 
-        self.mark_artifacts(candidate)
+        self.mark_artifacts(candidate_ref, candidate)
         state.mark_pulse(pulse_id)
         self.record_decision(query, candidate_ref, "ingest", reason, candidate)
         return "ingest"
@@ -283,16 +283,22 @@ class OTXProcessor:
             score=candidate.score,
         )
 
-    def mark_artifacts(self, candidate):
+    def mark_artifacts(self, candidate_ref, candidate):
         if not self.artifact_dedup:
             return
         try:
-            added = self.artifact_dedup.mark_indicators(candidate.indicators)
+            added = self.artifact_dedup.mark_indicators(
+                candidate.indicators,
+                source_key=candidate_ref.source.key,
+                external_id=candidate_ref.external_id,
+                title=candidate.name or candidate_ref.title,
+            )
         except Exception as exc:
             self.log(f"Artifact dedup mark failed: {candidate.name} error={exc}")
             return
         if added:
             self.log(f"Artifact dedup mark: {candidate.name} added={added}")
+
     def ingest_candidate(self, candidate, reason):
         self.log(f"Ingest: {candidate.name} score={candidate.score} reason={reason}")
         try:
