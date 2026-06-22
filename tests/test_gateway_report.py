@@ -46,6 +46,10 @@ class GatewayReportTests(unittest.TestCase):
         self.assertEqual(2, report.sources["otx"]["metrics"]["accepted"])
         self.assertEqual(3, report.sources["otx"]["metrics"]["filtered"])
         self.assertEqual(1, report.sources["misp"]["failed"])
+        self.assertEqual(1, len(report.failures))
+        self.assertEqual("misp", report.failures[0]["source_key"])
+        self.assertEqual("source offline", report.failures[0]["error"])
+        self.assertEqual(1, len(report.sources["misp"]["failures"]))
 
     def test_empty_report_is_serializable(self):
         report = build_operational_report([])
@@ -53,8 +57,24 @@ class GatewayReportTests(unittest.TestCase):
         self.assertEqual(0, report.run_count)
         self.assertEqual(0, report.metrics["accepted"])
         self.assertEqual(0.0, report.metrics["acceptance_rate_pct"])
+        self.assertEqual([], report.failures)
         self.assertEqual({}, report.sources)
         json.dumps(report.to_dict())
+
+    def test_report_records_missing_failure_detail(self):
+        records = [
+            gateway_record(
+                "2026-06-22T10:00:00Z",
+                [source_result("misp", False, errors=1, error="")],
+            )
+        ]
+
+        report = build_operational_report(records)
+
+        self.assertEqual(
+            "source failed without error detail",
+            report.failures[0]["error"],
+        )
 
     def test_value_metrics_handle_zero_and_error_rates(self):
         metrics = build_value_metrics(
@@ -104,6 +124,21 @@ class GatewayReportTests(unittest.TestCase):
         self.assertIn("metrics=handled=0 accepted=0 filtered=0", text)
         self.assertIn("- otx runs=1 succeeded=1 failed=0", text)
 
+    def test_text_report_includes_failures(self):
+        report = build_operational_report(
+            [
+                gateway_record(
+                    "2026-06-22T10:00:00Z",
+                    [source_result("misp", False, errors=1)],
+                )
+            ]
+        )
+
+        text = format_text_report(report)
+
+        self.assertIn("failures:", text)
+        self.assertIn("- 2026-06-22T10:00:00Z misp error=source offline", text)
+
 
 def gateway_record(recorded_at, results):
     return {
@@ -126,12 +161,13 @@ def source_result(
     skipped=0,
     errors=0,
     dry_run=0,
+    error=None,
 ):
     return {
         "source_key": source_key,
         "source_name": source_key.upper(),
         "success": success,
-        "error": "" if success else "source offline",
+        "error": "" if success else error if error is not None else "source offline",
         "summary_count": 1 if success else 0,
         "totals": {
             "reviewed": reviewed,

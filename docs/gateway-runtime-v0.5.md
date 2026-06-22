@@ -241,6 +241,7 @@ The report is local and read-only. It aggregates:
   outcomes.
 - Directional value metrics derived from those totals: handled, accepted,
   filtered, errors, acceptance rate, filter rate and error rate.
+- Source failure records with timestamp, source key and error message.
 - Per-source runs, success/failure counts and outcome totals.
 
 For v0.5, `accepted` means `ingested + dry_run` and `filtered` means

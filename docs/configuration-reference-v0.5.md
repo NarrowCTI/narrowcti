@@ -238,6 +238,9 @@ The operational report also includes derived value metrics. In v0.5,
 `dropped + quarantined + skipped`, and rates are calculated against reviewed
 candidates. These metrics are useful for local validation and operator
 readiness, while richer customer-facing value reporting remains roadmap work.
+Failed source executions are also listed with timestamp, source key and error
+message so operators can identify runtime breakage without reading raw JSONL
+first.
 
 The decision audit report reads source decision audit JSONL files, including
 files derived from `NARROWCTI_DECISION_AUDIT_DIR`, and summarizes actions,

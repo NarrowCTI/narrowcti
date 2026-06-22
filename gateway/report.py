@@ -13,6 +13,7 @@ class GatewayOperationalReport:
     last_recorded_at: str
     totals: dict
     metrics: dict
+    failures: list
     sources: dict
 
     def to_dict(self):
@@ -22,6 +23,7 @@ class GatewayOperationalReport:
             "last_recorded_at": self.last_recorded_at,
             "totals": self.totals,
             "metrics": self.metrics,
+            "failures": self.failures,
             "sources": self.sources,
         }
 
@@ -46,11 +48,13 @@ def build_operational_report(records):
             last_recorded_at="",
             totals=empty_totals(),
             metrics=build_value_metrics(empty_totals()),
+            failures=[],
             sources={},
         )
 
     sources = {}
     totals = empty_totals()
+    failures = []
     for record in records:
         merge_totals(totals, record.get("totals", {}))
         for result in record.get("results", []):
@@ -64,6 +68,7 @@ def build_operational_report(records):
                     "failed": 0,
                     "totals": empty_totals(),
                     "metrics": {},
+                    "failures": [],
                 },
             )
             source_report["runs"] += 1
@@ -71,6 +76,9 @@ def build_operational_report(records):
                 source_report["succeeded"] += 1
             else:
                 source_report["failed"] += 1
+                failure = failure_record(record, result)
+                failures.append(failure)
+                source_report["failures"].append(failure)
             merge_totals(source_report["totals"], result.get("totals", {}))
 
     for source_report in sources.values():
@@ -82,6 +90,7 @@ def build_operational_report(records):
         last_recorded_at=records[-1].get("recorded_at", ""),
         totals=totals,
         metrics=build_value_metrics(totals),
+        failures=failures,
         sources=sources,
     )
 
@@ -118,6 +127,15 @@ def build_value_metrics(totals):
     }
 
 
+def failure_record(record, result):
+    return {
+        "recorded_at": record.get("recorded_at", ""),
+        "source_key": result.get("source_key", "unknown"),
+        "source_name": result.get("source_name", result.get("source_key", "unknown")),
+        "error": result.get("error", "") or "source failed without error detail",
+    }
+
+
 def percentage(value, total):
     if total <= 0:
         return 0.0
@@ -133,6 +151,13 @@ def format_text_report(report):
         "totals=" + format_totals(report.totals),
         "metrics=" + format_metrics(report.metrics),
     ]
+    if report.failures:
+        lines.append("failures:")
+        for failure in report.failures:
+            lines.append(
+                f"- {failure['recorded_at'] or '(unknown-time)'} "
+                f"{failure['source_key']} error={failure['error']}"
+            )
     if report.sources:
         lines.append("sources:")
         for source_key in sorted(report.sources):
