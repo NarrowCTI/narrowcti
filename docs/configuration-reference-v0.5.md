@@ -168,7 +168,7 @@ are available.
 | `NARROWCTI_ALLOWED_TARGET_SECTORS` | Victimology filter for sectors or industries. |
 | `NARROWCTI_ALLOWED_TARGET_COUNTRIES` | Victimology filter for countries or regions. |
 | `NARROWCTI_MIN_CORROBORATING_SOURCES` | Minimum source corroboration before automatic ingest. |
-| `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON` | Requires analyst release reason before export. Implemented in v0.6. |
+| `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON` | Requires analyst review reason before release, partial release or rejection. Implemented in v0.6. |
 
 Detailed behavior and backlog placement are documented in
 `docs/enterprise-intelligence-gateway-v0.5.md`.

@@ -45,7 +45,8 @@ In scope for v0.6:
 
 - Local quarantine repository.
 - CLI review commands for pending, released and rejected candidates.
-- Release, partial release and reject actions with required reasons.
+- Release, partial release and reject actions with review reasons required by
+  default and governed by configuration.
 - Release audit records.
 - Automatic quarantine repository writes from OTX and MISP policy decisions.
 - Replay of released candidates through the existing STIX/export path.
@@ -115,8 +116,11 @@ Behavior:
 
 - `list` must be read-only.
 - `show` must expose source, reason, score, indicators and metadata.
-- `reject` must require a reason.
-- `release` must require a reason and write release approval evidence.
+- `reject` must require a reason by default, unless explicitly relaxed by
+  `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON=false`.
+- `release` and partial release must require a reason by default and write
+  release approval evidence, unless explicitly relaxed by
+  `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON=false`.
 - Partial release must preserve which indicators were released and which stayed
   held.
 - Every state transition must write release audit evidence.

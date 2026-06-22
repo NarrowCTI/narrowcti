@@ -126,6 +126,57 @@ class GatewayQuarantineCliTests(unittest.TestCase):
             self.assertEqual("", released["review"]["reason"])
             self.assertEqual("env-analyst", released["review"]["reviewer"])
 
+    def test_reject_without_reason_can_be_allowed_by_env(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            record = seed_record(repository_path)
+
+            with temporary_env(
+                NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON="false",
+                NARROWCTI_REVIEWER="env-analyst",
+            ):
+                output = run_cli(
+                    "--repository",
+                    repository_path,
+                    "reject",
+                    "--id",
+                    record["quarantine_id"],
+                )
+
+            self.assertIn("status=rejected", output)
+            rejected = QuarantineRepository(repository_path).get(
+                record["quarantine_id"]
+            )
+            self.assertEqual("", rejected["review"]["reason"])
+            self.assertEqual("env-analyst", rejected["review"]["reviewer"])
+
+    def test_release_indicators_without_reason_can_be_allowed_by_env(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            record = seed_record(repository_path)
+
+            with temporary_env(
+                NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON="false",
+                NARROWCTI_REVIEWER="env-analyst",
+            ):
+                output = run_cli(
+                    "--repository",
+                    repository_path,
+                    "release-indicators",
+                    "--id",
+                    record["quarantine_id"],
+                    "--type",
+                    "domain",
+                )
+
+            self.assertIn("status=partially-released", output)
+            released = QuarantineRepository(repository_path).get(
+                record["quarantine_id"]
+            )
+            self.assertEqual("", released["review"]["reason"])
+            self.assertEqual("env-analyst", released["review"]["reviewer"])
+            self.assertEqual(["domain"], released["review"]["released_indicator_types"])
+
     def test_export_released_defaults_to_dry_run(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             repository_path = os.path.join(tmpdir, "quarantine.jsonl")

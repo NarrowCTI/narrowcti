@@ -28,7 +28,7 @@ consistently and record evidence.
 | `OTX_QUARANTINE_REPOSITORY` | OTX-specific override for the quarantine repository. Defaults to `NARROWCTI_QUARANTINE_REPOSITORY` when unset. |
 | `MISP_QUARANTINE_REPOSITORY` | MISP-specific override for the quarantine repository. Defaults to `NARROWCTI_QUARANTINE_REPOSITORY` when unset. |
 | `NARROWCTI_RELEASE_AUDIT_FILE` | JSONL audit file for analyst release, partial release, reject and export evidence. |
-| `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON` | Requires a review reason before release or rejection. Default should remain `true` for governed environments. |
+| `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON` | Requires a review reason before release, partial release or rejection. Default should remain `true` for governed environments. |
 | `NARROWCTI_REVIEWER` | Default reviewer identity used by the quarantine CLI when `--reviewer` is not provided. |
 | `NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES` | Maximum raw source payload snapshot retained in quarantine evidence. Oversized snapshots are truncated. |
 
