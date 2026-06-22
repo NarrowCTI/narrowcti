@@ -107,6 +107,93 @@ class GatewayQuarantineCliTests(unittest.TestCase):
                 repository.get(released["quarantine_id"])["review"]["exported"]
             )
 
+    def test_audit_lists_release_events(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            audit_path = os.path.join(tmpdir, "releases.jsonl")
+            record = seed_record(repository_path)
+
+            run_cli(
+                "--repository",
+                repository_path,
+                "--release-audit-file",
+                audit_path,
+                "release",
+                "--id",
+                record["quarantine_id"],
+                "--reason",
+                "Relevant",
+                "--reviewer",
+                "analyst",
+            )
+            output = run_cli(
+                "--release-audit-file",
+                audit_path,
+                "audit",
+                "--id",
+                record["quarantine_id"],
+            )
+
+            self.assertIn("NarrowCTI quarantine release audit", output)
+            self.assertIn("count=1", output)
+            self.assertIn(f"id={record['quarantine_id']}", output)
+            self.assertIn("action=release", output)
+            self.assertIn("reviewer=analyst", output)
+            self.assertIn("reason=Relevant", output)
+
+    def test_audit_json_can_filter_by_action_and_limit(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            audit_path = os.path.join(tmpdir, "releases.jsonl")
+            first = seed_record(repository_path)
+            second = QuarantineRepository(repository_path).add(
+                QuarantineRecord(
+                    source_key="misp:misp",
+                    external_id="event-1",
+                    title="Sample event",
+                    reason="low score",
+                    indicators=[{"type": "domain", "indicator": "misp.example"}],
+                )
+            )
+
+            run_cli(
+                "--repository",
+                repository_path,
+                "--release-audit-file",
+                audit_path,
+                "release",
+                "--id",
+                first["quarantine_id"],
+                "--reason",
+                "Relevant",
+            )
+            run_cli(
+                "--repository",
+                repository_path,
+                "--release-audit-file",
+                audit_path,
+                "reject",
+                "--id",
+                second["quarantine_id"],
+                "--reason",
+                "Out of scope",
+            )
+            output = run_cli(
+                "--release-audit-file",
+                audit_path,
+                "--json",
+                "audit",
+                "--action",
+                "reject",
+                "--limit",
+                "1",
+            )
+
+            events = json.loads(output)
+            self.assertEqual(1, len(events))
+            self.assertEqual("reject", events[0]["action"])
+            self.assertEqual(second["quarantine_id"], events[0]["quarantine_id"])
+
 
 def run_cli(*args):
     output = io.StringIO()

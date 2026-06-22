@@ -174,6 +174,66 @@ def command_export_released(args):
     return 0
 
 
+def command_audit(args):
+    events = read_release_audit_events(
+        args.release_audit_file
+        or os.getenv("NARROWCTI_RELEASE_AUDIT_FILE", DEFAULT_RELEASE_AUDIT)
+    )
+    if args.id:
+        events = [
+            event
+            for event in events
+            if event.get("quarantine_id", "") == args.id
+        ]
+    if args.action:
+        events = [
+            event
+            for event in events
+            if event.get("action", "") == args.action
+        ]
+    if args.limit and args.limit > 0:
+        events = events[-args.limit :]
+    if args.json:
+        print(json.dumps(events, sort_keys=True))
+    else:
+        print(format_release_audit_events(events))
+    return 0
+
+
+def read_release_audit_events(path):
+    if not path or not os.path.exists(path):
+        return []
+    events = []
+    with open(path, "r", encoding="utf-8") as file_obj:
+        for line in file_obj:
+            stripped = line.strip()
+            if stripped:
+                events.append(json.loads(stripped))
+    return events
+
+
+def format_release_audit_events(events):
+    lines = [
+        "NarrowCTI quarantine release audit",
+        f"count={len(events)}",
+    ]
+    for event in events:
+        lines.append(
+            f"- {event.get('recorded_at') or '(unknown-time)'} "
+            f"id={event.get('quarantine_id') or '(none)'} "
+            f"action={event.get('action') or '(unknown)'} "
+            f"status={event.get('status') or '(unknown)'} "
+            f"reviewer={event.get('reviewer') or '(unknown)'} "
+            f"released={event.get('released_indicator_count', 0)} "
+            f"held={event.get('held_indicator_count', 0)} "
+            f"exported={str(event.get('exported', False)).lower()} "
+            f"title={event.get('title') or '(untitled)'}"
+        )
+        if event.get("reason"):
+            lines.append(f"  reason={event['reason']}")
+    return "\n".join(lines)
+
+
 def build_opencti_client():
     from pycti import OpenCTIApiClient
 
@@ -299,6 +359,15 @@ def build_parser():
         help="STIX identity name used for exported objects.",
     )
     export_parser.set_defaults(func=command_export_released)
+
+    audit_parser = subparsers.add_parser(
+        "audit",
+        help="Inspect release/reject/export audit events.",
+    )
+    audit_parser.add_argument("--id", default="", help="Optional quarantine id.")
+    audit_parser.add_argument("--action", default="", help="Optional review action.")
+    audit_parser.add_argument("--limit", type=int, default=0, help="Maximum events.")
+    audit_parser.set_defaults(func=command_audit)
 
     return parser
 

@@ -29,6 +29,7 @@ a local cache without treating MITRE as an IoC feed.
   partial release and export replay.
 - Adds release audit records with reviewer, reason, released indicators,
   held indicators and export evidence.
+- Adds CLI inspection for release, reject and export audit events.
 - Automatically queues OTX and MISP policy-quarantined candidates when a
   quarantine repository is configured.
 - Replays released quarantine records through the existing STIX/OpenCTI export
@@ -72,6 +73,7 @@ python -m gateway.quarantine --repository state\quarantine.jsonl --release-audit
 python -m gateway.quarantine --repository state\quarantine.jsonl --release-audit-file state\audit\releases.jsonl release-indicators --id <quarantine-id> --type filehash-sha256,url --reason "High-value indicators"
 python -m gateway.quarantine --repository state\quarantine.jsonl export-released --id <quarantine-id>
 python -m gateway.quarantine --repository state\quarantine.jsonl export-released --id <quarantine-id> --execute --dedup-state-file state\dedup_index.json
+python -m gateway.quarantine --release-audit-file state\audit\releases.jsonl audit --limit 20
 ```
 
 MITRE cache:
@@ -116,7 +118,7 @@ Latest complete suite result:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 183 tests
+Ran 185 tests
 OK
 ```
 

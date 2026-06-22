@@ -188,13 +188,15 @@ python -m gateway.quarantine --repository state\quarantine.jsonl --release-audit
 python -m gateway.quarantine --repository state\quarantine.jsonl --release-audit-file state\audit\releases.jsonl release-indicators --id <quarantine-id> --type filehash-sha256,url --reason "High-value indicators"
 python -m gateway.quarantine --repository state\quarantine.jsonl export-released --id <quarantine-id>
 python -m gateway.quarantine --repository state\quarantine.jsonl export-released --id <quarantine-id> --execute --dedup-state-file state\dedup_index.json
+python -m gateway.quarantine --release-audit-file state\audit\releases.jsonl audit
 ```
 
 The initial v0.6 CLI records review state and release audit evidence locally.
 The source processors automatically enqueue policy-quarantined OTX pulses and
 MISP events when `NARROWCTI_QUARANTINE_REPOSITORY` is configured. Released
 records can be replayed through the same OpenCTI export path with a dry-run
-default; `--execute` is required for real export.
+default; `--execute` is required for real export. The `audit` command summarizes
+release, reject and export audit events without requiring manual JSONL parsing.
 
 OTX entity extraction is controlled by
 `NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION=true`. In v0.6 this extraction is

@@ -108,6 +108,7 @@ python -m gateway.quarantine release --id <quarantine-id> --reason "Relevant to 
 python -m gateway.quarantine release-indicators --id <quarantine-id> --type filehash-sha256,url --reason "High-value indicators"
 python -m gateway.quarantine export-released --id <quarantine-id>
 python -m gateway.quarantine export-released --id <quarantine-id> --execute --dedup-state-file /app/state/dedup_index.json
+python -m gateway.quarantine audit --action release --limit 20
 ```
 
 Behavior:
@@ -119,6 +120,8 @@ Behavior:
 - Partial release must preserve which indicators were released and which stayed
   held.
 - Every state transition must write release audit evidence.
+- `audit` must let operators inspect release, reject and export audit events
+  without manually parsing JSONL.
 - `export-released` must be dry-run by default and require `--execute` for
   OpenCTI import.
 - Export replay must use the released indicator subset, preserve deduplication
