@@ -11,11 +11,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.5.0-dev
+v0.5.0
 ```
 
-`v0.5.0-dev` is the current gateway runtime and decision engine development
-track. `v0.4.0` remains the latest stable multi-feed expansion release.
+`v0.5.0` is the current stable gateway runtime and decision engine release.
+It promotes the unified NarrowCTI Gateway runtime as the default product
+runtime while keeping source-specific OTX and MISP runtimes available for
+debugging and bounded validation.
 
 ## Product Identity
 
@@ -137,9 +139,9 @@ historical backfill filters for date ranges, tags and published-only imports.
 The adapter has dedicated settings, MISP event state and a processor foundation
 so it can evolve without sharing OTX pulse processing state.
 
-## v0.5 Development Track
+## v0.5 Release
 
-The v0.5 track introduces the first unified NarrowCTI Gateway runtime.
+The v0.5 release introduces the first unified NarrowCTI Gateway runtime.
 Instead of treating each source container as the product shape, the gateway
 runtime should orchestrate enabled sources such as OTX and MISP through a source
 registry while keeping source-level state, audit evidence, guardrails and failure
@@ -381,10 +383,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-For this development track:
+For this release:
 
 ```text
-v0.5.0-dev
+v0.5.0
 ```
 
 ## Documentation
@@ -402,6 +404,7 @@ docs/product-foundation-v0.3.md
 docs/multi-feed-expansion-v0.4.md
 docs/misp-validation-v0.4.md
 docs/release-v0.4.0.md
+docs/release-v0.5.0.md
 docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.5.md
 docs/enterprise-intelligence-gateway-v0.5.md

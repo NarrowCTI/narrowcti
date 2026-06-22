@@ -72,7 +72,7 @@ Expected outcomes:
 
 ## v0.5.0 - Gateway Runtime And Decision Engine
 
-Status: in development.
+Status: released.
 
 Purpose:
 
