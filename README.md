@@ -155,9 +155,10 @@ the enterprise intelligence gateway model is tracked in
 continuity validation is tracked in
 `docs/product-architecture-validation-v0.5.md`.
 
-## v0.6 Development Track
+## v0.6 Release Candidate Track
 
-The v0.6 track starts the quarantine and enrichment foundation. The goal is to
+The v0.6 track is currently a release candidate for the quarantine and
+enrichment foundation. The goal is to
 turn quarantine from a decision outcome into a reviewable, auditable operator
 workflow while beginning structured enrichment from OTX and MITRE ATT&CK.
 

@@ -159,6 +159,8 @@ docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narr
 - Run one controlled MISP dry-run when MISP is enabled.
 - Confirm at least one quarantine record can be listed and inspected.
 - Confirm release and reject write release audit evidence.
+- Confirm release, reject and export audit events can be inspected with
+  `gateway.quarantine audit`.
 - Confirm `export-released` dry-run reports export intent without importing.
 - Confirm one controlled `export-released --execute` only after OpenCTI capacity
   and deduplication posture are acceptable.

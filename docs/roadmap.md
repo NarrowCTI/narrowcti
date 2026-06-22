@@ -112,7 +112,13 @@ Expected outcomes:
 
 ## v0.6.0 - Quarantine And Enrichment Foundation
 
-Status: in development.
+Status: release candidate.
+
+Release candidate notes:
+
+- `docs/release-v0.6.0.md`
+- Version remains `v0.6.0-dev` until final operational validation, merge and
+  tag.
 
 Purpose:
 
