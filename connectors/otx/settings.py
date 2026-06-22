@@ -48,6 +48,24 @@ def env_bool(name, default=False):
     return value.lower() in ["true", "1", "yes"]
 
 
+def env_int_with_gateway(name, gateway_name, default):
+    value = os.getenv(name)
+    if value is None:
+        value = os.getenv(gateway_name)
+    if value is None:
+        return default
+    return int(value)
+
+
+def env_bool_with_gateway(name, gateway_name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        value = os.getenv(gateway_name)
+    if value is None:
+        return default
+    return value.lower() in ["true", "1", "yes"]
+
+
 def env_list(name):
     return [value.strip() for value in os.getenv(name, "").split(",") if value.strip()]
 
@@ -74,7 +92,11 @@ def load_settings():
         otx_retries=env_int("OTX_RETRIES", 3),
         otx_retry_backoff_seconds=env_int("OTX_RETRY_BACKOFF_SECONDS", 3),
         connector_run_interval=env_int("CONNECTOR_RUN_INTERVAL", 3600),
-        max_days_old=env_int("MAX_DAYS_OLD", 1095),
+        max_days_old=env_int_with_gateway(
+            "MAX_DAYS_OLD",
+            "NARROWCTI_MAX_DAYS_OLD",
+            1095,
+        ),
         max_days_hard_filter=env_int("MAX_DAYS_HARD_FILTER", 0),
         max_pulses_per_query=max_pulses_per_query,
         max_search_results_per_query=max_search_results_per_query,
@@ -83,9 +105,21 @@ def load_settings():
         dry_run=env_bool("OTX_DRY_RUN", env_bool("NARROWCTI_DRY_RUN", False)),
         source_confidence=env_int("OTX_SOURCE_CONFIDENCE", 50),
         min_score_for_old_pulse=env_int("MIN_SCORE_FOR_OLD_PULSE", 80),
-        min_score_to_ingest=env_int("MIN_SCORE_TO_INGEST", 60),
-        enable_quarantine=env_bool("ENABLE_QUARANTINE", True),
-        quarantine_score_threshold=env_int("QUARANTINE_SCORE_THRESHOLD", 50),
+        min_score_to_ingest=env_int_with_gateway(
+            "MIN_SCORE_TO_INGEST",
+            "NARROWCTI_MIN_SCORE_TO_INGEST",
+            60,
+        ),
+        enable_quarantine=env_bool_with_gateway(
+            "ENABLE_QUARANTINE",
+            "NARROWCTI_ENABLE_QUARANTINE",
+            True,
+        ),
+        quarantine_score_threshold=env_int_with_gateway(
+            "QUARANTINE_SCORE_THRESHOLD",
+            "NARROWCTI_QUARANTINE_SCORE_THRESHOLD",
+            50,
+        ),
         state_file=os.getenv("STATE_FILE", "/app/state/state.json"),
         decision_audit_file=os.getenv("DECISION_AUDIT_FILE", ""),
     )

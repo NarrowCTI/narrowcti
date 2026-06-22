@@ -33,6 +33,10 @@ class GatewaySettingsTests(unittest.TestCase):
             "NARROWCTI_OPENCTI_DEDUP_LOOKUP": "1",
             "NARROWCTI_DEDUP_STATE_FILE": "/state/dedup.json",
             "NARROWCTI_RUN_SUMMARY_FILE": "/state/gateway-runs.jsonl",
+            "NARROWCTI_MIN_SCORE_TO_INGEST": "70",
+            "NARROWCTI_ENABLE_QUARANTINE": "false",
+            "NARROWCTI_QUARANTINE_SCORE_THRESHOLD": "45",
+            "NARROWCTI_MAX_DAYS_OLD": "365",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -46,6 +50,10 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertTrue(settings.opencti_dedup_lookup)
         self.assertEqual("/state/dedup.json", settings.dedup_state_file)
         self.assertEqual("/state/gateway-runs.jsonl", settings.run_summary_file)
+        self.assertEqual(70, settings.min_score_to_ingest)
+        self.assertFalse(settings.enable_quarantine)
+        self.assertEqual(45, settings.quarantine_score_threshold)
+        self.assertEqual(365, settings.max_days_old)
 
     def test_load_settings_uses_connector_interval_as_legacy_default(self):
         with patch.dict(os.environ, {"CONNECTOR_RUN_INTERVAL": "120"}, clear=True):
@@ -65,6 +73,10 @@ class GatewaySettingsTests(unittest.TestCase):
                 state_dir="/state",
                 decision_audit_dir="/state/audit",
                 run_summary_file="",
+                min_score_to_ingest=60,
+                enable_quarantine=True,
+                quarantine_score_threshold=50,
+                max_days_old=1095,
                 dedup_mode="source",
                 opencti_dedup_lookup=False,
                 dedup_state_file="/state/dedup.json",

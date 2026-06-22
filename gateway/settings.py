@@ -12,6 +12,10 @@ class GatewaySettings:
     state_dir: str
     decision_audit_dir: str
     run_summary_file: str
+    min_score_to_ingest: int
+    enable_quarantine: bool
+    quarantine_score_threshold: int
+    max_days_old: int
     dedup_mode: str
     opencti_dedup_lookup: bool
     dedup_state_file: str
@@ -31,6 +35,24 @@ def env_int(name, default):
 
 def env_bool(name, default=False):
     value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in ["true", "1", "yes"]
+
+
+def env_int_alias(primary, fallback, default):
+    value = os.getenv(primary)
+    if value is None:
+        value = os.getenv(fallback)
+    if value is None:
+        return default
+    return int(value)
+
+
+def env_bool_alias(primary, fallback, default=False):
+    value = os.getenv(primary)
+    if value is None:
+        value = os.getenv(fallback)
     if value is None:
         return default
     return value.lower() in ["true", "1", "yes"]
@@ -56,6 +78,26 @@ def load_settings():
         state_dir=os.getenv("NARROWCTI_STATE_DIR", "/app/state"),
         decision_audit_dir=os.getenv("NARROWCTI_DECISION_AUDIT_DIR", "/app/state/audit"),
         run_summary_file=os.getenv("NARROWCTI_RUN_SUMMARY_FILE", ""),
+        min_score_to_ingest=env_int_alias(
+            "NARROWCTI_MIN_SCORE_TO_INGEST",
+            "MIN_SCORE_TO_INGEST",
+            60,
+        ),
+        enable_quarantine=env_bool_alias(
+            "NARROWCTI_ENABLE_QUARANTINE",
+            "ENABLE_QUARANTINE",
+            True,
+        ),
+        quarantine_score_threshold=env_int_alias(
+            "NARROWCTI_QUARANTINE_SCORE_THRESHOLD",
+            "QUARANTINE_SCORE_THRESHOLD",
+            50,
+        ),
+        max_days_old=env_int_alias(
+            "NARROWCTI_MAX_DAYS_OLD",
+            "MAX_DAYS_OLD",
+            1095,
+        ),
         dedup_mode=os.getenv("NARROWCTI_DEDUP_MODE", "source").lower(),
         opencti_dedup_lookup=env_bool("NARROWCTI_OPENCTI_DEDUP_LOOKUP", False),
         dedup_state_file=os.getenv(

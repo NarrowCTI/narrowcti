@@ -280,6 +280,44 @@ class SettingsTests(unittest.TestCase):
         self.assertTrue(settings.dry_run)
         self.assertEqual(70, settings.source_confidence)
 
+    def test_load_settings_accepts_gateway_policy_fallbacks(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "OTX_API_KEY": "key",
+            "OTX_QUERIES": "lummac2",
+            "NARROWCTI_MIN_SCORE_TO_INGEST": "75",
+            "NARROWCTI_MAX_DAYS_OLD": "365",
+            "NARROWCTI_ENABLE_QUARANTINE": "false",
+            "NARROWCTI_QUARANTINE_SCORE_THRESHOLD": "55",
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            settings = load_settings()
+
+        self.assertEqual(75, settings.min_score_to_ingest)
+        self.assertEqual(365, settings.max_days_old)
+        self.assertFalse(settings.enable_quarantine)
+        self.assertEqual(55, settings.quarantine_score_threshold)
+
+    def test_load_settings_legacy_policy_names_override_gateway_defaults(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "OTX_API_KEY": "key",
+            "OTX_QUERIES": "lummac2",
+            "NARROWCTI_MIN_SCORE_TO_INGEST": "75",
+            "NARROWCTI_ENABLE_QUARANTINE": "false",
+            "MIN_SCORE_TO_INGEST": "65",
+            "ENABLE_QUARANTINE": "true",
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            settings = load_settings()
+
+        self.assertEqual(65, settings.min_score_to_ingest)
+        self.assertTrue(settings.enable_quarantine)
+
 
 class RuntimeTests(unittest.TestCase):
     def test_run_processor_loop_runs_cycle_and_sleeps(self):

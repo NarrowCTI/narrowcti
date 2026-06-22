@@ -135,6 +135,10 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             "state_dir": settings.state_dir,
             "decision_audit_dir": settings.decision_audit_dir,
             "run_summary_file": settings.run_summary_file,
+            "min_score_to_ingest": settings.min_score_to_ingest,
+            "enable_quarantine": settings.enable_quarantine,
+            "quarantine_score_threshold": settings.quarantine_score_threshold,
+            "max_days_old": settings.max_days_old,
             "dedup_mode": settings.dedup_mode,
             "opencti_dedup_lookup": settings.opencti_dedup_lookup,
             "dedup_state_file": settings.dedup_state_file,
@@ -183,6 +187,10 @@ def format_text_report(report):
         f"dedup_mode={report.settings['dedup_mode']}",
         f"opencti_dedup_lookup={str(report.settings['opencti_dedup_lookup']).lower()}",
         f"run_summary_file={report.settings['run_summary_file'] or '(disabled)'}",
+        f"min_score_to_ingest={report.settings['min_score_to_ingest']}",
+        f"enable_quarantine={str(report.settings['enable_quarantine']).lower()}",
+        f"quarantine_score_threshold={report.settings['quarantine_score_threshold']}",
+        f"max_days_old={report.settings['max_days_old']}",
     ]
     for source, controls in report.source_controls.items():
         if "dry_run" in controls:

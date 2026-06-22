@@ -30,10 +30,11 @@ OTX_*         OTX-specific connection, query and source behavior
 MISP_*        MISP-specific connection, filters, guardrails and source behavior
 ```
 
-Current source-specific runtimes already implement several controls. Some policy
-variables are still shared names such as `MIN_SCORE_TO_INGEST` and
-`ENABLE_QUARANTINE`; v0.5 should map them into gateway-level `NARROWCTI_*`
-settings while preserving backward compatibility during the transition.
+Current source-specific runtimes already implement several controls. v0.5 maps
+the shared policy variables into gateway-level `NARROWCTI_*` settings while
+preserving backward compatibility with legacy names such as
+`MIN_SCORE_TO_INGEST` and `ENABLE_QUARANTINE`. If both are present, the legacy
+name remains an explicit override for compatibility.
 
 ## Current Implemented Curation Controls
 
@@ -52,6 +53,16 @@ These variables are currently used by OTX and MISP processors.
 | `QUARANTINE_SCORE_THRESHOLD` | Score below which candidates become quarantine/drop decisions. |
 | `DECISION_AUDIT_FILE` | OTX decision audit JSONL output path. |
 | `MISP_DECISION_AUDIT_FILE` | MISP decision audit JSONL output path. |
+
+For shared policy behavior, prefer the gateway-level variables in new
+deployments:
+
+| Gateway variable | Legacy compatible variable |
+| --- | --- |
+| `NARROWCTI_MIN_SCORE_TO_INGEST` | `MIN_SCORE_TO_INGEST` |
+| `NARROWCTI_ENABLE_QUARANTINE` | `ENABLE_QUARANTINE` |
+| `NARROWCTI_QUARANTINE_SCORE_THRESHOLD` | `QUARANTINE_SCORE_THRESHOLD` |
+| `NARROWCTI_MAX_DAYS_OLD` | `MAX_DAYS_OLD` |
 
 ### OTX Controls
 

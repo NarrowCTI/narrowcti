@@ -83,6 +83,24 @@ def env_bool(name, default=False):
     return value.lower() in ["true", "1", "yes"]
 
 
+def env_int_with_gateway(name, gateway_name, default):
+    value = os.getenv(name)
+    if value is None:
+        value = os.getenv(gateway_name)
+    if value is None:
+        return default
+    return int(value)
+
+
+def env_bool_with_gateway(name, gateway_name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        value = os.getenv(gateway_name)
+    if value is None:
+        return default
+    return value.lower() in ["true", "1", "yes"]
+
+
 def env_list(name):
     return [value.strip() for value in os.getenv(name, "").split(",") if value.strip()]
 
@@ -117,12 +135,28 @@ def load_settings():
         misp_to_date=os.getenv("MISP_TO_DATE", ""),
         misp_tags=env_list("MISP_TAGS"),
         misp_published_only=env_bool("MISP_PUBLISHED_ONLY", False),
-        min_score_to_ingest=env_int("MIN_SCORE_TO_INGEST", 60),
-        max_days_old=env_int("MAX_DAYS_OLD", 1095),
+        min_score_to_ingest=env_int_with_gateway(
+            "MIN_SCORE_TO_INGEST",
+            "NARROWCTI_MIN_SCORE_TO_INGEST",
+            60,
+        ),
+        max_days_old=env_int_with_gateway(
+            "MAX_DAYS_OLD",
+            "NARROWCTI_MAX_DAYS_OLD",
+            1095,
+        ),
         min_score_for_old_event=env_int("MIN_SCORE_FOR_OLD_EVENT", 80),
         max_days_hard_filter=env_int("MAX_DAYS_HARD_FILTER", 0),
-        enable_quarantine=env_bool("ENABLE_QUARANTINE", True),
-        quarantine_score_threshold=env_int("QUARANTINE_SCORE_THRESHOLD", 50),
+        enable_quarantine=env_bool_with_gateway(
+            "ENABLE_QUARANTINE",
+            "NARROWCTI_ENABLE_QUARANTINE",
+            True,
+        ),
+        quarantine_score_threshold=env_int_with_gateway(
+            "QUARANTINE_SCORE_THRESHOLD",
+            "NARROWCTI_QUARANTINE_SCORE_THRESHOLD",
+            50,
+        ),
         state_file=os.getenv("MISP_STATE_FILE", "/app/state/misp_state.json"),
         decision_audit_file=os.getenv("MISP_DECISION_AUDIT_FILE", ""),
     )

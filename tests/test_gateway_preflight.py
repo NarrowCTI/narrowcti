@@ -15,6 +15,10 @@ def make_settings(**overrides):
         "state_dir": "/app/state",
         "decision_audit_dir": "/app/state/audit",
         "run_summary_file": "/app/state/gateway_runs.jsonl",
+        "min_score_to_ingest": 60,
+        "enable_quarantine": True,
+        "quarantine_score_threshold": 50,
+        "max_days_old": 1095,
         "dedup_mode": "hybrid",
         "opencti_dedup_lookup": False,
         "dedup_state_file": "/app/state/dedup_index.json",
@@ -39,6 +43,8 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertTrue(report.ok)
         self.assertEqual(("otx", "misp"), report.enabled_sources)
         self.assertEqual("hybrid", report.settings["dedup_mode"])
+        self.assertEqual(60, report.settings["min_score_to_ingest"])
+        self.assertTrue(report.settings["enable_quarantine"])
         self.assertTrue(report.source_controls["otx"]["dry_run"])
         self.assertTrue(report.source_controls["misp"]["dry_run"])
         self.assertEqual([], [issue for issue in report.issues if issue.severity == "error"])
