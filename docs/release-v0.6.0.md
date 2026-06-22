@@ -128,6 +128,21 @@ Ran 190 tests
 OK
 ```
 
+Safe operational validation performed on the release candidate:
+
+```text
+python -m gateway.mitre refresh-cache --cache-file state/mitre_attack_cache.json
+technique_count=858
+
+python -m gateway.preflight
+ok=true
+enabled_sources=otx
+dedup_mode=hybrid
+enable_mitre_attack_resolution=true
+mitre_cache_file=/repo/state/mitre_attack_cache.json
+issues=none
+```
+
 Final release validation should also run:
 
 ```powershell
