@@ -239,6 +239,20 @@ docker run --rm --env-file config\.env.example -v "${LAB_ROOT}\NarrowCTI:/repo" 
 
 The example keeps `NARROWCTI_DRY_RUN=true` and `OTX_DRY_RUN=true` for safe local validation.
 
+Before running ingestion, operators can validate the gateway runtime posture
+without calling feed APIs or OpenCTI:
+
+```powershell
+$LAB_ROOT = "<path-to-lab-root>"
+cd "$LAB_ROOT\NarrowCTI"
+docker run --rm --env-file config\.env.example -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.preflight
+docker run --rm --env-file config\.env.example -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.preflight --json
+```
+
+The preflight reports enabled sources, deduplication posture, OpenCTI lookup,
+aggregate summary output and source dry-run controls. Unknown sources fail the
+check; weaker graph-hygiene or operational settings are reported as warnings.
+
 The unified gateway entrypoint composes enabled source runtimes and isolates
 source failures. Keep source-specific runtimes available for debugging and
 bounded backfills while the v0.5 gateway matures.
@@ -307,6 +321,7 @@ Run validation from the repository root after building the Docker image:
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\NarrowCTI"
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/connector.py connectors/misp/feed_adapter.py connectors/misp/models.py connectors/misp/processor.py connectors/misp/runtime.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/scoring.py core/policy.py core/state_repository.py exporters/opencti.py exporters/stix_builder.py
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile gateway/preflight.py
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
 

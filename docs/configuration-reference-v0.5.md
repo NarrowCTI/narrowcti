@@ -173,6 +173,23 @@ NARROWCTI_ALLOWED_TARGET_SECTORS=finance,government,healthcare,energy
 NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON=true
 ```
 
+## Operational Preflight
+
+The gateway can validate runtime posture without calling OpenCTI or any feed API:
+
+```text
+python -m gateway.preflight
+python -m gateway.preflight --json
+```
+
+The preflight evaluates `NARROWCTI_*` gateway settings and source dry-run
+controls. It reports registered versus enabled sources, deduplication mode,
+OpenCTI dedup lookup, source dry-run state and the aggregate run summary path.
+
+Preflight output is meant for operator readiness and automation checks. It does
+not replace runtime decision audit records because it does not normalize,
+score, deduplicate or export feed candidates.
+
 ## Automatic Behavior
 
 The following behavior is intentionally automatic and should remain auditable:

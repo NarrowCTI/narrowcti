@@ -198,6 +198,30 @@ The OTX and MISP source runtimes remain available independently. The gateway
 composes them; it does not move feed-specific API or normalization logic out of
 `connectors/otx` or `connectors/misp`.
 
+## Operational Preflight
+
+The v0.5 runtime includes a configuration-only preflight command:
+
+```text
+python -m gateway.preflight
+python -m gateway.preflight --json
+```
+
+The preflight does not instantiate source runtimes, call feed APIs or query
+OpenCTI. It evaluates the local gateway posture before ingestion by reporting:
+
+- Enabled sources and registered sources.
+- Gateway mode, dry-run, run-once and interval settings.
+- Deduplication mode and optional OpenCTI dedup lookup.
+- Source dry-run controls for OTX and MISP.
+- Aggregate run summary output path.
+
+Unknown enabled sources are errors because the gateway cannot execute them.
+Weaker graph-hygiene postures, such as `NARROWCTI_DEDUP_MODE=source`, are
+warnings because they can be intentional during local validation but should be
+visible before production operation. Missing aggregate summary output is
+informational because source-level logs and decision audit can still be active.
+
 ## Guardrails
 
 The v0.5 runtime must preserve the safety posture established in v0.4:
@@ -229,8 +253,10 @@ The v0.5 runtime must preserve the safety posture established in v0.4:
 6. Add layered deduplication services for source items, artifact fingerprints and
    optional OpenCTI lookup.
 7. Add aggregate runtime summaries while keeping per-source summaries intact.
-8. Add Docker and Compose guidance for the `narrowcti-gateway` service.
-9. Keep source-specific entrypoints for troubleshooting and safe backfills.
+8. Add an operational preflight command for source, deduplication, dry-run and
+   summary validation before ingestion.
+9. Add Docker and Compose guidance for the `narrowcti-gateway` service.
+10. Keep source-specific entrypoints for troubleshooting and safe backfills.
 
 ## Success Criteria
 
@@ -243,5 +269,7 @@ The v0.5 runtime must preserve the safety posture established in v0.4:
 - OpenCTI-side deduplication lookup is configurable and audited when enabled.
 - Cross-source matches preserve provenance instead of creating graph noise.
 - Source-specific guardrails remain enforced inside the gateway runtime.
+- Operators can validate gateway configuration without network access or feed
+  execution.
 - Unit tests cover source registry behavior, gateway settings, isolated source
-  failures and aggregate summaries.
+  failures, aggregate summaries and preflight reporting.
