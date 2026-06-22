@@ -90,6 +90,19 @@ is removed, the candidate is skipped with an auditable reason.
 | `STATE_FILE` | Local OTX processed-pulse state file. |
 | `NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION` | Enables metadata-only extraction of OTX adversary, malware family, ATT&CK ids, industries, targeted countries, TLP, references and tags into decision/quarantine evidence. |
 
+### MITRE ATT&CK Reference Controls
+
+| Variable | Purpose |
+| --- | --- |
+| `NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION` | Enables local ATT&CK id resolution for extracted source metadata. When disabled, source decisions continue without MITRE enrichment. |
+| `NARROWCTI_MITRE_CACHE_FILE` | Local normalized ATT&CK cache path. The OTX processor loads this file when present and records missing-cache evidence when it is unavailable. |
+| `NARROWCTI_MITRE_STIX_URL` | Explicit ATT&CK STIX bundle URL used by cache refresh tooling. The default is the public Enterprise ATT&CK bundle. |
+
+The MITRE cache is reference data, not an ingest feed. NarrowCTI uses it to turn
+source fields such as OTX `attack_ids` into audit metadata with technique names,
+tactics and ATT&CK URLs before later releases expand these hints into graph
+objects.
+
 ### MISP Controls
 
 | Variable | Purpose |

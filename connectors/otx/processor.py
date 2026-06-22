@@ -2,6 +2,7 @@ import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.indicator_policy import filter_indicators_by_type
+from core.mitre_attack import MITREAttackResolver
 from core.policy import PolicyConfig, should_ingest
 from core.quarantine import (
     QuarantineRecord,
@@ -29,7 +30,11 @@ def age_label(age):
     return f"{age}d"
 
 
-def decision_metadata(candidate=None, enable_entity_extraction=True):
+def decision_metadata(
+    candidate=None,
+    enable_entity_extraction=True,
+    mitre_resolver=None,
+):
     score_details = getattr(candidate, "score_details", None)
     if not candidate:
         return {}
@@ -38,6 +43,25 @@ def decision_metadata(candidate=None, enable_entity_extraction=True):
         metadata["scoring"] = dict(score_details)
     if enable_entity_extraction:
         metadata["otx_entities"] = extract_otx_entities(candidate.pulse)
+        enrich_mitre_attack_metadata(metadata, mitre_resolver)
+    return metadata
+
+
+def enrich_mitre_attack_metadata(metadata, mitre_resolver=None):
+    attack_ids = (metadata.get("otx_entities") or {}).get("attack_ids") or []
+    if not attack_ids:
+        return metadata
+    if not mitre_resolver:
+        metadata["mitre_attack"] = {
+            "available": False,
+            "reason": "mitre cache unavailable",
+            "resolved": [],
+        }
+        return metadata
+    metadata["mitre_attack"] = {
+        "available": True,
+        "resolved": mitre_resolver.resolve(attack_ids),
+    }
     return metadata
 
 
@@ -56,6 +80,7 @@ class OTXProcessor:
         decision_audit=None,
         artifact_dedup=None,
         quarantine_repository=None,
+        mitre_resolver=None,
     ):
         self.settings = settings
         self.otx_client = otx_client
@@ -71,6 +96,7 @@ class OTXProcessor:
         self.quarantine_repository = quarantine_repository or self.build_quarantine_repository(
             settings
         )
+        self.mitre_resolver = mitre_resolver or self.build_mitre_resolver(settings)
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -85,6 +111,18 @@ class OTXProcessor:
         if not repository_file:
             return None
         return QuarantineRepository(repository_file)
+
+    def build_mitre_resolver(self, settings):
+        if not getattr(settings, "enable_mitre_attack_resolution", True):
+            return None
+        cache_file = getattr(settings, "mitre_cache_file", "")
+        if not cache_file:
+            return None
+        try:
+            return MITREAttackResolver(cache_file=cache_file)
+        except Exception as exc:
+            self.log(f"MITRE ATT&CK cache unavailable: {cache_file} error={exc}")
+            return None
 
     def run_once(self):
         state = self.state_repository_factory(self.settings.state_file)
@@ -297,6 +335,7 @@ class OTXProcessor:
             metadata=decision_metadata(
                 candidate,
                 getattr(self.settings, "enable_otx_entity_extraction", True),
+                self.mitre_resolver,
             ),
         )
 
@@ -322,6 +361,7 @@ class OTXProcessor:
         metadata = decision_metadata(
             candidate,
             getattr(self.settings, "enable_otx_entity_extraction", True),
+            self.mitre_resolver,
         )
         if truncated:
             metadata["raw_snapshot_truncated"] = True

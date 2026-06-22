@@ -315,6 +315,16 @@ class ProcessorTests(unittest.TestCase):
         )
         settings = self.settings()
         settings.min_score_to_ingest = 60
+        mitre_resolver = SimpleNamespace(
+            resolve=lambda attack_ids: [
+                {
+                    "attack_id": attack_ids[0],
+                    "found": True,
+                    "name": "Command and Scripting Interpreter",
+                    "tactics": ["execution"],
+                }
+            ]
+        )
 
         processor = OTXProcessor(
             settings,
@@ -322,6 +332,7 @@ class ProcessorTests(unittest.TestCase):
             api_client=None,
             logger=lambda message: None,
             decision_audit=SimpleNamespace(record=records.append),
+            mitre_resolver=mitre_resolver,
         )
 
         processed = processor.process_pulse(
@@ -338,6 +349,13 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(["Finance"], entities["industries"])
         self.assertEqual(["BR"], entities["targeted_countries"])
         self.assertEqual(["green"], entities["tlp"])
+        mitre_attack = records[0].metadata["mitre_attack"]
+        self.assertTrue(mitre_attack["available"])
+        self.assertEqual("T1059", mitre_attack["resolved"][0]["attack_id"])
+        self.assertEqual(
+            "Command and Scripting Interpreter",
+            mitre_attack["resolved"][0]["name"],
+        )
 
     def test_process_pulse_writes_quarantine_record(self):
         records = []
@@ -390,6 +408,47 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("domain", queued[0]["indicators"][0]["type"])
         self.assertEqual([], queued[0]["metadata"]["otx_entities"]["attack_ids"])
         self.assertTrue(any("Quarantine queued: Old weak pulse" in log for log in logs))
+
+    def test_process_pulse_records_missing_mitre_cache_evidence(self):
+        records = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "id": pulse_id,
+                "name": "Technique pulse",
+                "description": "description",
+                "created": "2026-04-01T00:00:00Z",
+                "attack_ids": ["T1059"],
+                "indicators": [],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: self.fail("state should not be marked"),
+        )
+        settings = self.settings()
+        settings.min_score_to_ingest = 60
+
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client=None,
+            logger=lambda message: None,
+            decision_audit=SimpleNamespace(record=records.append),
+        )
+
+        processed = processor.process_pulse(
+            "unrelated query",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertFalse(processed)
+        self.assertEqual(["T1059"], records[0].metadata["otx_entities"]["attack_ids"])
+        self.assertFalse(records[0].metadata["mitre_attack"]["available"])
+        self.assertEqual(
+            "mitre cache unavailable",
+            records[0].metadata["mitre_attack"]["reason"],
+        )
 
     def test_process_pulse_drops_disallowed_tlp(self):
         records = []

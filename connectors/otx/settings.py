@@ -1,6 +1,8 @@
 import os
 from dataclasses import dataclass
 
+from core.mitre_attack import DEFAULT_MITRE_STIX_URL
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -33,6 +35,9 @@ class Settings:
     quarantine_repository_file: str = ""
     quarantine_raw_snapshot_max_bytes: int = 65536
     enable_otx_entity_extraction: bool = True
+    enable_mitre_attack_resolution: bool = True
+    mitre_cache_file: str = ""
+    mitre_stix_url: str = DEFAULT_MITRE_STIX_URL
 
 
 def env_required(name):
@@ -140,5 +145,14 @@ def load_settings():
         enable_otx_entity_extraction=env_bool(
             "NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION",
             True,
+        ),
+        enable_mitre_attack_resolution=env_bool(
+            "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION",
+            True,
+        ),
+        mitre_cache_file=os.getenv("NARROWCTI_MITRE_CACHE_FILE", ""),
+        mitre_stix_url=os.getenv(
+            "NARROWCTI_MITRE_STIX_URL",
+            DEFAULT_MITRE_STIX_URL,
         ),
     )

@@ -172,6 +172,39 @@ Target v0.6 behavior:
 - Avoid blocking ingestion when the cache is unavailable; record missing
   enrichment evidence instead.
 
+The current v0.6 implementation adds a local MITRE resolver in
+`core/mitre_attack.py`. It can normalize an Enterprise ATT&CK STIX bundle into a
+compact cache, load an existing normalized cache and resolve technique or
+sub-technique ids into:
+
+- ATT&CK id.
+- Technique name.
+- Tactic phases.
+- ATT&CK STIX id.
+- ATT&CK URL.
+- Revoked/deprecated flags.
+
+When OTX entity extraction finds `attack_ids`, the OTX processor writes
+`mitre_attack` metadata next to `otx_entities`. If
+`NARROWCTI_MITRE_CACHE_FILE` is configured and readable, the metadata contains
+resolved technique context. If the cache is missing or disabled, the processor
+does not block curation or export; it records `available=false` with the reason
+`mitre cache unavailable` so the operator can see exactly why ATT&CK enrichment
+was not attached.
+
+Operational cache commands:
+
+```powershell
+python -m gateway.mitre build-cache --bundle enterprise-attack.json --cache-file state/mitre_attack_cache.json
+python -m gateway.mitre refresh-cache --cache-file state/mitre_attack_cache.json
+python -m gateway.mitre resolve --cache-file state/mitre_attack_cache.json T1059 T1059.001
+```
+
+`refresh-cache` downloads from `NARROWCTI_MITRE_STIX_URL` by default when the
+operator uses the same URL value. In restricted environments, prefer
+`build-cache` with a reviewed local STIX bundle so cache refresh remains
+explicit and auditable.
+
 ## Configuration Direction
 
 Candidate variables:
@@ -185,6 +218,7 @@ NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON=true
 NARROWCTI_REVIEWER=operator
 NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES=65536
 NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION=true
+NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION=true
 NARROWCTI_MITRE_CACHE_FILE=/app/state/mitre_attack_cache.json
 NARROWCTI_MITRE_STIX_URL=https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json
 ```
