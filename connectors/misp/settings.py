@@ -36,6 +36,7 @@ class MISPSettings:
     max_days_hard_filter: int
     enable_quarantine: bool
     quarantine_score_threshold: int
+    allowed_tlp: list[str]
     state_file: str
     decision_audit_file: str
 
@@ -157,6 +158,7 @@ def load_settings():
             "NARROWCTI_QUARANTINE_SCORE_THRESHOLD",
             50,
         ),
+        allowed_tlp=env_list("NARROWCTI_ALLOWED_TLP"),
         state_file=os.getenv("MISP_STATE_FILE", "/app/state/misp_state.json"),
         decision_audit_file=os.getenv("MISP_DECISION_AUDIT_FILE", ""),
     )

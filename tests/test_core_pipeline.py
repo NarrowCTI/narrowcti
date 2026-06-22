@@ -21,6 +21,7 @@ from core.state_repository import (
     ProcessedItemStateRepository,
     PulseStateRepository,
 )
+from core.tlp import extract_tlp_values, normalize_allowed_tlp, tlp_is_allowed
 from exporters.stix_builder import build_report_bundle, indicator_pattern
 
 
@@ -114,6 +115,30 @@ class PolicyTests(unittest.TestCase):
 
         self.assertTrue(decision)
         self.assertEqual("ok", reason)
+
+
+class TLPPolicyTests(unittest.TestCase):
+    def test_extract_tlp_values_normalizes_tags(self):
+        self.assertEqual(
+            ("green", "amber"),
+            extract_tlp_values(["TLP:GREEN", "tlp:amber", "ransomware"]),
+        )
+
+    def test_tlp_is_allowed_when_no_policy_or_no_tag(self):
+        self.assertEqual((True, ""), tlp_is_allowed(["tlp:red"], []))
+        self.assertEqual((True, ""), tlp_is_allowed(["ransomware"], ["green"]))
+
+    def test_tlp_is_denied_when_candidate_tag_is_not_allowed(self):
+        allowed, reason = tlp_is_allowed(["tlp:red"], ["white", "green"])
+
+        self.assertFalse(allowed)
+        self.assertEqual("tlp not allowed: red", reason)
+
+    def test_normalize_allowed_tlp_accepts_prefixed_values(self):
+        self.assertEqual(
+            ("white", "green"),
+            normalize_allowed_tlp(["tlp:white", "green"]),
+        )
 
 
 class ScoringTests(unittest.TestCase):
@@ -265,6 +290,7 @@ class SettingsTests(unittest.TestCase):
             "DECISION_AUDIT_FILE": "/app/state/decisions.jsonl",
             "NARROWCTI_DRY_RUN": "true",
             "OTX_SOURCE_CONFIDENCE": "70",
+            "NARROWCTI_ALLOWED_TLP": "white, green",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -279,6 +305,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual("/app/state/decisions.jsonl", settings.decision_audit_file)
         self.assertTrue(settings.dry_run)
         self.assertEqual(70, settings.source_confidence)
+        self.assertEqual(["white", "green"], settings.allowed_tlp)
 
     def test_load_settings_accepts_gateway_policy_fallbacks(self):
         env = {

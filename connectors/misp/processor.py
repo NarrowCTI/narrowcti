@@ -6,6 +6,7 @@ from core.feed_contract import FeedRunSummary
 from core.policy import PolicyConfig, should_ingest
 from core.scoring import age_days, calculate_score_details
 from core.state_repository import MISPEventStateRepository
+from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
 
 from connectors.misp.feed_adapter import MISPFeedAdapter, event_to_feed_candidate
@@ -175,6 +176,11 @@ class MISPProcessor:
             )
             return "skip"
 
+        action, reason = self.candidate_tlp_decision(candidate)
+        if action != "ingest":
+            self.record_decision(query, candidate_ref, action, reason, candidate)
+            return action
+
         action, reason = self.candidate_policy_decision(candidate)
         if action != "ingest":
             self.record_decision(query, candidate_ref, action, reason, candidate)
@@ -256,6 +262,16 @@ class MISPProcessor:
             return "drop", reason
 
         return "ingest", reason
+
+    def candidate_tlp_decision(self, candidate):
+        allowed, reason = tlp_is_allowed(
+            candidate.event.get("tags", []),
+            getattr(self.settings, "allowed_tlp", []),
+        )
+        if not allowed:
+            self.log(f"MISP drop: {candidate.name} reason={reason}")
+            return "drop", reason
+        return "ingest", "ok"
 
     def record_decision(self, query, candidate_ref, action, reason, candidate=None):
         title = candidate.name if candidate and candidate.name else candidate_ref.title

@@ -4,6 +4,7 @@ from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.policy import PolicyConfig, should_ingest
 from core.scoring import age_days, calculate_score_details
 from core.state_repository import PulseStateRepository
+from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
 
 try:
@@ -155,6 +156,11 @@ class OTXProcessor:
             )
             return "skip"
 
+        action, reason = self.candidate_tlp_decision(candidate)
+        if action != "ingest":
+            self.record_decision(query, candidate_ref, action, reason, candidate)
+            return action
+
         action, reason = self.candidate_policy_decision(candidate)
         if action != "ingest":
             self.record_decision(query, candidate_ref, action, reason, candidate)
@@ -234,6 +240,16 @@ class OTXProcessor:
             return "drop", reason
 
         return "ingest", reason
+
+    def candidate_tlp_decision(self, candidate):
+        allowed, reason = tlp_is_allowed(
+            candidate.pulse.get("tags", []),
+            getattr(self.settings, "allowed_tlp", []),
+        )
+        if not allowed:
+            self.log(f"Drop: {candidate.name} reason={reason}")
+            return "drop", reason
+        return "ingest", "ok"
 
     def record_decision(self, query, candidate_ref, action, reason, candidate=None):
         title = candidate.name if candidate and candidate.name else candidate_ref.title

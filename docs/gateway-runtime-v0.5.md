@@ -96,6 +96,7 @@ NARROWCTI_RUN_SUMMARY_FILE=/app/state/gateway_runs.jsonl
 NARROWCTI_DEDUP_MODE=hybrid
 NARROWCTI_OPENCTI_DEDUP_LOOKUP=false
 NARROWCTI_DEDUP_STATE_FILE=/app/state/dedup_index.json
+NARROWCTI_ALLOWED_TLP=white,green
 ```
 
 Source-specific configuration should remain source-specific:
@@ -133,6 +134,7 @@ The v0.5 decision layer should improve:
 - Source-specific weighting.
 - Age, confidence, indicator type and operational relevance scoring.
 - Policy reasons and evidence attached to every decision.
+- Configurable TLP governance through `NARROWCTI_ALLOWED_TLP`.
 - Quarantine reporting and operator review data.
 - Per-source and aggregate run summaries.
 

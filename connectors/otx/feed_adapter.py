@@ -19,6 +19,7 @@ def pulse_tags(pulse):
 def pulse_to_feed_candidate(pulse, source=OTX_SOURCE, external_id=None):
     pulse_id = external_id or pulse.get("id") or ""
     name = pulse.get("name") or pulse_id or "Untitled OTX pulse"
+    tags = pulse_tags(pulse)
     raw = dict(pulse)
 
     if pulse_id and not raw.get("id"):
@@ -27,6 +28,8 @@ def pulse_to_feed_candidate(pulse, source=OTX_SOURCE, external_id=None):
     if name and not raw.get("name"):
         raw["name"] = name
 
+    raw["tags"] = tags
+
     return FeedCandidate(
         source=source,
         external_id=pulse_id,
@@ -34,7 +37,7 @@ def pulse_to_feed_candidate(pulse, source=OTX_SOURCE, external_id=None):
         description=pulse.get("description", ""),
         created=pulse.get("created"),
         indicators=pulse.get("indicators", []),
-        tags=pulse_tags(pulse),
+        tags=tags,
         raw=raw,
     )
 

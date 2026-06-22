@@ -26,6 +26,7 @@ class Settings:
     min_score_to_ingest: int
     enable_quarantine: bool
     quarantine_score_threshold: int
+    allowed_tlp: list[str]
     state_file: str
     decision_audit_file: str
 
@@ -120,6 +121,7 @@ def load_settings():
             "NARROWCTI_QUARANTINE_SCORE_THRESHOLD",
             50,
         ),
+        allowed_tlp=env_list("NARROWCTI_ALLOWED_TLP"),
         state_file=os.getenv("STATE_FILE", "/app/state/state.json"),
         decision_audit_file=os.getenv("DECISION_AUDIT_FILE", ""),
     )

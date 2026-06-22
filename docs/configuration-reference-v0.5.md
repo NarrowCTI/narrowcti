@@ -63,6 +63,12 @@ deployments:
 | `NARROWCTI_ENABLE_QUARANTINE` | `ENABLE_QUARANTINE` |
 | `NARROWCTI_QUARANTINE_SCORE_THRESHOLD` | `QUARANTINE_SCORE_THRESHOLD` |
 | `NARROWCTI_MAX_DAYS_OLD` | `MAX_DAYS_OLD` |
+| `NARROWCTI_ALLOWED_TLP` | No legacy equivalent. |
+
+`NARROWCTI_ALLOWED_TLP` accepts comma-separated values such as
+`white,green`. OTX and MISP candidates with a TLP tag outside the allowed list
+are dropped before export. Candidates without a TLP tag continue through normal
+curation so feeds that omit TLP do not lose intelligence by default.
 
 ### OTX Controls
 
@@ -114,7 +120,7 @@ supported by code.
 | `NARROWCTI_ENABLE_QUARANTINE` | Gateway-level quarantine default. |
 | `NARROWCTI_QUARANTINE_SCORE_THRESHOLD` | Gateway-level quarantine threshold. |
 | `NARROWCTI_MAX_DAYS_OLD` | Gateway-level age threshold. |
-| `NARROWCTI_ALLOWED_TLP` | Allowed TLP values before source-specific mapping. |
+| `NARROWCTI_ALLOWED_TLP` | Allowed TLP values. Empty allows any TLP; configured values drop candidates tagged with disallowed TLP before export. |
 | `NARROWCTI_DEDUP_MODE` | Deduplication mode. `source` keeps source-item state only; `artifact` or `hybrid` enables the local artifact fingerprint index. |
 | `NARROWCTI_OPENCTI_DEDUP_LOOKUP` | Enables optional OpenCTI STIX Indicator pattern lookup before export. Lookup errors are logged and fail open. |
 | `NARROWCTI_DEDUP_STATE_FILE` | Local artifact index used by `artifact` and `hybrid` modes. It stores `artifact_fingerprints` for skip decisions and `artifact_records` for source sightings/correlation metadata. |
@@ -235,6 +241,7 @@ The following behavior is intentionally automatic and should remain auditable:
   confidence, applied adjustments, raw score and final score.
 - Apply policy and produce ingest, drop, quarantine, skip, dry-run or error
   decisions.
+- Apply allowed TLP governance when `NARROWCTI_ALLOWED_TLP` is configured.
 - Deduplicate source items and artifact fingerprints, then record source sightings for exported artifacts when artifact or hybrid deduplication is enabled.
 - Build STIX bundles after curation.
 - Export to OpenCTI only after policy and deduplication pass.
