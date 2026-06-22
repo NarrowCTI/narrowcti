@@ -267,13 +267,31 @@ This repository is expected to sit next to the OpenCTI Compose workspace:
   opencti/
 ```
 
-The OpenCTI Compose file owns the connector service definitions. Runtime
-services are intentionally split by source:
+The OpenCTI Compose file owns the connector service definitions. The v0.5
+default product runtime is the gateway service, while source-specific runtimes
+remain available for troubleshooting and bounded validation:
 
 ```text
-connector-narrowcti       OTX reference runtime
-connector-narrowcti-misp  MISP dry-run/backfill runtime
+narrowcti-gateway         Unified NarrowCTI Gateway runtime
+connector-narrowcti       OTX reference/debug runtime
+connector-narrowcti-misp  MISP dry-run/backfill/debug runtime
 ```
+
+Safe gateway validation commands:
+
+```powershell
+$LAB_ROOT = "<path-to-lab-root>"
+cd "$LAB_ROOT\opencti"
+docker compose --profile narrowcti-gateway build narrowcti-gateway
+docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.preflight
+docker compose --profile narrowcti-gateway up --force-recreate narrowcti-gateway
+docker compose --profile narrowcti-gateway logs --tail 120 narrowcti-gateway
+```
+
+The local compose profile keeps `NARROWCTI_RUN_ONCE=true` and
+`NARROWCTI_DRY_RUN=true` by default. For continuous operation, explicitly set
+`NARROWCTI_RUN_ONCE=false`, review source guardrails and change the service
+restart policy only after preflight and dry-run results are acceptable.
 
 Common OTX commands:
 

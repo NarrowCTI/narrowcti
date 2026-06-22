@@ -70,6 +70,10 @@ narrowcti-gateway
   enabled sources: otx,misp
 ```
 
+`Dockerfile.gateway` defines the dedicated gateway image. Its default command is
+`python -m gateway.connector`, so the container represents the product runtime
+rather than an OTX-specific connector with a different command.
+
 Source-specific commands should remain available for debugging, validation and
 bounded backfills. The MISP path in particular must remain opt-in and guarded
 until repeated local validations show stable OpenCTI, queue and Elasticsearch
@@ -197,6 +201,38 @@ JSONL record with aggregate totals, per-source status and per-query summaries.
 The OTX and MISP source runtimes remain available independently. The gateway
 composes them; it does not move feed-specific API or normalization logic out of
 `connectors/otx` or `connectors/misp`.
+
+## Docker Compose Operation
+
+The local OpenCTI compose workspace can expose the gateway through a dedicated
+profile:
+
+```text
+profile: narrowcti-gateway
+service: narrowcti-gateway
+image build: ../NarrowCTI/Dockerfile.gateway
+```
+
+The safe local posture is:
+
+```text
+NARROWCTI_ENABLED_SOURCES=otx
+NARROWCTI_DRY_RUN=true
+NARROWCTI_RUN_ONCE=true
+NARROWCTI_DEDUP_MODE=source
+```
+
+Operators should run preflight before executing the gateway:
+
+```text
+docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.preflight
+docker compose --profile narrowcti-gateway up --force-recreate narrowcti-gateway
+```
+
+For continuous gateway operation, switch `NARROWCTI_RUN_ONCE=false` only after
+bounded dry-run behavior, source guardrails, Elasticsearch capacity and OpenCTI
+queue behavior are acceptable. Source-specific containers remain available for
+isolated OTX checks and bounded MISP backfill investigations.
 
 ## Operational Preflight
 
