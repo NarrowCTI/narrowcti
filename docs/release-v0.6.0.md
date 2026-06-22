@@ -1,14 +1,11 @@
-# NarrowCTI v0.6.0 Release Candidate Notes
+# NarrowCTI v0.6.0 Release Notes
 
 ## Status
 
-`v0.6.0` is the quarantine and enrichment foundation release candidate. It
+`v0.6.0` is the quarantine and enrichment foundation release. It
 extends the v0.5 gateway runtime with reviewable quarantine, release audit,
 controlled replay, source entity extraction and local MITRE ATT&CK reference
 resolution.
-
-The version remains `v0.6.0-dev` until final operational validation, merge and
-tag.
 
 ## Product Value
 
@@ -101,7 +98,7 @@ python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state
 
 ## Test Validation
 
-Current release-candidate validation was performed with the existing
+Release validation was performed with the existing
 `opencti-connector-narrowcti` test image:
 
 ```powershell
@@ -128,7 +125,7 @@ Ran 190 tests
 OK
 ```
 
-Safe operational validation performed on the release candidate:
+Safe operational validation performed on the release:
 
 ```text
 python -m gateway.mitre refresh-cache --cache-file state/mitre_attack_cache.json

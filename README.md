@@ -11,12 +11,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.6.0-dev
+v0.6.0
 ```
 
-`v0.6.0-dev` is the current quarantine and enrichment foundation release
-candidate track. `v0.5.0` remains the latest stable gateway runtime and
-decision engine release.
+`v0.6.0` is the current stable quarantine and enrichment foundation release.
+It extends the v0.5 gateway runtime with reviewable quarantine, release audit,
+controlled replay, source entity extraction and local MITRE ATT&CK reference
+resolution.
 
 ## Product Identity
 
@@ -155,10 +156,9 @@ the enterprise intelligence gateway model is tracked in
 continuity validation is tracked in
 `docs/product-architecture-validation-v0.5.md`.
 
-## v0.6 Release Candidate Track
+## v0.6 Release Track
 
-The v0.6 track is currently a release candidate for the quarantine and
-enrichment foundation. The goal is to
+The v0.6 track is the quarantine and enrichment foundation. The goal is to
 turn quarantine from a decision outcome into a reviewable, auditable operator
 workflow while beginning structured enrichment from OTX and MITRE ATT&CK.
 
@@ -176,7 +176,7 @@ checks and operational reporting now include quarantine/release and MITRE cache
 posture for operator readiness.
 
 The detailed v0.6 design is tracked in
-`docs/quarantine-enrichment-v0.6.md`, and the release-candidate notes are
+`docs/quarantine-enrichment-v0.6.md`, and the release notes are
 tracked in `docs/release-v0.6.0.md`.
 
 Initial quarantine CLI commands:
@@ -424,7 +424,7 @@ cd "$LAB_ROOT\NarrowCTI"
 ```
 
 The helper runs the same Docker-based syntax and unit validation commands used
-for the release candidate. To inspect commands without executing Docker:
+for the release. To inspect commands without executing Docker:
 
 ```powershell
 .\scripts\validate-v0.6.ps1 -Preview
@@ -450,7 +450,7 @@ feature/refactor branch -> dev -> main -> version tag
 For this release:
 
 ```text
-v0.6.0-dev
+v0.6.0
 ```
 
 ## Documentation
