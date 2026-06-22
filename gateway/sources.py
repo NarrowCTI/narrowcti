@@ -9,6 +9,7 @@ from connectors.otx.otx_client import OTXClient
 from connectors.otx.processor import OTXProcessor
 from connectors.otx.settings import load_settings as load_otx_settings
 from core.decision_audit import DecisionAuditLog
+from core.deduplication import ArtifactDeduplicationIndex
 from gateway.runtime import SourceRegistry
 
 
@@ -22,7 +23,7 @@ class ProcessorRunner:
         return self.processor.run_once()
 
 
-def build_otx_runner(logger):
+def build_otx_runner(logger, artifact_dedup=None):
     settings = load_otx_settings()
     api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
     otx = OTXClient(
@@ -41,11 +42,12 @@ def build_otx_runner(logger):
         ingest_pause_seconds=settings.ingest_pause_seconds,
         feed_adapter=OTXFeedAdapter(otx),
         decision_audit=DecisionAuditLog(settings.decision_audit_file),
+        artifact_dedup=artifact_dedup,
     )
     return ProcessorRunner("otx", "OTX", processor)
 
 
-def build_misp_runner(logger):
+def build_misp_runner(logger, artifact_dedup=None):
     settings = load_misp_settings()
     api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
     misp = MISPClient(
@@ -72,13 +74,23 @@ def build_misp_runner(logger):
         ingest_pause_seconds=settings.ingest_pause_seconds,
         feed_adapter=adapter,
         decision_audit=DecisionAuditLog(settings.decision_audit_file),
+        artifact_dedup=artifact_dedup,
     )
     return ProcessorRunner("misp", "MISP", processor)
 
 
-def default_source_registry(logger):
+def build_artifact_dedup(gateway_settings):
+    if not gateway_settings:
+        return None
+    if gateway_settings.dedup_mode not in ["artifact", "hybrid"]:
+        return None
+    return ArtifactDeduplicationIndex(gateway_settings.dedup_state_file)
+
+
+def default_source_registry(logger, gateway_settings=None):
+    artifact_dedup = build_artifact_dedup(gateway_settings)
     return (
         SourceRegistry()
-        .register("otx", "OTX", lambda: build_otx_runner(logger))
-        .register("misp", "MISP", lambda: build_misp_runner(logger))
+        .register("otx", "OTX", lambda: build_otx_runner(logger, artifact_dedup))
+        .register("misp", "MISP", lambda: build_misp_runner(logger, artifact_dedup))
     )

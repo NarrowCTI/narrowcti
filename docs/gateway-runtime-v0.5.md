@@ -133,19 +133,23 @@ Deduplication is a product-level curation capability, not just a local runtime
 optimization. NarrowCTI should prevent unnecessary OpenCTI graph growth while
 preserving the intelligence value of repeated sightings across sources.
 
-The current implementation has two deduplication layers:
+The current implementation has three deduplication layers:
 
 - Source-item state prevents the same OTX pulse or MISP event from being
   reprocessed after a successful export.
 - STIX bundle construction removes repeated indicator patterns inside the same
   export bundle.
+- The v0.5 gateway can create a local artifact fingerprint index when
+  `NARROWCTI_DEDUP_MODE` is `artifact` or `hybrid`.
 
-The v0.5 gateway should evolve this into layered pre-export deduplication:
+The v0.5 gateway should keep evolving this into layered pre-export
+deduplication:
 
 - Source-item deduplication uses `source_key + external_id` to avoid repeated
   processing of the same upstream object.
 - Artifact deduplication builds normalized fingerprints such as
-  `indicator_type + normalized_value` before export.
+  `indicator_type + normalized_value` before export and skips candidates whose
+  exportable indicators are already known locally.
 - Optional OpenCTI lookup can check whether the indicator or observable already
   exists before import. This must be configurable because it adds API cost and
   operational coupling to OpenCTI.

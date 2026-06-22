@@ -251,6 +251,37 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(["tlp:green"], metadata["tags"])
         self.assertFalse(metadata["guardrails"]["oversized"])
 
+    def test_process_event_skips_when_all_artifacts_are_known(self):
+        records = []
+        marked = []
+        logs = []
+        state = SimpleNamespace(
+            has_event=lambda event_id: False,
+            mark_event=lambda event_id: marked.append(event_id),
+        )
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators: ([], len(indicators)),
+            mark_indicators=lambda indicators: self.fail("artifacts should not be marked"),
+        )
+
+        processor = MISPProcessor(
+            self.settings(),
+            misp_client=None,
+            api_client="api",
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: self.fail("export should not be called"),
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=self.adapter(enriched=candidate(raw=enriched_event())),
+            artifact_dedup=artifact_dedup,
+        )
+
+        outcome = processor.process_event_outcome("tlp:green", candidate(), state)
+
+        self.assertEqual("skip", outcome)
+        self.assertEqual([], marked)
+        self.assertEqual("skip", records[0].action)
+        self.assertEqual("all indicators already known", records[0].reason)
+        self.assertIn("MISP artifact dedup: tlp green event duplicates=1", logs)
     def test_process_event_dry_run_records_decision_without_export_or_state(self):
         records = []
         marked = []

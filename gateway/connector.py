@@ -9,7 +9,7 @@ def log(msg):
 
 def main():
     settings = load_settings()
-    registry = default_source_registry(log)
+    registry = default_source_registry(log, settings)
     if settings.run_once:
         run_gateway_once(settings, registry, log)
         return

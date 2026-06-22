@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest.mock import ANY, patch
@@ -6,6 +7,7 @@ from unittest.mock import ANY, patch
 from gateway.connector import main
 from gateway.runtime import SourceRegistry, run_gateway_loop, run_gateway_once
 from gateway.settings import GatewaySettings, load_settings
+from gateway.sources import build_artifact_dedup
 
 
 class GatewaySettingsTests(unittest.TestCase):
@@ -54,6 +56,19 @@ class GatewaySettingsTests(unittest.TestCase):
             )
 
 
+    def test_build_artifact_dedup_uses_gateway_mode(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            enabled = SimpleNamespace(
+                dedup_mode="hybrid",
+                dedup_state_file=os.path.join(tmpdir, "dedup.json"),
+            )
+            disabled = SimpleNamespace(
+                dedup_mode="source",
+                dedup_state_file=os.path.join(tmpdir, "dedup.json"),
+            )
+
+            self.assertIsNotNone(build_artifact_dedup(enabled))
+            self.assertIsNone(build_artifact_dedup(disabled))
 class GatewayRuntimeTests(unittest.TestCase):
     def test_registry_normalizes_source_keys(self):
         registry = SourceRegistry().register(" OTX ", "OTX", lambda: object())

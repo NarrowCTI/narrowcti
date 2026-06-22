@@ -55,6 +55,7 @@ class MISPProcessor:
         ingest_pause_seconds=2,
         feed_adapter=None,
         decision_audit=None,
+        artifact_dedup=None,
     ):
         self.settings = settings
         self.misp_client = misp_client
@@ -70,6 +71,7 @@ class MISPProcessor:
         self.sleeper = sleeper
         self.ingest_pause_seconds = ingest_pause_seconds
         self.decision_audit = decision_audit or DecisionAuditLog()
+        self.artifact_dedup = artifact_dedup
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -175,6 +177,10 @@ class MISPProcessor:
             self.record_decision(query, candidate_ref, action, reason, candidate)
             return action
 
+        candidate = self.apply_artifact_dedup(query, candidate_ref, candidate)
+        if not candidate:
+            return "skip"
+
         if self.settings.dry_run:
             self.log(
                 f"MISP dry-run: {candidate.name} score={candidate.score} "
@@ -199,6 +205,7 @@ class MISPProcessor:
             )
             return "error"
 
+        self.mark_artifacts(candidate)
         state.mark_event(event_id)
         self.record_decision(query, candidate_ref, "ingest", reason, candidate)
         return "ingest"
@@ -271,6 +278,48 @@ class MISPProcessor:
         except Exception as exc:
             self.log(f"MISP decision audit failed: {title} error={exc}")
 
+    def apply_artifact_dedup(self, query, candidate_ref, candidate):
+        if not self.artifact_dedup:
+            return candidate
+
+        indicators, duplicate_count = self.artifact_dedup.filter_new_indicators(
+            candidate.indicators
+        )
+        if duplicate_count:
+            self.log(
+                f"MISP artifact dedup: {candidate.name} duplicates={duplicate_count}"
+            )
+        if not indicators:
+            self.record_decision(
+                query,
+                candidate_ref,
+                action="skip",
+                reason="all indicators already known",
+                candidate=candidate,
+            )
+            return None
+        if len(indicators) == len(candidate.indicators):
+            return candidate
+        return MISPEventCandidate(
+            event=candidate.event,
+            name=candidate.name,
+            description=candidate.description,
+            indicators=indicators,
+            ioc_count=len(indicators),
+            age=candidate.age,
+            score=candidate.score,
+        )
+
+    def mark_artifacts(self, candidate):
+        if not self.artifact_dedup:
+            return
+        try:
+            added = self.artifact_dedup.mark_indicators(candidate.indicators)
+        except Exception as exc:
+            self.log(f"MISP artifact dedup mark failed: {candidate.name} error={exc}")
+            return
+        if added:
+            self.log(f"MISP artifact dedup mark: {candidate.name} added={added}")
     def ingest_candidate(self, candidate, reason):
         self.log(f"MISP ingest: {candidate.name} score={candidate.score} reason={reason}")
         try:
