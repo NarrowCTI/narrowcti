@@ -63,6 +63,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             report.sources["otx"]["score_summary"]["records_with_score"],
         )
         self.assertEqual(1, report.sources["misp"]["actions"]["skip"])
+        self.assertEqual([], report.quarantined)
         json.dumps(report.to_dict())
 
     def test_score_summary_ignores_records_without_score(self):
@@ -88,8 +89,48 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(0, report.record_count)
         self.assertEqual({}, report.sources)
         self.assertEqual([], report.reasons)
+        self.assertEqual([], report.quarantined)
         self.assertEqual(0, report.score_summary["overall"]["records_with_score"])
         json.dumps(report.to_dict())
+
+    def test_report_lists_recent_quarantined_candidates(self):
+        records = [
+            decision_record(
+                "2026-06-22T10:00:00Z",
+                "otx",
+                "quarantine",
+                "low score",
+                score=30,
+            ),
+            decision_record(
+                "2026-06-22T10:05:00Z",
+                "misp",
+                "quarantine",
+                "low score",
+                score=40,
+                metadata={"tags": ["tlp:green"]},
+            ),
+            decision_record(
+                "2026-06-22T10:06:00Z",
+                "otx",
+                "drop",
+                "tlp blocked",
+                score=80,
+            ),
+        ]
+
+        report = build_decision_audit_report(records, quarantine_limit=1)
+
+        self.assertEqual(1, len(report.quarantined))
+        self.assertEqual("misp", report.quarantined[0]["source_key"])
+        self.assertEqual("external-1", report.quarantined[0]["external_id"])
+        self.assertEqual("Sample intelligence", report.quarantined[0]["title"])
+        self.assertEqual("sample", report.quarantined[0]["query"])
+        self.assertEqual("low score", report.quarantined[0]["reason"])
+        self.assertEqual(40, report.quarantined[0]["score"])
+        self.assertEqual(1, report.quarantined[0]["age_days"])
+        self.assertEqual(1, report.quarantined[0]["indicator_count"])
+        self.assertEqual(["tlp:green"], report.quarantined[0]["metadata"]["tags"])
 
     def test_read_decision_records_can_expand_directory_and_limit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -136,10 +177,15 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("actions=ingest=0 drop=0 quarantine=1", text)
         self.assertIn("scores=records_with_score=1 min_score=50", text)
         self.assertIn("- action=quarantine count=1 reason=low score", text)
+        self.assertIn("quarantine_candidates:", text)
+        self.assertIn(
+            "- 2026-06-22T10:00:00Z otx external_id=external-1",
+            text,
+        )
         self.assertIn("- otx records=1", text)
 
 
-def decision_record(recorded_at, source_key, action, reason, score=50):
+def decision_record(recorded_at, source_key, action, reason, score=50, metadata=None):
     return {
         "recorded_at": recorded_at,
         "source_key": source_key,
@@ -151,7 +197,7 @@ def decision_record(recorded_at, source_key, action, reason, score=50):
         "score": score,
         "age_days": 1,
         "indicator_count": 1,
-        "metadata": {},
+        "metadata": metadata or {},
     }
 
 

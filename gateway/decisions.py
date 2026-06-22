@@ -2,6 +2,7 @@ import argparse
 import glob
 import json
 import os
+from collections.abc import Mapping
 from collections import Counter
 from dataclasses import dataclass
 
@@ -25,6 +26,7 @@ class DecisionAuditReport:
     last_recorded_at: str
     actions: dict
     reasons: list
+    quarantined: list
     score_summary: dict
     sources: dict
 
@@ -35,6 +37,7 @@ class DecisionAuditReport:
             "last_recorded_at": self.last_recorded_at,
             "actions": self.actions,
             "reasons": self.reasons,
+            "quarantined": self.quarantined,
             "score_summary": self.score_summary,
             "sources": self.sources,
         }
@@ -66,7 +69,7 @@ def expand_paths(paths):
     return expanded
 
 
-def build_decision_audit_report(records, reason_limit=10):
+def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
     if not records:
         return DecisionAuditReport(
             record_count=0,
@@ -74,6 +77,7 @@ def build_decision_audit_report(records, reason_limit=10):
             last_recorded_at="",
             actions=empty_actions(),
             reasons=[],
+            quarantined=[],
             score_summary={
                 "overall": build_score_summary([]),
                 "by_action": {},
@@ -119,6 +123,7 @@ def build_decision_audit_report(records, reason_limit=10):
         last_recorded_at=records[-1].get("recorded_at", ""),
         actions=actions,
         reasons=top_reasons(reason_counts, reason_limit),
+        quarantined=quarantine_candidates(records, quarantine_limit),
         score_summary={
             "overall": build_score_summary(records),
             "by_action": {
@@ -150,6 +155,43 @@ def top_reasons(reason_counts, limit):
         {"action": action, "reason": reason, "count": count}
         for (action, reason), count in items
     ]
+
+
+def quarantine_candidates(records, limit):
+    candidates = [
+        quarantine_record(record)
+        for record in records or ()
+        if normalize_value(record.get("action"), "") == "quarantine"
+    ]
+    candidates.sort(
+        key=lambda item: (
+            item.get("recorded_at", ""),
+            item.get("source_key", ""),
+            item.get("external_id", ""),
+        ),
+        reverse=True,
+    )
+    if limit and limit > 0:
+        candidates = candidates[:limit]
+    return candidates
+
+
+def quarantine_record(record):
+    metadata = record.get("metadata")
+    if not isinstance(metadata, Mapping):
+        metadata = {}
+    return {
+        "recorded_at": normalize_value(record.get("recorded_at"), ""),
+        "source_key": normalize_value(record.get("source_key"), "unknown"),
+        "external_id": normalize_value(record.get("external_id"), ""),
+        "title": normalize_value(record.get("title"), "(untitled)"),
+        "query": normalize_value(record.get("query"), ""),
+        "reason": normalize_value(record.get("reason"), "unspecified"),
+        "score": coerce_score(record.get("score")),
+        "age_days": record.get("age_days"),
+        "indicator_count": int(record.get("indicator_count", 0) or 0),
+        "metadata": dict(metadata),
+    }
 
 
 def build_score_summary(records):
@@ -211,6 +253,17 @@ def format_text_report(report):
             lines.append(
                 f"- action={item['action']} count={item['count']} "
                 f"reason={item['reason']}"
+            )
+    if report.quarantined:
+        lines.append("quarantine_candidates:")
+        for item in report.quarantined:
+            lines.append(
+                f"- {item['recorded_at'] or '(unknown-time)'} "
+                f"{item['source_key']} external_id={item['external_id'] or '(none)'} "
+                f"score={format_optional(item['score'])} "
+                f"age_days={format_optional(item['age_days'])} "
+                f"indicators={item['indicator_count']} reason={item['reason']} "
+                f"title={item['title']}"
             )
     if report.sources:
         lines.append("sources:")
@@ -274,6 +327,12 @@ def main():
         default=10,
         help="Maximum top reasons to include. Zero includes all reasons.",
     )
+    parser.add_argument(
+        "--quarantine-limit",
+        type=int,
+        default=10,
+        help="Maximum quarantined candidates to include. Zero includes all candidates.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -284,7 +343,11 @@ def main():
         paths.append(load_settings().decision_audit_dir)
 
     records = read_decision_records(paths, limit=args.limit or None)
-    report = build_decision_audit_report(records, reason_limit=args.reason_limit)
+    report = build_decision_audit_report(
+        records,
+        reason_limit=args.reason_limit,
+        quarantine_limit=args.quarantine_limit,
+    )
     if args.json:
         print(json.dumps(report.to_dict(), sort_keys=True))
     else:

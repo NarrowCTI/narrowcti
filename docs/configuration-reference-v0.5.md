@@ -250,7 +250,10 @@ reasons and source counts. It helps operators understand the practical effect
 of configured policy thresholds, TLP controls, indicator-type filters,
 deduplication and dry-run settings. It also summarizes score evidence through
 minimum score, maximum score, average score and score bands so operators can see
-how scoring shaped ingest, drop, quarantine and skip outcomes.
+how scoring shaped ingest, drop, quarantine and skip outcomes. The same report
+lists recent quarantine candidates for review, and
+`--quarantine-limit <count>` controls how many held candidates are displayed;
+`0` includes all quarantined records in the selected audit input.
 
 The local artifact deduplication index can also be summarized:
 
@@ -281,8 +284,8 @@ The following behavior is intentionally automatic and should remain auditable:
 - Write decision evidence and runtime summaries.
 - Write optional aggregate gateway run summaries to JSONL when
   `NARROWCTI_RUN_SUMMARY_FILE` is configured.
-- Preserve quarantined candidates for future analyst review and release when the
-  quarantine repository is implemented.
+- Expose quarantined candidates in decision audit reporting while preserving the
+  repository-backed analyst release workflow for the next maturity stage.
 
 Operators configure the boundaries. NarrowCTI executes the curation workflow and
 records why each candidate was accepted, rejected, skipped or held for review.
