@@ -103,6 +103,8 @@ python -m gateway.quarantine show --id <quarantine-id>
 python -m gateway.quarantine reject --id <quarantine-id> --reason "Out of scope"
 python -m gateway.quarantine release --id <quarantine-id> --reason "Relevant to monitored actor"
 python -m gateway.quarantine release-indicators --id <quarantine-id> --type filehash-sha256,url --reason "High-value indicators"
+python -m gateway.quarantine export-released --id <quarantine-id>
+python -m gateway.quarantine export-released --id <quarantine-id> --execute --dedup-state-file /app/state/dedup_index.json
 ```
 
 Behavior:
@@ -114,11 +116,16 @@ Behavior:
 - Partial release must preserve which indicators were released and which stayed
   held.
 - Every state transition must write release audit evidence.
+- `export-released` must be dry-run by default and require `--execute` for
+  OpenCTI import.
+- Export replay must use the released indicator subset, preserve deduplication
+  and mark the quarantine record as exported only after successful execution or
+  confirmed dedup-skip.
 
 The initial v0.6 implementation provides the local JSONL repository, automatic
-OTX/MISP quarantine writes, CLI state transitions and release audit records.
-Export replay through the existing STIX, OpenCTI and deduplication pipeline
-remains the next integration step.
+OTX/MISP quarantine writes, CLI state transitions, release audit records and
+controlled export replay for released records through the existing STIX/OpenCTI
+path. Rich graph enrichment remains a later integration step.
 
 ## Enrichment Foundation
 
@@ -191,6 +198,9 @@ Minimum validation for v0.6:
 - Unit tests proving OTX and MISP quarantine decisions write pending repository
   records without export or state marking.
 - CLI validation for list, show, reject, release and partial release.
+- CLI validation for dry-run released-record replay.
+- Unit tests for released-record export, partial release export and dedup-skip
+  export marking.
 - Unit tests for OTX entity extraction from representative pulse payloads.
 - Unit tests for MITRE technique/tactic resolver.
 - Local dry-run validation showing quarantine records are created.
@@ -204,8 +214,8 @@ Minimum validation for v0.6:
   automatically.
 - Operators can list, inspect, release and reject held candidates locally.
 - Release actions are audited with reviewer reason and timestamp.
-- Released candidates produce approval evidence that can be replayed through
-  existing scoring, STIX building, export and deduplication controls.
+- Released candidates can be replayed through existing STIX building, OpenCTI
+  export and deduplication controls.
 - OTX entity extraction creates structured metadata for future graph enrichment.
 - MITRE technique ids can be resolved to names and tactics through a local cache.
 - v0.6 improves governance without weakening the v0.5 safety posture.

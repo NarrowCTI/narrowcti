@@ -9,6 +9,7 @@ from core.quarantine import (
     RELEASED,
     QuarantineRecord,
     QuarantineRepository,
+    released_indicators,
 )
 
 
@@ -82,6 +83,7 @@ class QuarantineRepositoryTests(unittest.TestCase):
             self.assertEqual(2, released["review"]["released_indicator_count"])
             self.assertEqual(0, released["review"]["held_indicator_count"])
             self.assertFalse(released["review"]["exported"])
+            self.assertEqual(2, len(released_indicators(released)))
 
     def test_partial_release_filters_indicator_types(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -98,6 +100,35 @@ class QuarantineRepositoryTests(unittest.TestCase):
             self.assertEqual(["domain"], released["review"]["released_indicator_types"])
             self.assertEqual(1, released["review"]["released_indicator_count"])
             self.assertEqual(1, released["review"]["held_indicator_count"])
+            self.assertEqual(
+                [{"type": "domain", "indicator": "example.com"}],
+                released_indicators(released),
+            )
+
+    def test_mark_exported_appends_export_evidence(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository = QuarantineRepository(
+                os.path.join(tmpdir, "quarantine.jsonl"),
+                os.path.join(tmpdir, "releases.jsonl"),
+            )
+            record = repository.add(sample_record())
+            released = repository.release(record["quarantine_id"], "Relevant")
+
+            exported = repository.mark_exported(
+                released["quarantine_id"],
+                exported_indicator_count=2,
+                dedup_duplicate_count=1,
+                exported_by="unit-test",
+            )
+
+            self.assertTrue(exported["review"]["exported"])
+            self.assertEqual("unit-test", exported["review"]["exported_by"])
+            self.assertEqual(2, exported["review"]["exported_indicator_count"])
+            self.assertEqual(1, exported["review"]["dedup_duplicate_count"])
+            self.assertEqual(3, len(repository.events()))
+            audit = read_jsonl(os.path.join(tmpdir, "releases.jsonl"))
+            self.assertTrue(audit[-1]["exported"])
+            self.assertEqual(2, audit[-1]["exported_indicator_count"])
 
     def test_cannot_transition_non_pending_record(self):
         with tempfile.TemporaryDirectory() as tmpdir:

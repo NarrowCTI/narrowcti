@@ -16,6 +16,7 @@ EXPIRED = "expired"
 ACTIVE_STATUSES = {PENDING}
 FINAL_STATUSES = {RELEASED, PARTIALLY_RELEASED, REJECTED, EXPIRED}
 VALID_STATUSES = ACTIVE_STATUSES | FINAL_STATUSES
+EXPORTABLE_STATUSES = {RELEASED, PARTIALLY_RELEASED}
 
 
 @dataclass(frozen=True)
@@ -157,6 +158,44 @@ class QuarantineRepository:
             indicator_types=selected_types,
         )
 
+    def mark_exported(
+        self,
+        quarantine_id,
+        exported_indicator_count,
+        dedup_duplicate_count=0,
+        exported_by="gateway.quarantine",
+    ):
+        current = self.get(quarantine_id)
+        current_status = normalize_status(current.get("status", PENDING))
+        if current_status not in EXPORTABLE_STATUSES:
+            raise ValueError(
+                f"quarantine record is not exportable: {quarantine_id} status={current_status}"
+            )
+        review = dict(current.get("review") or {})
+        if review.get("exported"):
+            raise ValueError(f"quarantine record is already exported: {quarantine_id}")
+
+        now = utc_now()
+        review.update(
+            {
+                "exported": True,
+                "exported_at": now,
+                "exported_by": exported_by or "gateway.quarantine",
+                "exported_indicator_count": int(exported_indicator_count or 0),
+                "dedup_duplicate_count": int(dedup_duplicate_count or 0),
+            }
+        )
+        updated = dict(current)
+        updated.update(
+            {
+                "updated_at": now,
+                "review": review,
+            }
+        )
+        self._append(updated)
+        self._append_release_audit(updated)
+        return updated
+
     def _transition(
         self,
         quarantine_id,
@@ -251,6 +290,10 @@ class QuarantineRepository:
             "released_indicator_count": review.get("released_indicator_count", 0),
             "held_indicator_count": review.get("held_indicator_count", 0),
             "exported": review.get("exported", False),
+            "exported_at": review.get("exported_at", ""),
+            "exported_by": review.get("exported_by", ""),
+            "exported_indicator_count": review.get("exported_indicator_count", 0),
+            "dedup_duplicate_count": review.get("dedup_duplicate_count", 0),
         }
         directory = os.path.dirname(self.release_audit_file)
         if directory:
@@ -300,6 +343,26 @@ def indicator_type(indicator):
         or indicator.get("observable_type")
         or ""
     ).strip().lower()
+
+
+def released_indicators(record):
+    status = normalize_status(record.get("status", PENDING))
+    if status not in EXPORTABLE_STATUSES:
+        return []
+    indicators = [dict(indicator) for indicator in record.get("indicators") or []]
+    if status == RELEASED:
+        return indicators
+
+    released_types = normalize_indicator_types(
+        (record.get("review") or {}).get("released_indicator_types") or (),
+    )
+    if not released_types:
+        return []
+    return [
+        indicator
+        for indicator in indicators
+        if indicator_type(indicator) in released_types
+    ]
 
 
 def bounded_raw_snapshot(value, max_bytes=65536):

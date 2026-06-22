@@ -2,7 +2,13 @@ import argparse
 import json
 import os
 
+from core.deduplication import ArtifactDeduplicationIndex
+from core.opencti_deduplication import (
+    CompositeArtifactDeduplication,
+    OpenCTIArtifactLookup,
+)
 from core.quarantine import QuarantineRepository
+from gateway.quarantine_export import QuarantineExporter
 
 
 DEFAULT_REPOSITORY = "/app/state/quarantine.jsonl"
@@ -144,6 +150,76 @@ def command_release_indicators(args):
     return 0
 
 
+def command_export_released(args):
+    dry_run = not args.execute
+    api_client = None
+    if args.opencti_dedup_lookup or not dry_run:
+        api_client = build_opencti_client()
+
+    dedup = build_artifact_dedup(args, api_client)
+    service = QuarantineExporter(
+        repository_from_args(args),
+        api_client=api_client,
+        artifact_dedup=dedup,
+        identity_name=args.identity_name,
+        logger=lambda message: None,
+        dry_run=dry_run,
+    )
+    results = service.export_pending(args.id, limit=args.limit)
+    data = [result.to_dict() for result in results]
+    if args.json:
+        print(json.dumps(data, sort_keys=True))
+    else:
+        print(format_export_results(data))
+    return 0
+
+
+def build_opencti_client():
+    from pycti import OpenCTIApiClient
+
+    opencti_url = os.getenv("OPENCTI_URL")
+    opencti_token = os.getenv("OPENCTI_TOKEN")
+    if not opencti_url or not opencti_token:
+        raise ValueError("OPENCTI_URL and OPENCTI_TOKEN are required for export")
+    return OpenCTIApiClient(opencti_url, opencti_token)
+
+
+def build_artifact_dedup(args, api_client=None):
+    state_file = args.dedup_state_file or os.getenv("NARROWCTI_DEDUP_STATE_FILE", "")
+    local_index = ArtifactDeduplicationIndex(state_file) if state_file else None
+    opencti_lookup = None
+    if args.opencti_dedup_lookup:
+        if not api_client:
+            raise ValueError("OpenCTI client is required for OpenCTI dedup lookup")
+        opencti_lookup = OpenCTIArtifactLookup(api_client)
+    if not local_index and not opencti_lookup:
+        return None
+    return CompositeArtifactDeduplication(
+        local_index=local_index,
+        opencti_lookup=opencti_lookup,
+    )
+
+
+def format_export_results(results):
+    lines = [
+        "NarrowCTI quarantine export",
+        f"count={len(results)}",
+    ]
+    for result in results:
+        lines.append(
+            f"- {result['quarantine_id']} action={result['action']} "
+            f"status={result['status']} dry_run={str(result['dry_run']).lower()} "
+            f"exported_indicators={result['exported_indicator_count']} "
+            f"duplicates={result['dedup_duplicate_count']} "
+            f"title={result['title'] or '(untitled)'}"
+        )
+        if result.get("reason"):
+            lines.append(f"  reason={result['reason']}")
+        for error in result.get("errors") or []:
+            lines.append(f"  error={error}")
+    return "\n".join(lines)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         description="Review NarrowCTI quarantine records."
@@ -195,6 +271,34 @@ def build_parser():
     partial_parser.add_argument("--reason", required=True, help="Review reason.")
     partial_parser.add_argument("--reviewer", default="", help="Reviewer identity.")
     partial_parser.set_defaults(func=command_release_indicators)
+
+    export_parser = subparsers.add_parser(
+        "export-released",
+        help="Replay released quarantine records through the OpenCTI export path.",
+    )
+    export_parser.add_argument("--id", default="", help="Optional quarantine id.")
+    export_parser.add_argument("--limit", type=int, default=0, help="Maximum records.")
+    export_parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="Export to OpenCTI. Without this flag the command runs as dry-run.",
+    )
+    export_parser.add_argument(
+        "--dedup-state-file",
+        default="",
+        help="Artifact dedup state file. Defaults to NARROWCTI_DEDUP_STATE_FILE.",
+    )
+    export_parser.add_argument(
+        "--opencti-dedup-lookup",
+        action="store_true",
+        help="Check OpenCTI for existing indicator patterns before export.",
+    )
+    export_parser.add_argument(
+        "--identity-name",
+        default=os.getenv("CONNECTOR_NAME", "NarrowCTI Gateway"),
+        help="STIX identity name used for exported objects.",
+    )
+    export_parser.set_defaults(func=command_export_released)
 
     return parser
 

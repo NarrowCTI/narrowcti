@@ -85,6 +85,28 @@ class GatewayQuarantineCliTests(unittest.TestCase):
             self.assertEqual(1, data["review"]["released_indicator_count"])
             self.assertEqual(1, data["review"]["held_indicator_count"])
 
+    def test_export_released_defaults_to_dry_run(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            repository = QuarantineRepository(repository_path)
+            record = repository.add(sample_record())
+            released = repository.release(record["quarantine_id"], "Relevant")
+
+            output = run_cli(
+                "--repository",
+                repository_path,
+                "export-released",
+                "--id",
+                released["quarantine_id"],
+            )
+
+            self.assertIn("NarrowCTI quarantine export", output)
+            self.assertIn("action=dry-run", output)
+            self.assertIn("exported_indicators=2", output)
+            self.assertFalse(
+                repository.get(released["quarantine_id"])["review"]["exported"]
+            )
+
 
 def run_cli(*args):
     output = io.StringIO()
@@ -97,20 +119,22 @@ def run_cli(*args):
 
 def seed_record(repository_path):
     repository = QuarantineRepository(repository_path)
-    return repository.add(
-        QuarantineRecord(
-            source_key="alienvault:otx",
-            external_id="pulse-1",
-            title="Sample pulse",
-            query="lummac2",
-            reason="low score",
-            score=40,
-            indicators=[
-                {"type": "domain", "indicator": "example.com"},
-                {"type": "url", "indicator": "https://example.com/a"},
-            ],
-            metadata={"tags": ["tlp:green"]},
-        )
+    return repository.add(sample_record())
+
+
+def sample_record():
+    return QuarantineRecord(
+        source_key="alienvault:otx",
+        external_id="pulse-1",
+        title="Sample pulse",
+        query="lummac2",
+        reason="low score",
+        score=40,
+        indicators=[
+            {"type": "domain", "indicator": "example.com"},
+            {"type": "url", "indicator": "https://example.com/a"},
+        ],
+        metadata={"tags": ["tlp:green"]},
     )
 
 
