@@ -235,6 +235,44 @@ class GatewayQuarantineCliTests(unittest.TestCase):
             self.assertEqual("reject", events[0]["action"])
             self.assertEqual(second["quarantine_id"], events[0]["quarantine_id"])
 
+    def test_audit_json_can_filter_export_events(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            audit_path = os.path.join(tmpdir, "releases.jsonl")
+            record = seed_record(repository_path)
+
+            run_cli(
+                "--repository",
+                repository_path,
+                "--release-audit-file",
+                audit_path,
+                "release",
+                "--id",
+                record["quarantine_id"],
+                "--reason",
+                "Relevant",
+            )
+            QuarantineRepository(repository_path, audit_path).mark_exported(
+                record["quarantine_id"],
+                exported_indicator_count=2,
+                exported_by="unit-test",
+            )
+            output = run_cli(
+                "--release-audit-file",
+                audit_path,
+                "--json",
+                "audit",
+                "--action",
+                "export",
+            )
+
+            events = json.loads(output)
+            self.assertEqual(1, len(events))
+            self.assertEqual("export", events[0]["action"])
+            self.assertTrue(events[0]["exported"])
+            self.assertEqual("unit-test", events[0]["exported_by"])
+            self.assertEqual(record["quarantine_id"], events[0]["quarantine_id"])
+
 
 def run_cli(*args):
     output = io.StringIO()

@@ -96,6 +96,7 @@ python -m gateway.quarantine --repository state\quarantine.jsonl --release-audit
 python -m gateway.quarantine --repository state\quarantine.jsonl --release-audit-file state\audit\releases.jsonl reject --id <quarantine-id> --reason "Out of scope"
 python -m gateway.quarantine --repository state\quarantine.jsonl export-released --id <quarantine-id>
 python -m gateway.quarantine --release-audit-file state\audit\releases.jsonl audit --limit 20
+python -m gateway.quarantine --release-audit-file state\audit\releases.jsonl audit --action export
 ```
 
 `export-released` is dry-run by default. Use `--execute` only after OpenCTI

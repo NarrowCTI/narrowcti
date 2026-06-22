@@ -29,7 +29,8 @@ a local cache without treating MITRE as an IoC feed.
   partial release and export replay.
 - Adds release audit records with reviewer, reason, released indicators,
   held indicators and export evidence.
-- Adds CLI inspection for release, reject and export audit events.
+- Adds CLI inspection for release, reject and export audit events, including
+  `audit --action export`.
 - Makes release/reject CLI reason enforcement follow
   `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON`.
 - Automatically queues OTX and MISP policy-quarantined candidates when a
@@ -123,7 +124,7 @@ Latest complete suite result:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 187 tests
+Ran 188 tests
 OK
 ```
 

@@ -122,12 +122,16 @@ class QuarantineRepositoryTests(unittest.TestCase):
             )
 
             self.assertTrue(exported["review"]["exported"])
+            self.assertEqual("release", exported["review"]["action"])
             self.assertEqual("unit-test", exported["review"]["exported_by"])
             self.assertEqual(2, exported["review"]["exported_indicator_count"])
             self.assertEqual(1, exported["review"]["dedup_duplicate_count"])
             self.assertEqual(3, len(repository.events()))
             audit = read_jsonl(os.path.join(tmpdir, "releases.jsonl"))
+            self.assertEqual("release", audit[0]["action"])
+            self.assertEqual("export", audit[-1]["action"])
             self.assertTrue(audit[-1]["exported"])
+            self.assertEqual("unit-test", audit[-1]["exported_by"])
             self.assertEqual(2, audit[-1]["exported_indicator_count"])
 
     def test_cannot_transition_non_pending_record(self):

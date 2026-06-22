@@ -193,7 +193,7 @@ class QuarantineRepository:
             }
         )
         self._append(updated)
-        self._append_release_audit(updated)
+        self._append_release_audit(updated, action="export")
         return updated
 
     def _transition(
@@ -272,15 +272,19 @@ class QuarantineRepository:
         with open(self.repository_file, "a", encoding="utf-8") as file_obj:
             file_obj.write(json.dumps(record, sort_keys=True) + "\n")
 
-    def _append_release_audit(self, record):
+    def _append_release_audit(self, record, action=""):
         if not self.release_audit_file:
             return
         review = dict(record.get("review") or {})
+        audit_action = action or review.get("action", "")
+        recorded_at = review.get("recorded_at") or utc_now()
+        if audit_action == "export":
+            recorded_at = review.get("exported_at") or recorded_at
         event = {
-            "recorded_at": review.get("recorded_at") or utc_now(),
+            "recorded_at": recorded_at,
             "quarantine_id": record.get("quarantine_id", ""),
             "status": record.get("status", ""),
-            "action": review.get("action", ""),
+            "action": audit_action,
             "reviewer": review.get("reviewer", ""),
             "reason": review.get("reason", ""),
             "source_key": record.get("source_key", ""),
