@@ -112,6 +112,8 @@ Expected outcomes:
 
 ## v0.6.0 - Quarantine And Enrichment Foundation
 
+Status: in development.
+
 Purpose:
 
 - Add operational metrics and clearer runtime reporting.

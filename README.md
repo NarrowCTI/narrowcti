@@ -11,13 +11,12 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.5.0
+v0.6.0-dev
 ```
 
-`v0.5.0` is the current stable gateway runtime and decision engine release.
-It promotes the unified NarrowCTI Gateway runtime as the default product
-runtime while keeping source-specific OTX and MISP runtimes available for
-debugging and bounded validation.
+`v0.6.0-dev` is the current quarantine and enrichment foundation development
+track. `v0.5.0` remains the latest stable gateway runtime and decision engine
+release.
 
 ## Product Identity
 
@@ -155,6 +154,22 @@ the enterprise intelligence gateway model is tracked in
 `docs/enterprise-intelligence-gateway-v0.5.md`, and the product/architecture
 continuity validation is tracked in
 `docs/product-architecture-validation-v0.5.md`.
+
+## v0.6 Development Track
+
+The v0.6 track starts the quarantine and enrichment foundation. The goal is to
+turn quarantine from a decision outcome into a reviewable, auditable operator
+workflow while beginning structured enrichment from OTX and MITRE ATT&CK.
+
+The first safe target is a local quarantine repository and CLI workflow for
+listing, showing, rejecting and releasing held candidates with reviewer reason
+and release audit evidence. The second target is source enrichment groundwork:
+extracting OTX adversary, malware family, ATT&CK, industry, country, TLP and
+reference fields, then resolving ATT&CK technique and tactic context through a
+local cache.
+
+The detailed v0.6 design is tracked in
+`docs/quarantine-enrichment-v0.6.md`.
 
 ## Curation Configuration
 
@@ -386,7 +401,7 @@ feature/refactor branch -> dev -> main -> version tag
 For this release:
 
 ```text
-v0.5.0
+v0.6.0-dev
 ```
 
 ## Documentation
@@ -405,6 +420,7 @@ docs/multi-feed-expansion-v0.4.md
 docs/misp-validation-v0.4.md
 docs/release-v0.4.0.md
 docs/release-v0.5.0.md
+docs/quarantine-enrichment-v0.6.md
 docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.5.md
 docs/enterprise-intelligence-gateway-v0.5.md
