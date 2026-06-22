@@ -111,6 +111,10 @@ MISP_OVERSIZED_EVENT_ACTION=skip
 The gateway must not force OTX and MISP to share processing state. Shared
 services are acceptable; source state and audit context must remain clearly
 scoped.
+When source-specific overrides such as `STATE_FILE`, `MISP_STATE_FILE`,
+`DECISION_AUDIT_FILE` or `MISP_DECISION_AUDIT_FILE` are not set, the gateway
+derives source-scoped defaults from `NARROWCTI_STATE_DIR` and
+`NARROWCTI_DECISION_AUDIT_DIR`.
 The detailed parameter reference for curation filters, policy thresholds,
 guardrails, source-specific controls and target gateway variables is maintained
 in `docs/configuration-reference-v0.5.md`.

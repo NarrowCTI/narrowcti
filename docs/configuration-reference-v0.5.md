@@ -96,8 +96,8 @@ supported by code.
 | `NARROWCTI_DRY_RUN` | Gateway-level dry-run default for enabled sources. |
 | `NARROWCTI_RUN_ONCE` | Gateway-level run-once behavior. |
 | `NARROWCTI_SOURCE_INTERVAL_SECONDS` | Gateway loop interval between source runs. |
-| `NARROWCTI_STATE_DIR` | Base directory for source state and gateway indexes. |
-| `NARROWCTI_DECISION_AUDIT_DIR` | Base directory for decision audit output. |
+| `NARROWCTI_STATE_DIR` | Base directory for source state and gateway indexes. The gateway derives source-scoped defaults such as `otx_state.json` and `misp_state.json` when source-specific state variables are not set. |
+| `NARROWCTI_DECISION_AUDIT_DIR` | Base directory for decision audit output. The gateway derives source-scoped audit files when `DECISION_AUDIT_FILE` or `MISP_DECISION_AUDIT_FILE` are not set. |
 | `NARROWCTI_RUN_SUMMARY_FILE` | Optional JSONL file for aggregate gateway run summaries. |
 | `NARROWCTI_MIN_SCORE_TO_INGEST` | Gateway-level default minimum score. |
 | `NARROWCTI_ENABLE_QUARANTINE` | Gateway-level quarantine default. |

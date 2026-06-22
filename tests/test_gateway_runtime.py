@@ -2,13 +2,24 @@ import json
 import os
 import tempfile
 import unittest
+from dataclasses import dataclass
 from types import SimpleNamespace
 from unittest.mock import ANY, patch
 
 from gateway.connector import main
 from gateway.runtime import SourceRegistry, run_gateway_loop, run_gateway_once
 from gateway.settings import GatewaySettings, load_settings
-from gateway.sources import build_artifact_dedup, build_source_dedup
+from gateway.sources import (
+    apply_gateway_source_paths,
+    build_artifact_dedup,
+    build_source_dedup,
+)
+
+
+@dataclass(frozen=True)
+class RuntimePathSettings:
+    state_file: str = ""
+    decision_audit_file: str = ""
 
 
 class GatewaySettingsTests(unittest.TestCase):
@@ -84,6 +95,55 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertIsNotNone(dedup)
         self.assertIsNotNone(dedup.opencti_lookup)
         self.assertIsNone(dedup.local_index)
+
+    def test_gateway_source_paths_use_source_scoped_defaults(self):
+        gateway_settings = SimpleNamespace(
+            state_dir="/state",
+            decision_audit_dir="/state/audit",
+        )
+
+        with patch.dict(os.environ, {}, clear=True):
+            otx = apply_gateway_source_paths(
+                RuntimePathSettings(),
+                gateway_settings,
+                "otx",
+            )
+            misp = apply_gateway_source_paths(
+                RuntimePathSettings(),
+                gateway_settings,
+                "misp",
+            )
+
+        self.assertEqual("/state/otx_state.json", otx.state_file)
+        self.assertEqual("/state/audit/otx_decisions.jsonl", otx.decision_audit_file)
+        self.assertEqual("/state/misp_state.json", misp.state_file)
+        self.assertEqual(
+            "/state/audit/misp_decisions.jsonl",
+            misp.decision_audit_file,
+        )
+
+    def test_gateway_source_paths_preserve_explicit_source_overrides(self):
+        gateway_settings = SimpleNamespace(
+            state_dir="/state",
+            decision_audit_dir="/state/audit",
+        )
+        current = RuntimePathSettings(
+            state_file="/custom/state.json",
+            decision_audit_file="/custom/audit.jsonl",
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "STATE_FILE": "/custom/state.json",
+                "DECISION_AUDIT_FILE": "/custom/audit.jsonl",
+            },
+            clear=True,
+        ):
+            resolved = apply_gateway_source_paths(current, gateway_settings, "otx")
+
+        self.assertEqual("/custom/state.json", resolved.state_file)
+        self.assertEqual("/custom/audit.jsonl", resolved.decision_audit_file)
 
 class GatewayRuntimeTests(unittest.TestCase):
     def test_registry_normalizes_source_keys(self):

@@ -1,3 +1,6 @@
+import os
+from dataclasses import replace
+
 from pycti import OpenCTIApiClient
 
 from connectors.misp.client import MISPClient
@@ -15,6 +18,22 @@ from core.opencti_deduplication import (
     OpenCTIArtifactLookup,
 )
 from gateway.runtime import SourceRegistry
+
+
+SOURCE_RUNTIME_PATHS = {
+    "otx": {
+        "state_env": "STATE_FILE",
+        "state_file": "otx_state.json",
+        "audit_env": "DECISION_AUDIT_FILE",
+        "audit_file": "otx_decisions.jsonl",
+    },
+    "misp": {
+        "state_env": "MISP_STATE_FILE",
+        "state_file": "misp_state.json",
+        "audit_env": "MISP_DECISION_AUDIT_FILE",
+        "audit_file": "misp_decisions.jsonl",
+    },
+}
 
 
 class ProcessorRunner:
@@ -42,8 +61,41 @@ def build_source_dedup(api_client, artifact_dedup, opencti_dedup_lookup, logger)
     )
 
 
-def build_otx_runner(logger, artifact_dedup=None, opencti_dedup_lookup=False):
-    settings = load_otx_settings()
+def gateway_file(gateway_settings, directory_name, filename):
+    base_dir = getattr(gateway_settings, directory_name, "")
+    if not base_dir:
+        return ""
+    return os.path.join(base_dir, filename)
+
+
+def apply_gateway_source_paths(settings, gateway_settings, source_key):
+    if not gateway_settings:
+        return settings
+
+    path_config = SOURCE_RUNTIME_PATHS[source_key]
+    updates = {}
+    if path_config["state_env"] not in os.environ:
+        updates["state_file"] = gateway_file(
+            gateway_settings,
+            "state_dir",
+            path_config["state_file"],
+        )
+    if path_config["audit_env"] not in os.environ:
+        updates["decision_audit_file"] = gateway_file(
+            gateway_settings,
+            "decision_audit_dir",
+            path_config["audit_file"],
+        )
+    return replace(settings, **updates) if updates else settings
+
+
+def build_otx_runner(
+    logger,
+    artifact_dedup=None,
+    opencti_dedup_lookup=False,
+    gateway_settings=None,
+):
+    settings = apply_gateway_source_paths(load_otx_settings(), gateway_settings, "otx")
     api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
     dedup = build_source_dedup(api, artifact_dedup, opencti_dedup_lookup, logger)
     otx = OTXClient(
@@ -67,8 +119,13 @@ def build_otx_runner(logger, artifact_dedup=None, opencti_dedup_lookup=False):
     return ProcessorRunner("otx", "OTX", processor)
 
 
-def build_misp_runner(logger, artifact_dedup=None, opencti_dedup_lookup=False):
-    settings = load_misp_settings()
+def build_misp_runner(
+    logger,
+    artifact_dedup=None,
+    opencti_dedup_lookup=False,
+    gateway_settings=None,
+):
+    settings = apply_gateway_source_paths(load_misp_settings(), gateway_settings, "misp")
     api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
     dedup = build_source_dedup(api, artifact_dedup, opencti_dedup_lookup, logger)
     misp = MISPClient(
@@ -122,6 +179,7 @@ def default_source_registry(logger, gateway_settings=None):
                 logger,
                 artifact_dedup,
                 opencti_dedup_lookup,
+                gateway_settings,
             ),
         )
         .register(
@@ -131,6 +189,7 @@ def default_source_registry(logger, gateway_settings=None):
                 logger,
                 artifact_dedup,
                 opencti_dedup_lookup,
+                gateway_settings,
             ),
         )
     )
