@@ -308,13 +308,13 @@ def build_parser():
 
     reject_parser = subparsers.add_parser("reject", help="Reject a pending record.")
     reject_parser.add_argument("--id", required=True, help="Quarantine id.")
-    reject_parser.add_argument("--reason", required=True, help="Review reason.")
+    reject_parser.add_argument("--reason", default="", help="Review reason.")
     reject_parser.add_argument("--reviewer", default="", help="Reviewer identity.")
     reject_parser.set_defaults(func=command_reject)
 
     release_parser = subparsers.add_parser("release", help="Release a pending record.")
     release_parser.add_argument("--id", required=True, help="Quarantine id.")
-    release_parser.add_argument("--reason", required=True, help="Review reason.")
+    release_parser.add_argument("--reason", default="", help="Review reason.")
     release_parser.add_argument("--reviewer", default="", help="Reviewer identity.")
     release_parser.set_defaults(func=command_release)
 
@@ -328,7 +328,7 @@ def build_parser():
         required=True,
         help="Comma-separated indicator types to release.",
     )
-    partial_parser.add_argument("--reason", required=True, help="Review reason.")
+    partial_parser.add_argument("--reason", default="", help="Review reason.")
     partial_parser.add_argument("--reviewer", default="", help="Reviewer identity.")
     partial_parser.set_defaults(func=command_release_indicators)
 

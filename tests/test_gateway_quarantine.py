@@ -85,6 +85,47 @@ class GatewayQuarantineCliTests(unittest.TestCase):
             self.assertEqual(1, data["review"]["released_indicator_count"])
             self.assertEqual(1, data["review"]["held_indicator_count"])
 
+    def test_release_without_reason_fails_by_default(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            record = seed_record(repository_path)
+
+            with self.assertRaises(SystemExit) as caught:
+                run_cli(
+                    "--repository",
+                    repository_path,
+                    "release",
+                    "--id",
+                    record["quarantine_id"],
+                )
+
+            self.assertEqual(2, caught.exception.code)
+
+    def test_release_without_reason_can_be_allowed_by_env(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            record = seed_record(repository_path)
+
+            with temporary_env(
+                NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON="false",
+                NARROWCTI_REVIEWER="env-analyst",
+            ):
+                output = run_cli(
+                    "--repository",
+                    repository_path,
+                    "release",
+                    "--id",
+                    record["quarantine_id"],
+                )
+
+            self.assertIn("status=released", output)
+            self.assertIn("- reviewer=env-analyst", output)
+            released = QuarantineRepository(repository_path).get(
+                record["quarantine_id"]
+            )
+            self.assertEqual("", released["review"]["reason"])
+            self.assertEqual("env-analyst", released["review"]["reviewer"])
+
     def test_export_released_defaults_to_dry_run(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             repository_path = os.path.join(tmpdir, "quarantine.jsonl")
@@ -197,7 +238,8 @@ class GatewayQuarantineCliTests(unittest.TestCase):
 
 def run_cli(*args):
     output = io.StringIO()
-    with contextlib.redirect_stdout(output):
+    error = io.StringIO()
+    with contextlib.redirect_stdout(output), contextlib.redirect_stderr(error):
         exit_code = main(list(args))
     if exit_code:
         raise AssertionError(f"CLI returned {exit_code}")
@@ -228,6 +270,24 @@ def sample_record():
 def read_jsonl(path):
     with open(path, "r", encoding="utf-8") as file_obj:
         return [json.loads(line) for line in file_obj if line.strip()]
+
+
+@contextlib.contextmanager
+def temporary_env(**updates):
+    previous = {key: os.environ.get(key) for key in updates}
+    try:
+        for key, value in updates.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        yield
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 if __name__ == "__main__":
