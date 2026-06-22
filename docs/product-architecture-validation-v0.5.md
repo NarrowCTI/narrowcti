@@ -62,6 +62,8 @@ The strongest value signals already present are:
 - Safe handling of high-volume MISP events through metadata-first guardrails.
 - Provenance preservation for collector and original source context.
 - STIX export into OpenCTI after curation rather than raw forwarding.
+- Enterprise direction for actor, arsenal, ATT&CK, victimology, quarantine
+  release and graph enrichment filters.
 
 This is the right product posture for a professional gateway aimed at CTI,
 threat hunting, SOC and platform teams.
@@ -77,6 +79,8 @@ explicit:
   model.
 - `docs/misp-validation-v0.4.md` records operational evidence and guardrails.
 - `docs/gateway-runtime-v0.5.md` describes the unified gateway runtime target.
+- `docs/enterprise-intelligence-gateway-v0.5.md` defines the enterprise filter,
+  quarantine-release and graph-enrichment target.
 - This document records the v0.5 continuity check against the product vision.
 
 ## v0.5 Quality Bar
@@ -94,6 +98,8 @@ a gateway:
 - Dry-run mode remains trustworthy and non-exporting.
 - Tests prove registry, orchestration, failure isolation and summaries.
 - Documentation explains how the gateway improves CTI and hunting workflows.
+- Enterprise backlog separates safe v0.5 documentation from future quarantine,
+  entity extraction, ATT&CK resolver and graph enrichment implementation.
 
 ## Known Gaps To Preserve As Roadmap Items
 
@@ -103,6 +109,8 @@ a gateway:
 - OpenCTI-side deduplication lookup and initial local cross-source artifact
   correlation records are implemented. Analyst-facing enrichment, confidence
   uplift and reporting from those records remain roadmap items.
+- There is no quarantine release workflow yet; today quarantine is recorded as
+  a decision outcome, not a managed review queue.
 - There is no administrative UI for policy tuning.
 - Metrics are still operational summaries, not full customer-facing value
   reporting.

@@ -86,6 +86,8 @@ Purpose:
 - Improve quarantine behavior, summaries and operator reporting.
 - Document curation parameters so operators know which filters, thresholds and
   guardrails can be configured.
+- Formalize enterprise curation domains for actor, arsenal, MITRE ATT&CK,
+  victimology, quarantine release and graph enrichment.
 
 Expected outcomes:
 
@@ -105,52 +107,73 @@ Expected outcomes:
   `docs/configuration-reference-v0.5.md`.
 - Product and architecture continuity are validated in
   `docs/product-architecture-validation-v0.5.md`.
+- Enterprise gateway direction is documented in
+  `docs/enterprise-intelligence-gateway-v0.5.md`.
 
-## v0.6.0 - Operational Layer
+## v0.6.0 - Quarantine And Enrichment Foundation
 
 Purpose:
 
 - Add operational metrics and clearer runtime reporting.
-- Add dry-run mode.
 - Improve health checks.
 - Produce value metrics such as reviewed, ingested, dropped and quarantined
   intelligence by source.
+- Add a quarantine repository, CLI release workflow and release audit records.
+- Start OTX enriched entity extraction for adversary, malware families,
+  ATT&CK ids, industries, countries, TLP and references.
+- Add a local MITRE ATT&CK cache and technique/tactic resolver.
 
 Expected outcomes:
 
 - Operators can tune the gateway safely.
 - Customers can see measurable feed-noise reduction.
 - Runtime behavior is easier to support.
+- Quarantined intelligence can be reviewed, released, rejected or replayed
+  without losing auditability.
+- OTX and MITRE data begin to populate actor, arsenal, TTP and victimology
+  context instead of only indicators and reports.
 
-## v0.7.0 - Commercial Licensing
+## v0.7.0 - Graph Enrichment And Enterprise Filters
 
 Purpose:
 
-- Add technical license enforcement.
-- Support offline signed license files.
-- Track customer id, expiration and enabled features.
-- Introduce feature gates by feed, environment or capability.
+- Export richer STIX objects and relationships for actors, intrusion sets,
+  malware, tools, infrastructure, vulnerabilities, ATT&CK techniques,
+  campaigns, sectors and locations.
+- Add enterprise policy variables for actor, arsenal, ATT&CK, sector,
+  geography, artifact criticality and graph state.
+- Add confidence and provenance controls for relationships inferred from source
+  fields.
+- Expand graph hygiene from indicator deduplication into relationship and entity
+  quality controls.
 
 Expected outcomes:
 
-- Product use can be controlled without requiring internet access.
-- Commercial packaging has a technical foundation.
-- Support teams can identify customer and entitlement state.
+- OpenCTI receives more useful context across Threats, Arsenal, Techniques,
+  Entities, Locations, Observations and Analyses.
+- Analysts can filter intake by monitored actors, sectors, tactics, malware
+  families and infrastructure classes.
+- Relationship evidence is auditable before it becomes graph knowledge.
 
-## v0.8.0 - Deployment Package
+## v0.8.0 - Analyst Review And Product Operations
 
 Purpose:
 
+- Add analyst review API/UI for quarantine, release and policy tuning.
 - Provide a cleaner installation and upgrade path.
 - Add deployment templates.
 - Harden configuration defaults.
 - Document customer installation procedures.
+- Add technical license enforcement and feature gates by feed, environment or
+  capability.
 
 Expected outcomes:
 
 - The product can be deployed repeatably outside the lab.
 - Upgrade steps are clear.
 - Customer onboarding becomes predictable.
+- Product use can be controlled without requiring internet access.
+- Support teams can identify customer and entitlement state.
 
 ## v1.0.0 - Commercial-Ready Release
 
@@ -158,6 +181,8 @@ Purpose:
 
 - Ship a stable, documented and installable product.
 - Finalize commercial license and support terms.
+- Ship the enterprise curation engine with quarantine release, graph enrichment,
+  explainable policy and measurable graph-quality outcomes.
 - Provide validated deployment guidance.
 - Maintain a clear changelog and upgrade path.
 

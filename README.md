@@ -10,7 +10,7 @@ CTI, hunting and SOC teams.
 
 ## Current Version
 
-`	ext
+```text
 v0.5.0-dev
 ```
 
@@ -24,7 +24,10 @@ transition from an OTX-specific connector into NarrowCTI Gateway, an OpenCTI-nat
 pre-ingestion intelligence gateway. OTX remains the first source adapter; it is no
 longer the product identity. The v0.4 release validates the gateway model with a
 second real feed, with MISP as the first strategic candidate. The v0.5 track
-starts the move toward a unified gateway runtime.
+starts the move toward a unified gateway runtime. The v0.5 track also records
+the enterprise intelligence gateway target: NarrowCTI should become the decision
+layer that shapes actor, arsenal, TTP, victimology, infrastructure and
+quarantine/release context before OpenCTI ingestion.
 
 ## What It Does
 
@@ -38,6 +41,8 @@ starts the move toward a unified gateway runtime.
 - Deduplicates processed pulses with persistent local state.
 - Provides a MISP adapter foundation with independent state, dry-run mode,
   run-once execution and safe backfill filters.
+- Defines the enterprise roadmap for actor, arsenal, MITRE ATT&CK,
+  victimology, quarantine-release and graph-enrichment filters.
 - Builds STIX bundles for OpenCTI ingestion.
 - Runs as a Dockerized connector inside an OpenCTI lab environment.
 
@@ -74,7 +79,9 @@ The product direction is a professional CTI gateway for analysts, hunters, SOC
 and platform teams that need curated intelligence, explainable decisions and
 auditable feed governance instead of raw IoC forwarding. OTX, MISP, commercial
 feeds and internal sources should be evaluated through the same explainable
-ingestion model.
+ingestion model. The enterprise target is to enrich OpenCTI with actors,
+arsenal, MITRE tactics and techniques, victimology, infrastructure, campaigns,
+vulnerabilities and detection context when source evidence supports it.
 
 ## Deduplication Posture
 
@@ -141,7 +148,9 @@ The source-specific OTX and MISP runtimes should remain available for debugging,
 validation and bounded backfill. MISP should stay opt-in and guarded until local
 OpenCTI, queue and Elasticsearch behavior remains stable across repeated bounded
 runs. The detailed v0.5 design is tracked in `docs/gateway-runtime-v0.5.md`,
-and the product/architecture continuity validation is tracked in
+the enterprise intelligence gateway model is tracked in
+`docs/enterprise-intelligence-gateway-v0.5.md`, and the product/architecture
+continuity validation is tracked in
 `docs/product-architecture-validation-v0.5.md`.
 
 ## Curation Configuration
@@ -151,7 +160,9 @@ automatically by the gateway. Current source runtimes expose score thresholds,
 age limits, quarantine behavior, MISP date ranges, MISP TLP/tag filters and
 volume guardrails through environment variables. The v0.5 target adds gateway
 level `NARROWCTI_*` controls for shared policy, deduplication and source
-selection.
+selection. Future enterprise controls should cover actor, arsenal, ATT&CK,
+victimology, graph state and quarantine release workflows without hiding those
+policy choices from operators.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.5.md`.
@@ -330,6 +341,7 @@ docs/misp-validation-v0.4.md
 docs/release-v0.4.0.md
 docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.5.md
+docs/enterprise-intelligence-gateway-v0.5.md
 docs/product-architecture-validation-v0.5.md
 docs/roadmap.md
 docs/licensing-strategy.md
@@ -343,6 +355,9 @@ docs/licensing-strategy.md
 - Richer scoring model with source-specific weighting.
 - Sigma or detection-rule generation.
 - Administrative controls for policy tuning.
+- Quarantine review and analyst release workflow.
+- Enterprise filters for actor, arsenal, MITRE ATT&CK, victimology and graph
+  state.
 
 ## Security Notes
 

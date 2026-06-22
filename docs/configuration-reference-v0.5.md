@@ -105,6 +105,30 @@ supported by code.
 | `NARROWCTI_OPENCTI_DEDUP_LOOKUP` | Enables optional OpenCTI STIX Indicator pattern lookup before export. Lookup errors are logged and fail open. |
 | `NARROWCTI_DEDUP_STATE_FILE` | Local artifact index used by `artifact` and `hybrid` modes. It stores `artifact_fingerprints` for skip decisions and `artifact_records` for source sightings/correlation metadata. |
 
+## Target Enterprise Curation Controls
+
+These controls are not all implemented yet. They define the enterprise filter
+surface that should be introduced after quarantine release and entity extraction
+are available.
+
+| Variable | Purpose |
+| --- | --- |
+| `NARROWCTI_ALLOWED_INDICATOR_TYPES` | Allows only selected indicator or observable classes. |
+| `NARROWCTI_CRITICAL_INDICATOR_TYPES` | Indicator classes that can receive criticality override scoring. |
+| `NARROWCTI_HIGH_VALUE_TAGS` | Tags that increase priority or bypass low-context drops. |
+| `NARROWCTI_ALLOWED_ATTACK_PATTERN_IDS` | ATT&CK technique/sub-technique ids allowed by policy. |
+| `NARROWCTI_ALLOWED_MITRE_TACTICS` | ATT&CK tactics allowed by policy. |
+| `NARROWCTI_ALLOWED_THREAT_ACTORS` | Actor, group or intrusion-set names allowed by policy. |
+| `NARROWCTI_ALLOWED_MALWARE_FAMILIES` | Malware family names allowed by policy. |
+| `NARROWCTI_ALLOWED_TARGET_SECTORS` | Victimology filter for sectors or industries. |
+| `NARROWCTI_ALLOWED_TARGET_COUNTRIES` | Victimology filter for countries or regions. |
+| `NARROWCTI_MIN_CORROBORATING_SOURCES` | Minimum source corroboration before automatic ingest. |
+| `NARROWCTI_QUARANTINE_REPOSITORY` | Future repository for reviewable quarantined candidates. |
+| `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON` | Requires analyst release reason before export. |
+
+Detailed behavior and backlog placement are documented in
+`docs/enterprise-intelligence-gateway-v0.5.md`.
+
 ## Example Safe Local MISP Backfill
 
 ```env
@@ -138,6 +162,10 @@ NARROWCTI_ALLOWED_TLP=white,green
 NARROWCTI_MAX_DAYS_OLD=365
 NARROWCTI_DEDUP_MODE=hybrid
 NARROWCTI_OPENCTI_DEDUP_LOOKUP=false
+NARROWCTI_ALLOWED_INDICATOR_TYPES=ipv4,ipv6,domain,hostname,url,filehash-sha256,cve
+NARROWCTI_ALLOWED_MITRE_TACTICS=initial-access,execution,command-and-control
+NARROWCTI_ALLOWED_TARGET_SECTORS=finance,government,healthcare,energy
+NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON=true
 ```
 
 ## Automatic Behavior
@@ -152,6 +180,8 @@ The following behavior is intentionally automatic and should remain auditable:
 - Build STIX bundles after curation.
 - Export to OpenCTI only after policy and deduplication pass.
 - Write decision evidence and runtime summaries.
+- Preserve quarantined candidates for future analyst review and release when the
+  quarantine repository is implemented.
 
 Operators configure the boundaries. NarrowCTI executes the curation workflow and
 records why each candidate was accepted, rejected, skipped or held for review.
