@@ -7,7 +7,7 @@ from unittest.mock import ANY, patch
 from gateway.connector import main
 from gateway.runtime import SourceRegistry, run_gateway_loop, run_gateway_once
 from gateway.settings import GatewaySettings, load_settings
-from gateway.sources import build_artifact_dedup
+from gateway.sources import build_artifact_dedup, build_source_dedup
 
 
 class GatewaySettingsTests(unittest.TestCase):
@@ -69,6 +69,18 @@ class GatewaySettingsTests(unittest.TestCase):
 
             self.assertIsNotNone(build_artifact_dedup(enabled))
             self.assertIsNone(build_artifact_dedup(disabled))
+    def test_build_source_dedup_can_enable_opencti_lookup_only(self):
+        dedup = build_source_dedup(
+            api_client="api",
+            artifact_dedup=None,
+            opencti_dedup_lookup=True,
+            logger=lambda message: None,
+        )
+
+        self.assertIsNotNone(dedup)
+        self.assertIsNotNone(dedup.opencti_lookup)
+        self.assertIsNone(dedup.local_index)
+
 class GatewayRuntimeTests(unittest.TestCase):
     def test_registry_normalizes_source_keys(self):
         registry = SourceRegistry().register(" OTX ", "OTX", lambda: object())

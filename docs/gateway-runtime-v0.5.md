@@ -141,6 +141,8 @@ The current implementation has three deduplication layers:
   export bundle.
 - The v0.5 gateway can create a local artifact fingerprint index when
   `NARROWCTI_DEDUP_MODE` is `artifact` or `hybrid`.
+- The v0.5 gateway can optionally query OpenCTI for existing STIX Indicator
+  patterns when `NARROWCTI_OPENCTI_DEDUP_LOOKUP=true`.
 
 The v0.5 gateway should keep evolving this into layered pre-export
 deduplication:
@@ -150,9 +152,10 @@ deduplication:
 - Artifact deduplication builds normalized fingerprints such as
   `indicator_type + normalized_value` before export and skips candidates whose
   exportable indicators are already known locally.
-- Optional OpenCTI lookup can check whether the indicator or observable already
-  exists before import. This must be configurable because it adds API cost and
-  operational coupling to OpenCTI.
+- Optional OpenCTI lookup can check whether the STIX Indicator pattern already
+  exists before import. This is configurable because it adds API cost and
+  operational coupling to OpenCTI; lookup failures are logged and fail open so
+  ingestion is not blocked by a transient lookup issue.
 - Cross-source matches should enrich provenance, confidence and audit evidence
   instead of creating duplicate graph objects.
 - Deduplication decisions should be visible in audit records and summaries as

@@ -10,6 +10,10 @@ from connectors.otx.processor import OTXProcessor
 from connectors.otx.settings import load_settings as load_otx_settings
 from core.decision_audit import DecisionAuditLog
 from core.deduplication import ArtifactDeduplicationIndex
+from core.opencti_deduplication import (
+    CompositeArtifactDeduplication,
+    OpenCTIArtifactLookup,
+)
 from gateway.runtime import SourceRegistry
 
 
@@ -23,9 +27,25 @@ class ProcessorRunner:
         return self.processor.run_once()
 
 
-def build_otx_runner(logger, artifact_dedup=None):
+def build_source_dedup(api_client, artifact_dedup, opencti_dedup_lookup, logger):
+    if not artifact_dedup and not opencti_dedup_lookup:
+        return None
+
+    lookup = None
+    if opencti_dedup_lookup:
+        lookup = OpenCTIArtifactLookup(api_client, logger=logger)
+
+    return CompositeArtifactDeduplication(
+        local_index=artifact_dedup,
+        opencti_lookup=lookup,
+        logger=logger,
+    )
+
+
+def build_otx_runner(logger, artifact_dedup=None, opencti_dedup_lookup=False):
     settings = load_otx_settings()
     api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
+    dedup = build_source_dedup(api, artifact_dedup, opencti_dedup_lookup, logger)
     otx = OTXClient(
         settings.otx_api_key,
         search_timeout=settings.otx_search_timeout,
@@ -42,14 +62,15 @@ def build_otx_runner(logger, artifact_dedup=None):
         ingest_pause_seconds=settings.ingest_pause_seconds,
         feed_adapter=OTXFeedAdapter(otx),
         decision_audit=DecisionAuditLog(settings.decision_audit_file),
-        artifact_dedup=artifact_dedup,
+        artifact_dedup=dedup,
     )
     return ProcessorRunner("otx", "OTX", processor)
 
 
-def build_misp_runner(logger, artifact_dedup=None):
+def build_misp_runner(logger, artifact_dedup=None, opencti_dedup_lookup=False):
     settings = load_misp_settings()
     api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
+    dedup = build_source_dedup(api, artifact_dedup, opencti_dedup_lookup, logger)
     misp = MISPClient(
         settings.misp_url,
         settings.misp_key,
@@ -74,7 +95,7 @@ def build_misp_runner(logger, artifact_dedup=None):
         ingest_pause_seconds=settings.ingest_pause_seconds,
         feed_adapter=adapter,
         decision_audit=DecisionAuditLog(settings.decision_audit_file),
-        artifact_dedup=artifact_dedup,
+        artifact_dedup=dedup,
     )
     return ProcessorRunner("misp", "MISP", processor)
 
@@ -89,8 +110,27 @@ def build_artifact_dedup(gateway_settings):
 
 def default_source_registry(logger, gateway_settings=None):
     artifact_dedup = build_artifact_dedup(gateway_settings)
+    opencti_dedup_lookup = bool(
+        gateway_settings and gateway_settings.opencti_dedup_lookup
+    )
     return (
         SourceRegistry()
-        .register("otx", "OTX", lambda: build_otx_runner(logger, artifact_dedup))
-        .register("misp", "MISP", lambda: build_misp_runner(logger, artifact_dedup))
+        .register(
+            "otx",
+            "OTX",
+            lambda: build_otx_runner(
+                logger,
+                artifact_dedup,
+                opencti_dedup_lookup,
+            ),
+        )
+        .register(
+            "misp",
+            "MISP",
+            lambda: build_misp_runner(
+                logger,
+                artifact_dedup,
+                opencti_dedup_lookup,
+            ),
+        )
     )

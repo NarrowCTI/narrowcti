@@ -87,7 +87,7 @@ deduplication:
 - Source-item deduplication prevents the same OTX pulse or MISP event from being
   processed repeatedly.
 - Artifact deduplication normalizes indicator type and value before export.
-- Optional OpenCTI lookup can check existing indicators or observables before
+- Optional OpenCTI lookup can check existing STIX Indicator patterns before
   import when enabled.
 - Cross-source matches should become provenance and confidence evidence, not
   duplicate graph noise.

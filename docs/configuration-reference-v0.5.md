@@ -102,7 +102,7 @@ supported by code.
 | `NARROWCTI_MAX_DAYS_OLD` | Gateway-level age threshold. |
 | `NARROWCTI_ALLOWED_TLP` | Allowed TLP values before source-specific mapping. |
 | `NARROWCTI_DEDUP_MODE` | Deduplication mode. `source` keeps source-item state only; `artifact` or `hybrid` enables the local artifact fingerprint index. |
-| `NARROWCTI_OPENCTI_DEDUP_LOOKUP` | Enables optional OpenCTI lookup before export. |
+| `NARROWCTI_OPENCTI_DEDUP_LOOKUP` | Enables optional OpenCTI STIX Indicator pattern lookup before export. Lookup errors are logged and fail open. |
 | `NARROWCTI_DEDUP_STATE_FILE` | Local artifact fingerprint index used by `artifact` and `hybrid` modes. |
 
 ## Example Safe Local MISP Backfill
