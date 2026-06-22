@@ -161,17 +161,22 @@ The v0.6 track starts the quarantine and enrichment foundation. The goal is to
 turn quarantine from a decision outcome into a reviewable, auditable operator
 workflow while beginning structured enrichment from OTX and MITRE ATT&CK.
 
-The first safe target is a local quarantine repository and CLI workflow for
-listing, showing, rejecting and releasing held candidates with reviewer reason
-and release audit evidence. OTX and MISP quarantine decisions now write pending
-records into the local repository with scoring metadata, source provenance,
-indicators and a bounded raw snapshot. The second target is source enrichment
-groundwork: extracting OTX adversary, malware family, ATT&CK, industry, country,
-TLP and reference fields, then resolving ATT&CK technique and tactic context
-through a local cache.
+The current v0.6 implementation provides a local quarantine repository and CLI
+workflow for listing, showing, rejecting and releasing held candidates with
+reviewer reason and release audit evidence. OTX and MISP quarantine decisions
+write pending records into the local repository with scoring metadata, source
+provenance, indicators and a bounded raw snapshot. Released records can be
+replayed through the existing OpenCTI export path with dry-run as the default.
+
+The enrichment foundation extracts OTX adversary, malware family, ATT&CK,
+industry, country, TLP and reference fields, then resolves ATT&CK technique and
+tactic context through a local MITRE cache when configured. Gateway preflight
+checks and operational reporting now include quarantine/release and MITRE cache
+posture for operator readiness.
 
 The detailed v0.6 design is tracked in
-`docs/quarantine-enrichment-v0.6.md`.
+`docs/quarantine-enrichment-v0.6.md`, and the release-candidate notes are
+tracked in `docs/release-v0.6.0.md`.
 
 Initial quarantine CLI commands:
 
@@ -447,6 +452,7 @@ docs/multi-feed-expansion-v0.4.md
 docs/misp-validation-v0.4.md
 docs/release-v0.4.0.md
 docs/release-v0.5.0.md
+docs/release-v0.6.0.md
 docs/quarantine-enrichment-v0.6.md
 docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.5.md

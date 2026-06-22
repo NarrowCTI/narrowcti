@@ -1,5 +1,8 @@
 # Quarantine And Enrichment Foundation - v0.6.0
 
+Release-candidate notes and final validation checklist are tracked in
+`docs/release-v0.6.0.md`.
+
 ## Purpose
 
 The v0.6.0 track starts the first reviewable quarantine and enrichment
