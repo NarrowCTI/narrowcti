@@ -11,13 +11,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.6.0
+v0.7.0-dev
 ```
 
-`v0.6.0` is the current stable quarantine and enrichment foundation release.
-It extends the v0.5 gateway runtime with reviewable quarantine, release audit,
-controlled replay, source entity extraction and local MITRE ATT&CK reference
-resolution.
+`v0.7.0-dev` is the current graph enrichment and enterprise-filter development
+track. `v0.6.0` remains the latest stable quarantine and enrichment foundation
+release, with reviewable quarantine, release audit, controlled replay, source
+entity extraction and local MITRE ATT&CK reference resolution.
 
 ## Product Identity
 
@@ -204,6 +204,18 @@ OTX entity extraction is controlled by
 metadata-only: adversary, malware family, ATT&CK ids, industries, targeted
 countries, TLP, references and tags are preserved as structured evidence for
 future graph enrichment.
+
+## v0.7 Development Track
+
+The v0.7 track turns the enrichment evidence from v0.6 into graph-aware
+STIX/OpenCTI output. The objective is to validate source metadata more deeply,
+map supported evidence into actors, intrusion sets, malware, tools,
+infrastructure, vulnerabilities, campaigns, sectors, locations, ATT&CK
+techniques and relationships, and keep those relationships explainable before
+they affect the OpenCTI graph.
+
+The detailed design is tracked in `docs/graph-enrichment-v0.7.md`, and the
+development release notes are tracked in `docs/release-v0.7.0.md`.
 
 ## Curation Configuration
 
@@ -447,10 +459,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-For this release:
+For the current development track:
 
 ```text
-v0.6.0
+v0.7.0-dev
 ```
 
 ## Documentation
@@ -470,6 +482,7 @@ docs/misp-validation-v0.4.md
 docs/release-v0.4.0.md
 docs/release-v0.5.0.md
 docs/release-v0.6.0.md
+docs/release-v0.7.0.md
 docs/quarantine-enrichment-v0.6.md
 docs/graph-enrichment-v0.7.md
 docs/gateway-runtime-v0.5.md

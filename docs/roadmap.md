@@ -141,9 +141,15 @@ Expected outcomes:
 
 ## v0.7.0 - Graph Enrichment And Enterprise Filters
 
+Status: in development.
+
 Detailed design:
 
 - `docs/graph-enrichment-v0.7.md`
+
+Development notes:
+
+- `docs/release-v0.7.0.md`
 
 Purpose:
 
