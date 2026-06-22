@@ -20,6 +20,7 @@ def make_settings(**overrides):
         "quarantine_score_threshold": 50,
         "max_days_old": 1095,
         "allowed_tlp": ["white", "green"],
+        "allowed_indicator_types": ["domain", "ipv4"],
         "dedup_mode": "hybrid",
         "opencti_dedup_lookup": False,
         "dedup_state_file": "/app/state/dedup_index.json",
@@ -47,6 +48,10 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertEqual(60, report.settings["min_score_to_ingest"])
         self.assertTrue(report.settings["enable_quarantine"])
         self.assertEqual(["white", "green"], report.settings["allowed_tlp"])
+        self.assertEqual(
+            ["domain", "ipv4"],
+            report.settings["allowed_indicator_types"],
+        )
         self.assertTrue(report.source_controls["otx"]["dry_run"])
         self.assertTrue(report.source_controls["misp"]["dry_run"])
         self.assertEqual([], [issue for issue in report.issues if issue.severity == "error"])
@@ -85,6 +90,7 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("NarrowCTI gateway preflight", text)
         self.assertIn("run_summary_file=(disabled)", text)
         self.assertIn("allowed_tlp=white,green", text)
+        self.assertIn("allowed_indicator_types=domain,ipv4", text)
         self.assertEqual("", data["settings"]["run_summary_file"])
         json.dumps(data)
 

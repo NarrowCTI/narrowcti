@@ -16,6 +16,7 @@ class ProcessorTests(unittest.TestCase):
             min_score_for_old_pulse=80,
             max_days_hard_filter=0,
             allowed_tlp=[],
+            allowed_indicator_types=[],
             connector_name="Test Connector",
             state_file="state.json",
             decision_audit_file="",
@@ -330,6 +331,49 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("drop", records[0].action)
         self.assertEqual("tlp not allowed: red", records[0].reason)
         self.assertIn("Drop: TLP red pulse reason=tlp not allowed: red", logs)
+
+    def test_process_pulse_skips_disallowed_indicator_types(self):
+        records = []
+        marked = []
+        logs = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "id": pulse_id,
+                "name": "LummaC2 email pulse",
+                "description": "email only",
+                "created": "2099-01-01T00:00:00Z",
+                "indicators": [{"type": "email", "indicator": "user@example.com"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: marked.append(pulse_id),
+        )
+        settings = self.settings()
+        settings.allowed_indicator_types = ["domain"]
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client=None,
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: self.fail("export should not be called"),
+            decision_audit=SimpleNamespace(record=records.append),
+        )
+
+        processed = processor.process_pulse(
+            "lummac2",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertFalse(processed)
+        self.assertEqual([], marked)
+        self.assertEqual("skip", records[0].action)
+        self.assertEqual("all indicators disallowed by type", records[0].reason)
+        self.assertIn(
+            "Indicator type filter: LummaC2 email pulse dropped=1 kept=0",
+            logs,
+        )
 
     def test_process_pulse_records_successful_ingest(self):
         records = []

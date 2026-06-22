@@ -14,6 +14,10 @@ from core.feed_contract import (
     FeedRunSummary,
     FeedSource,
 )
+from core.indicator_policy import (
+    filter_indicators_by_type,
+    normalize_allowed_indicator_types,
+)
 from core.policy import PolicyConfig, should_ingest
 from core.scoring import calculate_score, calculate_score_details
 from core.state_repository import (
@@ -139,6 +143,38 @@ class TLPPolicyTests(unittest.TestCase):
             ("white", "green"),
             normalize_allowed_tlp(["tlp:white", "green"]),
         )
+
+
+class IndicatorTypePolicyTests(unittest.TestCase):
+    def test_normalize_allowed_indicator_types_accepts_aliases(self):
+        self.assertEqual(
+            ("ipv4", "domain", "filehash-sha256"),
+            normalize_allowed_indicator_types(["ip", "domain-name", "sha256"]),
+        )
+
+    def test_filter_indicators_by_type_keeps_allowed_types(self):
+        indicators = [
+            {"type": "ip", "indicator": "8.8.8.8"},
+            {"type": "email", "indicator": "user@example.com"},
+            {"type": "sha256", "indicator": "abc"},
+        ]
+
+        filtered, dropped = filter_indicators_by_type(
+            indicators,
+            ["ipv4", "filehash-sha256"],
+        )
+
+        self.assertEqual(2, len(filtered))
+        self.assertEqual(1, dropped)
+        self.assertEqual(["ip", "sha256"], [item["type"] for item in filtered])
+
+    def test_filter_indicators_by_type_is_noop_without_policy(self):
+        indicators = [{"type": "unsupported", "indicator": "x"}]
+
+        filtered, dropped = filter_indicators_by_type(indicators, [])
+
+        self.assertEqual(indicators, filtered)
+        self.assertEqual(0, dropped)
 
 
 class ScoringTests(unittest.TestCase):
@@ -291,6 +327,7 @@ class SettingsTests(unittest.TestCase):
             "NARROWCTI_DRY_RUN": "true",
             "OTX_SOURCE_CONFIDENCE": "70",
             "NARROWCTI_ALLOWED_TLP": "white, green",
+            "NARROWCTI_ALLOWED_INDICATOR_TYPES": "domain, ipv4",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -306,6 +343,7 @@ class SettingsTests(unittest.TestCase):
         self.assertTrue(settings.dry_run)
         self.assertEqual(70, settings.source_confidence)
         self.assertEqual(["white", "green"], settings.allowed_tlp)
+        self.assertEqual(["domain", "ipv4"], settings.allowed_indicator_types)
 
     def test_load_settings_accepts_gateway_policy_fallbacks(self):
         env = {

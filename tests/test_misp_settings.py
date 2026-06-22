@@ -29,6 +29,7 @@ class MISPSettingsTests(unittest.TestCase):
             "MIN_SCORE_FOR_OLD_EVENT": "85",
             "ENABLE_QUARANTINE": "false",
             "NARROWCTI_ALLOWED_TLP": "white, green",
+            "NARROWCTI_ALLOWED_INDICATOR_TYPES": "domain, ipv4",
             "MISP_STATE_FILE": "/app/state/misp.json",
             "MISP_DECISION_AUDIT_FILE": "/app/state/misp-decisions.jsonl",
         }
@@ -58,6 +59,7 @@ class MISPSettingsTests(unittest.TestCase):
         self.assertEqual(85, settings.min_score_for_old_event)
         self.assertFalse(settings.enable_quarantine)
         self.assertEqual(["white", "green"], settings.allowed_tlp)
+        self.assertEqual(["domain", "ipv4"], settings.allowed_indicator_types)
         self.assertEqual("/app/state/misp.json", settings.state_file)
         self.assertEqual("/app/state/misp-decisions.jsonl", settings.decision_audit_file)
 

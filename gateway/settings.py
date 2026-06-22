@@ -17,6 +17,7 @@ class GatewaySettings:
     quarantine_score_threshold: int
     max_days_old: int
     allowed_tlp: list[str]
+    allowed_indicator_types: list[str]
     dedup_mode: str
     opencti_dedup_lookup: bool
     dedup_state_file: str
@@ -100,6 +101,7 @@ def load_settings():
             1095,
         ),
         allowed_tlp=env_list("NARROWCTI_ALLOWED_TLP"),
+        allowed_indicator_types=env_list("NARROWCTI_ALLOWED_INDICATOR_TYPES"),
         dedup_mode=os.getenv("NARROWCTI_DEDUP_MODE", "source").lower(),
         opencti_dedup_lookup=env_bool("NARROWCTI_OPENCTI_DEDUP_LOOKUP", False),
         dedup_state_file=os.getenv(

@@ -64,11 +64,17 @@ deployments:
 | `NARROWCTI_QUARANTINE_SCORE_THRESHOLD` | `QUARANTINE_SCORE_THRESHOLD` |
 | `NARROWCTI_MAX_DAYS_OLD` | `MAX_DAYS_OLD` |
 | `NARROWCTI_ALLOWED_TLP` | No legacy equivalent. |
+| `NARROWCTI_ALLOWED_INDICATOR_TYPES` | No legacy equivalent. |
 
 `NARROWCTI_ALLOWED_TLP` accepts comma-separated values such as
 `white,green`. OTX and MISP candidates with a TLP tag outside the allowed list
 are dropped before export. Candidates without a TLP tag continue through normal
 curation so feeds that omit TLP do not lose intelligence by default.
+
+`NARROWCTI_ALLOWED_INDICATOR_TYPES` accepts normalized indicator types such as
+`ipv4,domain,url,filehash-sha256`. When configured, OTX and MISP candidates keep
+only exportable indicators whose normalized type is allowed. If every indicator
+is removed, the candidate is skipped with an auditable reason.
 
 ### OTX Controls
 
@@ -133,7 +139,6 @@ are available.
 
 | Variable | Purpose |
 | --- | --- |
-| `NARROWCTI_ALLOWED_INDICATOR_TYPES` | Allows only selected indicator or observable classes. |
 | `NARROWCTI_CRITICAL_INDICATOR_TYPES` | Indicator classes that can receive criticality override scoring. |
 | `NARROWCTI_HIGH_VALUE_TAGS` | Tags that increase priority or bypass low-context drops. |
 | `NARROWCTI_ALLOWED_ATTACK_PATTERN_IDS` | ATT&CK technique/sub-technique ids allowed by policy. |
@@ -242,6 +247,8 @@ The following behavior is intentionally automatic and should remain auditable:
 - Apply policy and produce ingest, drop, quarantine, skip, dry-run or error
   decisions.
 - Apply allowed TLP governance when `NARROWCTI_ALLOWED_TLP` is configured.
+- Filter exportable indicators by `NARROWCTI_ALLOWED_INDICATOR_TYPES` when
+  configured.
 - Deduplicate source items and artifact fingerprints, then record source sightings for exported artifacts when artifact or hybrid deduplication is enabled.
 - Build STIX bundles after curation.
 - Export to OpenCTI only after policy and deduplication pass.

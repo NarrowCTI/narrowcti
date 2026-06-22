@@ -1,6 +1,7 @@
 import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
+from core.indicator_policy import filter_indicators_by_type
 from core.policy import PolicyConfig, should_ingest
 from core.scoring import age_days, calculate_score_details
 from core.state_repository import PulseStateRepository
@@ -166,6 +167,10 @@ class OTXProcessor:
             self.record_decision(query, candidate_ref, action, reason, candidate)
             return action
 
+        candidate = self.apply_indicator_type_filter(query, candidate_ref, candidate)
+        if not candidate:
+            return "skip"
+
         candidate = self.apply_artifact_dedup(query, candidate_ref, candidate)
         if not candidate:
             return "skip"
@@ -297,6 +302,37 @@ class OTXProcessor:
             return None
         if len(indicators) == len(candidate.indicators):
             return candidate
+        return PulseCandidate(
+            pulse=candidate.pulse,
+            name=candidate.name,
+            description=candidate.description,
+            indicators=indicators,
+            ioc_count=len(indicators),
+            age=candidate.age,
+            score=candidate.score,
+            score_details=candidate.score_details,
+        )
+
+    def apply_indicator_type_filter(self, query, candidate_ref, candidate):
+        indicators, dropped_count = filter_indicators_by_type(
+            candidate.indicators,
+            getattr(self.settings, "allowed_indicator_types", []),
+        )
+        if not dropped_count:
+            return candidate
+        self.log(
+            f"Indicator type filter: {candidate.name} dropped={dropped_count} "
+            f"kept={len(indicators)}"
+        )
+        if not indicators:
+            self.record_decision(
+                query,
+                candidate_ref,
+                action="skip",
+                reason="all indicators disallowed by type",
+                candidate=candidate,
+            )
+            return None
         return PulseCandidate(
             pulse=candidate.pulse,
             name=candidate.name,

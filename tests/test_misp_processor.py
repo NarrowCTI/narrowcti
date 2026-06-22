@@ -56,6 +56,7 @@ class MISPProcessorTests(unittest.TestCase):
             min_score_for_old_event=80,
             max_days_hard_filter=0,
             allowed_tlp=[],
+            allowed_indicator_types=[],
             connector_name="Test Connector",
             state_file="misp-state.json",
             decision_audit_file="",
@@ -318,6 +319,41 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("drop", records[0].action)
         self.assertEqual("tlp not allowed: red", records[0].reason)
         self.assertIn("MISP drop: tlp red event reason=tlp not allowed: red", logs)
+
+    def test_process_event_skips_disallowed_indicator_types(self):
+        records = []
+        marked = []
+        logs = []
+        settings = self.settings()
+        settings.allowed_indicator_types = ["domain"]
+        settings.max_iocs_per_event = 10
+        state = SimpleNamespace(
+            has_event=lambda event_id: False,
+            mark_event=lambda event_id: marked.append(event_id),
+        )
+        event = enriched_event(name="email only event", indicator_count=0)
+        event["indicators"] = [{"type": "email", "indicator": "user@example.com"}]
+
+        processor = MISPProcessor(
+            settings,
+            misp_client=None,
+            api_client="api",
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: self.fail("export should not be called"),
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=self.adapter(enriched=candidate(raw=event)),
+        )
+
+        outcome = processor.process_event_outcome("tlp:green", candidate(), state)
+
+        self.assertEqual("skip", outcome)
+        self.assertEqual([], marked)
+        self.assertEqual("skip", records[0].action)
+        self.assertEqual("all indicators disallowed by type", records[0].reason)
+        self.assertIn(
+            "MISP indicator type filter: email only event dropped=1 kept=0",
+            logs,
+        )
 
     def test_process_event_dry_run_records_decision_without_export_or_state(self):
         records = []

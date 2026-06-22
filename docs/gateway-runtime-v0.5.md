@@ -97,6 +97,7 @@ NARROWCTI_DEDUP_MODE=hybrid
 NARROWCTI_OPENCTI_DEDUP_LOOKUP=false
 NARROWCTI_DEDUP_STATE_FILE=/app/state/dedup_index.json
 NARROWCTI_ALLOWED_TLP=white,green
+NARROWCTI_ALLOWED_INDICATOR_TYPES=ipv4,ipv6,domain,hostname,url,email,filehash-sha256
 ```
 
 Source-specific configuration should remain source-specific:
@@ -135,6 +136,8 @@ The v0.5 decision layer should improve:
 - Age, confidence, indicator type and operational relevance scoring.
 - Policy reasons and evidence attached to every decision.
 - Configurable TLP governance through `NARROWCTI_ALLOWED_TLP`.
+- Configurable exportable indicator types through
+  `NARROWCTI_ALLOWED_INDICATOR_TYPES`.
 - Quarantine reporting and operator review data.
 - Per-source and aggregate run summaries.
 
