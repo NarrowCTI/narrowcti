@@ -190,6 +190,20 @@ Preflight output is meant for operator readiness and automation checks. It does
 not replace runtime decision audit records because it does not normalize,
 score, deduplicate or export feed candidates.
 
+## Operational Report
+
+When `NARROWCTI_RUN_SUMMARY_FILE` is enabled, the gateway writes aggregate JSONL
+records that can be summarized locally:
+
+```text
+python -m gateway.report --file /app/state/gateway_runs.jsonl
+python -m gateway.report --file /app/state/gateway_runs.jsonl --json
+python -m gateway.report --file /app/state/gateway_runs.jsonl --limit 20
+```
+
+This report reads existing summary evidence only. It does not query OpenCTI,
+call source APIs or make ingestion decisions.
+
 ## Automatic Behavior
 
 The following behavior is intentionally automatic and should remain auditable:

@@ -202,6 +202,29 @@ The OTX and MISP source runtimes remain available independently. The gateway
 composes them; it does not move feed-specific API or normalization logic out of
 `connectors/otx` or `connectors/misp`.
 
+## Operational Reporting
+
+The v0.5 runtime can summarize JSONL records written by
+`NARROWCTI_RUN_SUMMARY_FILE`:
+
+```text
+python -m gateway.report --file /app/state/gateway_runs.jsonl
+python -m gateway.report --file /app/state/gateway_runs.jsonl --json
+python -m gateway.report --file /app/state/gateway_runs.jsonl --limit 20
+```
+
+The report is local and read-only. It aggregates:
+
+- Number of gateway runs included in the report.
+- First and last recorded run timestamp.
+- Total reviewed, ingested, dropped, quarantined, skipped, error and dry-run
+  outcomes.
+- Per-source runs, success/failure counts and outcome totals.
+
+This is an operator reporting layer for v0.5, not a customer-facing metrics
+platform. The v0.6 roadmap can expand this into richer health checks, value
+metrics and quarantine review workflows.
+
 ## Docker Compose Operation
 
 The local OpenCTI compose workspace can expose the gateway through a dedicated
@@ -227,6 +250,7 @@ Operators should run preflight before executing the gateway:
 ```text
 docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.preflight
 docker compose --profile narrowcti-gateway up --force-recreate narrowcti-gateway
+docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.report --file /app/state/gateway_runs.jsonl
 ```
 
 For continuous gateway operation, switch `NARROWCTI_RUN_ONCE=false` only after
