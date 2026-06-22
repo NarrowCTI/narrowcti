@@ -3,6 +3,7 @@ from collections.abc import Mapping
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.feed_contract import FeedRunSummary
+from core.graph_evidence import build_graph_evidence
 from core.indicator_policy import filter_indicators_by_type
 from core.policy import PolicyConfig, should_ingest
 from core.quarantine import (
@@ -49,6 +50,12 @@ def decision_metadata(candidate_ref, candidate=None):
     score_details = getattr(candidate, "score_details", None)
     if score_details:
         metadata["scoring"] = dict(score_details)
+    metadata["graph_evidence"] = build_graph_evidence(
+        metadata,
+        source_key=candidate_ref.source.key,
+        external_id=candidate_ref.external_id,
+        title=getattr(candidate, "name", "") or candidate_ref.title,
+    )
     return metadata
 
 

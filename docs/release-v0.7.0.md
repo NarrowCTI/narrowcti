@@ -25,9 +25,31 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 - Extend graph hygiene beyond indicator deduplication into entity and
   relationship quality controls.
 
+## Implemented Foundation
+
+- Added `core/graph_evidence.py` as the first shared graph-evidence model.
+- OTX decision and quarantine metadata now include `graph_evidence` records
+  built from OTX entity extraction and resolved MITRE ATT&CK context.
+- MISP decision and quarantine metadata now include `graph_evidence` records
+  built from collector provenance, original source and TLP/tag evidence.
+- Each evidence record carries the logical entity type, suggested STIX/OpenCTI
+  object type, intended relationship type, confidence, source field and source
+  provenance.
+- The STIX exporter still emits the existing stable `Report + Indicator`
+  bundle. v0.7 graph evidence is deliberately audit-only until the graph-aware
+  STIX builder and OpenCTI validation are implemented.
+
 ## Validation Target
 
 v0.7 is not complete until the test suite covers source metadata extraction,
 STIX object creation, relationship construction, enterprise filters,
 deduplication, quarantine release and OpenCTI import behavior for representative
 OTX, MISP and MITRE evidence.
+
+Current validation:
+
+```text
+.\scripts\validate-v0.6.ps1
+Ran 192 tests
+OK
+```

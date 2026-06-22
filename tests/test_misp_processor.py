@@ -256,6 +256,18 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(["tlp:green"], metadata["tags"])
         self.assertFalse(metadata["guardrails"]["oversized"])
         self.assertEqual(100, metadata["scoring"]["final_score"])
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual("v0.7.0-dev", graph_evidence["version"])
+        self.assertEqual("misp:misp", graph_evidence["source_key"])
+        self.assertEqual(3, graph_evidence["record_count"])
+        self.assertEqual(1, graph_evidence["counts"]["marking"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "source_identity"
+                and record["value"] == "AlienVault"
+                for record in graph_evidence["records"]
+            )
+        )
 
     def test_process_event_skips_when_all_artifacts_are_known(self):
         records = []
@@ -360,6 +372,14 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("low score", queued[0]["reason"])
         self.assertEqual(1, queued[0]["indicator_count"])
         self.assertEqual("AlienVault", queued[0]["metadata"]["original_source"])
+        self.assertEqual(
+            "AlienVault",
+            next(
+                record["value"]
+                for record in queued[0]["metadata"]["graph_evidence"]["records"]
+                if record["entity_type"] == "source_identity"
+            ),
+        )
         self.assertTrue(
             any("MISP quarantine queued: old weak misp event" in log for log in logs)
         )

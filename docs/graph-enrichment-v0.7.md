@@ -289,9 +289,13 @@ v0.7 should not be considered complete until:
 
 ## Implementation Backlog
 
-1. Create a shared graph candidate model.
-2. Expand OTX metadata mapping into graph candidates.
-3. Add MISP metadata and galaxy extraction fixtures.
+1. Create a shared graph candidate model. Initial audit-only foundation added
+   in `core/graph_evidence.py`.
+2. Expand OTX metadata mapping into graph candidates. Initial OTX and MITRE
+   evidence mapping is now present in decision and quarantine metadata.
+3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
+   original-source, TLP and tag evidence mapping is present; MISP galaxy
+   extraction remains pending.
 4. Extend MITRE cache usage beyond technique names into reusable graph
    references.
 5. Build a graph-aware STIX exporter.

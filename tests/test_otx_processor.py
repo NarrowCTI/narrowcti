@@ -356,6 +356,25 @@ class ProcessorTests(unittest.TestCase):
             "Command and Scripting Interpreter",
             mitre_attack["resolved"][0]["name"],
         )
+        graph_evidence = records[0].metadata["graph_evidence"]
+        self.assertEqual("v0.7.0-dev", graph_evidence["version"])
+        self.assertEqual("alienvault:otx", graph_evidence["source_key"])
+        self.assertEqual(2, graph_evidence["counts"]["attack_pattern"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "threat_actor"
+                and record["value"] == "APT Example"
+                and record["stix_object_type"] == "threat-actor"
+                for record in graph_evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "attack_tactic"
+                and record["value"] == "execution"
+                for record in graph_evidence["records"]
+            )
+        )
 
     def test_process_pulse_writes_quarantine_record(self):
         records = []
@@ -407,6 +426,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(1, queued[0]["indicator_count"])
         self.assertEqual("domain", queued[0]["indicators"][0]["type"])
         self.assertEqual([], queued[0]["metadata"]["otx_entities"]["attack_ids"])
+        self.assertEqual(0, queued[0]["metadata"]["graph_evidence"]["record_count"])
         self.assertTrue(any("Quarantine queued: Old weak pulse" in log for log in logs))
 
     def test_process_pulse_records_missing_mitre_cache_evidence(self):

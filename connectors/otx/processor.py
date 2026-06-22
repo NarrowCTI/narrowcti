@@ -1,6 +1,7 @@
 import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
+from core.graph_evidence import build_graph_evidence
 from core.indicator_policy import filter_indicators_by_type
 from core.mitre_attack import MITREAttackResolver
 from core.policy import PolicyConfig, should_ingest
@@ -34,6 +35,9 @@ def decision_metadata(
     candidate=None,
     enable_entity_extraction=True,
     mitre_resolver=None,
+    source_key="",
+    external_id="",
+    title="",
 ):
     score_details = getattr(candidate, "score_details", None)
     if not candidate:
@@ -44,6 +48,12 @@ def decision_metadata(
     if enable_entity_extraction:
         metadata["otx_entities"] = extract_otx_entities(candidate.pulse)
         enrich_mitre_attack_metadata(metadata, mitre_resolver)
+    metadata["graph_evidence"] = build_graph_evidence(
+        metadata,
+        source_key=source_key,
+        external_id=external_id or candidate.pulse.get("id", ""),
+        title=title or candidate.name,
+    )
     return metadata
 
 
@@ -336,6 +346,9 @@ class OTXProcessor:
                 candidate,
                 getattr(self.settings, "enable_otx_entity_extraction", True),
                 self.mitre_resolver,
+                source_key=candidate_ref.source.key,
+                external_id=candidate_ref.external_id,
+                title=title,
             ),
         )
 
@@ -362,6 +375,9 @@ class OTXProcessor:
             candidate,
             getattr(self.settings, "enable_otx_entity_extraction", True),
             self.mitre_resolver,
+            source_key=candidate_ref.source.key,
+            external_id=candidate_ref.external_id,
+            title=title,
         )
         if truncated:
             metadata["raw_snapshot_truncated"] = True
