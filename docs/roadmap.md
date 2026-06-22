@@ -50,7 +50,7 @@ Expected outcomes:
 
 ## v0.4.0 - Multi-Feed Expansion
 
-Status: in development.
+Status: released.
 
 Purpose:
 
@@ -66,6 +66,8 @@ Expected outcomes:
 - MISP runtime foundation uses shared state, policy, audit and export paths.
 - Local MISP dry-run validation proves search, enrichment, policy and audit
   without OpenCTI export.
+- Bounded operational validation keeps OpenCTI, MISP, Caddy and Elasticsearch
+  healthy after opt-in MISP runs.
 - OpenCTI export remains consistent across sources.
 
 ## v0.5.0 - Gateway Runtime And Decision Engine
