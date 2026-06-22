@@ -250,8 +250,10 @@ reasons and source counts. It helps operators understand the practical effect
 of configured policy thresholds, TLP controls, indicator-type filters,
 deduplication and dry-run settings. It also summarizes score evidence through
 minimum score, maximum score, average score and score bands so operators can see
-how scoring shaped ingest, drop, quarantine and skip outcomes. The same report
-lists recent quarantine candidates for review, and
+how scoring shaped ingest, drop, quarantine and skip outcomes. It aggregates
+decision outcomes by source and query so query tuning can be based on audited
+ingest, filter, quarantine and skip behavior instead of raw feed volume. The
+same report lists recent quarantine candidates for review, and
 `--quarantine-limit <count>` controls how many held candidates are displayed;
 `0` includes all quarantined records in the selected audit input.
 

@@ -257,7 +257,10 @@ decision audit JSONL files by action, reason and source so operators can inspect
 why candidates were ingested, dropped, quarantined, skipped, treated as dry-run
 or marked as errors. It also summarizes score evidence with records that have a
 score, minimum score, maximum score, average score and score bands, both overall
-and by source/action. Recent quarantine candidates are listed with timestamp,
+and by source/action. The report also aggregates decisions by source and query,
+including action counts, reason counts and score evidence, so operators can see
+which searches are producing accepted intelligence, filtering noise or creating
+quarantine review work. Recent quarantine candidates are listed with timestamp,
 source, external id, score, age, indicator count, reason and title so operators
 can review held intelligence before the v0.6 quarantine repository and release
 workflow exists.

@@ -2,8 +2,8 @@ import argparse
 import glob
 import json
 import os
-from collections.abc import Mapping
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from gateway.settings import load_settings
@@ -27,6 +27,7 @@ class DecisionAuditReport:
     actions: dict
     reasons: list
     quarantined: list
+    queries: list
     score_summary: dict
     sources: dict
 
@@ -38,6 +39,7 @@ class DecisionAuditReport:
             "actions": self.actions,
             "reasons": self.reasons,
             "quarantined": self.quarantined,
+            "queries": self.queries,
             "score_summary": self.score_summary,
             "sources": self.sources,
         }
@@ -78,6 +80,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
             actions=empty_actions(),
             reasons=[],
             quarantined=[],
+            queries=[],
             score_summary={
                 "overall": build_score_summary([]),
                 "by_action": {},
@@ -88,6 +91,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
     actions = empty_actions()
     reason_counts = Counter()
     sources = {}
+    queries = {}
     records_by_action = {}
     records_by_source = {}
 
@@ -95,6 +99,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
         action = normalize_value(record.get("action"), "unknown")
         reason = normalize_value(record.get("reason"), "unspecified")
         source_key = normalize_value(record.get("source_key"), "unknown")
+        query = normalize_value(record.get("query"), "(none)")
 
         actions[action] = actions.get(action, 0) + 1
         reason_counts[(action, reason)] += 1
@@ -113,6 +118,22 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
         source_report["records"] += 1
         source_report["actions"][action] = source_report["actions"].get(action, 0) + 1
         source_report["reasons"][reason] = source_report["reasons"].get(reason, 0) + 1
+        query_report = queries.setdefault(
+            (source_key, query),
+            {
+                "source_key": source_key,
+                "query": query,
+                "records": 0,
+                "actions": empty_actions(),
+                "reasons": {},
+                "score_summary": {},
+                "_records": [],
+            },
+        )
+        query_report["records"] += 1
+        query_report["actions"][action] = query_report["actions"].get(action, 0) + 1
+        query_report["reasons"][reason] = query_report["reasons"].get(reason, 0) + 1
+        query_report["_records"].append(record)
 
     for source_key, source_records in records_by_source.items():
         sources[source_key]["score_summary"] = build_score_summary(source_records)
@@ -124,6 +145,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
         actions=actions,
         reasons=top_reasons(reason_counts, reason_limit),
         quarantined=quarantine_candidates(records, quarantine_limit),
+        queries=sorted_query_reports(queries),
         score_summary={
             "overall": build_score_summary(records),
             "by_action": {
@@ -132,6 +154,22 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
             },
         },
         sources=sources,
+    )
+
+
+def sorted_query_reports(queries):
+    reports = []
+    for query_report in queries.values():
+        records = query_report.pop("_records", [])
+        query_report["score_summary"] = build_score_summary(records)
+        reports.append(query_report)
+    return sorted(
+        reports,
+        key=lambda item: (
+            -int(item.get("records", 0) or 0),
+            item.get("source_key", ""),
+            item.get("query", ""),
+        ),
     )
 
 
@@ -264,6 +302,14 @@ def format_text_report(report):
                 f"age_days={format_optional(item['age_days'])} "
                 f"indicators={item['indicator_count']} reason={item['reason']} "
                 f"title={item['title']}"
+            )
+    if report.queries:
+        lines.append("queries:")
+        for query in report.queries:
+            lines.append(
+                f"- {query['source_key']} query={query['query']} "
+                f"records={query['records']} actions={format_counts(query['actions'])} "
+                f"scores={format_score_summary(query['score_summary'])}"
             )
     if report.sources:
         lines.append("sources:")

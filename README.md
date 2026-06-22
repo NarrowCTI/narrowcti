@@ -276,9 +276,9 @@ source failures captured during gateway runs. Per-query rollups show which
 searches produced reviewed, handled, accepted and filtered candidates. The
 decision audit report aggregates ingest, drop, quarantine, skip, dry-run and
 error reasons from source audit JSONL files, plus score ranges, averages and
-recent quarantined candidates for operator review. The correlation report
-summarizes the local artifact index, including cross-source fingerprints and
-source sighting counts.
+per-query decision rollups for operator review. It also lists recent
+quarantined candidates. The correlation report summarizes the local artifact
+index, including cross-source fingerprints and source sighting counts.
 
 The unified gateway entrypoint composes enabled source runtimes and isolates
 source failures. Keep source-specific runtimes available for debugging and
