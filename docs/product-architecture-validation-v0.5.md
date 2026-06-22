@@ -105,7 +105,9 @@ a gateway:
 
 - Scoring is still basic and must mature into source-specific weighting.
 - The unified gateway entrypoint and source registry exist; they still need
-  broader operational validation and richer aggregate reporting.
+  broader operational validation and richer value reporting.
+- Aggregate run, decision-reason and artifact-correlation reports exist as
+  local operator evidence for v0.5.
 - OpenCTI-side deduplication lookup and initial local cross-source artifact
   correlation records are implemented. Analyst-facing enrichment, confidence
   uplift and reporting from those records remain roadmap items.

@@ -262,13 +262,16 @@ $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\NarrowCTI"
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.report --file state\gateway_runs.jsonl
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.report --file state\gateway_runs.jsonl --json
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.decisions --dir state\audit
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.correlation --file state\dedup_index.json
 ```
 
 The report aggregates run count, time range, total outcomes and per-source
 outcomes for reviewed, ingested, dropped, quarantined, skipped, error and
-dry-run candidates. The correlation report summarizes the local artifact index,
-including cross-source fingerprints and source sighting counts.
+dry-run candidates. The decision audit report aggregates ingest, drop,
+quarantine, skip, dry-run and error reasons from source audit JSONL files. The
+correlation report summarizes the local artifact index, including cross-source
+fingerprints and source sighting counts.
 
 The unified gateway entrypoint composes enabled source runtimes and isolates
 source failures. Keep source-specific runtimes available for debugging and
@@ -358,7 +361,7 @@ Run validation from the repository root after building the Docker image:
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\NarrowCTI"
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/connector.py connectors/misp/feed_adapter.py connectors/misp/models.py connectors/misp/processor.py connectors/misp/runtime.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/indicator_policy.py core/scoring.py core/policy.py core/state_repository.py core/tlp.py exporters/opencti.py exporters/stix_builder.py
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile gateway/preflight.py gateway/report.py gateway/correlation.py
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile gateway/preflight.py gateway/report.py gateway/decisions.py gateway/correlation.py
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
 

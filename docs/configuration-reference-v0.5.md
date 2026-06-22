@@ -221,10 +221,18 @@ records that can be summarized locally:
 python -m gateway.report --file /app/state/gateway_runs.jsonl
 python -m gateway.report --file /app/state/gateway_runs.jsonl --json
 python -m gateway.report --file /app/state/gateway_runs.jsonl --limit 20
+python -m gateway.decisions --dir /app/state/audit
+python -m gateway.decisions --dir /app/state/audit --json
 ```
 
 This report reads existing summary evidence only. It does not query OpenCTI,
 call source APIs or make ingestion decisions.
+
+The decision audit report reads source decision audit JSONL files, including
+files derived from `NARROWCTI_DECISION_AUDIT_DIR`, and summarizes actions,
+reasons and source counts. It helps operators understand the practical effect
+of configured policy thresholds, TLP controls, indicator-type filters,
+deduplication and dry-run settings.
 
 The local artifact deduplication index can also be summarized:
 

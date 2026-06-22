@@ -229,6 +229,8 @@ The v0.5 runtime can summarize JSONL records written by
 python -m gateway.report --file /app/state/gateway_runs.jsonl
 python -m gateway.report --file /app/state/gateway_runs.jsonl --json
 python -m gateway.report --file /app/state/gateway_runs.jsonl --limit 20
+python -m gateway.decisions --dir /app/state/audit
+python -m gateway.decisions --dir /app/state/audit --json
 ```
 
 The report is local and read-only. It aggregates:
@@ -238,6 +240,11 @@ The report is local and read-only. It aggregates:
 - Total reviewed, ingested, dropped, quarantined, skipped, error and dry-run
   outcomes.
 - Per-source runs, success/failure counts and outcome totals.
+
+The decision audit report is also local and read-only. It summarizes source
+decision audit JSONL files by action, reason and source so operators can inspect
+why candidates were ingested, dropped, quarantined, skipped, treated as dry-run
+or marked as errors.
 
 The companion artifact correlation report summarizes the local deduplication
 index:
