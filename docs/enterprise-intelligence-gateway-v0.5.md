@@ -259,6 +259,11 @@ Recommended placement:
 | v0.8 | Add analyst review API/UI and value reporting. | Turns governance into product workflow. |
 | v1.0 | Stable enterprise policy engine with explainable scoring, release, enrichment, graph quality metrics and enterprise CTI report output. | Production-grade target. |
 
+The centralized v0.7 graph enrichment design is tracked in
+`docs/graph-enrichment-v0.7.md`. That document should drive implementation of
+source metadata validation, graph candidate modeling, STIX/OpenCTI object
+mapping, relationship confidence and enterprise graph filters.
+
 The enterprise CTI report should be built after reliable evidence exists from
 gateway summaries, decision audit, quarantine/release actions, artifact
 correlation and graph-enrichment outcomes. It should explain what NarrowCTI

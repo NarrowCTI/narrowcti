@@ -143,6 +143,10 @@ Expected outcomes:
 
 ## v0.7.0 - Graph Enrichment And Enterprise Filters
 
+Detailed design:
+
+- `docs/graph-enrichment-v0.7.md`
+
 Purpose:
 
 - Export richer STIX objects and relationships for actors, intrusion sets,
@@ -162,6 +166,9 @@ Expected outcomes:
 - Analysts can filter intake by monitored actors, sectors, tactics, malware
   families and infrastructure classes.
 - Relationship evidence is auditable before it becomes graph knowledge.
+- Source metadata validation is broad enough for OTX, MISP and MITRE evidence
+  to enrich OpenCTI graph views with high-signal CTI context instead of only
+  reports and indicators.
 
 ## v0.8.0 - Analyst Review And Product Operations
 

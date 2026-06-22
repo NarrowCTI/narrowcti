@@ -207,7 +207,8 @@ were validated without importing synthetic validation data into OpenCTI.
 ## Next Release Direction
 
 v0.7 should use this foundation to move from metadata and review workflow into
-graph enrichment and enterprise filters:
+graph enrichment and enterprise filters. The centralized v0.7 design is tracked
+in `docs/graph-enrichment-v0.7.md`.
 
 - STIX/OpenCTI objects for actors, malware, tools, sectors, locations and
   attack patterns.
@@ -215,3 +216,5 @@ graph enrichment and enterprise filters:
 - Enterprise policy variables for actor, arsenal, ATT&CK tactic/technique,
   target sector and geography.
 - Graph hygiene beyond indicator deduplication.
+- Broader source metadata validation so OTX, MISP and MITRE evidence can
+  populate richer OpenCTI graph views with enterprise CTI context.
