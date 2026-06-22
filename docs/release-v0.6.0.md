@@ -47,6 +47,9 @@ a local cache without treating MITRE as an IoC feed.
 
 ## Configuration Added
 
+The v0.6 configuration reference is tracked in
+`docs/configuration-reference-v0.6.md`.
+
 ```env
 NARROWCTI_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl
 OTX_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl

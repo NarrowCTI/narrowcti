@@ -14,9 +14,9 @@ CTI, hunting and SOC teams.
 v0.6.0-dev
 ```
 
-`v0.6.0-dev` is the current quarantine and enrichment foundation development
-track. `v0.5.0` remains the latest stable gateway runtime and decision engine
-release.
+`v0.6.0-dev` is the current quarantine and enrichment foundation release
+candidate track. `v0.5.0` remains the latest stable gateway runtime and
+decision engine release.
 
 ## Product Identity
 
@@ -218,6 +218,7 @@ state and quarantine release workflows without hiding those policy choices from
 operators.
 
 The full configuration reference is tracked in
+`docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in
 `docs/configuration-reference-v0.5.md`.
 
 ## NarrowCTI Gateway Runtime
@@ -471,6 +472,7 @@ docs/release-v0.5.0.md
 docs/release-v0.6.0.md
 docs/quarantine-enrichment-v0.6.md
 docs/gateway-runtime-v0.5.md
+docs/configuration-reference-v0.6.md
 docs/configuration-reference-v0.5.md
 docs/enterprise-intelligence-gateway-v0.5.md
 docs/product-architecture-validation-v0.5.md

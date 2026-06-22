@@ -104,7 +104,7 @@ Expected outcomes:
   correlations instead of duplicate OpenCTI graph objects.
 - Gateway design details are documented in `docs/gateway-runtime-v0.5.md`.
 - Curation configuration is documented in
-  `docs/configuration-reference-v0.5.md`.
+  `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference.
 - Product and architecture continuity are validated in
   `docs/product-architecture-validation-v0.5.md`.
 - Enterprise gateway direction is documented in
