@@ -251,8 +251,10 @@ docker run --rm --env-file config\.env.example -v "${LAB_ROOT}\NarrowCTI:/repo" 
 ```
 
 The preflight reports enabled sources, deduplication posture, OpenCTI lookup,
-aggregate summary output and source dry-run controls. Unknown sources fail the
-check; weaker graph-hygiene or operational settings are reported as warnings.
+aggregate summary output, source dry-run controls and local evidence paths for
+source state, decision audit and artifact deduplication. Unknown sources fail
+the check; weaker graph-hygiene or operational settings are reported as
+warnings.
 
 After one or more gateway runs, operators can summarize the aggregate JSONL
 evidence written by `NARROWCTI_RUN_SUMMARY_FILE`:

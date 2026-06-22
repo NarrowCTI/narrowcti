@@ -320,13 +320,17 @@ OpenCTI. It evaluates the local gateway posture before ingestion by reporting:
 - Gateway mode, dry-run, run-once and interval settings.
 - Deduplication mode and optional OpenCTI dedup lookup.
 - Source dry-run controls for OTX and MISP.
-- Aggregate run summary output path.
+- Local evidence paths for gateway state, source state, source decision audit
+  files, aggregate run summary output and artifact deduplication index.
 
 Unknown enabled sources are errors because the gateway cannot execute them.
 Weaker graph-hygiene postures, such as `NARROWCTI_DEDUP_MODE=source`, are
 warnings because they can be intentional during local validation but should be
 visible before production operation. Missing aggregate summary output is
 informational because source-level logs and decision audit can still be active.
+Empty source state files are errors because source deduplication state cannot
+be persisted. Empty decision audit files are warnings because ingestion can run,
+but decision evidence will not be written.
 
 ## Guardrails
 

@@ -7,6 +7,20 @@ from gateway.settings import load_settings
 
 
 AVAILABLE_SOURCES = ("otx", "misp")
+SOURCE_EVIDENCE_PATHS = {
+    "otx": {
+        "state_env": "STATE_FILE",
+        "state_file": "otx_state.json",
+        "audit_env": "DECISION_AUDIT_FILE",
+        "audit_file": "otx_decisions.jsonl",
+    },
+    "misp": {
+        "state_env": "MISP_STATE_FILE",
+        "state_file": "misp_state.json",
+        "audit_env": "MISP_DECISION_AUDIT_FILE",
+        "audit_file": "misp_decisions.jsonl",
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -29,6 +43,7 @@ class PreflightReport:
     enabled_sources: tuple[str, ...]
     available_sources: tuple[str, ...]
     settings: dict
+    evidence_paths: dict
     source_controls: dict
     issues: tuple[PreflightIssue, ...]
 
@@ -38,6 +53,7 @@ class PreflightReport:
             "enabled_sources": list(self.enabled_sources),
             "available_sources": list(self.available_sources),
             "settings": self.settings,
+            "evidence_paths": self.evidence_paths,
             "source_controls": self.source_controls,
             "issues": [issue.to_dict() for issue in self.issues],
         }
@@ -106,6 +122,27 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             )
         )
 
+    evidence_paths = build_evidence_paths(enabled, settings, env)
+    for source, paths in evidence_paths.get("sources", {}).items():
+        if not paths.get("state_file"):
+            issues.append(
+                PreflightIssue(
+                    "error",
+                    "source-state-disabled",
+                    f"{source} state file is empty; source deduplication state "
+                    "cannot be persisted.",
+                )
+            )
+        if not paths.get("decision_audit_file"):
+            issues.append(
+                PreflightIssue(
+                    "warning",
+                    "decision-audit-disabled",
+                    f"{source} decision audit file is empty; decision evidence "
+                    "will not be written.",
+                )
+            )
+
     source_controls = build_source_controls(enabled, env)
     unsafe_sources = [
         source
@@ -145,9 +182,54 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             "opencti_dedup_lookup": settings.opencti_dedup_lookup,
             "dedup_state_file": settings.dedup_state_file,
         },
+        evidence_paths=evidence_paths,
         source_controls=source_controls,
         issues=tuple(issues),
     )
+
+
+def build_evidence_paths(enabled_sources, settings, env):
+    return {
+        "state_dir": settings.state_dir,
+        "decision_audit_dir": settings.decision_audit_dir,
+        "run_summary_file": settings.run_summary_file,
+        "dedup_state_file": settings.dedup_state_file,
+        "sources": {
+            source: build_source_evidence_paths(source, settings, env)
+            for source in enabled_sources
+            if source in SOURCE_EVIDENCE_PATHS
+        },
+    }
+
+
+def build_source_evidence_paths(source, settings, env):
+    path_config = SOURCE_EVIDENCE_PATHS[source]
+    return {
+        "state_file": env_path(
+            env,
+            path_config["state_env"],
+            gateway_file(settings.state_dir, path_config["state_file"]),
+        ),
+        "state_variable": path_config["state_env"],
+        "decision_audit_file": env_path(
+            env,
+            path_config["audit_env"],
+            gateway_file(settings.decision_audit_dir, path_config["audit_file"]),
+        ),
+        "decision_audit_variable": path_config["audit_env"],
+    }
+
+
+def env_path(env, name, default):
+    if name in env:
+        return env.get(name, "")
+    return default
+
+
+def gateway_file(base_dir, filename):
+    if not base_dir:
+        return ""
+    return os.path.join(base_dir, filename)
 
 
 def build_source_controls(enabled_sources, env):
@@ -188,7 +270,11 @@ def format_text_report(report):
         f"available_sources={','.join(report.available_sources)}",
         f"dedup_mode={report.settings['dedup_mode']}",
         f"opencti_dedup_lookup={str(report.settings['opencti_dedup_lookup']).lower()}",
+        f"state_dir={report.evidence_paths.get('state_dir') or '(disabled)'}",
+        "decision_audit_dir="
+        f"{report.evidence_paths.get('decision_audit_dir') or '(disabled)'}",
         f"run_summary_file={report.settings['run_summary_file'] or '(disabled)'}",
+        f"dedup_state_file={report.evidence_paths.get('dedup_state_file') or '(disabled)'}",
         f"min_score_to_ingest={report.settings['min_score_to_ingest']}",
         f"enable_quarantine={str(report.settings['enable_quarantine']).lower()}",
         f"quarantine_score_threshold={report.settings['quarantine_score_threshold']}",
@@ -200,6 +286,12 @@ def format_text_report(report):
     for source, controls in report.source_controls.items():
         if "dry_run" in controls:
             lines.append(f"{source}.dry_run={str(controls['dry_run']).lower()}")
+    for source, paths in report.evidence_paths.get("sources", {}).items():
+        lines.append(f"{source}.state_file={paths.get('state_file') or '(disabled)'}")
+        lines.append(
+            f"{source}.decision_audit_file="
+            f"{paths.get('decision_audit_file') or '(disabled)'}"
+        )
     if report.issues:
         lines.append("issues:")
         for issue in report.issues:
@@ -223,6 +315,7 @@ def main():
             enabled_sources=(),
             available_sources=AVAILABLE_SOURCES,
             settings={},
+            evidence_paths={},
             source_controls={},
             issues=(issue,),
         )

@@ -206,7 +206,12 @@ python -m gateway.preflight --json
 
 The preflight evaluates `NARROWCTI_*` gateway settings and source dry-run
 controls. It reports registered versus enabled sources, deduplication mode,
-OpenCTI dedup lookup, source dry-run state and the aggregate run summary path.
+OpenCTI dedup lookup, source dry-run state, aggregate run summary path, source
+state files, source decision audit files and artifact deduplication index path.
+
+Empty source state files are preflight errors because source deduplication state
+cannot be persisted. Empty decision audit files are warnings because ingestion
+can still run, but decision evidence will not be written.
 
 Preflight output is meant for operator readiness and automation checks. It does
 not replace runtime decision audit records because it does not normalize,
