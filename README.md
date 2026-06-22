@@ -213,6 +213,21 @@ MISP_PUBLISHED_ONLY=true
 MISP_OVERSIZED_EVENT_ACTION=skip
 ```
 
+
+Initial v0.5 gateway runtime command for development validation:
+
+```powershell
+$LAB_ROOT = "<path-to-lab-root>"
+cd "$LAB_ROOT\NarrowCTI"
+docker run --rm --env-file config\.env.example -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.connector
+```
+
+The example keeps `NARROWCTI_DRY_RUN=true` and `OTX_DRY_RUN=true` for safe local validation.
+
+The unified gateway entrypoint composes enabled source runtimes and isolates
+source failures. Keep source-specific runtimes available for debugging and
+bounded backfills while the v0.5 gateway matures.
+
 ## Docker Runtime
 
 This repository is expected to sit next to the OpenCTI Compose workspace:

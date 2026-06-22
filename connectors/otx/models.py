@@ -22,6 +22,7 @@ class QuerySummary:
     quarantined: int = 0
     skipped: int = 0
     errors: int = 0
+    dry_run: int = 0
 
     @property
     def handled(self):
@@ -31,4 +32,5 @@ class QuerySummary:
             + self.quarantined
             + self.skipped
             + self.errors
+            + self.dry_run
         )

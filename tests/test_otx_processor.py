@@ -119,7 +119,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(QuerySummary("lummac2", 1, 1, 3), summary)
         self.assertIn(
             "Query summary: lummac2 reviewed=1 ingested=1 dropped=0 "
-            "quarantined=0 skipped=0 errors=0 available=3",
+            "quarantined=0 skipped=0 errors=0 dry_run=0 available=3",
             logs,
         )
 
@@ -415,6 +415,46 @@ class ProcessorTests(unittest.TestCase):
             logs,
         )
 
+
+    def test_process_pulse_dry_run_records_decision_without_export_or_state(self):
+        records = []
+        marked = []
+        logs = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "LummaC2 fresh",
+                "description": "description",
+                "created": "2026-04-01T00:00:00Z",
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: marked.append(pulse_id),
+        )
+        settings = self.settings()
+        settings.dry_run = True
+
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client="api",
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: self.fail("export should not be called"),
+            decision_audit=SimpleNamespace(record=records.append),
+        )
+
+        processed = processor.process_pulse(
+            "lummac2",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertFalse(processed)
+        self.assertEqual([], marked)
+        self.assertEqual("dry_run", records[0].action)
+        self.assertEqual("ok", records[0].reason)
+        self.assertIn("Dry-run: LummaC2 fresh", logs[1])
 
 if __name__ == "__main__":
     unittest.main()

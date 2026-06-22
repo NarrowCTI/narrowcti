@@ -61,6 +61,7 @@ These variables are currently used by OTX and MISP processors.
 | `MAX_SEARCH_RESULTS_PER_QUERY` | Maximum OTX search candidates reviewed per query. |
 | `MAX_PULSES_PER_QUERY` | Maximum OTX pulses ingested per query. |
 | `MAX_IOCS_PER_PULSE` | Maximum indicators exported from a single OTX pulse. |
+| `OTX_DRY_RUN` | Exercises OTX search, enrichment, scoring, policy and audit without OpenCTI export. |
 | `STATE_FILE` | Local OTX processed-pulse state file. |
 
 ### MISP Controls

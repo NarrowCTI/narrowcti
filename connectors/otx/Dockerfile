@@ -18,5 +18,6 @@ COPY connectors/otx/*.py /app/
 COPY connectors /app/connectors
 COPY core /app/core
 COPY exporters /app/exporters
+COPY gateway /app/gateway
 
 CMD ["python", "connector.py"]

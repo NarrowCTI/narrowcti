@@ -229,6 +229,7 @@ class SettingsTests(unittest.TestCase):
             "MAX_SEARCH_RESULTS_PER_QUERY": "2",
             "INGEST_PAUSE_SECONDS": "4",
             "DECISION_AUDIT_FILE": "/app/state/decisions.jsonl",
+            "NARROWCTI_DRY_RUN": "true",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -241,6 +242,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(3, settings.otx_retries)
         self.assertEqual(4, settings.ingest_pause_seconds)
         self.assertEqual("/app/state/decisions.jsonl", settings.decision_audit_file)
+        self.assertTrue(settings.dry_run)
 
 
 class RuntimeTests(unittest.TestCase):

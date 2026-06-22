@@ -157,6 +157,23 @@ The v0.5 gateway should evolve this into layered pre-export deduplication:
 The target behavior is graph hygiene with analyst value: repeated sightings are
 not noise, but they should become context rather than duplicate objects.
 
+
+## Initial Runtime Entrypoint
+
+The first v0.5 implementation adds a neutral Python entrypoint:
+
+```text
+python -m gateway.connector
+```
+
+The entrypoint loads `NARROWCTI_*` settings, builds the default source registry
+and executes enabled sources through isolated `run_once()` calls. A source error
+is reported in the gateway summary without stopping the next enabled source.
+
+The OTX and MISP source runtimes remain available independently. The gateway
+composes them; it does not move feed-specific API or normalization logic out of
+`connectors/otx` or `connectors/misp`.
+
 ## Guardrails
 
 The v0.5 runtime must preserve the safety posture established in v0.4:
