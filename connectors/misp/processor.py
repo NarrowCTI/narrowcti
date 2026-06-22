@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.feed_contract import FeedRunSummary
 from core.policy import PolicyConfig, should_ingest
-from core.scoring import age_days, calculate_score
+from core.scoring import age_days, calculate_score_details
 from core.state_repository import MISPEventStateRepository
 from exporters.opencti import send_bundle
 
@@ -39,6 +39,9 @@ def decision_metadata(candidate_ref, candidate=None):
     }
     if controls:
         metadata["guardrails"] = controls
+    score_details = getattr(candidate, "score_details", None)
+    if score_details:
+        metadata["scoring"] = dict(score_details)
     return metadata
 
 
@@ -308,6 +311,7 @@ class MISPProcessor:
             ioc_count=len(indicators),
             age=candidate.age,
             score=candidate.score,
+            score_details=candidate.score_details,
         )
 
     def mark_artifacts(self, candidate_ref, candidate):
@@ -375,6 +379,11 @@ class MISPProcessor:
             event,
             list(event.get("indicators", [])),
         )
+        score_details = calculate_score_details(
+            event,
+            query,
+            source_confidence=getattr(self.settings, "source_confidence", 50),
+        )
 
         return MISPEventCandidate(
             event=event,
@@ -383,5 +392,6 @@ class MISPProcessor:
             indicators=indicators,
             ioc_count=ioc_count,
             age=age_days(event.get("created")),
-            score=calculate_score(event, query),
+            score=score_details["final_score"],
+            score_details=score_details,
         )

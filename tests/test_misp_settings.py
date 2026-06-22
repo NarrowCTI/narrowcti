@@ -23,6 +23,7 @@ class MISPSettingsTests(unittest.TestCase):
             "MISP_TO_DATE": "2026-01-31",
             "MISP_TAGS": "tlp:green, type:OSINT",
             "MISP_PUBLISHED_ONLY": "true",
+            "MISP_SOURCE_CONFIDENCE": "65",
             "INGEST_PAUSE_SECONDS": "5",
             "MIN_SCORE_TO_INGEST": "70",
             "MIN_SCORE_FOR_OLD_EVENT": "85",
@@ -51,6 +52,7 @@ class MISPSettingsTests(unittest.TestCase):
             settings.search_filters,
         )
         self.assertEqual(5, settings.ingest_pause_seconds)
+        self.assertEqual(65, settings.source_confidence)
         self.assertEqual(70, settings.min_score_to_ingest)
         self.assertEqual(85, settings.min_score_for_old_event)
         self.assertFalse(settings.enable_quarantine)

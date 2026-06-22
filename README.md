@@ -33,7 +33,7 @@ quarantine/release context before OpenCTI ingestion.
 
 - Searches OTX pulses using configurable threat intelligence queries.
 - Enriches candidate pulses through the OTX API.
-- Calculates contextual scores before ingestion.
+- Calculates contextual scores and records scoring evidence before ingestion.
 - Applies ingestion policy for drop, quarantine and export decisions.
 - Optionally writes structured decision audit records for operational review.
 - Logs per-query operational summaries for reviewed, ingested, dropped,

@@ -21,6 +21,7 @@ class MISPSettings:
     ingest_pause_seconds: int
     dry_run: bool
     run_once: bool
+    source_confidence: int
     max_events_per_run: int
     max_attributes_per_event: int
     max_iocs_per_event: int
@@ -107,6 +108,7 @@ def load_settings():
         ingest_pause_seconds=env_int("INGEST_PAUSE_SECONDS", 2),
         dry_run=env_bool("MISP_DRY_RUN", True),
         run_once=env_bool("MISP_RUN_ONCE", False),
+        source_confidence=env_int("MISP_SOURCE_CONFIDENCE", 50),
         max_events_per_run=env_int("MISP_MAX_EVENTS_PER_RUN", 10),
         max_attributes_per_event=env_int("MISP_MAX_ATTRIBUTES_PER_EVENT", 1000),
         max_iocs_per_event=env_int("MISP_MAX_IOCS_PER_EVENT", 1000),

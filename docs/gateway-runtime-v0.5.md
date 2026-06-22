@@ -127,6 +127,12 @@ The v0.5 decision layer should improve:
 - Quarantine reporting and operator review data.
 - Per-source and aggregate run summaries.
 
+The current v0.5 implementation records scoring evidence in decision audit
+metadata. Each scored candidate can include the neutral base score, source
+confidence, applied score adjustments, raw score and final score. Source
+confidence is intentionally source-specific, using variables such as
+`OTX_SOURCE_CONFIDENCE` and `MISP_SOURCE_CONFIDENCE`, where `50` is neutral.
+
 ## Deduplication and Graph Hygiene
 
 Deduplication is a product-level curation capability, not just a local runtime

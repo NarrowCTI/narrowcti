@@ -15,6 +15,7 @@ from core.feed_contract import (
     FeedSource,
 )
 from core.policy import PolicyConfig, should_ingest
+from core.scoring import calculate_score, calculate_score_details
 from core.state_repository import (
     MISPEventStateRepository,
     ProcessedItemStateRepository,
@@ -113,6 +114,39 @@ class PolicyTests(unittest.TestCase):
 
         self.assertTrue(decision)
         self.assertEqual("ok", reason)
+
+
+class ScoringTests(unittest.TestCase):
+    def test_score_details_explain_adjustments(self):
+        pulse = {
+            "name": "LummaC2 fresh infrastructure",
+            "tags": ["malware"],
+            "created": "2099-01-01T00:00:00Z",
+            "indicators": [
+                {"type": "domain", "indicator": f"host-{index}.example"}
+                for index in range(10)
+            ],
+        }
+
+        details = calculate_score_details(pulse, "lummac2")
+
+        self.assertEqual(40, details["base_score"])
+        self.assertEqual(50, details["source_confidence"])
+        self.assertEqual(95, details["final_score"])
+        self.assertEqual(95, calculate_score(pulse, "lummac2"))
+        self.assertIn(
+            "query_name_exact",
+            [adjustment["signal"] for adjustment in details["adjustments"]],
+        )
+
+    def test_source_confidence_can_weight_score(self):
+        pulse = {"name": "unrelated", "tags": [], "indicators": []}
+
+        low = calculate_score_details(pulse, "query", source_confidence=25)
+        high = calculate_score_details(pulse, "query", source_confidence=75)
+
+        self.assertEqual(35, low["final_score"])
+        self.assertEqual(45, high["final_score"])
 
 
 class StateRepositoryTests(unittest.TestCase):
@@ -230,6 +264,7 @@ class SettingsTests(unittest.TestCase):
             "INGEST_PAUSE_SECONDS": "4",
             "DECISION_AUDIT_FILE": "/app/state/decisions.jsonl",
             "NARROWCTI_DRY_RUN": "true",
+            "OTX_SOURCE_CONFIDENCE": "70",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -243,6 +278,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(4, settings.ingest_pause_seconds)
         self.assertEqual("/app/state/decisions.jsonl", settings.decision_audit_file)
         self.assertTrue(settings.dry_run)
+        self.assertEqual(70, settings.source_confidence)
 
 
 class RuntimeTests(unittest.TestCase):

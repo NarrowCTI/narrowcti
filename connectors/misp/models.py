@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Mapping
 
 
 @dataclass(frozen=True)
@@ -10,3 +11,4 @@ class MISPEventCandidate:
     ioc_count: int
     age: int | None
     score: int
+    score_details: Mapping[str, object] = field(default_factory=dict)

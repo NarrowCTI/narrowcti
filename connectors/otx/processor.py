@@ -2,7 +2,7 @@ import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.policy import PolicyConfig, should_ingest
-from core.scoring import age_days, calculate_score
+from core.scoring import age_days, calculate_score_details
 from core.state_repository import PulseStateRepository
 from exporters.opencti import send_bundle
 
@@ -18,6 +18,13 @@ def age_label(age):
     if age is None:
         return "unknown"
     return f"{age}d"
+
+
+def decision_metadata(candidate=None):
+    score_details = getattr(candidate, "score_details", None)
+    if not candidate or not score_details:
+        return {}
+    return {"scoring": dict(score_details)}
 
 
 class OTXProcessor:
@@ -244,6 +251,7 @@ class OTXProcessor:
             score=score,
             age_days=candidate_age,
             indicator_count=indicator_count,
+            metadata=decision_metadata(candidate),
         )
 
         try:
@@ -281,6 +289,7 @@ class OTXProcessor:
             ioc_count=len(indicators),
             age=candidate.age,
             score=candidate.score,
+            score_details=candidate.score_details,
         )
 
     def mark_artifacts(self, candidate_ref, candidate):
@@ -320,6 +329,11 @@ class OTXProcessor:
     def prepare_candidate(self, query, pulse):
         indicators = pulse.get("indicators", [])
         ioc_count = len(indicators)
+        score_details = calculate_score_details(
+            pulse,
+            query,
+            source_confidence=getattr(self.settings, "source_confidence", 50),
+        )
 
         if ioc_count > self.settings.max_iocs_per_pulse:
             indicators = indicators[: self.settings.max_iocs_per_pulse]
@@ -331,5 +345,6 @@ class OTXProcessor:
             indicators=indicators,
             ioc_count=ioc_count,
             age=age_days(pulse.get("created")),
-            score=calculate_score(pulse, query),
+            score=score_details["final_score"],
+            score_details=score_details,
         )

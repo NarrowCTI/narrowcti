@@ -287,6 +287,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("alienvault:otx", records[0].source_key)
         self.assertEqual("pulse-1", records[0].external_id)
         self.assertEqual("Low score pulse", records[0].title)
+        self.assertEqual(50, records[0].metadata["scoring"]["source_confidence"])
 
     def test_process_pulse_records_successful_ingest(self):
         records = []
@@ -324,6 +325,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("ingest", records[0].action)
         self.assertEqual("ok", records[0].reason)
         self.assertEqual(1, records[0].indicator_count)
+        self.assertEqual(records[0].score, records[0].metadata["scoring"]["final_score"])
 
     def test_process_pulse_uses_exporter_and_marks_state_after_success(self):
         logs = []
@@ -496,6 +498,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual([], marked)
         self.assertEqual("dry_run", records[0].action)
         self.assertEqual("ok", records[0].reason)
+        self.assertIn("scoring", records[0].metadata)
         self.assertIn("Dry-run: LummaC2 fresh", logs[1])
 
 if __name__ == "__main__":

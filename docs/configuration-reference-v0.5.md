@@ -61,6 +61,7 @@ These variables are currently used by OTX and MISP processors.
 | `MAX_SEARCH_RESULTS_PER_QUERY` | Maximum OTX search candidates reviewed per query. |
 | `MAX_PULSES_PER_QUERY` | Maximum OTX pulses ingested per query. |
 | `MAX_IOCS_PER_PULSE` | Maximum indicators exported from a single OTX pulse. |
+| `OTX_SOURCE_CONFIDENCE` | Source confidence weight used by scoring; `50` is neutral. |
 | `OTX_DRY_RUN` | Exercises OTX search, enrichment, scoring, policy and audit without OpenCTI export. |
 | `STATE_FILE` | Local OTX processed-pulse state file. |
 
@@ -79,6 +80,7 @@ These variables are currently used by OTX and MISP processors.
 | `MISP_MAX_ATTRIBUTES_PER_EVENT` | Metadata-first guardrail for event size before enrichment. |
 | `MISP_MAX_IOCS_PER_EVENT` | Maximum indicators exported from a single MISP event. |
 | `MISP_OVERSIZED_EVENT_ACTION` | Oversized event behavior: `skip` by default, `truncate` for controlled tests. |
+| `MISP_SOURCE_CONFIDENCE` | Source confidence weight used by scoring; `50` is neutral. |
 | `MISP_STATE_FILE` | Local MISP processed-event state file. |
 
 ## Target v0.5 Gateway Controls
@@ -146,6 +148,7 @@ MISP_OVERSIZED_EVENT_ACTION=skip
 MIN_SCORE_TO_INGEST=60
 ENABLE_QUARANTINE=true
 QUARANTINE_SCORE_THRESHOLD=50
+MISP_SOURCE_CONFIDENCE=50
 ```
 
 ## Example Target Gateway Policy
@@ -173,7 +176,8 @@ NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON=true
 The following behavior is intentionally automatic and should remain auditable:
 
 - Normalize source data into the shared feed contract.
-- Calculate contextual score.
+- Calculate contextual score and record scoring evidence, including source
+  confidence, applied adjustments, raw score and final score.
 - Apply policy and produce ingest, drop, quarantine, skip, dry-run or error
   decisions.
 - Deduplicate source items and artifact fingerprints, then record source sightings for exported artifacts when artifact or hybrid deduplication is enabled.
