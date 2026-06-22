@@ -103,35 +103,68 @@ ingested=1
 artifact_dedup_added=4
 ```
 
-The final operational report summarized three validation runs:
+MISP was also validated with one controlled non-dry-run execution and explicit
+resource bounds:
 
 ```text
-run_count=3
-reviewed=2
+NARROWCTI_ENABLED_SOURCES=misp
+MISP_QUERIES=*
+MISP_FROM_DATE=2016-01-01
+MISP_TO_DATE=2016-12-31
+MISP_TAGS=tlp:green
+MISP_MAX_EVENTS_PER_RUN=1
+MISP_MAX_ATTRIBUTES_PER_EVENT=1000
+MISP_MAX_IOCS_PER_EVENT=50
+MISP_OVERSIZED_EVENT_ACTION=skip
+MAX_DAYS_OLD=5000
+MIN_SCORE_FOR_OLD_EVENT=30
+MIN_SCORE_TO_INGEST=30
+QUARANTINE_SCORE_THRESHOLD=20
+```
+
+Result:
+
+```text
+Candidate: OSINT - New Hacking team samples (OSX)
+score=30
+indicators_before_type_filter=7
+indicators_after_type_filter=3
 ingested=1
+artifact_dedup_added=3
+```
+
+The final operational report summarized four validation runs:
+
+```text
+run_count=4
+reviewed=3
+ingested=2
 dropped=1
-accepted=1
+accepted=2
 filtered=1
-acceptance_rate_pct=50.0
-filter_rate_pct=50.0
+acceptance_rate_pct=66.67
+filter_rate_pct=33.33
+otx query=lummac2 reviewed=2 ingested=1 dropped=1
+misp query=* reviewed=1 ingested=1
 ```
 
 The final decision audit report summarized:
 
 ```text
-record_count=2
-actions=ingest=1 drop=1 quarantine=0 skip=0 dry-run=0 error=0
-query=lummac2
-score=75
+record_count=3
+actions=ingest=2 drop=1 quarantine=0 skip=0 dry-run=0 error=0
+alienvault:otx query=lummac2 records=2 score=75
+misp:misp query=* records=1 score=30
 ```
 
 The artifact correlation report confirmed the local deduplication index:
 
 ```text
-artifact_count=4
-record_count=4
+artifact_count=7
+record_count=7
 correlated_count=0
 source=alienvault:otx artifacts=4
+source=misp:misp artifacts=3
 ```
 
 Evidence was written under local validation paths:
@@ -139,8 +172,10 @@ Evidence was written under local validation paths:
 ```text
 state/validation-v0.5/gateway_runs.jsonl
 state/validation-v0.5/audit/otx_decisions.jsonl
+state/validation-v0.5/audit/misp_decisions.jsonl
 state/validation-v0.5/dedup_index.json
 state/validation-v0.5/otx_state.json
+state/validation-v0.5/misp_state.json
 ```
 
 ## Test Validation
