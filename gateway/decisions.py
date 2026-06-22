@@ -25,6 +25,7 @@ class DecisionAuditReport:
     last_recorded_at: str
     actions: dict
     reasons: list
+    score_summary: dict
     sources: dict
 
     def to_dict(self):
@@ -34,6 +35,7 @@ class DecisionAuditReport:
             "last_recorded_at": self.last_recorded_at,
             "actions": self.actions,
             "reasons": self.reasons,
+            "score_summary": self.score_summary,
             "sources": self.sources,
         }
 
@@ -72,12 +74,18 @@ def build_decision_audit_report(records, reason_limit=10):
             last_recorded_at="",
             actions=empty_actions(),
             reasons=[],
+            score_summary={
+                "overall": build_score_summary([]),
+                "by_action": {},
+            },
             sources={},
         )
 
     actions = empty_actions()
     reason_counts = Counter()
     sources = {}
+    records_by_action = {}
+    records_by_source = {}
 
     for record in records:
         action = normalize_value(record.get("action"), "unknown")
@@ -86,6 +94,8 @@ def build_decision_audit_report(records, reason_limit=10):
 
         actions[action] = actions.get(action, 0) + 1
         reason_counts[(action, reason)] += 1
+        records_by_action.setdefault(action, []).append(record)
+        records_by_source.setdefault(source_key, []).append(record)
 
         source_report = sources.setdefault(
             source_key,
@@ -93,11 +103,15 @@ def build_decision_audit_report(records, reason_limit=10):
                 "records": 0,
                 "actions": empty_actions(),
                 "reasons": {},
+                "score_summary": {},
             },
         )
         source_report["records"] += 1
         source_report["actions"][action] = source_report["actions"].get(action, 0) + 1
         source_report["reasons"][reason] = source_report["reasons"].get(reason, 0) + 1
+
+    for source_key, source_records in records_by_source.items():
+        sources[source_key]["score_summary"] = build_score_summary(source_records)
 
     return DecisionAuditReport(
         record_count=len(records),
@@ -105,6 +119,13 @@ def build_decision_audit_report(records, reason_limit=10):
         last_recorded_at=records[-1].get("recorded_at", ""),
         actions=actions,
         reasons=top_reasons(reason_counts, reason_limit),
+        score_summary={
+            "overall": build_score_summary(records),
+            "by_action": {
+                action: build_score_summary(action_records)
+                for action, action_records in sorted(records_by_action.items())
+            },
+        },
         sources=sources,
     )
 
@@ -131,6 +152,50 @@ def top_reasons(reason_counts, limit):
     ]
 
 
+def build_score_summary(records):
+    scores = [
+        score
+        for score in (coerce_score(record.get("score")) for record in records or ())
+        if score is not None
+    ]
+    return {
+        "records_with_score": len(scores),
+        "min_score": min(scores) if scores else None,
+        "max_score": max(scores) if scores else None,
+        "average_score": round(sum(scores) / len(scores), 2) if scores else None,
+        "bands": score_bands(scores),
+    }
+
+
+def coerce_score(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def score_bands(scores):
+    bands = {
+        "0-29": 0,
+        "30-49": 0,
+        "50-69": 0,
+        "70-89": 0,
+        "90-100": 0,
+    }
+    for score in scores:
+        if score < 30:
+            bands["0-29"] += 1
+        elif score < 50:
+            bands["30-49"] += 1
+        elif score < 70:
+            bands["50-69"] += 1
+        elif score < 90:
+            bands["70-89"] += 1
+        else:
+            bands["90-100"] += 1
+    return bands
+
+
 def format_text_report(report):
     lines = [
         "NarrowCTI decision audit report",
@@ -138,6 +203,7 @@ def format_text_report(report):
         f"first_recorded_at={report.first_recorded_at or '(none)'}",
         f"last_recorded_at={report.last_recorded_at or '(none)'}",
         "actions=" + format_counts(report.actions),
+        "scores=" + format_score_summary(report.score_summary["overall"]),
     ]
     if report.reasons:
         lines.append("top_reasons:")
@@ -152,7 +218,8 @@ def format_text_report(report):
             source = report.sources[source_key]
             lines.append(
                 f"- {source_key} records={source['records']} "
-                f"actions={format_counts(source['actions'])}"
+                f"actions={format_counts(source['actions'])} "
+                f"scores={format_score_summary(source['score_summary'])}"
             )
     return "\n".join(lines)
 
@@ -162,6 +229,22 @@ def format_counts(counts):
         key for key in counts if key not in ACTION_ORDER
     )
     return " ".join(f"{key}={counts.get(key, 0)}" for key in ordered_keys)
+
+
+def format_score_summary(summary):
+    bands = summary.get("bands", {})
+    band_text = ",".join(f"{key}:{bands.get(key, 0)}" for key in sorted(bands))
+    return (
+        f"records_with_score={summary.get('records_with_score', 0)} "
+        f"min_score={format_optional(summary.get('min_score'))} "
+        f"max_score={format_optional(summary.get('max_score'))} "
+        f"average_score={format_optional(summary.get('average_score'))} "
+        f"bands={band_text}"
+    )
+
+
+def format_optional(value):
+    return "(none)" if value is None else str(value)
 
 
 def main():

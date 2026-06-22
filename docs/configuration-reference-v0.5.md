@@ -243,7 +243,9 @@ The decision audit report reads source decision audit JSONL files, including
 files derived from `NARROWCTI_DECISION_AUDIT_DIR`, and summarizes actions,
 reasons and source counts. It helps operators understand the practical effect
 of configured policy thresholds, TLP controls, indicator-type filters,
-deduplication and dry-run settings.
+deduplication and dry-run settings. It also summarizes score evidence through
+minimum score, maximum score, average score and score bands so operators can see
+how scoring shaped ingest, drop, quarantine and skip outcomes.
 
 The local artifact deduplication index can also be summarized:
 

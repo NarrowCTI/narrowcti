@@ -273,9 +273,9 @@ outcomes for reviewed, ingested, dropped, quarantined, skipped, error and
 dry-run candidates. It also reports directional value metrics such as accepted
 items, filtered items, acceptance rate, filter rate and error rate. The decision
 audit report aggregates ingest, drop, quarantine, skip, dry-run and error
-reasons from source audit JSONL files. The correlation report summarizes the
-local artifact index, including cross-source fingerprints and source sighting
-counts.
+reasons from source audit JSONL files, plus score ranges and averages for
+operator review. The correlation report summarizes the local artifact index,
+including cross-source fingerprints and source sighting counts.
 
 The unified gateway entrypoint composes enabled source runtimes and isolates
 source failures. Keep source-specific runtimes available for debugging and

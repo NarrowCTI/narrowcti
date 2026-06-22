@@ -251,7 +251,9 @@ full customer-facing value reporting.
 The decision audit report is also local and read-only. It summarizes source
 decision audit JSONL files by action, reason and source so operators can inspect
 why candidates were ingested, dropped, quarantined, skipped, treated as dry-run
-or marked as errors.
+or marked as errors. It also summarizes score evidence with records that have a
+score, minimum score, maximum score, average score and score bands, both overall
+and by source/action.
 
 The companion artifact correlation report summarizes the local deduplication
 index:

@@ -5,6 +5,7 @@ import unittest
 
 from gateway.decisions import (
     build_decision_audit_report,
+    build_score_summary,
     format_text_report,
     read_decision_records,
 )
@@ -18,18 +19,21 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                 "otx",
                 "drop",
                 "below minimum score",
+                score=30,
             ),
             decision_record(
                 "2026-06-22T10:01:00Z",
                 "misp",
                 "skip",
                 "all indicators already known",
+                score=90,
             ),
             decision_record(
                 "2026-06-22T10:02:00Z",
                 "otx",
                 "drop",
                 "below minimum score",
+                score=50,
             ),
         ]
 
@@ -44,9 +48,39 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             {"action": "drop", "reason": "below minimum score", "count": 2},
             report.reasons[0],
         )
+        self.assertEqual(3, report.score_summary["overall"]["records_with_score"])
+        self.assertEqual(30, report.score_summary["overall"]["min_score"])
+        self.assertEqual(90, report.score_summary["overall"]["max_score"])
+        self.assertEqual(56.67, report.score_summary["overall"]["average_score"])
+        self.assertEqual(1, report.score_summary["overall"]["bands"]["30-49"])
+        self.assertEqual(
+            2,
+            report.score_summary["by_action"]["drop"]["records_with_score"],
+        )
         self.assertEqual(2, report.sources["otx"]["records"])
+        self.assertEqual(
+            2,
+            report.sources["otx"]["score_summary"]["records_with_score"],
+        )
         self.assertEqual(1, report.sources["misp"]["actions"]["skip"])
         json.dumps(report.to_dict())
+
+    def test_score_summary_ignores_records_without_score(self):
+        summary = build_score_summary(
+            [
+                {"score": 20},
+                {"score": "80"},
+                {"score": None},
+                {"score": "not-a-score"},
+            ]
+        )
+
+        self.assertEqual(2, summary["records_with_score"])
+        self.assertEqual(20, summary["min_score"])
+        self.assertEqual(80, summary["max_score"])
+        self.assertEqual(50.0, summary["average_score"])
+        self.assertEqual(1, summary["bands"]["0-29"])
+        self.assertEqual(1, summary["bands"]["70-89"])
 
     def test_empty_report_is_serializable(self):
         report = build_decision_audit_report([])
@@ -54,6 +88,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(0, report.record_count)
         self.assertEqual({}, report.sources)
         self.assertEqual([], report.reasons)
+        self.assertEqual(0, report.score_summary["overall"]["records_with_score"])
         json.dumps(report.to_dict())
 
     def test_read_decision_records_can_expand_directory_and_limit(self):
@@ -99,11 +134,12 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("NarrowCTI decision audit report", text)
         self.assertIn("record_count=1", text)
         self.assertIn("actions=ingest=0 drop=0 quarantine=1", text)
+        self.assertIn("scores=records_with_score=1 min_score=50", text)
         self.assertIn("- action=quarantine count=1 reason=low score", text)
         self.assertIn("- otx records=1", text)
 
 
-def decision_record(recorded_at, source_key, action, reason):
+def decision_record(recorded_at, source_key, action, reason, score=50):
     return {
         "recorded_at": recorded_at,
         "source_key": source_key,
@@ -112,7 +148,7 @@ def decision_record(recorded_at, source_key, action, reason):
         "query": "sample",
         "action": action,
         "reason": reason,
-        "score": 50,
+        "score": score,
         "age_days": 1,
         "indicator_count": 1,
         "metadata": {},
