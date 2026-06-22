@@ -97,6 +97,16 @@ Current release-candidate validation was performed with the existing
 `opencti-connector-narrowcti` test image:
 
 ```powershell
+.\scripts\validate-v0.6.ps1
+```
+
+The helper executes the Docker-based syntax and unit validation. Use
+`.\scripts\validate-v0.6.ps1 -Preview` to inspect the Docker commands without
+running them.
+
+Manual equivalent:
+
+```powershell
 docker run --rm -v "${PWD}:/repo" -w /repo opencti-connector-narrowcti python -m py_compile gateway/settings.py gateway/preflight.py
 docker run --rm -v "${PWD}:/repo" -w /repo opencti-connector-narrowcti python -m unittest tests.test_gateway_preflight tests.test_gateway_runtime -v
 docker run --rm -v "${PWD}:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
@@ -105,11 +115,18 @@ docker run --rm -v "${PWD}:/repo" -w /repo opencti-connector-narrowcti python -m
 Latest complete suite result:
 
 ```text
+.\scripts\validate-v0.6.ps1
 Ran 183 tests
 OK
 ```
 
 Final release validation should also run:
+
+```powershell
+.\scripts\validate-v0.6.ps1
+```
+
+Manual equivalent:
 
 ```powershell
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/entity_extraction.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/connector.py connectors/misp/feed_adapter.py connectors/misp/models.py connectors/misp/processor.py connectors/misp/runtime.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/indicator_policy.py core/mitre_attack.py core/quarantine.py core/scoring.py core/policy.py core/state_repository.py core/tlp.py exporters/opencti.py exporters/stix_builder.py
