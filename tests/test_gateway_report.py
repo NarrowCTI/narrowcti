@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from gateway.report import (
+    build_quarantine_review,
     build_value_metrics,
     build_operational_report,
     format_text_report,
@@ -85,6 +86,7 @@ class GatewayReportTests(unittest.TestCase):
         self.assertEqual([], report.failures)
         self.assertEqual([], report.queries)
         self.assertEqual({}, report.sources)
+        self.assertEqual(0, report.quarantine_review["record_count"])
         json.dumps(report.to_dict())
 
     def test_report_records_missing_failure_detail(self):
@@ -197,6 +199,85 @@ class GatewayReportTests(unittest.TestCase):
         self.assertIn("queries:", text)
         self.assertIn("- otx query=stealc runs=1 available=3 handled=2", text)
 
+    def test_report_can_include_quarantine_review_metrics(self):
+        report = build_operational_report(
+            [gateway_record("2026-06-22T10:00:00Z", [source_result("otx", True)])],
+            quarantine_records=[
+                quarantine_record("q-1", "otx", "pending"),
+                quarantine_record(
+                    "q-2",
+                    "otx",
+                    "released",
+                    review={
+                        "released_indicator_count": 2,
+                        "held_indicator_count": 0,
+                        "exported": True,
+                        "exported_indicator_count": 2,
+                        "dedup_duplicate_count": 1,
+                    },
+                ),
+                quarantine_record(
+                    "q-3",
+                    "misp",
+                    "partially-released",
+                    review={
+                        "released_indicator_count": 1,
+                        "held_indicator_count": 3,
+                        "exported": False,
+                    },
+                ),
+                quarantine_record("q-4", "misp", "rejected"),
+            ],
+        )
+
+        review = report.quarantine_review
+
+        self.assertEqual(4, review["record_count"])
+        self.assertEqual(1, review["pending"])
+        self.assertEqual(1, review["released"])
+        self.assertEqual(1, review["partially_released"])
+        self.assertEqual(1, review["rejected"])
+        self.assertEqual(2, review["exportable"])
+        self.assertEqual(1, review["exported"])
+        self.assertEqual(3, review["released_indicator_count"])
+        self.assertEqual(3, review["held_indicator_count"])
+        self.assertEqual(2, review["exported_indicator_count"])
+        self.assertEqual(1, review["dedup_duplicate_count"])
+        self.assertEqual(2, review["by_source"]["otx"]["records"])
+        self.assertEqual(1, review["by_source"]["misp"]["statuses"]["rejected"])
+
+    def test_quarantine_review_empty_counts_are_stable(self):
+        review = build_quarantine_review([])
+
+        self.assertEqual(0, review["record_count"])
+        self.assertEqual(0, review["pending"])
+        self.assertEqual(0, review["exportable"])
+        self.assertEqual({}, review["by_source"])
+
+    def test_text_report_includes_quarantine_review(self):
+        report = build_operational_report(
+            [gateway_record("2026-06-22T10:00:00Z", [source_result("otx", True)])],
+            quarantine_records=[
+                quarantine_record("q-1", "otx", "pending"),
+                quarantine_record(
+                    "q-2",
+                    "otx",
+                    "released",
+                    review={
+                        "released_indicator_count": 2,
+                        "exported": True,
+                        "exported_indicator_count": 2,
+                    },
+                ),
+            ],
+        )
+
+        text = format_text_report(report)
+
+        self.assertIn("quarantine_review:", text)
+        self.assertIn("records=2 pending=1 released=1", text)
+        self.assertIn("source=otx records=2", text)
+
 
 def gateway_record(recorded_at, results):
     return {
@@ -281,6 +362,17 @@ def merge_result_totals(results):
         for field_name, value in result["totals"].items():
             totals[field_name] += value
     return totals
+
+
+def quarantine_record(quarantine_id, source_key, status, review=None):
+    return {
+        "quarantine_id": quarantine_id,
+        "source_key": source_key,
+        "external_id": quarantine_id,
+        "title": f"Record {quarantine_id}",
+        "status": status,
+        "review": review or {},
+    }
 
 
 if __name__ == "__main__":

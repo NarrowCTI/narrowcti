@@ -1,9 +1,27 @@
 import argparse
 import json
+from collections import Counter
 from dataclasses import dataclass
 
+from core.quarantine import (
+    EXPIRED,
+    PARTIALLY_RELEASED,
+    PENDING,
+    REJECTED,
+    RELEASED,
+    QuarantineRepository,
+    normalize_status,
+)
 from gateway.runtime import SUMMARY_FIELDS
 from gateway.settings import load_settings
+
+QUARANTINE_STATUS_ORDER = (
+    PENDING,
+    RELEASED,
+    PARTIALLY_RELEASED,
+    REJECTED,
+    EXPIRED,
+)
 
 
 @dataclass(frozen=True)
@@ -16,6 +34,7 @@ class GatewayOperationalReport:
     failures: list
     queries: list
     sources: dict
+    quarantine_review: dict
 
     def to_dict(self):
         return {
@@ -27,6 +46,7 @@ class GatewayOperationalReport:
             "failures": self.failures,
             "queries": self.queries,
             "sources": self.sources,
+            "quarantine_review": self.quarantine_review,
         }
 
 
@@ -42,7 +62,13 @@ def read_gateway_summary_file(summary_file, limit=None):
     return records
 
 
-def build_operational_report(records):
+def read_quarantine_records(repository_file):
+    if not repository_file:
+        return []
+    return QuarantineRepository(repository_file).records()
+
+
+def build_operational_report(records, quarantine_records=None):
     if not records:
         return GatewayOperationalReport(
             run_count=0,
@@ -53,6 +79,7 @@ def build_operational_report(records):
             failures=[],
             queries=[],
             sources={},
+            quarantine_review=build_quarantine_review(quarantine_records),
         )
 
     sources = {}
@@ -98,7 +125,78 @@ def build_operational_report(records):
         failures=failures,
         queries=sorted_query_summaries(queries),
         sources=sources,
+        quarantine_review=build_quarantine_review(quarantine_records),
     )
+
+
+def build_quarantine_review(records):
+    records = list(records or [])
+    statuses = Counter()
+    by_source = {}
+    exported = 0
+    released_indicator_count = 0
+    held_indicator_count = 0
+    exported_indicator_count = 0
+    dedup_duplicate_count = 0
+
+    for record in records:
+        status = normalize_status(record.get("status", PENDING))
+        statuses[status] += 1
+        source_key = str(record.get("source_key") or "unknown")
+        source_report = by_source.setdefault(
+            source_key,
+            {
+                "records": 0,
+                "statuses": empty_quarantine_statuses(),
+                "released_indicator_count": 0,
+                "held_indicator_count": 0,
+                "exported_indicator_count": 0,
+                "dedup_duplicate_count": 0,
+            },
+        )
+        source_report["records"] += 1
+        source_report["statuses"][status] += 1
+
+        review = record.get("review") or {}
+        if review.get("exported"):
+            exported += 1
+        released_count = int(review.get("released_indicator_count", 0) or 0)
+        held_count = int(review.get("held_indicator_count", 0) or 0)
+        exported_count = int(review.get("exported_indicator_count", 0) or 0)
+        duplicate_count = int(review.get("dedup_duplicate_count", 0) or 0)
+        released_indicator_count += released_count
+        held_indicator_count += held_count
+        exported_indicator_count += exported_count
+        dedup_duplicate_count += duplicate_count
+        source_report["released_indicator_count"] += released_count
+        source_report["held_indicator_count"] += held_count
+        source_report["exported_indicator_count"] += exported_count
+        source_report["dedup_duplicate_count"] += duplicate_count
+
+    status_counts = empty_quarantine_statuses()
+    for status, count in statuses.items():
+        status_counts[status] = count
+
+    return {
+        "record_count": len(records),
+        "statuses": status_counts,
+        "pending": status_counts[PENDING],
+        "released": status_counts[RELEASED],
+        "partially_released": status_counts[PARTIALLY_RELEASED],
+        "rejected": status_counts[REJECTED],
+        "expired": status_counts[EXPIRED],
+        "exportable": status_counts[RELEASED] + status_counts[PARTIALLY_RELEASED],
+        "exported": exported,
+        "released_indicator_count": released_indicator_count,
+        "held_indicator_count": held_indicator_count,
+        "exported_indicator_count": exported_indicator_count,
+        "dedup_duplicate_count": dedup_duplicate_count,
+        "by_source": dict(sorted(by_source.items())),
+    }
+
+
+def empty_quarantine_statuses():
+    return {status: 0 for status in QUARANTINE_STATUS_ORDER}
 
 
 def empty_totals():
@@ -220,6 +318,32 @@ def format_text_report(report):
                 f"{format_totals(source['totals'])} "
                 f"metrics={format_metrics(source['metrics'])}"
             )
+    if report.quarantine_review.get("record_count", 0):
+        review = report.quarantine_review
+        lines.append("quarantine_review:")
+        lines.append(
+            "- "
+            f"records={review['record_count']} "
+            f"pending={review['pending']} "
+            f"released={review['released']} "
+            f"partially_released={review['partially_released']} "
+            f"rejected={review['rejected']} "
+            f"exportable={review['exportable']} "
+            f"exported={review['exported']} "
+            f"released_indicators={review['released_indicator_count']} "
+            f"held_indicators={review['held_indicator_count']} "
+            f"exported_indicators={review['exported_indicator_count']} "
+            f"dedup_duplicates={review['dedup_duplicate_count']}"
+        )
+        for source_key, source in review["by_source"].items():
+            lines.append(
+                f"- source={source_key} records={source['records']} "
+                f"statuses={format_quarantine_statuses(source['statuses'])} "
+                f"released_indicators={source['released_indicator_count']} "
+                f"held_indicators={source['held_indicator_count']} "
+                f"exported_indicators={source['exported_indicator_count']} "
+                f"dedup_duplicates={source['dedup_duplicate_count']}"
+            )
     return "\n".join(lines)
 
 
@@ -244,6 +368,12 @@ def format_metrics(metrics):
     )
 
 
+def format_quarantine_statuses(statuses):
+    return " ".join(
+        f"{status}={statuses.get(status, 0)}" for status in QUARANTINE_STATUS_ORDER
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Summarize NarrowCTI gateway JSONL run summaries."
@@ -260,14 +390,22 @@ def main():
         help="Only read the most recent N records. Zero reads all records.",
     )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
+    parser.add_argument(
+        "--quarantine-file",
+        default="",
+        help="Optional quarantine repository JSONL file for review metrics.",
+    )
     args = parser.parse_args()
 
-    summary_file = args.file or load_settings().run_summary_file
+    settings = load_settings()
+    summary_file = args.file or settings.run_summary_file
     if not summary_file:
         raise SystemExit("summary file is required")
 
     records = read_gateway_summary_file(summary_file, limit=args.limit or None)
-    report = build_operational_report(records)
+    quarantine_file = args.quarantine_file or settings.quarantine_repository_file
+    quarantine_records = read_quarantine_records(quarantine_file)
+    report = build_operational_report(records, quarantine_records=quarantine_records)
     if args.json:
         print(json.dumps(report.to_dict(), sort_keys=True))
     else:

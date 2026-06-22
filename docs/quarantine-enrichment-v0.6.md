@@ -127,6 +127,25 @@ OTX/MISP quarantine writes, CLI state transitions, release audit records and
 controlled export replay for released records through the existing STIX/OpenCTI
 path. Rich graph enrichment remains a later integration step.
 
+## Operator Reporting
+
+The gateway operational report can include quarantine review metrics when a
+quarantine repository is configured. This keeps v0.6 aligned with the product
+goal of making curation measurable, not only executable.
+
+```powershell
+python -m gateway.report --file state/gateway_runs.jsonl --quarantine-file state/quarantine.jsonl
+python -m gateway.report --file state/gateway_runs.jsonl --quarantine-file state/quarantine.jsonl --json
+```
+
+The `quarantine_review` section summarizes:
+
+- Pending, released, partially released, rejected and expired records.
+- Exportable and already exported review records.
+- Released, held and exported indicator counts.
+- Deduplication duplicates detected during released-record export.
+- Per-source quarantine review counts.
+
 ## Enrichment Foundation
 
 v0.6 should not pretend to export the full enterprise graph. It should extract
