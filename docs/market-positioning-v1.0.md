@@ -122,6 +122,16 @@ capabilities are present and validated:
 - Installation and upgrade guidance suitable for controlled customer delivery.
 - Value reporting that can show noise reduction, accepted intelligence,
   quarantined intelligence and graph-quality outcomes.
+- Enterprise CTI report output that can summarize what was ingested, how it was
+  curated, which policy controls shaped the result, which sources contributed,
+  and what graph-quality value was produced.
+
+The v0.5 operational reports are the evidence foundation for this capability.
+They should not be marketed as the final enterprise report. The v1.0 or
+post-UI product should turn gateway run summaries, decision audit, quarantine
+release history, artifact correlation and graph-quality metrics into an
+analyst-facing CTI curation report suitable for leadership, CTI operations and
+platform governance.
 
 ## Relationship To OpenCTI And MISP
 

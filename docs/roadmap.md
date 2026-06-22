@@ -160,6 +160,7 @@ Expected outcomes:
 Purpose:
 
 - Add analyst review API/UI for quarantine, release and policy tuning.
+- Prepare the reporting model for analyst-facing CTI curation reports.
 - Provide a cleaner installation and upgrade path.
 - Add deployment templates.
 - Harden configuration defaults.
@@ -183,6 +184,9 @@ Purpose:
 - Finalize commercial license and support terms.
 - Ship the enterprise curation engine with quarantine release, graph enrichment,
   explainable policy and measurable graph-quality outcomes.
+- Provide enterprise CTI reporting that explains what was ingested, what was
+  filtered, how policy was applied, which sources contributed, and how graph
+  quality improved.
 - Provide validated deployment guidance.
 - Maintain a clear changelog and upgrade path.
 - Carry the v1.0 market position: NarrowCTI as an OpenCTI-native CTI
@@ -192,4 +196,7 @@ Expected outcomes:
 
 - NarrowCTI is ready for controlled commercial delivery.
 - Product, engineering, licensing and operations are aligned.
+- Operators and CTI teams can produce an enterprise-grade report from gateway
+  evidence, decision audit, quarantine/release history and graph hygiene
+  metrics.
 - Release messaging is aligned with `docs/market-positioning-v1.0.md`.

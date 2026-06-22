@@ -257,7 +257,13 @@ Recommended placement:
 | v0.7 | Export richer STIX objects and relationships to OpenCTI. | Starts feeding more OpenCTI tabs and graph pivots. |
 | v0.7 | Add enterprise policy variables for actor, arsenal, ATT&CK, sector and geography filters. | Safe after extraction and quarantine exist. |
 | v0.8 | Add analyst review API/UI and value reporting. | Turns governance into product workflow. |
-| v1.0 | Stable enterprise policy engine with explainable scoring, release, enrichment and graph quality metrics. | Production-grade target. |
+| v1.0 | Stable enterprise policy engine with explainable scoring, release, enrichment, graph quality metrics and enterprise CTI report output. | Production-grade target. |
+
+The enterprise CTI report should be built after reliable evidence exists from
+gateway summaries, decision audit, quarantine/release actions, artifact
+correlation and graph-enrichment outcomes. It should explain what NarrowCTI
+allowed into OpenCTI, what it filtered, why those decisions were made, and what
+value was created for CTI and hunting teams.
 
 ## Research Notes
 
