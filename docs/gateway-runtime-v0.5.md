@@ -239,7 +239,14 @@ The report is local and read-only. It aggregates:
 - First and last recorded run timestamp.
 - Total reviewed, ingested, dropped, quarantined, skipped, error and dry-run
   outcomes.
+- Directional value metrics derived from those totals: handled, accepted,
+  filtered, errors, acceptance rate, filter rate and error rate.
 - Per-source runs, success/failure counts and outcome totals.
+
+For v0.5, `accepted` means `ingested + dry_run` and `filtered` means
+`dropped + quarantined + skipped`. These metrics are intentionally operational:
+they help operators see curation behavior and noise reduction without claiming
+full customer-facing value reporting.
 
 The decision audit report is also local and read-only. It summarizes source
 decision audit JSONL files by action, reason and source so operators can inspect

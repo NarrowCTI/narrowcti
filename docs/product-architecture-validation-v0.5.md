@@ -106,8 +106,8 @@ a gateway:
 - Scoring is still basic and must mature into source-specific weighting.
 - The unified gateway entrypoint and source registry exist; they still need
   broader operational validation and richer value reporting.
-- Aggregate run, decision-reason and artifact-correlation reports exist as
-  local operator evidence for v0.5.
+- Aggregate run, directional value metrics, decision-reason and
+  artifact-correlation reports exist as local operator evidence for v0.5.
 - OpenCTI-side deduplication lookup and initial local cross-source artifact
   correlation records are implemented. Analyst-facing enrichment, confidence
   uplift and reporting from those records remain roadmap items.
@@ -115,6 +115,6 @@ a gateway:
   a decision outcome, not a managed review queue.
 - There is no administrative UI for policy tuning.
 - Metrics are still operational summaries, not full customer-facing value
-  reporting.
+  reporting with trend analysis, analyst workflow outcomes or business impact.
 - MITRE mapping, Sigma generation and threat-to-detection workflows remain later
   product layers.

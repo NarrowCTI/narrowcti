@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from gateway.report import (
+    build_value_metrics,
     build_operational_report,
     format_text_report,
     read_gateway_summary_file,
@@ -36,16 +37,44 @@ class GatewayReportTests(unittest.TestCase):
         self.assertEqual(5, report.totals["reviewed"])
         self.assertEqual(1, report.totals["ingested"])
         self.assertEqual(1, report.totals["errors"])
+        self.assertEqual(2, report.metrics["accepted"])
+        self.assertEqual(3, report.metrics["filtered"])
+        self.assertEqual(40.0, report.metrics["acceptance_rate_pct"])
+        self.assertEqual(60.0, report.metrics["filter_rate_pct"])
         self.assertEqual(2, report.sources["otx"]["runs"])
         self.assertEqual(2, report.sources["otx"]["succeeded"])
+        self.assertEqual(2, report.sources["otx"]["metrics"]["accepted"])
+        self.assertEqual(3, report.sources["otx"]["metrics"]["filtered"])
         self.assertEqual(1, report.sources["misp"]["failed"])
 
     def test_empty_report_is_serializable(self):
         report = build_operational_report([])
 
         self.assertEqual(0, report.run_count)
+        self.assertEqual(0, report.metrics["accepted"])
+        self.assertEqual(0.0, report.metrics["acceptance_rate_pct"])
         self.assertEqual({}, report.sources)
         json.dumps(report.to_dict())
+
+    def test_value_metrics_handle_zero_and_error_rates(self):
+        metrics = build_value_metrics(
+            {
+                "reviewed": 4,
+                "ingested": 1,
+                "dropped": 1,
+                "quarantined": 1,
+                "skipped": 0,
+                "errors": 1,
+                "dry_run": 0,
+            }
+        )
+
+        self.assertEqual(4, metrics["handled"])
+        self.assertEqual(1, metrics["accepted"])
+        self.assertEqual(2, metrics["filtered"])
+        self.assertEqual(25.0, metrics["acceptance_rate_pct"])
+        self.assertEqual(50.0, metrics["filter_rate_pct"])
+        self.assertEqual(25.0, metrics["error_rate_pct"])
 
     def test_read_gateway_summary_file_can_limit_recent_records(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -72,6 +101,7 @@ class GatewayReportTests(unittest.TestCase):
 
         self.assertIn("NarrowCTI gateway operational report", text)
         self.assertIn("run_count=1", text)
+        self.assertIn("metrics=handled=0 accepted=0 filtered=0", text)
         self.assertIn("- otx runs=1 succeeded=1 failed=0", text)
 
 

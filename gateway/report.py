@@ -12,6 +12,7 @@ class GatewayOperationalReport:
     first_recorded_at: str
     last_recorded_at: str
     totals: dict
+    metrics: dict
     sources: dict
 
     def to_dict(self):
@@ -20,6 +21,7 @@ class GatewayOperationalReport:
             "first_recorded_at": self.first_recorded_at,
             "last_recorded_at": self.last_recorded_at,
             "totals": self.totals,
+            "metrics": self.metrics,
             "sources": self.sources,
         }
 
@@ -43,6 +45,7 @@ def build_operational_report(records):
             first_recorded_at="",
             last_recorded_at="",
             totals=empty_totals(),
+            metrics=build_value_metrics(empty_totals()),
             sources={},
         )
 
@@ -60,6 +63,7 @@ def build_operational_report(records):
                     "succeeded": 0,
                     "failed": 0,
                     "totals": empty_totals(),
+                    "metrics": {},
                 },
             )
             source_report["runs"] += 1
@@ -69,11 +73,15 @@ def build_operational_report(records):
                 source_report["failed"] += 1
             merge_totals(source_report["totals"], result.get("totals", {}))
 
+    for source_report in sources.values():
+        source_report["metrics"] = build_value_metrics(source_report["totals"])
+
     return GatewayOperationalReport(
         run_count=len(records),
         first_recorded_at=records[0].get("recorded_at", ""),
         last_recorded_at=records[-1].get("recorded_at", ""),
         totals=totals,
+        metrics=build_value_metrics(totals),
         sources=sources,
     )
 
@@ -87,6 +95,35 @@ def merge_totals(target, source):
         target[field_name] += int(source.get(field_name, 0) or 0)
 
 
+def build_value_metrics(totals):
+    reviewed = int(totals.get("reviewed", 0) or 0)
+    accepted = int(totals.get("ingested", 0) or 0) + int(
+        totals.get("dry_run", 0) or 0
+    )
+    filtered = (
+        int(totals.get("dropped", 0) or 0)
+        + int(totals.get("quarantined", 0) or 0)
+        + int(totals.get("skipped", 0) or 0)
+    )
+    errors = int(totals.get("errors", 0) or 0)
+    handled = accepted + filtered + errors
+    return {
+        "handled": handled,
+        "accepted": accepted,
+        "filtered": filtered,
+        "errors": errors,
+        "acceptance_rate_pct": percentage(accepted, reviewed),
+        "filter_rate_pct": percentage(filtered, reviewed),
+        "error_rate_pct": percentage(errors, reviewed),
+    }
+
+
+def percentage(value, total):
+    if total <= 0:
+        return 0.0
+    return round((value / total) * 100, 2)
+
+
 def format_text_report(report):
     lines = [
         "NarrowCTI gateway operational report",
@@ -94,6 +131,7 @@ def format_text_report(report):
         f"first_recorded_at={report.first_recorded_at or '(none)'}",
         f"last_recorded_at={report.last_recorded_at or '(none)'}",
         "totals=" + format_totals(report.totals),
+        "metrics=" + format_metrics(report.metrics),
     ]
     if report.sources:
         lines.append("sources:")
@@ -102,7 +140,8 @@ def format_text_report(report):
             lines.append(
                 f"- {source_key} runs={source['runs']} "
                 f"succeeded={source['succeeded']} failed={source['failed']} "
-                f"{format_totals(source['totals'])}"
+                f"{format_totals(source['totals'])} "
+                f"metrics={format_metrics(source['metrics'])}"
             )
     return "\n".join(lines)
 
@@ -110,6 +149,21 @@ def format_text_report(report):
 def format_totals(totals):
     return " ".join(
         f"{field_name}={totals.get(field_name, 0)}" for field_name in SUMMARY_FIELDS
+    )
+
+
+def format_metrics(metrics):
+    fields = (
+        "handled",
+        "accepted",
+        "filtered",
+        "errors",
+        "acceptance_rate_pct",
+        "filter_rate_pct",
+        "error_rate_pct",
+    )
+    return " ".join(
+        f"{field_name}={metrics.get(field_name, 0)}" for field_name in fields
     )
 
 

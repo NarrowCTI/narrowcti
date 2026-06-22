@@ -228,6 +228,12 @@ python -m gateway.decisions --dir /app/state/audit --json
 This report reads existing summary evidence only. It does not query OpenCTI,
 call source APIs or make ingestion decisions.
 
+The operational report also includes derived value metrics. In v0.5,
+`accepted` means `ingested + dry_run`, `filtered` means
+`dropped + quarantined + skipped`, and rates are calculated against reviewed
+candidates. These metrics are useful for local validation and operator
+readiness, while richer customer-facing value reporting remains roadmap work.
+
 The decision audit report reads source decision audit JSONL files, including
 files derived from `NARROWCTI_DECISION_AUDIT_DIR`, and summarizes actions,
 reasons and source counts. It helps operators understand the practical effect
