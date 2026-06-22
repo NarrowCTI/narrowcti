@@ -183,6 +183,19 @@ deduplication:
 The target behavior is graph hygiene with analyst value: repeated sightings are
 not noise, but they should become context rather than duplicate objects.
 
+The v0.5 runtime can summarize the local artifact index without querying
+OpenCTI:
+
+```text
+python -m gateway.correlation --file /app/state/dedup_index.json
+python -m gateway.correlation --file /app/state/dedup_index.json --json
+```
+
+This report exposes artifact count, source counts and multi-source fingerprints
+recorded in `artifact_records`. It is intentionally read-only and should be used
+as operator evidence that graph hygiene is producing reusable correlation
+context.
+
 
 ## Initial Runtime Entrypoint
 
@@ -221,6 +234,19 @@ The report is local and read-only. It aggregates:
   outcomes.
 - Per-source runs, success/failure counts and outcome totals.
 
+The companion artifact correlation report summarizes the local deduplication
+index:
+
+```text
+python -m gateway.correlation --file /app/state/dedup_index.json
+python -m gateway.correlation --file /app/state/dedup_index.json --limit 50
+```
+
+It shows how many artifacts are tracked, how many have records, how many are
+cross-source correlations and which sources contributed sightings. This keeps
+the v0.5 cross-source deduplication behavior inspectable before later releases
+turn correlation records into analyst-facing enrichment.
+
 This is an operator reporting layer for v0.5, not a customer-facing metrics
 platform. The v0.6 roadmap can expand this into richer health checks, value
 metrics and quarantine review workflows.
@@ -251,6 +277,7 @@ Operators should run preflight before executing the gateway:
 docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.preflight
 docker compose --profile narrowcti-gateway up --force-recreate narrowcti-gateway
 docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.report --file /app/state/gateway_runs.jsonl
+docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.correlation --file /app/state/dedup_index.json
 ```
 
 For continuous gateway operation, switch `NARROWCTI_RUN_ONCE=false` only after

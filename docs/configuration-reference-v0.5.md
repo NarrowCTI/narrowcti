@@ -204,6 +204,17 @@ python -m gateway.report --file /app/state/gateway_runs.jsonl --limit 20
 This report reads existing summary evidence only. It does not query OpenCTI,
 call source APIs or make ingestion decisions.
 
+The local artifact deduplication index can also be summarized:
+
+```text
+python -m gateway.correlation --file /app/state/dedup_index.json
+python -m gateway.correlation --file /app/state/dedup_index.json --json
+```
+
+This command reads `NARROWCTI_DEDUP_STATE_FILE` or an explicit `--file` path and
+reports artifact count, per-source artifact counts and cross-source correlated
+fingerprints stored in `artifact_records`.
+
 ## Automatic Behavior
 
 The following behavior is intentionally automatic and should remain auditable:
