@@ -57,6 +57,7 @@ The strongest value signals already present are:
 - Explainable ingest, drop, quarantine, skip, error and dry-run outcomes.
 - Source-specific normalization with shared policy behavior.
 - Persistent deduplication and source-scoped state.
+- Graph hygiene through layered deduplication before OpenCTI export.
 - Decision audit evidence for analyst and operator review.
 - Safe handling of high-volume MISP events through metadata-first guardrails.
 - Provenance preservation for collector and original source context.
@@ -87,6 +88,8 @@ a gateway:
 - One runtime can orchestrate enabled sources.
 - Source failure does not prevent other enabled sources from running.
 - State, audit and guardrails remain source-scoped.
+- Duplicate artifacts are skipped, correlated or enriched before they can pollute
+  the OpenCTI graph.
 - Operators can see per-source and aggregate outcomes.
 - Dry-run mode remains trustworthy and non-exporting.
 - Tests prove registry, orchestration, failure isolation and summaries.
@@ -96,6 +99,8 @@ a gateway:
 
 - Scoring is still basic and must mature into source-specific weighting.
 - There is not yet a unified gateway entrypoint or source registry.
+- OpenCTI-side deduplication lookup and cross-source artifact correlation are
+  not yet implemented.
 - There is no administrative UI for policy tuning.
 - Metrics are still operational summaries, not full customer-facing value
   reporting.

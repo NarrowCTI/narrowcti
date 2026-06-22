@@ -81,6 +81,7 @@ Purpose:
 - Preserve source-level state, audit evidence, safety limits and failure
   isolation inside the unified runtime.
 - Improve scoring beyond the current basic model.
+- Protect OpenCTI graph hygiene through layered deduplication.
 - Add source-specific weighting, policy reasons and decision evidence.
 - Improve quarantine behavior, summaries and operator reporting.
 
@@ -95,6 +96,8 @@ Expected outcomes:
 - Analysts can understand why intelligence was dropped, quarantined or ingested.
 - The gateway can prioritize intelligence based on source, age, confidence,
   indicator type and operational relevance.
+- Duplicate artifacts are treated as skips, known items or cross-source
+  correlations instead of duplicate OpenCTI graph objects.
 - Gateway design details are documented in `docs/gateway-runtime-v0.5.md`.
 - Product and architecture continuity are validated in
   `docs/product-architecture-validation-v0.5.md`.

@@ -33,8 +33,10 @@ NarrowCTI Gateway entrypoint
   -> source registry
   -> source runtime for OTX
   -> source runtime for MISP
-  -> shared scoring, policy, audit and export services
-  -> source-scoped state and operational summaries
+  -> shared scoring, policy, audit and deduplication services
+  -> source-scoped state and artifact indexes
+  -> OpenCTI export service
+  -> source and gateway operational summaries
 ```
 
 The gateway process decides which sources are enabled, builds each source
@@ -86,6 +88,9 @@ NARROWCTI_RUN_ONCE=true
 NARROWCTI_SOURCE_INTERVAL_SECONDS=300
 NARROWCTI_STATE_DIR=/app/state
 NARROWCTI_DECISION_AUDIT_DIR=/app/state/audit
+NARROWCTI_DEDUP_MODE=hybrid
+NARROWCTI_OPENCTI_DEDUP_LOOKUP=false
+NARROWCTI_DEDUP_STATE_FILE=/app/state/dedup_index.json
 ```
 
 Source-specific configuration should remain source-specific:
@@ -119,6 +124,36 @@ The v0.5 decision layer should improve:
 - Quarantine reporting and operator review data.
 - Per-source and aggregate run summaries.
 
+## Deduplication and Graph Hygiene
+
+Deduplication is a product-level curation capability, not just a local runtime
+optimization. NarrowCTI should prevent unnecessary OpenCTI graph growth while
+preserving the intelligence value of repeated sightings across sources.
+
+The current implementation has two deduplication layers:
+
+- Source-item state prevents the same OTX pulse or MISP event from being
+  reprocessed after a successful export.
+- STIX bundle construction removes repeated indicator patterns inside the same
+  export bundle.
+
+The v0.5 gateway should evolve this into layered pre-export deduplication:
+
+- Source-item deduplication uses `source_key + external_id` to avoid repeated
+  processing of the same upstream object.
+- Artifact deduplication builds normalized fingerprints such as
+  `indicator_type + normalized_value` before export.
+- Optional OpenCTI lookup can check whether the indicator or observable already
+  exists before import. This must be configurable because it adds API cost and
+  operational coupling to OpenCTI.
+- Cross-source matches should enrich provenance, confidence and audit evidence
+  instead of creating duplicate graph objects.
+- Deduplication decisions should be visible in audit records and summaries as
+  skipped, already-known or correlated outcomes.
+
+The target behavior is graph hygiene with analyst value: repeated sightings are
+not noise, but they should become context rather than duplicate objects.
+
 ## Guardrails
 
 The v0.5 runtime must preserve the safety posture established in v0.4:
@@ -147,9 +182,11 @@ The v0.5 runtime must preserve the safety posture established in v0.4:
 3. Register OTX and MISP using the existing adapters, processors and settings.
 4. Add gateway settings for enabled sources, dry-run, run-once and intervals.
 5. Add a gateway loop that executes each enabled source and isolates failures.
-6. Add aggregate runtime summaries while keeping per-source summaries intact.
-7. Add Docker and Compose guidance for the `narrowcti-gateway` service.
-8. Keep source-specific entrypoints for troubleshooting and safe backfills.
+6. Add layered deduplication services for source items, artifact fingerprints and
+   optional OpenCTI lookup.
+7. Add aggregate runtime summaries while keeping per-source summaries intact.
+8. Add Docker and Compose guidance for the `narrowcti-gateway` service.
+9. Keep source-specific entrypoints for troubleshooting and safe backfills.
 
 ## Success Criteria
 
@@ -157,6 +194,10 @@ The v0.5 runtime must preserve the safety posture established in v0.4:
 - A failing source does not prevent another enabled source from running.
 - OTX and MISP keep separate state and audit evidence.
 - Dry-run mode exports nothing to OpenCTI.
+- Duplicate source items and duplicate artifact fingerprints do not create
+  duplicate OpenCTI imports.
+- OpenCTI-side deduplication lookup is configurable and audited when enabled.
+- Cross-source matches preserve provenance instead of creating graph noise.
 - Source-specific guardrails remain enforced inside the gateway runtime.
 - Unit tests cover source registry behavior, gateway settings, isolated source
   failures and aggregate summaries.

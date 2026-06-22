@@ -75,6 +75,22 @@ auditable feed governance instead of raw IoC forwarding. OTX, MISP, commercial
 feeds and internal sources should be evaluated through the same explainable
 ingestion model.
 
+## Deduplication Posture
+
+NarrowCTI should protect OpenCTI graph hygiene instead of forwarding the same
+artifact repeatedly. The current implementation deduplicates processed source
+items with local state and deduplicates repeated STIX patterns inside each
+bundle. The v0.5 gateway design extends this into layered pre-export
+deduplication:
+
+- Source-item deduplication prevents the same OTX pulse or MISP event from being
+  processed repeatedly.
+- Artifact deduplication normalizes indicator type and value before export.
+- Optional OpenCTI lookup can check existing indicators or observables before
+  import when enabled.
+- Cross-source matches should become provenance and confidence evidence, not
+  duplicate graph noise.
+
 ## v0.4 Release
 
 The v0.4 release starts the multi-feed expansion. OTX remains the reference
