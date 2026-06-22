@@ -9,7 +9,8 @@ explainable decisions, source provenance, guardrails and operational evidence fo
 CTI, hunting and SOC teams.
 
 ## Current Version
-```text
+
+`	ext
 v0.5.0-dev
 ```
 
@@ -139,6 +140,18 @@ OpenCTI, queue and Elasticsearch behavior remains stable across repeated bounded
 runs. The detailed v0.5 design is tracked in `docs/gateway-runtime-v0.5.md`,
 and the product/architecture continuity validation is tracked in
 `docs/product-architecture-validation-v0.5.md`.
+
+## Curation Configuration
+
+Curation controls must be visible in configuration and then applied
+automatically by the gateway. Current source runtimes expose score thresholds,
+age limits, quarantine behavior, MISP date ranges, MISP TLP/tag filters and
+volume guardrails through environment variables. The v0.5 target adds gateway
+level `NARROWCTI_*` controls for shared policy, deduplication and source
+selection.
+
+The full configuration reference is tracked in
+`docs/configuration-reference-v0.5.md`.
 
 ## NarrowCTI Gateway Runtime
 
@@ -298,6 +311,8 @@ docs/multi-feed-expansion-v0.4.md
 docs/misp-validation-v0.4.md
 docs/release-v0.4.0.md
 docs/gateway-runtime-v0.5.md
+docs/configuration-reference-v0.5.md
+docs/product-architecture-validation-v0.5.md
 docs/roadmap.md
 docs/licensing-strategy.md
 ```
