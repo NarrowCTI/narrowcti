@@ -107,11 +107,14 @@ Behavior:
 - `list` must be read-only.
 - `show` must expose source, reason, score, indicators and metadata.
 - `reject` must require a reason.
-- `release` must require a reason and pass through the existing export and
-  deduplication pipeline.
+- `release` must require a reason and write release approval evidence.
 - Partial release must preserve which indicators were released and which stayed
   held.
 - Every state transition must write release audit evidence.
+
+The initial v0.6 implementation provides the local JSONL repository, CLI state
+transitions and release audit records. Export replay through the existing STIX,
+OpenCTI and deduplication pipeline remains the next integration step.
 
 ## Enrichment Foundation
 
@@ -163,6 +166,7 @@ Candidate variables:
 NARROWCTI_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl
 NARROWCTI_RELEASE_AUDIT_FILE=/app/state/audit/releases.jsonl
 NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON=true
+NARROWCTI_REVIEWER=operator
 NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES=65536
 NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION=true
 NARROWCTI_MITRE_CACHE_FILE=/app/state/mitre_attack_cache.json
@@ -178,6 +182,7 @@ Minimum validation for v0.6:
 - Unit tests proving release requires a reason when configured.
 - Unit tests proving partial release filters indicator types safely.
 - Unit tests for release audit records.
+- CLI validation for list, show, reject, release and partial release.
 - Unit tests for OTX entity extraction from representative pulse payloads.
 - Unit tests for MITRE technique/tactic resolver.
 - Local dry-run validation showing quarantine records are created.
@@ -189,8 +194,8 @@ Minimum validation for v0.6:
 - Quarantined intelligence is preserved as reviewable evidence.
 - Operators can list, inspect, release and reject held candidates locally.
 - Release actions are audited with reviewer reason and timestamp.
-- Released candidates reuse existing scoring, STIX building, export and
-  deduplication controls.
+- Released candidates produce approval evidence that can be replayed through
+  existing scoring, STIX building, export and deduplication controls.
 - OTX entity extraction creates structured metadata for future graph enrichment.
 - MITRE technique ids can be resolved to names and tactics through a local cache.
 - v0.6 improves governance without weakening the v0.5 safety posture.
