@@ -14,6 +14,7 @@ class GatewayOperationalReport:
     totals: dict
     metrics: dict
     failures: list
+    queries: list
     sources: dict
 
     def to_dict(self):
@@ -24,6 +25,7 @@ class GatewayOperationalReport:
             "totals": self.totals,
             "metrics": self.metrics,
             "failures": self.failures,
+            "queries": self.queries,
             "sources": self.sources,
         }
 
@@ -49,12 +51,14 @@ def build_operational_report(records):
             totals=empty_totals(),
             metrics=build_value_metrics(empty_totals()),
             failures=[],
+            queries=[],
             sources={},
         )
 
     sources = {}
     totals = empty_totals()
     failures = []
+    queries = {}
     for record in records:
         merge_totals(totals, record.get("totals", {}))
         for result in record.get("results", []):
@@ -80,6 +84,7 @@ def build_operational_report(records):
                 failures.append(failure)
                 source_report["failures"].append(failure)
             merge_totals(source_report["totals"], result.get("totals", {}))
+            merge_query_summaries(queries, source_key, result.get("summaries", []))
 
     for source_report in sources.values():
         source_report["metrics"] = build_value_metrics(source_report["totals"])
@@ -91,6 +96,7 @@ def build_operational_report(records):
         totals=totals,
         metrics=build_value_metrics(totals),
         failures=failures,
+        queries=sorted_query_summaries(queries),
         sources=sources,
     )
 
@@ -102,6 +108,43 @@ def empty_totals():
 def merge_totals(target, source):
     for field_name in SUMMARY_FIELDS:
         target[field_name] += int(source.get(field_name, 0) or 0)
+
+
+def merge_query_summaries(target, source_key, summaries):
+    for summary in summaries or ():
+        query = str(summary.get("query", "") or "(none)")
+        key = (source_key, query)
+        query_report = target.setdefault(
+            key,
+            {
+                "source_key": source_key,
+                "query": query,
+                "runs": 0,
+                "available": 0,
+                "handled": 0,
+                "totals": empty_totals(),
+                "metrics": {},
+            },
+        )
+        query_report["runs"] += 1
+        query_report["available"] += int(summary.get("available", 0) or 0)
+        query_report["handled"] += int(summary.get("handled", 0) or 0)
+        merge_totals(query_report["totals"], summary)
+
+
+def sorted_query_summaries(query_reports):
+    reports = []
+    for report in query_reports.values():
+        report["metrics"] = build_value_metrics(report["totals"])
+        reports.append(report)
+    return sorted(
+        reports,
+        key=lambda item: (
+            -int(item.get("handled", 0) or 0),
+            item.get("source_key", ""),
+            item.get("query", ""),
+        ),
+    )
 
 
 def build_value_metrics(totals):
@@ -157,6 +200,15 @@ def format_text_report(report):
             lines.append(
                 f"- {failure['recorded_at'] or '(unknown-time)'} "
                 f"{failure['source_key']} error={failure['error']}"
+            )
+    if report.queries:
+        lines.append("queries:")
+        for query in report.queries:
+            lines.append(
+                f"- {query['source_key']} query={query['query']} "
+                f"runs={query['runs']} available={query['available']} "
+                f"handled={query['handled']} {format_totals(query['totals'])} "
+                f"metrics={format_metrics(query['metrics'])}"
             )
     if report.sources:
         lines.append("sources:")

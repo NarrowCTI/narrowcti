@@ -17,14 +17,32 @@ class GatewayReportTests(unittest.TestCase):
             gateway_record(
                 "2026-06-22T10:00:00Z",
                 [
-                    source_result("otx", True, reviewed=3, ingested=1, skipped=2),
+                    source_result(
+                        "otx",
+                        True,
+                        reviewed=3,
+                        ingested=1,
+                        skipped=2,
+                        summaries=[
+                            query_summary("lummac2", reviewed=3, ingested=1, skipped=2)
+                        ],
+                    ),
                     source_result("misp", False, errors=1),
                 ],
             ),
             gateway_record(
                 "2026-06-22T10:05:00Z",
                 [
-                    source_result("otx", True, reviewed=2, dropped=1, dry_run=1),
+                    source_result(
+                        "otx",
+                        True,
+                        reviewed=2,
+                        dropped=1,
+                        dry_run=1,
+                        summaries=[
+                            query_summary("lummac2", reviewed=2, dropped=1, dry_run=1)
+                        ],
+                    ),
                 ],
             ),
         ]
@@ -50,6 +68,13 @@ class GatewayReportTests(unittest.TestCase):
         self.assertEqual("misp", report.failures[0]["source_key"])
         self.assertEqual("source offline", report.failures[0]["error"])
         self.assertEqual(1, len(report.sources["misp"]["failures"]))
+        self.assertEqual(1, len(report.queries))
+        self.assertEqual("lummac2", report.queries[0]["query"])
+        self.assertEqual("otx", report.queries[0]["source_key"])
+        self.assertEqual(2, report.queries[0]["runs"])
+        self.assertEqual(5, report.queries[0]["totals"]["reviewed"])
+        self.assertEqual(5, report.queries[0]["handled"])
+        self.assertEqual(2, report.queries[0]["metrics"]["accepted"])
 
     def test_empty_report_is_serializable(self):
         report = build_operational_report([])
@@ -58,6 +83,7 @@ class GatewayReportTests(unittest.TestCase):
         self.assertEqual(0, report.metrics["accepted"])
         self.assertEqual(0.0, report.metrics["acceptance_rate_pct"])
         self.assertEqual([], report.failures)
+        self.assertEqual([], report.queries)
         self.assertEqual({}, report.sources)
         json.dumps(report.to_dict())
 
@@ -139,6 +165,38 @@ class GatewayReportTests(unittest.TestCase):
         self.assertIn("failures:", text)
         self.assertIn("- 2026-06-22T10:00:00Z misp error=source offline", text)
 
+    def test_text_report_includes_query_summaries(self):
+        report = build_operational_report(
+            [
+                gateway_record(
+                    "2026-06-22T10:00:00Z",
+                    [
+                        source_result(
+                            "otx",
+                            True,
+                            reviewed=2,
+                            ingested=1,
+                            skipped=1,
+                            summaries=[
+                                query_summary(
+                                    "stealc",
+                                    available=3,
+                                    reviewed=2,
+                                    ingested=1,
+                                    skipped=1,
+                                )
+                            ],
+                        )
+                    ],
+                )
+            ]
+        )
+
+        text = format_text_report(report)
+
+        self.assertIn("queries:", text)
+        self.assertIn("- otx query=stealc runs=1 available=3 handled=2", text)
+
 
 def gateway_record(recorded_at, results):
     return {
@@ -162,6 +220,7 @@ def source_result(
     errors=0,
     dry_run=0,
     error=None,
+    summaries=None,
 ):
     return {
         "source_key": source_key,
@@ -178,7 +237,33 @@ def source_result(
             "errors": errors,
             "dry_run": dry_run,
         },
-        "summaries": [],
+        "summaries": summaries or [],
+    }
+
+
+def query_summary(
+    query,
+    available=0,
+    reviewed=0,
+    ingested=0,
+    dropped=0,
+    quarantined=0,
+    skipped=0,
+    errors=0,
+    dry_run=0,
+):
+    handled = ingested + dropped + quarantined + skipped + errors + dry_run
+    return {
+        "query": query,
+        "available": available or reviewed,
+        "handled": handled,
+        "reviewed": reviewed,
+        "ingested": ingested,
+        "dropped": dropped,
+        "quarantined": quarantined,
+        "skipped": skipped,
+        "errors": errors,
+        "dry_run": dry_run,
     }
 
 

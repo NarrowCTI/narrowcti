@@ -241,6 +241,8 @@ readiness, while richer customer-facing value reporting remains roadmap work.
 Failed source executions are also listed with timestamp, source key and error
 message so operators can identify runtime breakage without reading raw JSONL
 first.
+The report also aggregates source query summaries so operators can see which
+queries produced reviewed, handled, accepted, filtered or error outcomes.
 
 The decision audit report reads source decision audit JSONL files, including
 files derived from `NARROWCTI_DECISION_AUDIT_DIR`, and summarizes actions,
