@@ -11,6 +11,7 @@ class GatewaySettings:
     source_interval_seconds: int
     state_dir: str
     decision_audit_dir: str
+    quarantine_repository_file: str
     run_summary_file: str
     min_score_to_ingest: int
     enable_quarantine: bool
@@ -67,6 +68,7 @@ def env_list(name, default=""):
 
 def load_settings():
     legacy_interval = env_int("CONNECTOR_RUN_INTERVAL", 3600)
+    state_dir = os.getenv("NARROWCTI_STATE_DIR", "/app/state")
 
     return GatewaySettings(
         mode=os.getenv("NARROWCTI_MODE", "gateway"),
@@ -77,8 +79,12 @@ def load_settings():
             "NARROWCTI_SOURCE_INTERVAL_SECONDS",
             legacy_interval,
         ),
-        state_dir=os.getenv("NARROWCTI_STATE_DIR", "/app/state"),
+        state_dir=state_dir,
         decision_audit_dir=os.getenv("NARROWCTI_DECISION_AUDIT_DIR", "/app/state/audit"),
+        quarantine_repository_file=os.getenv(
+            "NARROWCTI_QUARANTINE_REPOSITORY",
+            os.path.join(state_dir, "quarantine.jsonl"),
+        ),
         run_summary_file=os.getenv("NARROWCTI_RUN_SUMMARY_FILE", ""),
         min_score_to_ingest=env_int_alias(
             "NARROWCTI_MIN_SCORE_TO_INGEST",

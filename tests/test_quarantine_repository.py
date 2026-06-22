@@ -25,6 +25,17 @@ class QuarantineRepositoryTests(unittest.TestCase):
             self.assertEqual(record["quarantine_id"], repository.records()[0]["quarantine_id"])
             self.assertEqual(1, len(repository.events()))
 
+    def test_add_is_idempotent_for_same_quarantine_id(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository = QuarantineRepository(os.path.join(tmpdir, "quarantine.jsonl"))
+
+            first = repository.add(sample_record())
+            second = repository.add(sample_record())
+
+            self.assertEqual(first["quarantine_id"], second["quarantine_id"])
+            self.assertEqual(1, len(repository.events()))
+            self.assertEqual(1, len(repository.records()))
+
     def test_reject_appends_transition_and_release_audit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             repository = QuarantineRepository(

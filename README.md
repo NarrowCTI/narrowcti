@@ -163,10 +163,12 @@ workflow while beginning structured enrichment from OTX and MITRE ATT&CK.
 
 The first safe target is a local quarantine repository and CLI workflow for
 listing, showing, rejecting and releasing held candidates with reviewer reason
-and release audit evidence. The second target is source enrichment groundwork:
-extracting OTX adversary, malware family, ATT&CK, industry, country, TLP and
-reference fields, then resolving ATT&CK technique and tactic context through a
-local cache.
+and release audit evidence. OTX and MISP quarantine decisions now write pending
+records into the local repository with scoring metadata, source provenance,
+indicators and a bounded raw snapshot. The second target is source enrichment
+groundwork: extracting OTX adversary, malware family, ATT&CK, industry, country,
+TLP and reference fields, then resolving ATT&CK technique and tactic context
+through a local cache.
 
 The detailed v0.6 design is tracked in
 `docs/quarantine-enrichment-v0.6.md`.
@@ -182,7 +184,9 @@ python -m gateway.quarantine --repository state\quarantine.jsonl --release-audit
 ```
 
 The initial v0.6 CLI records review state and release audit evidence locally.
-Export replay through the OpenCTI pipeline is the next integration step.
+The source processors automatically enqueue policy-quarantined OTX pulses and
+MISP events when `NARROWCTI_QUARANTINE_REPOSITORY` is configured. Export replay
+through the OpenCTI pipeline is the next integration step.
 
 ## Curation Configuration
 

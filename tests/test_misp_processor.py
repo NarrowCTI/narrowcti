@@ -320,6 +320,50 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("tlp not allowed: red", records[0].reason)
         self.assertIn("MISP drop: tlp red event reason=tlp not allowed: red", logs)
 
+    def test_process_event_writes_quarantine_record(self):
+        records = []
+        queued = []
+        marked = []
+        logs = []
+        state = SimpleNamespace(
+            has_event=lambda event_id: False,
+            mark_event=lambda event_id: marked.append(event_id),
+        )
+        event = enriched_event(name="old weak misp event", indicator_count=1)
+        event["created"] = "2020-01-01T00:00:00Z"
+        event["tags"] = []
+        quarantine_repository = SimpleNamespace(
+            add=lambda record: queued.append(record.to_dict()) or queued[-1]
+        )
+
+        processor = MISPProcessor(
+            self.settings(),
+            misp_client=None,
+            api_client="api",
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: self.fail("export should not be called"),
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=self.adapter(enriched=candidate(raw=event)),
+            quarantine_repository=quarantine_repository,
+        )
+
+        outcome = processor.process_event_outcome("unrelated", candidate(), state)
+
+        self.assertEqual("quarantine", outcome)
+        self.assertEqual([], marked)
+        self.assertEqual("quarantine", records[0].action)
+        self.assertEqual("low score", records[0].reason)
+        self.assertEqual(1, len(queued))
+        self.assertEqual("misp:misp", queued[0]["source_key"])
+        self.assertEqual("event-1", queued[0]["external_id"])
+        self.assertEqual("old weak misp event", queued[0]["title"])
+        self.assertEqual("low score", queued[0]["reason"])
+        self.assertEqual(1, queued[0]["indicator_count"])
+        self.assertEqual("AlienVault", queued[0]["metadata"]["original_source"])
+        self.assertTrue(
+            any("MISP quarantine queued: old weak misp event" in log for log in logs)
+        )
+
     def test_process_event_skips_disallowed_indicator_types(self):
         records = []
         marked = []

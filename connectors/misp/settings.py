@@ -40,6 +40,8 @@ class MISPSettings:
     allowed_indicator_types: list[str]
     state_file: str
     decision_audit_file: str
+    quarantine_repository_file: str = ""
+    quarantine_raw_snapshot_max_bytes: int = 65536
 
     def __post_init__(self):
         if self.max_iocs_per_event < 1:
@@ -163,6 +165,14 @@ def load_settings():
         allowed_indicator_types=env_list("NARROWCTI_ALLOWED_INDICATOR_TYPES"),
         state_file=os.getenv("MISP_STATE_FILE", "/app/state/misp_state.json"),
         decision_audit_file=os.getenv("MISP_DECISION_AUDIT_FILE", ""),
+        quarantine_repository_file=os.getenv(
+            "MISP_QUARANTINE_REPOSITORY",
+            os.getenv("NARROWCTI_QUARANTINE_REPOSITORY", ""),
+        ),
+        quarantine_raw_snapshot_max_bytes=env_int(
+            "NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES",
+            65536,
+        ),
     )
     settings.adapter_limits
     return settings

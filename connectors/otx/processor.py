@@ -3,6 +3,11 @@ import time
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.indicator_policy import filter_indicators_by_type
 from core.policy import PolicyConfig, should_ingest
+from core.quarantine import (
+    QuarantineRecord,
+    QuarantineRepository,
+    bounded_raw_snapshot,
+)
 from core.scoring import age_days, calculate_score_details
 from core.state_repository import PulseStateRepository
 from core.tlp import tlp_is_allowed
@@ -43,6 +48,7 @@ class OTXProcessor:
         feed_adapter=None,
         decision_audit=None,
         artifact_dedup=None,
+        quarantine_repository=None,
     ):
         self.settings = settings
         self.otx_client = otx_client
@@ -55,6 +61,9 @@ class OTXProcessor:
         self.ingest_pause_seconds = ingest_pause_seconds
         self.decision_audit = decision_audit or DecisionAuditLog()
         self.artifact_dedup = artifact_dedup
+        self.quarantine_repository = quarantine_repository or self.build_quarantine_repository(
+            settings
+        )
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -63,6 +72,12 @@ class OTXProcessor:
             min_score_for_old_pulse=settings.min_score_for_old_pulse,
             max_days_hard_filter=settings.max_days_hard_filter,
         )
+
+    def build_quarantine_repository(self, settings):
+        repository_file = getattr(settings, "quarantine_repository_file", "")
+        if not repository_file:
+            return None
+        return QuarantineRepository(repository_file)
 
     def run_once(self):
         state = self.state_repository_factory(self.settings.state_file)
@@ -279,6 +294,47 @@ class OTXProcessor:
             self.decision_audit.record(decision)
         except Exception as exc:
             self.log(f"Decision audit failed: {title} error={exc}")
+
+        if action == "quarantine":
+            self.record_quarantine(query, candidate_ref, reason, candidate)
+
+    def record_quarantine(self, query, candidate_ref, reason, candidate=None):
+        if not self.quarantine_repository:
+            return
+
+        title = candidate.name if candidate and candidate.name else candidate_ref.title
+        indicators = list(candidate.indicators if candidate else candidate_ref.indicators)
+        raw_source = candidate.pulse if candidate else candidate_ref.raw
+        raw_snapshot, truncated = bounded_raw_snapshot(
+            raw_source,
+            getattr(self.settings, "quarantine_raw_snapshot_max_bytes", 65536),
+        )
+        metadata = decision_metadata(candidate)
+        if truncated:
+            metadata["raw_snapshot_truncated"] = True
+
+        record = QuarantineRecord(
+            source_key=candidate_ref.source.key,
+            external_id=candidate_ref.external_id,
+            title=title,
+            reason=reason,
+            query=query,
+            score=candidate.score if candidate else None,
+            age_days=candidate.age if candidate else None,
+            indicator_count=candidate.ioc_count if candidate else len(indicators),
+            indicators=indicators,
+            metadata=metadata,
+            raw_snapshot=raw_snapshot,
+        )
+
+        try:
+            queued = self.quarantine_repository.add(record)
+            self.log(
+                f"Quarantine queued: {title} "
+                f"id={queued.get('quarantine_id')} status={queued.get('status')}"
+            )
+        except Exception as exc:
+            self.log(f"Quarantine repository failed: {title} error={exc}")
 
     def apply_artifact_dedup(self, query, candidate_ref, candidate):
         if not self.artifact_dedup:

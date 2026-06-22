@@ -20,6 +20,7 @@ from gateway.sources import (
 class RuntimePathSettings:
     state_file: str = ""
     decision_audit_file: str = ""
+    quarantine_repository_file: str = ""
 
 
 class GatewaySettingsTests(unittest.TestCase):
@@ -33,6 +34,7 @@ class GatewaySettingsTests(unittest.TestCase):
             "NARROWCTI_OPENCTI_DEDUP_LOOKUP": "1",
             "NARROWCTI_DEDUP_STATE_FILE": "/state/dedup.json",
             "NARROWCTI_RUN_SUMMARY_FILE": "/state/gateway-runs.jsonl",
+            "NARROWCTI_QUARANTINE_REPOSITORY": "/state/quarantine.jsonl",
             "NARROWCTI_MIN_SCORE_TO_INGEST": "70",
             "NARROWCTI_ENABLE_QUARANTINE": "false",
             "NARROWCTI_QUARANTINE_SCORE_THRESHOLD": "45",
@@ -52,6 +54,10 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertTrue(settings.opencti_dedup_lookup)
         self.assertEqual("/state/dedup.json", settings.dedup_state_file)
         self.assertEqual("/state/gateway-runs.jsonl", settings.run_summary_file)
+        self.assertEqual(
+            "/state/quarantine.jsonl",
+            settings.quarantine_repository_file,
+        )
         self.assertEqual(70, settings.min_score_to_ingest)
         self.assertFalse(settings.enable_quarantine)
         self.assertEqual(45, settings.quarantine_score_threshold)
@@ -76,6 +82,7 @@ class GatewaySettingsTests(unittest.TestCase):
                 source_interval_seconds=60,
                 state_dir="/state",
                 decision_audit_dir="/state/audit",
+                quarantine_repository_file="/state/quarantine.jsonl",
                 run_summary_file="",
                 min_score_to_ingest=60,
                 enable_quarantine=True,
@@ -118,6 +125,7 @@ class GatewaySettingsTests(unittest.TestCase):
         gateway_settings = SimpleNamespace(
             state_dir="/state",
             decision_audit_dir="/state/audit",
+            quarantine_repository_file="/state/quarantine.jsonl",
         )
 
         with patch.dict(os.environ, {}, clear=True):
@@ -134,20 +142,24 @@ class GatewaySettingsTests(unittest.TestCase):
 
         self.assertEqual("/state/otx_state.json", otx.state_file)
         self.assertEqual("/state/audit/otx_decisions.jsonl", otx.decision_audit_file)
+        self.assertEqual("/state/quarantine.jsonl", otx.quarantine_repository_file)
         self.assertEqual("/state/misp_state.json", misp.state_file)
         self.assertEqual(
             "/state/audit/misp_decisions.jsonl",
             misp.decision_audit_file,
         )
+        self.assertEqual("/state/quarantine.jsonl", misp.quarantine_repository_file)
 
     def test_gateway_source_paths_preserve_explicit_source_overrides(self):
         gateway_settings = SimpleNamespace(
             state_dir="/state",
             decision_audit_dir="/state/audit",
+            quarantine_repository_file="/state/quarantine.jsonl",
         )
         current = RuntimePathSettings(
             state_file="/custom/state.json",
             decision_audit_file="/custom/audit.jsonl",
+            quarantine_repository_file="/custom/quarantine.jsonl",
         )
 
         with patch.dict(
@@ -155,6 +167,7 @@ class GatewaySettingsTests(unittest.TestCase):
             {
                 "STATE_FILE": "/custom/state.json",
                 "DECISION_AUDIT_FILE": "/custom/audit.jsonl",
+                "OTX_QUARANTINE_REPOSITORY": "/custom/quarantine.jsonl",
             },
             clear=True,
         ):
@@ -162,6 +175,7 @@ class GatewaySettingsTests(unittest.TestCase):
 
         self.assertEqual("/custom/state.json", resolved.state_file)
         self.assertEqual("/custom/audit.jsonl", resolved.decision_audit_file)
+        self.assertEqual("/custom/quarantine.jsonl", resolved.quarantine_repository_file)
 
 class GatewayRuntimeTests(unittest.TestCase):
     def test_registry_normalizes_source_keys(self):

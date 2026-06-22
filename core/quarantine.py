@@ -60,6 +60,9 @@ class QuarantineRepository:
         if data["status"] != PENDING:
             raise ValueError("new quarantine records must start as pending")
         data["quarantine_id"] = data.get("quarantine_id") or quarantine_id_for(data)
+        existing = self.find(data["quarantine_id"])
+        if existing:
+            return existing
         data["created_at"] = data.get("created_at") or utc_now()
         data["updated_at"] = data.get("updated_at") or data["created_at"]
         data["indicator_count"] = int(
@@ -102,10 +105,16 @@ class QuarantineRepository:
         return records
 
     def get(self, quarantine_id):
+        record = self.find(quarantine_id)
+        if record:
+            return record
+        raise KeyError(f"Unknown quarantine id: {quarantine_id}")
+
+    def find(self, quarantine_id):
         for record in reversed(self.records()):
             if record.get("quarantine_id") == quarantine_id:
                 return record
-        raise KeyError(f"Unknown quarantine id: {quarantine_id}")
+        return None
 
     def reject(self, quarantine_id, reason, reviewer="operator", require_reason=True):
         return self._transition(
@@ -291,3 +300,20 @@ def indicator_type(indicator):
         or indicator.get("observable_type")
         or ""
     ).strip().lower()
+
+
+def bounded_raw_snapshot(value, max_bytes=65536):
+    if value is None:
+        return None, False
+    try:
+        encoded = json.dumps(value, sort_keys=True, default=str).encode("utf-8")
+    except TypeError:
+        value = str(value)
+        encoded = value.encode("utf-8")
+    limit = int(max_bytes or 0)
+    if limit < 1:
+        return None, True
+    if len(encoded) <= limit:
+        return value, False
+    preview = encoded[:limit].decode("utf-8", errors="replace")
+    return {"truncated": True, "preview": preview}, True

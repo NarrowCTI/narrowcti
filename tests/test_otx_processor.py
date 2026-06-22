@@ -291,6 +291,57 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("Low score pulse", records[0].title)
         self.assertEqual(50, records[0].metadata["scoring"]["source_confidence"])
 
+    def test_process_pulse_writes_quarantine_record(self):
+        records = []
+        queued = []
+        marked = []
+        logs = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "id": pulse_id,
+                "name": "Old weak pulse",
+                "description": "needs analyst review",
+                "created": "2020-01-01T00:00:00Z",
+                "indicators": [{"type": "domain", "indicator": "old.example"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: marked.append(pulse_id),
+        )
+        quarantine_repository = SimpleNamespace(
+            add=lambda record: queued.append(record.to_dict()) or queued[-1]
+        )
+
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=otx_client,
+            api_client="api",
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: self.fail("export should not be called"),
+            decision_audit=SimpleNamespace(record=records.append),
+            quarantine_repository=quarantine_repository,
+        )
+
+        outcome = processor.process_pulse_outcome(
+            "unrelated",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertEqual("quarantine", outcome)
+        self.assertEqual([], marked)
+        self.assertEqual("quarantine", records[0].action)
+        self.assertEqual("low score", records[0].reason)
+        self.assertEqual(1, len(queued))
+        self.assertEqual("alienvault:otx", queued[0]["source_key"])
+        self.assertEqual("pulse-1", queued[0]["external_id"])
+        self.assertEqual("Old weak pulse", queued[0]["title"])
+        self.assertEqual("low score", queued[0]["reason"])
+        self.assertEqual(1, queued[0]["indicator_count"])
+        self.assertEqual("domain", queued[0]["indicators"][0]["type"])
+        self.assertTrue(any("Quarantine queued: Old weak pulse" in log for log in logs))
+
     def test_process_pulse_drops_disallowed_tlp(self):
         records = []
         marked = []

@@ -14,6 +14,7 @@ def make_settings(**overrides):
         "source_interval_seconds": 300,
         "state_dir": "/app/state",
         "decision_audit_dir": "/app/state/audit",
+        "quarantine_repository_file": "/app/state/quarantine.jsonl",
         "run_summary_file": "/app/state/gateway_runs.jsonl",
         "min_score_to_ingest": 60,
         "enable_quarantine": True,
@@ -53,6 +54,10 @@ class GatewayPreflightTests(unittest.TestCase):
             report.settings["allowed_indicator_types"],
         )
         self.assertEqual("/app/state", report.evidence_paths["state_dir"])
+        self.assertEqual(
+            "/app/state/quarantine.jsonl",
+            report.evidence_paths["quarantine_repository_file"],
+        )
         self.assertEqual(
             "/app/state/otx_state.json",
             report.evidence_paths["sources"]["otx"]["state_file"],
@@ -157,6 +162,7 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("state_dir=/app/state", text)
         self.assertIn("decision_audit_dir=/app/state/audit", text)
         self.assertIn("run_summary_file=(disabled)", text)
+        self.assertIn("quarantine_repository_file=/app/state/quarantine.jsonl", text)
         self.assertIn("dedup_state_file=/app/state/dedup_index.json", text)
         self.assertIn("otx.state_file=/app/state/otx_state.json", text)
         self.assertIn(
@@ -167,6 +173,10 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("allowed_indicator_types=domain,ipv4", text)
         self.assertEqual("", data["settings"]["run_summary_file"])
         self.assertEqual("/app/state", data["evidence_paths"]["state_dir"])
+        self.assertEqual(
+            "/app/state/quarantine.jsonl",
+            data["settings"]["quarantine_repository_file"],
+        )
         json.dumps(data)
 
 

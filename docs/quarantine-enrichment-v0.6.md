@@ -44,6 +44,7 @@ In scope for v0.6:
 - CLI review commands for pending, released and rejected candidates.
 - Release, partial release and reject actions with required reasons.
 - Release audit records.
+- Automatic quarantine repository writes from OTX and MISP policy decisions.
 - Replay of released candidates through the existing STIX/export path.
 - OTX entity extraction groundwork for adversary, malware families, ATT&CK ids,
   industries, targeted countries, TLP and references.
@@ -87,8 +88,10 @@ Target record fields:
 | `updated_at` | Last state transition timestamp. |
 | `review` | Reviewer, reason, released types and release metadata. |
 
-The repository must not silently overwrite historical review records. State
-transitions should be audit-friendly.
+The repository must not silently overwrite historical review records. New
+quarantine writes are idempotent by stable `quarantine_id`, so repeated source
+runs do not duplicate the pending queue or reopen records already reviewed.
+State transitions should be audit-friendly.
 
 ## CLI Target
 
@@ -112,9 +115,10 @@ Behavior:
   held.
 - Every state transition must write release audit evidence.
 
-The initial v0.6 implementation provides the local JSONL repository, CLI state
-transitions and release audit records. Export replay through the existing STIX,
-OpenCTI and deduplication pipeline remains the next integration step.
+The initial v0.6 implementation provides the local JSONL repository, automatic
+OTX/MISP quarantine writes, CLI state transitions and release audit records.
+Export replay through the existing STIX, OpenCTI and deduplication pipeline
+remains the next integration step.
 
 ## Enrichment Foundation
 
@@ -164,6 +168,8 @@ Candidate variables:
 
 ```env
 NARROWCTI_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl
+OTX_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl
+MISP_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl
 NARROWCTI_RELEASE_AUDIT_FILE=/app/state/audit/releases.jsonl
 NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON=true
 NARROWCTI_REVIEWER=operator
@@ -182,6 +188,8 @@ Minimum validation for v0.6:
 - Unit tests proving release requires a reason when configured.
 - Unit tests proving partial release filters indicator types safely.
 - Unit tests for release audit records.
+- Unit tests proving OTX and MISP quarantine decisions write pending repository
+  records without export or state marking.
 - CLI validation for list, show, reject, release and partial release.
 - Unit tests for OTX entity extraction from representative pulse payloads.
 - Unit tests for MITRE technique/tactic resolver.
@@ -192,6 +200,8 @@ Minimum validation for v0.6:
 ## Success Criteria
 
 - Quarantined intelligence is preserved as reviewable evidence.
+- OTX and MISP decisions that return `quarantine` create pending review records
+  automatically.
 - Operators can list, inspect, release and reject held candidates locally.
 - Release actions are audited with reviewer reason and timestamp.
 - Released candidates produce approval evidence that can be replayed through

@@ -121,6 +121,19 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
                 "JSONL summaries will not be written.",
             )
         )
+    if settings.enable_quarantine and not getattr(
+        settings,
+        "quarantine_repository_file",
+        "",
+    ):
+        issues.append(
+            PreflightIssue(
+                "warning",
+                "quarantine-repository-disabled",
+                "NARROWCTI_QUARANTINE_REPOSITORY is empty; quarantine decisions "
+                "will only appear in decision audit evidence.",
+            )
+        )
 
     evidence_paths = build_evidence_paths(enabled, settings, env)
     for source, paths in evidence_paths.get("sources", {}).items():
@@ -171,6 +184,11 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             "source_interval_seconds": settings.source_interval_seconds,
             "state_dir": settings.state_dir,
             "decision_audit_dir": settings.decision_audit_dir,
+            "quarantine_repository_file": getattr(
+                settings,
+                "quarantine_repository_file",
+                "",
+            ),
             "run_summary_file": settings.run_summary_file,
             "min_score_to_ingest": settings.min_score_to_ingest,
             "enable_quarantine": settings.enable_quarantine,
@@ -192,6 +210,11 @@ def build_evidence_paths(enabled_sources, settings, env):
     return {
         "state_dir": settings.state_dir,
         "decision_audit_dir": settings.decision_audit_dir,
+        "quarantine_repository_file": getattr(
+            settings,
+            "quarantine_repository_file",
+            "",
+        ),
         "run_summary_file": settings.run_summary_file,
         "dedup_state_file": settings.dedup_state_file,
         "sources": {
@@ -274,6 +297,8 @@ def format_text_report(report):
         "decision_audit_dir="
         f"{report.evidence_paths.get('decision_audit_dir') or '(disabled)'}",
         f"run_summary_file={report.settings['run_summary_file'] or '(disabled)'}",
+        "quarantine_repository_file="
+        f"{report.settings.get('quarantine_repository_file') or '(disabled)'}",
         f"dedup_state_file={report.evidence_paths.get('dedup_state_file') or '(disabled)'}",
         f"min_score_to_ingest={report.settings['min_score_to_ingest']}",
         f"enable_quarantine={str(report.settings['enable_quarantine']).lower()}",

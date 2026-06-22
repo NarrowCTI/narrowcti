@@ -26,12 +26,14 @@ SOURCE_RUNTIME_PATHS = {
         "state_file": "otx_state.json",
         "audit_env": "DECISION_AUDIT_FILE",
         "audit_file": "otx_decisions.jsonl",
+        "quarantine_env": "OTX_QUARANTINE_REPOSITORY",
     },
     "misp": {
         "state_env": "MISP_STATE_FILE",
         "state_file": "misp_state.json",
         "audit_env": "MISP_DECISION_AUDIT_FILE",
         "audit_file": "misp_decisions.jsonl",
+        "quarantine_env": "MISP_QUARANTINE_REPOSITORY",
     },
 }
 
@@ -85,6 +87,15 @@ def apply_gateway_source_paths(settings, gateway_settings, source_key):
             gateway_settings,
             "decision_audit_dir",
             path_config["audit_file"],
+        )
+    if (
+        path_config["quarantine_env"] not in os.environ
+        and "NARROWCTI_QUARANTINE_REPOSITORY" not in os.environ
+    ):
+        updates["quarantine_repository_file"] = getattr(
+            gateway_settings,
+            "quarantine_repository_file",
+            "",
         )
     return replace(settings, **updates) if updates else settings
 
