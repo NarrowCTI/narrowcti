@@ -1,20 +1,20 @@
 # NarrowCTI
 
-NarrowCTI is a modular threat intelligence ingestion layer designed to collect,
-score, deduplicate and export intelligence into OpenCTI.
+NarrowCTI is an OpenCTI-native threat intelligence gateway designed to curate,
+score, deduplicate and govern threat intelligence before it reaches the OpenCTI
+graph.
 
-NarrowCTI Gateway currently uses AlienVault OTX as its first reference feed
-adapter. OTX pulses are normalized into controlled ingestion candidates, scored,
-deduplicated and evaluated before export to OpenCTI.
+NarrowCTI Gateway turns raw feed data into controlled ingestion candidates with
+explainable decisions, source provenance, guardrails and operational evidence for
+CTI, hunting and SOC teams.
 
 ## Current Version
-
 ```text
-v0.4.0
+v0.5.0-dev
 ```
 
-`v0.4.0` is the current multi-feed expansion release. `v0.3.0` remains
-the previous stable product foundation release.
+`v0.5.0-dev` is the current gateway runtime and decision engine development
+track. `v0.4.0` remains the latest stable multi-feed expansion release.
 
 ## Product Identity
 
@@ -22,7 +22,8 @@ The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
 transition from an OTX-specific connector into NarrowCTI Gateway, an OpenCTI-native
 pre-ingestion intelligence gateway. OTX remains the first source adapter; it is no
 longer the product identity. The v0.4 release validates the gateway model with a
-second real feed, with MISP as the first strategic candidate.
+second real feed, with MISP as the first strategic candidate. The v0.5 track
+starts the move toward a unified gateway runtime.
 
 ## What It Does
 
@@ -42,11 +43,11 @@ second real feed, with MISP as the first strategic candidate.
 ## Architecture
 
 ```text
-OTX API
-  -> OTX client
-  -> processor
-  -> scoring and policy
-  -> state repository
+External and internal intelligence sources
+  -> source adapters such as OTX and MISP
+  -> shared feed contract
+  -> scoring, policy and decision audit
+  -> source-scoped state and guardrails
   -> STIX builder
   -> OpenCTI exporter
 ```
@@ -68,9 +69,11 @@ NarrowCTI is designed as a pre-ingestion intelligence decision layer for
 OpenCTI. Its role is to reduce feed noise before data reaches the OpenCTI graph
 by applying source-specific enrichment, scoring, deduplication and policy.
 
-The long-term product direction is multi-feed support with a shared decision
-engine, so OTX, MISP, commercial feeds and internal sources can be evaluated
-through the same explainable ingestion model.
+The product direction is a professional CTI gateway for analysts, hunters, SOC
+and platform teams that need curated intelligence, explainable decisions and
+auditable feed governance instead of raw IoC forwarding. OTX, MISP, commercial
+feeds and internal sources should be evaluated through the same explainable
+ingestion model.
 
 ## v0.4 Release
 
@@ -106,9 +109,9 @@ historical backfill filters for date ranges, tags and published-only imports.
 The adapter has dedicated settings, MISP event state and a processor foundation
 so it can evolve without sharing OTX pulse processing state.
 
-## v0.5 Design Direction
+## v0.5 Development Track
 
-The v0.5 track should introduce the first unified NarrowCTI Gateway runtime.
+The v0.5 track introduces the first unified NarrowCTI Gateway runtime.
 Instead of treating each source container as the product shape, the gateway
 runtime should orchestrate enabled sources such as OTX and MISP through a source
 registry while keeping source-level state, audit evidence, guardrails and failure
@@ -117,7 +120,9 @@ isolation intact.
 The source-specific OTX and MISP runtimes should remain available for debugging,
 validation and bounded backfill. MISP should stay opt-in and guarded until local
 OpenCTI, queue and Elasticsearch behavior remains stable across repeated bounded
-runs. The detailed v0.5 design is tracked in `docs/gateway-runtime-v0.5.md`.
+runs. The detailed v0.5 design is tracked in `docs/gateway-runtime-v0.5.md`,
+and the product/architecture continuity validation is tracked in
+`docs/product-architecture-validation-v0.5.md`.
 
 ## NarrowCTI Gateway Runtime
 
@@ -255,10 +260,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-For this release:
+For this development track:
 
 ```text
-v0.4.0
+v0.5.0-dev
 ```
 
 ## Documentation

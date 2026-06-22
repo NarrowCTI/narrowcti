@@ -72,7 +72,7 @@ Expected outcomes:
 
 ## v0.5.0 - Gateway Runtime And Decision Engine
 
-Status: planned.
+Status: in development.
 
 Purpose:
 
@@ -96,6 +96,8 @@ Expected outcomes:
 - The gateway can prioritize intelligence based on source, age, confidence,
   indicator type and operational relevance.
 - Gateway design details are documented in `docs/gateway-runtime-v0.5.md`.
+- Product and architecture continuity are validated in
+  `docs/product-architecture-validation-v0.5.md`.
 
 ## v0.6.0 - Operational Layer
 

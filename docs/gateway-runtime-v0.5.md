@@ -11,6 +11,20 @@ v0.4 proves that OTX and MISP can use the same feed contract and decision
 foundation. v0.5 should turn that foundation into the runtime shape of the
 product.
 
+## Product Standard
+
+v0.5 must keep NarrowCTI positioned as a professional CTI gateway, not as a
+collection of feed connectors. The runtime should make the product feel like a
+curation and decision layer for analysts, hunters and platform teams:
+
+- Feed data is normalized before it becomes OpenCTI graph data.
+- Every decision remains explainable and auditable.
+- Risky sources remain controlled through dry-run, run-once and guardrail limits.
+- Source provenance is preserved so analysts can understand collector context and
+  original intelligence origin.
+- Runtime summaries should help operators understand value, noise reduction and
+  source behavior.
+
 ## Target Runtime Model
 
 ```text
@@ -26,6 +40,17 @@ NarrowCTI Gateway entrypoint
 The gateway process decides which sources are enabled, builds each source
 runtime from external configuration, executes each source safely and reports a
 combined gateway run summary.
+
+## Architecture Continuity
+
+The v0.5 runtime must preserve the architecture established from v0.2 through
+v0.4:
+
+- Source packages own source-specific API access and normalization.
+- `core` owns shared feed contracts, policy, scoring, state and decision audit.
+- `exporters` own STIX and OpenCTI export concerns.
+- Gateway orchestration must compose these pieces instead of moving feed-specific
+  behavior into a monolithic process.
 
 ## Container Strategy
 
