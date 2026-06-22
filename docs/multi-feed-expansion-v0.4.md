@@ -72,6 +72,11 @@ and a policy-relaxed validation reached `dry_run=1` without OpenCTI export or
 persistent state marking. Runtime provenance validation also confirmed audit
 metadata with collector, original source, MISP IDs, tags and guardrail context.
 
+A bounded operational validation on 2026-06-21 repeated the opt-in Compose
+runtime path with OpenCTI, MISP and Caddy running. The default-policy run
+quarantined one sampled event, a policy-relaxed run reached `dry_run=1`, and
+OpenCTI, MISP, Caddy and Elasticsearch remained healthy after both runs.
+
 ## MISP Adapter Guardrails
 
 The NarrowCTI MISP adapter must enforce controls before exporting to OpenCTI:

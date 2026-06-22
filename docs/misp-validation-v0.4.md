@@ -417,3 +417,67 @@ Post-validation stack signals:
   redirect.
 - OpenCTI and MISP Compose services remained up; Elasticsearch and MISP DB were
   healthy.
+
+## Bounded Operational Validation
+
+A bounded operational validation was performed on 2026-06-21 local time after
+OpenCTI, MISP and Caddy were already running in the local lab.
+
+Pre-run checks:
+
+- OpenCTI on `http://localhost:8080` returned HTTP 200.
+- MISP login endpoint on `http://localhost:8081/users/login` returned HTTP 200.
+- `opencti.local` and `misp.local` returned Caddy HTTP 308 redirects to HTTPS.
+- `misp-core`, `misp-db`, OpenCTI, Elasticsearch, RabbitMQ, Redis, MinIO and
+  Caddy containers were up.
+- Elasticsearch memory was below 1 GiB and MISP CPU returned to idle before the
+  connector run.
+
+Connector controls:
+
+```text
+MISP_DRY_RUN=true
+MISP_RUN_ONCE=true
+MISP_QUERIES=*
+MISP_FROM_DATE=2016-01-01
+MISP_TAGS=tlp:green
+MISP_PUBLISHED_ONLY=true
+MISP_MAX_EVENTS_PER_RUN=1
+MISP_MAX_ATTRIBUTES_PER_EVENT=1000
+MISP_MAX_IOCS_PER_EVENT=1000
+MISP_OVERSIZED_EVENT_ACTION=skip
+```
+
+Default-policy run:
+
+- Command: `docker compose --profile narrowcti-misp up --force-recreate connector-narrowcti-misp`.
+- OpenCTI platform health check completed.
+- MISP `/events/restSearch` returned HTTP 200.
+- MISP `/events/view/56d4b32d-664c-4647-a748-1362950d210f` returned HTTP 200.
+- NarrowCTI normalized `OSINT - New Hacking team samples (OSX)` with 7 IoCs.
+- The event scored 30 and was quarantined as `low score`.
+- Summary: `reviewed=1 ingested=0 dropped=0 quarantined=1 skipped=0 errors=0 dry_run=0 available=1`.
+- The connector exited with code 0.
+
+Policy-relaxed dry-run proof:
+
+- Command: `docker compose --profile narrowcti-misp run --rm` with
+  `MIN_SCORE_TO_INGEST=0`, `ENABLE_QUARANTINE=false`,
+  `QUARANTINE_SCORE_THRESHOLD=0`, `MAX_DAYS_OLD=9999`, `MISP_DRY_RUN=true` and
+  `MISP_RUN_ONCE=true`.
+- The same MISP search and enrichment calls returned HTTP 200.
+- NarrowCTI reached the non-exporting dry-run path.
+- Summary: `reviewed=1 ingested=0 dropped=0 quarantined=0 skipped=0 errors=0 dry_run=1 available=1`.
+
+Post-run checks:
+
+- `connector-narrowcti-misp` exited with code 0.
+- OpenCTI remained available on `http://localhost:8080` with HTTP 200.
+- MISP remained available on `http://localhost:8081/users/login` with HTTP 200.
+- Caddy continued returning redirects for `opencti.local` and `misp.local`.
+- Elasticsearch remained healthy and below 1 GiB memory usage.
+- MISP core, MISP DB, OpenCTI, worker, Elasticsearch, RabbitMQ, Redis, MinIO and
+  Caddy remained up after the run.
+
+This validation supports keeping MISP as an opt-in, bounded, dry-run-first
+runtime path for v0.4. It does not promote broad scheduled MISP ingestion.
