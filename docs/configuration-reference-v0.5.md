@@ -98,6 +98,7 @@ supported by code.
 | `NARROWCTI_SOURCE_INTERVAL_SECONDS` | Gateway loop interval between source runs. |
 | `NARROWCTI_STATE_DIR` | Base directory for source state and gateway indexes. |
 | `NARROWCTI_DECISION_AUDIT_DIR` | Base directory for decision audit output. |
+| `NARROWCTI_RUN_SUMMARY_FILE` | Optional JSONL file for aggregate gateway run summaries. |
 | `NARROWCTI_MIN_SCORE_TO_INGEST` | Gateway-level default minimum score. |
 | `NARROWCTI_ENABLE_QUARANTINE` | Gateway-level quarantine default. |
 | `NARROWCTI_QUARANTINE_SCORE_THRESHOLD` | Gateway-level quarantine threshold. |
@@ -158,6 +159,7 @@ NARROWCTI_MODE=gateway
 NARROWCTI_ENABLED_SOURCES=otx,misp
 NARROWCTI_DRY_RUN=true
 NARROWCTI_RUN_ONCE=true
+NARROWCTI_RUN_SUMMARY_FILE=/app/state/gateway_runs.jsonl
 NARROWCTI_MIN_SCORE_TO_INGEST=60
 NARROWCTI_ENABLE_QUARANTINE=true
 NARROWCTI_QUARANTINE_SCORE_THRESHOLD=50
@@ -184,6 +186,8 @@ The following behavior is intentionally automatic and should remain auditable:
 - Build STIX bundles after curation.
 - Export to OpenCTI only after policy and deduplication pass.
 - Write decision evidence and runtime summaries.
+- Write optional aggregate gateway run summaries to JSONL when
+  `NARROWCTI_RUN_SUMMARY_FILE` is configured.
 - Preserve quarantined candidates for future analyst review and release when the
   quarantine repository is implemented.
 

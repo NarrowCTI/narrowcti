@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import unittest
@@ -20,6 +21,7 @@ class GatewaySettingsTests(unittest.TestCase):
             "NARROWCTI_DEDUP_MODE": "hybrid",
             "NARROWCTI_OPENCTI_DEDUP_LOOKUP": "1",
             "NARROWCTI_DEDUP_STATE_FILE": "/state/dedup.json",
+            "NARROWCTI_RUN_SUMMARY_FILE": "/state/gateway-runs.jsonl",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -32,6 +34,7 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertEqual("hybrid", settings.dedup_mode)
         self.assertTrue(settings.opencti_dedup_lookup)
         self.assertEqual("/state/dedup.json", settings.dedup_state_file)
+        self.assertEqual("/state/gateway-runs.jsonl", settings.run_summary_file)
 
     def test_load_settings_uses_connector_interval_as_legacy_default(self):
         with patch.dict(os.environ, {"CONNECTOR_RUN_INTERVAL": "120"}, clear=True):
@@ -50,6 +53,7 @@ class GatewaySettingsTests(unittest.TestCase):
                 source_interval_seconds=60,
                 state_dir="/state",
                 decision_audit_dir="/state/audit",
+                run_summary_file="",
                 dedup_mode="source",
                 opencti_dedup_lookup=False,
                 dedup_state_file="/state/dedup.json",
@@ -112,6 +116,42 @@ class GatewayRuntimeTests(unittest.TestCase):
         self.assertEqual(3, result.total("reviewed"))
         self.assertEqual(1, result.total("ingested"))
         self.assertTrue(any("Gateway summary" in line for line in logs))
+
+    def test_run_gateway_once_writes_jsonl_summary_when_configured(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            summary_file = os.path.join(tmpdir, "gateway-runs.jsonl")
+            query_summary = SimpleNamespace(
+                query="lummac2",
+                reviewed=3,
+                ingested=1,
+                dropped=1,
+                quarantined=0,
+                skipped=1,
+                errors=0,
+                dry_run=0,
+                available=4,
+                handled=3,
+            )
+            runner = SimpleNamespace(run_once=lambda: [query_summary])
+            registry = SourceRegistry().register("otx", "OTX", lambda: runner)
+            settings = SimpleNamespace(
+                enabled_sources=["otx", "unknown"],
+                run_summary_file=summary_file,
+            )
+
+            run_gateway_once(settings, registry, lambda message: None)
+
+            with open(summary_file, "r", encoding="utf-8") as file_obj:
+                data = json.loads(file_obj.readline())
+
+            self.assertEqual(2, data["sources"])
+            self.assertEqual(1, data["succeeded"])
+            self.assertEqual(1, data["failed"])
+            self.assertEqual(3, data["totals"]["reviewed"])
+            self.assertEqual(1, data["totals"]["ingested"])
+            self.assertEqual("otx", data["results"][0]["source_key"])
+            self.assertEqual("unknown", data["results"][1]["source_key"])
+            self.assertEqual("lummac2", data["results"][0]["summaries"][0]["query"])
 
     def test_run_gateway_once_isolates_source_failure(self):
         good_summary = SimpleNamespace(reviewed=2, ingested=0, errors=0)

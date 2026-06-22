@@ -1,6 +1,10 @@
+import json
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Iterable
+
+from core.decision_audit import utc_now
 
 
 SUMMARY_FIELDS = (
@@ -32,10 +36,22 @@ class SourceRunResult:
     def total(self, field_name):
         return sum(getattr(summary, field_name, 0) for summary in self.summaries)
 
+    def to_dict(self):
+        return {
+            "source_key": self.source_key,
+            "source_name": self.source_name,
+            "success": self.success,
+            "error": self.error,
+            "summary_count": len(self.summaries),
+            "totals": summary_totals(self),
+            "summaries": [run_summary_to_dict(summary) for summary in self.summaries],
+        }
+
 
 @dataclass(frozen=True)
 class GatewayRunSummary:
     results: tuple[SourceRunResult, ...]
+    recorded_at: str = field(default_factory=utc_now)
 
     @property
     def succeeded(self):
@@ -47,6 +63,16 @@ class GatewayRunSummary:
 
     def total(self, field_name):
         return sum(result.total(field_name) for result in self.results)
+
+    def to_dict(self):
+        return {
+            "recorded_at": self.recorded_at,
+            "sources": len(self.results),
+            "succeeded": self.succeeded,
+            "failed": self.failed,
+            "totals": summary_totals(self),
+            "results": [result.to_dict() for result in self.results],
+        }
 
 
 class SourceRegistry:
@@ -134,6 +160,11 @@ def run_gateway_once(settings, registry, logger):
 
     summary = GatewayRunSummary(tuple(results))
     log_gateway_summary(summary, logger)
+    write_gateway_summary(
+        summary,
+        getattr(settings, "run_summary_file", ""),
+        logger,
+    )
     return summary
 
 
@@ -152,3 +183,44 @@ def log_gateway_summary(summary, logger):
         f"Gateway summary: sources={len(summary.results)} "
         f"succeeded={summary.succeeded} failed={summary.failed} {totals}"
     )
+
+
+def summary_totals(summary):
+    return {field_name: summary.total(field_name) for field_name in SUMMARY_FIELDS}
+
+
+def run_summary_to_dict(summary):
+    data = {
+        "query": getattr(summary, "query", ""),
+        "available": getattr(summary, "available", 0),
+        "handled": getattr(summary, "handled", 0),
+    }
+    data.update(
+        {
+            field_name: getattr(summary, field_name, 0)
+            for field_name in SUMMARY_FIELDS
+        }
+    )
+    source = getattr(summary, "source", None)
+    if source:
+        data["source"] = {
+            "key": source.key,
+            "name": source.name,
+            "provider": source.provider,
+            "type": source.source_type,
+        }
+    return data
+
+
+def write_gateway_summary(summary, summary_file, logger):
+    if not summary_file:
+        return
+
+    try:
+        directory = os.path.dirname(summary_file)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(summary_file, "a", encoding="utf-8") as file_obj:
+            file_obj.write(json.dumps(summary.to_dict(), sort_keys=True) + "\n")
+    except Exception as exc:
+        logger(f"Gateway summary write failed: {summary_file} error={exc}")

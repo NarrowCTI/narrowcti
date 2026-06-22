@@ -11,6 +11,7 @@ class GatewaySettings:
     source_interval_seconds: int
     state_dir: str
     decision_audit_dir: str
+    run_summary_file: str
     dedup_mode: str
     opencti_dedup_lookup: bool
     dedup_state_file: str
@@ -54,6 +55,7 @@ def load_settings():
         ),
         state_dir=os.getenv("NARROWCTI_STATE_DIR", "/app/state"),
         decision_audit_dir=os.getenv("NARROWCTI_DECISION_AUDIT_DIR", "/app/state/audit"),
+        run_summary_file=os.getenv("NARROWCTI_RUN_SUMMARY_FILE", ""),
         dedup_mode=os.getenv("NARROWCTI_DEDUP_MODE", "source").lower(),
         opencti_dedup_lookup=env_bool("NARROWCTI_OPENCTI_DEDUP_LOOKUP", False),
         dedup_state_file=os.getenv(

@@ -88,6 +88,7 @@ NARROWCTI_RUN_ONCE=true
 NARROWCTI_SOURCE_INTERVAL_SECONDS=300
 NARROWCTI_STATE_DIR=/app/state
 NARROWCTI_DECISION_AUDIT_DIR=/app/state/audit
+NARROWCTI_RUN_SUMMARY_FILE=/app/state/gateway_runs.jsonl
 NARROWCTI_DEDUP_MODE=hybrid
 NARROWCTI_OPENCTI_DEDUP_LOOKUP=false
 NARROWCTI_DEDUP_STATE_FILE=/app/state/dedup_index.json
@@ -186,6 +187,8 @@ python -m gateway.connector
 The entrypoint loads `NARROWCTI_*` settings, builds the default source registry
 and executes enabled sources through isolated `run_once()` calls. A source error
 is reported in the gateway summary without stopping the next enabled source.
+When `NARROWCTI_RUN_SUMMARY_FILE` is configured, the gateway also appends a
+JSONL record with aggregate totals, per-source status and per-query summaries.
 
 The OTX and MISP source runtimes remain available independently. The gateway
 composes them; it does not move feed-specific API or normalization logic out of
