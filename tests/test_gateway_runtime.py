@@ -41,6 +41,10 @@ class GatewaySettingsTests(unittest.TestCase):
             "NARROWCTI_MAX_DAYS_OLD": "365",
             "NARROWCTI_ALLOWED_TLP": "white, green",
             "NARROWCTI_ALLOWED_INDICATOR_TYPES": "domain, ipv4",
+            "NARROWCTI_RELEASE_AUDIT_FILE": "/state/audit/releases.jsonl",
+            "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION": "false",
+            "NARROWCTI_MITRE_CACHE_FILE": "/state/mitre_attack_cache.json",
+            "NARROWCTI_MITRE_STIX_URL": "https://example.com/enterprise.json",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -64,6 +68,13 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertEqual(365, settings.max_days_old)
         self.assertEqual(["white", "green"], settings.allowed_tlp)
         self.assertEqual(["domain", "ipv4"], settings.allowed_indicator_types)
+        self.assertEqual("/state/audit/releases.jsonl", settings.release_audit_file)
+        self.assertFalse(settings.enable_mitre_attack_resolution)
+        self.assertEqual("/state/mitre_attack_cache.json", settings.mitre_cache_file)
+        self.assertEqual(
+            "https://example.com/enterprise.json",
+            settings.mitre_stix_url,
+        )
 
     def test_load_settings_uses_connector_interval_as_legacy_default(self):
         with patch.dict(os.environ, {"CONNECTOR_RUN_INTERVAL": "120"}, clear=True):

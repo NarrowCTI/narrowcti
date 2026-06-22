@@ -146,6 +146,29 @@ The `quarantine_review` section summarizes:
 - Deduplication duplicates detected during released-record export.
 - Per-source quarantine review counts.
 
+## Health Checks
+
+The gateway preflight includes v0.6 readiness checks without calling OpenCTI or
+feed APIs:
+
+```powershell
+python -m gateway.preflight
+python -m gateway.preflight --json
+```
+
+The v0.6 checks report:
+
+- Quarantine repository path.
+- Release audit file path.
+- MITRE cache path and STIX refresh URL.
+- Whether ATT&CK resolution is enabled.
+- Missing, empty or invalid MITRE cache warnings.
+- Disabled release audit warnings.
+
+MITRE cache issues are warnings instead of hard failures because the processor
+records missing-cache evidence and continues curation. Empty source state files
+remain preflight errors because source deduplication cannot be persisted.
+
 ## Enrichment Foundation
 
 v0.6 should not pretend to export the full enterprise graph. It should extract

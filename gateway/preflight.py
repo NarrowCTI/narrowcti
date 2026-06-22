@@ -3,6 +3,7 @@ import json
 import os
 from dataclasses import dataclass
 
+from core.mitre_attack import load_attack_cache
 from gateway.settings import load_settings
 
 
@@ -134,8 +135,18 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
                 "will only appear in decision audit evidence.",
             )
         )
+    if settings.enable_quarantine and not getattr(settings, "release_audit_file", ""):
+        issues.append(
+            PreflightIssue(
+                "warning",
+                "release-audit-disabled",
+                "NARROWCTI_RELEASE_AUDIT_FILE is empty; release and reject "
+                "actions will not write separate review audit evidence.",
+            )
+        )
 
     evidence_paths = build_evidence_paths(enabled, settings, env)
+    issues.extend(mitre_cache_issues(settings))
     for source, paths in evidence_paths.get("sources", {}).items():
         if not paths.get("state_file"):
             issues.append(
@@ -189,6 +200,14 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
                 "quarantine_repository_file",
                 "",
             ),
+            "release_audit_file": getattr(settings, "release_audit_file", ""),
+            "enable_mitre_attack_resolution": getattr(
+                settings,
+                "enable_mitre_attack_resolution",
+                True,
+            ),
+            "mitre_cache_file": getattr(settings, "mitre_cache_file", ""),
+            "mitre_stix_url": getattr(settings, "mitre_stix_url", ""),
             "run_summary_file": settings.run_summary_file,
             "min_score_to_ingest": settings.min_score_to_ingest,
             "enable_quarantine": settings.enable_quarantine,
@@ -215,6 +234,8 @@ def build_evidence_paths(enabled_sources, settings, env):
             "quarantine_repository_file",
             "",
         ),
+        "release_audit_file": getattr(settings, "release_audit_file", ""),
+        "mitre_cache_file": getattr(settings, "mitre_cache_file", ""),
         "run_summary_file": settings.run_summary_file,
         "dedup_state_file": settings.dedup_state_file,
         "sources": {
@@ -223,6 +244,68 @@ def build_evidence_paths(enabled_sources, settings, env):
             if source in SOURCE_EVIDENCE_PATHS
         },
     }
+
+
+def mitre_cache_issues(settings):
+    if not getattr(settings, "enable_mitre_attack_resolution", True):
+        return [
+            PreflightIssue(
+                "info",
+                "mitre-resolution-disabled",
+                "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION is disabled; "
+                "ATT&CK ids will remain unresolved metadata.",
+            )
+        ]
+
+    issues = []
+    cache_file = getattr(settings, "mitre_cache_file", "")
+    if not cache_file:
+        issues.append(
+            PreflightIssue(
+                "warning",
+                "mitre-cache-disabled",
+                "NARROWCTI_MITRE_CACHE_FILE is empty; ATT&CK enrichment will "
+                "record missing-cache evidence.",
+            )
+        )
+    elif not os.path.exists(cache_file):
+        issues.append(
+            PreflightIssue(
+                "warning",
+                "mitre-cache-missing",
+                f"MITRE ATT&CK cache does not exist: {cache_file}",
+            )
+        )
+    else:
+        try:
+            cache = load_attack_cache(cache_file)
+            if int(cache.get("technique_count", 0) or 0) <= 0:
+                issues.append(
+                    PreflightIssue(
+                        "warning",
+                        "mitre-cache-empty",
+                        f"MITRE ATT&CK cache has no techniques: {cache_file}",
+                    )
+                )
+        except Exception as exc:
+            issues.append(
+                PreflightIssue(
+                    "warning",
+                    "mitre-cache-invalid",
+                    f"MITRE ATT&CK cache could not be loaded: {cache_file} error={exc}",
+                )
+            )
+
+    if not getattr(settings, "mitre_stix_url", ""):
+        issues.append(
+            PreflightIssue(
+                "warning",
+                "mitre-stix-url-empty",
+                "NARROWCTI_MITRE_STIX_URL is empty; refresh-cache has no "
+                "configured ATT&CK source URL.",
+            )
+        )
+    return issues
 
 
 def build_source_evidence_paths(source, settings, env):
@@ -299,6 +382,14 @@ def format_text_report(report):
         f"run_summary_file={report.settings['run_summary_file'] or '(disabled)'}",
         "quarantine_repository_file="
         f"{report.settings.get('quarantine_repository_file') or '(disabled)'}",
+        "release_audit_file="
+        f"{report.settings.get('release_audit_file') or '(disabled)'}",
+        "mitre_cache_file="
+        f"{report.settings.get('mitre_cache_file') or '(disabled)'}",
+        "mitre_stix_url="
+        f"{report.settings.get('mitre_stix_url') or '(disabled)'}",
+        "enable_mitre_attack_resolution="
+        f"{str(report.settings.get('enable_mitre_attack_resolution', True)).lower()}",
         f"dedup_state_file={report.evidence_paths.get('dedup_state_file') or '(disabled)'}",
         f"min_score_to_ingest={report.settings['min_score_to_ingest']}",
         f"enable_quarantine={str(report.settings['enable_quarantine']).lower()}",

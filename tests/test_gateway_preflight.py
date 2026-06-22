@@ -1,6 +1,9 @@
 import json
+import os
+import tempfile
 import unittest
 
+from core.mitre_attack import build_attack_cache, save_attack_cache
 from gateway.preflight import build_preflight_report, format_text_report
 from gateway.settings import GatewaySettings
 
@@ -25,6 +28,10 @@ def make_settings(**overrides):
         "dedup_mode": "hybrid",
         "opencti_dedup_lookup": False,
         "dedup_state_file": "/app/state/dedup_index.json",
+        "release_audit_file": "/app/state/audit/releases.jsonl",
+        "enable_mitre_attack_resolution": True,
+        "mitre_cache_file": "",
+        "mitre_stix_url": "https://example.com/enterprise-attack.json",
     }
     values.update(overrides)
     return GatewaySettings(**values)
@@ -57,6 +64,10 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertEqual(
             "/app/state/quarantine.jsonl",
             report.evidence_paths["quarantine_repository_file"],
+        )
+        self.assertEqual(
+            "/app/state/audit/releases.jsonl",
+            report.evidence_paths["release_audit_file"],
         )
         self.assertEqual(
             "/app/state/otx_state.json",
@@ -93,6 +104,88 @@ class GatewayPreflightTests(unittest.TestCase):
 
         self.assertTrue(report.ok)
         self.assertIn("source-dry-run-disabled", [issue.code for issue in report.issues])
+
+    def test_preflight_warns_when_release_audit_is_disabled(self):
+        settings = make_settings(release_audit_file="")
+
+        report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
+
+        self.assertTrue(report.ok)
+        self.assertIn("release-audit-disabled", [issue.code for issue in report.issues])
+
+    def test_preflight_reports_mitre_resolution_disabled(self):
+        settings = make_settings(enable_mitre_attack_resolution=False)
+
+        report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
+
+        self.assertTrue(report.ok)
+        self.assertIn(
+            "mitre-resolution-disabled",
+            [issue.code for issue in report.issues],
+        )
+
+    def test_preflight_warns_when_mitre_cache_is_missing(self):
+        settings = make_settings(mitre_cache_file="/missing/mitre_attack_cache.json")
+
+        report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
+
+        self.assertTrue(report.ok)
+        self.assertIn("mitre-cache-missing", [issue.code for issue in report.issues])
+
+    def test_preflight_warns_when_mitre_cache_is_invalid(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_file = os.path.join(tmpdir, "mitre_attack_cache.json")
+            with open(cache_file, "w", encoding="utf-8") as handle:
+                handle.write("{not json")
+            settings = make_settings(mitre_cache_file=cache_file)
+
+            report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
+
+        self.assertTrue(report.ok)
+        self.assertIn("mitre-cache-invalid", [issue.code for issue in report.issues])
+
+    def test_preflight_accepts_valid_mitre_cache(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_file = os.path.join(tmpdir, "mitre_attack_cache.json")
+            save_attack_cache(
+                build_attack_cache(
+                    {
+                        "objects": [
+                            {
+                                "type": "attack-pattern",
+                                "id": "attack-pattern--1059",
+                                "name": "Command and Scripting Interpreter",
+                                "external_references": [
+                                    {
+                                        "source_name": "mitre-attack",
+                                        "external_id": "T1059",
+                                    }
+                                ],
+                                "kill_chain_phases": [
+                                    {
+                                        "kill_chain_name": "mitre-attack",
+                                        "phase_name": "execution",
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                ),
+                cache_file,
+            )
+            settings = make_settings(mitre_cache_file=cache_file)
+
+            report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
+
+        self.assertTrue(report.ok)
+        self.assertNotIn(
+            "mitre-cache-missing",
+            [issue.code for issue in report.issues],
+        )
+        self.assertNotIn(
+            "mitre-cache-invalid",
+            [issue.code for issue in report.issues],
+        )
 
     def test_preflight_preserves_source_evidence_overrides(self):
         settings = make_settings(enabled_sources=["otx"])
@@ -163,6 +256,9 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("decision_audit_dir=/app/state/audit", text)
         self.assertIn("run_summary_file=(disabled)", text)
         self.assertIn("quarantine_repository_file=/app/state/quarantine.jsonl", text)
+        self.assertIn("release_audit_file=/app/state/audit/releases.jsonl", text)
+        self.assertIn("mitre_cache_file=(disabled)", text)
+        self.assertIn("enable_mitre_attack_resolution=true", text)
         self.assertIn("dedup_state_file=/app/state/dedup_index.json", text)
         self.assertIn("otx.state_file=/app/state/otx_state.json", text)
         self.assertIn(
@@ -176,6 +272,10 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertEqual(
             "/app/state/quarantine.jsonl",
             data["settings"]["quarantine_repository_file"],
+        )
+        self.assertEqual(
+            "/app/state/audit/releases.jsonl",
+            data["settings"]["release_audit_file"],
         )
         json.dumps(data)
 

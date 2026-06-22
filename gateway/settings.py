@@ -1,6 +1,8 @@
 import os
 from dataclasses import dataclass
 
+from core.mitre_attack import DEFAULT_MITRE_STIX_URL
+
 
 @dataclass(frozen=True)
 class GatewaySettings:
@@ -22,6 +24,10 @@ class GatewaySettings:
     dedup_mode: str
     opencti_dedup_lookup: bool
     dedup_state_file: str
+    release_audit_file: str = ""
+    enable_mitre_attack_resolution: bool = True
+    mitre_cache_file: str = ""
+    mitre_stix_url: str = DEFAULT_MITRE_STIX_URL
 
     def __post_init__(self):
         if not self.enabled_sources:
@@ -113,5 +119,18 @@ def load_settings():
         dedup_state_file=os.getenv(
             "NARROWCTI_DEDUP_STATE_FILE",
             "/app/state/dedup_index.json",
+        ),
+        release_audit_file=os.getenv(
+            "NARROWCTI_RELEASE_AUDIT_FILE",
+            os.path.join(state_dir, "audit", "releases.jsonl"),
+        ),
+        enable_mitre_attack_resolution=env_bool(
+            "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION",
+            True,
+        ),
+        mitre_cache_file=os.getenv("NARROWCTI_MITRE_CACHE_FILE", ""),
+        mitre_stix_url=os.getenv(
+            "NARROWCTI_MITRE_STIX_URL",
+            DEFAULT_MITRE_STIX_URL,
         ),
     )

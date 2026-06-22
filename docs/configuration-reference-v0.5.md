@@ -137,6 +137,8 @@ supported by code.
 | `NARROWCTI_STATE_DIR` | Base directory for source state and gateway indexes. The gateway derives source-scoped defaults such as `otx_state.json` and `misp_state.json` when source-specific state variables are not set. |
 | `NARROWCTI_DECISION_AUDIT_DIR` | Base directory for decision audit output. The gateway derives source-scoped audit files when `DECISION_AUDIT_FILE` or `MISP_DECISION_AUDIT_FILE` are not set. |
 | `NARROWCTI_RUN_SUMMARY_FILE` | Optional JSONL file for aggregate gateway run summaries. |
+| `NARROWCTI_QUARANTINE_REPOSITORY` | Local quarantine repository used by source processors, review CLI and operational report review metrics. |
+| `NARROWCTI_RELEASE_AUDIT_FILE` | Separate release/reject/export audit JSONL file for analyst review actions. |
 | `NARROWCTI_MIN_SCORE_TO_INGEST` | Gateway-level default minimum score. |
 | `NARROWCTI_ENABLE_QUARANTINE` | Gateway-level quarantine default. |
 | `NARROWCTI_QUARANTINE_SCORE_THRESHOLD` | Gateway-level quarantine threshold. |
@@ -145,6 +147,9 @@ supported by code.
 | `NARROWCTI_DEDUP_MODE` | Deduplication mode. `source` keeps source-item state only; `artifact` or `hybrid` enables the local artifact fingerprint index. |
 | `NARROWCTI_OPENCTI_DEDUP_LOOKUP` | Enables optional OpenCTI STIX Indicator pattern lookup before export. Lookup errors are logged and fail open. |
 | `NARROWCTI_DEDUP_STATE_FILE` | Local artifact index used by `artifact` and `hybrid` modes. It stores `artifact_fingerprints` for skip decisions and `artifact_records` for source sightings/correlation metadata. |
+| `NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION` | Enables ATT&CK id resolution when extracted source metadata contains technique ids. |
+| `NARROWCTI_MITRE_CACHE_FILE` | Local ATT&CK cache used by preflight and OTX metadata enrichment. Missing cache is a warning, not an ingest blocker. |
+| `NARROWCTI_MITRE_STIX_URL` | ATT&CK STIX source URL used by cache refresh tooling. |
 
 ## Target Enterprise Curation Controls
 
@@ -221,12 +226,18 @@ python -m gateway.preflight --json
 
 The preflight evaluates `NARROWCTI_*` gateway settings and source dry-run
 controls. It reports registered versus enabled sources, deduplication mode,
-OpenCTI dedup lookup, source dry-run state, aggregate run summary path, source
+OpenCTI dedup lookup, source dry-run state, aggregate run summary path,
+quarantine repository, release audit file, MITRE cache configuration, source
 state files, source decision audit files and artifact deduplication index path.
 
 Empty source state files are preflight errors because source deduplication state
 cannot be persisted. Empty decision audit files are warnings because ingestion
 can still run, but decision evidence will not be written.
+
+Missing or invalid MITRE caches are warnings because ATT&CK enrichment is
+auditable and optional at runtime. Empty release audit files are warnings
+because quarantine state transitions still work, but review evidence is less
+complete.
 
 Preflight output is meant for operator readiness and automation checks. It does
 not replace runtime decision audit records because it does not normalize,
