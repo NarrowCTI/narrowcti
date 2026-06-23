@@ -36,6 +36,7 @@ class MISPSettingsTests(unittest.TestCase):
             "NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES": "source_identity, marking",
             "NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES": "identity, marking-definition",
             "NARROWCTI_GRAPH_EXPORT_MODE": "dry-run",
+            "NARROWCTI_GRAPH_DEDUP_STATE_FILE": "/app/state/graph_dedup.json",
             "MISP_STATE_FILE": "/app/state/misp.json",
             "MISP_DECISION_AUDIT_FILE": "/app/state/misp-decisions.jsonl",
         }
@@ -78,6 +79,10 @@ class MISPSettingsTests(unittest.TestCase):
             settings.graph_allowed_stix_object_types,
         )
         self.assertEqual("dry-run", settings.graph_export_mode)
+        self.assertEqual(
+            "/app/state/graph_dedup.json",
+            settings.graph_dedup_state_file,
+        )
         self.assertEqual("/app/state/misp.json", settings.state_file)
         self.assertEqual("/app/state/misp-decisions.jsonl", settings.decision_audit_file)
 

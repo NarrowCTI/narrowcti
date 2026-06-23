@@ -106,6 +106,33 @@ def build_graph_export_plan(
     }
 
 
+def build_graph_export_plan_with_known_keys(
+    graph_candidate_policy,
+    mode="audit",
+    graph_deduplication_index=None,
+):
+    plan = build_graph_export_plan(graph_candidate_policy, mode=mode)
+    known = {"entity_keys": [], "relationship_keys": []}
+    if not graph_deduplication_index:
+        return plan, known, ""
+
+    try:
+        known = normalize_known_graph_keys(
+            graph_deduplication_index.known_keys_for_plan(plan)
+        )
+    except Exception as exc:
+        return plan, known, str(exc)
+
+    if known["entity_keys"] or known["relationship_keys"]:
+        plan = build_graph_export_plan(
+            graph_candidate_policy,
+            mode=mode,
+            known_entity_keys=known["entity_keys"],
+            known_relationship_keys=known["relationship_keys"],
+        )
+    return plan, known, ""
+
+
 def planned_accepted_actions(
     accepted,
     mode,
@@ -312,6 +339,22 @@ def mapping_from(value):
     if hasattr(value, "to_dict"):
         return mapping_from(value.to_dict())
     return {}
+
+
+def normalize_known_graph_keys(value):
+    known = mapping_from(value)
+    return {
+        "entity_keys": [
+            clean_string(key)
+            for key in known.get("entity_keys") or []
+            if clean_string(key)
+        ],
+        "relationship_keys": [
+            clean_string(key)
+            for key in known.get("relationship_keys") or []
+            if clean_string(key)
+        ],
+    }
 
 
 def clean_string(value):

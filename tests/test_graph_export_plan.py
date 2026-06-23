@@ -3,6 +3,7 @@ import unittest
 from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
 from core.graph_export_plan import (
     build_graph_export_plan,
+    build_graph_export_plan_with_known_keys,
     normalize_graph_export_mode,
 )
 
@@ -144,6 +145,44 @@ class GraphExportPlanTests(unittest.TestCase):
             plan["actions"][0]["reason"],
         )
 
+    def test_builds_plan_with_known_keys_from_index(self):
+        policy = apply_graph_candidate_policy(
+            build_graph_candidates(
+                {
+                    "version": "v0.7.0-dev",
+                    "source_key": "alienvault:otx",
+                    "external_id": "pulse-1",
+                    "records": [accepted_attack_pattern_record()],
+                }
+            )
+        ).to_dict()
+
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            policy,
+            mode="dry-run",
+            graph_deduplication_index=FirstEntityKnownIndex(),
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(1, plan["deduplicated_candidate_count"])
+        self.assertEqual(0, plan["would_create_object_count"])
+        self.assertEqual(1, plan["would_create_relationship_count"])
+
+    def test_keeps_plan_when_known_key_lookup_fails(self):
+        policy = self.graph_policy().to_dict()
+
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            policy,
+            mode="dry-run",
+            graph_deduplication_index=FailingGraphIndex(),
+        )
+
+        self.assertEqual("lookup unavailable", error)
+        self.assertEqual({"entity_keys": [], "relationship_keys": []}, known)
+        self.assertEqual(1, plan["would_create_object_count"])
+        self.assertEqual(1, plan["would_create_relationship_count"])
+
     def test_export_mode_is_blocked_until_graph_export_exists(self):
         policy = self.graph_policy().to_dict()
 
@@ -216,6 +255,19 @@ def accepted_attack_pattern_record():
         "confidence": 90,
         "relationship_confidence": 85,
     }
+
+
+class FirstEntityKnownIndex:
+    def known_keys_for_plan(self, plan):
+        return {
+            "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
+            "relationship_keys": [],
+        }
+
+
+class FailingGraphIndex:
+    def known_keys_for_plan(self, plan):
+        raise RuntimeError("lookup unavailable")
 
 
 if __name__ == "__main__":

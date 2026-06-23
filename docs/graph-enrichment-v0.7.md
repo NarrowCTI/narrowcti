@@ -334,13 +334,16 @@ deterministic entity and relationship deduplication keys, marks duplicate
 entities and duplicate relationships, and reduces dry-run would-create object
 or relationship counts when duplicate graph intent appears inside the same
 decision record. This is not yet OpenCTI-side deduplication; it is the first
-safe dedup layer before persisted graph lookup and real export.
+safe dedup layer before OpenCTI graph lookup and real export.
 
 The local graph deduplication state model is now available in
 `core/graph_deduplication.py`. It can persist graph entity keys, graph
-relationship keys, candidate summaries, sources and sightings. It is intended
-for future graph export promotion and OpenCTI lookup; it should not mark
-dry-run plans as exported knowledge.
+relationship keys, candidate summaries, sources and sightings. OTX and MISP
+can now read this index through `NARROWCTI_GRAPH_DEDUP_STATE_FILE` when building
+`graph_export_plan`; matching local known keys are reported as deduplicated in
+the decision metadata. This lookup is read-only in v0.7. It should not mark
+dry-run plans as exported knowledge, and it does not replace future
+OpenCTI-side entity/relationship lookup.
 
 The decision audit report now aggregates `graph_export_plan` evidence across
 decision audit records. Operators can see graph export modes, statuses,
@@ -437,7 +440,8 @@ v0.7 should not be considered complete until:
 8. Add graph deduplication and optional OpenCTI graph lookup. Initial
    intra-plan entity and relationship deduplication is implemented in
    `graph_export_plan`; local persisted graph deduplication state is available
-   in `core/graph_deduplication.py`; runtime wiring and OpenCTI lookup remain
+   in `core/graph_deduplication.py`; OTX and MISP can read local known graph
+   keys during export planning; export-time marking and OpenCTI lookup remain
    pending.
 9. Add graph export dry-run reporting. Initial per-decision
    `graph_export_plan` metadata and decision-audit aggregate rollups are

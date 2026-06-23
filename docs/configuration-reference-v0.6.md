@@ -62,6 +62,7 @@ graph enrichment layer.
 | `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES` | Optional allow-list for NarrowCTI graph entity types such as `attack_pattern`, `malware`, `threat_actor`, `source_identity` or `marking`. Empty allows all current candidate types. |
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Optional allow-list for STIX/OpenCTI object types such as `attack-pattern`, `malware`, `threat-actor`, `identity` or `marking-definition`. Empty allows all current candidate object types. |
 | `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export planning mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` is currently blocked until graph-aware STIX export is implemented. |
+| `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a read-only known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. v0.7 does not mark plans as exported from this setting. |
 
 Current graph controls do not create new OpenCTI graph objects. They make the
 future graph promotion decision visible in decision audit and quarantine
@@ -71,9 +72,11 @@ can review modes, statuses, actions, would-create counts, held reasons and
 source/query rollups without reading raw JSONL records. v0.7 graph export
 plans also include local intra-plan entity and relationship deduplication
 evidence. This reduces duplicate dry-run intent inside one decision record, but
-does not replace future OpenCTI graph lookup. The local graph deduplication
-state model exists in code for future graph export wiring, but it is not a
-runtime configuration surface yet.
+does not replace future OpenCTI graph lookup. When
+`NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured, OTX and MISP can read known
+local graph keys and mark matching candidates as deduplicated in the plan. This
+is a read-only planning aid in v0.7; real graph export and post-export marking
+remain pending.
 
 ## Source Examples
 
@@ -106,6 +109,7 @@ NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE=true
 NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=attack_pattern,malware,threat_actor,source_identity,marking
 NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=attack-pattern,malware,threat-actor,identity,marking-definition
 NARROWCTI_GRAPH_EXPORT_MODE=dry-run
+NARROWCTI_GRAPH_DEDUP_STATE_FILE=/app/state/graph_dedup.json
 ```
 
 MISP-specific review posture:

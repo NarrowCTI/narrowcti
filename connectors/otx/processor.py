@@ -2,8 +2,9 @@ import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
+from core.graph_deduplication import GraphDeduplicationIndex
 from core.graph_evidence import build_graph_evidence
-from core.graph_export_plan import build_graph_export_plan
+from core.graph_export_plan import build_graph_export_plan_with_known_keys
 from core.indicator_policy import filter_indicators_by_type
 from core.mitre_attack import MITREAttackResolver
 from core.policy import PolicyConfig, should_ingest
@@ -42,6 +43,7 @@ def decision_metadata(
     title="",
     graph_candidate_policy=None,
     graph_export_mode="audit",
+    graph_deduplication_index=None,
 ):
     score_details = getattr(candidate, "score_details", None)
     if not candidate:
@@ -65,10 +67,16 @@ def decision_metadata(
         **(graph_candidate_policy or {}),
     ).to_dict()
     metadata["graph_candidate_policy"] = graph_policy
-    metadata["graph_export_plan"] = build_graph_export_plan(
+    graph_plan, known_keys, lookup_error = build_graph_export_plan_with_known_keys(
         graph_policy,
         mode=graph_export_mode,
+        graph_deduplication_index=graph_deduplication_index,
     )
+    metadata["graph_export_plan"] = graph_plan
+    if known_keys["entity_keys"] or known_keys["relationship_keys"]:
+        metadata["graph_export_plan_known_keys"] = known_keys
+    if lookup_error:
+        metadata["graph_export_plan_lookup_error"] = lookup_error
     return metadata
 
 
@@ -106,6 +114,7 @@ class OTXProcessor:
         artifact_dedup=None,
         quarantine_repository=None,
         mitre_resolver=None,
+        graph_deduplication_index=None,
     ):
         self.settings = settings
         self.otx_client = otx_client
@@ -122,6 +131,9 @@ class OTXProcessor:
             settings
         )
         self.mitre_resolver = mitre_resolver or self.build_mitre_resolver(settings)
+        self.graph_deduplication_index = (
+            graph_deduplication_index or self.build_graph_deduplication_index(settings)
+        )
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -137,6 +149,12 @@ class OTXProcessor:
         if not repository_file:
             return None
         return QuarantineRepository(repository_file)
+
+    def build_graph_deduplication_index(self, settings):
+        state_file = getattr(settings, "graph_dedup_state_file", "")
+        if not state_file:
+            return None
+        return GraphDeduplicationIndex(state_file)
 
     def build_mitre_resolver(self, settings):
         if not getattr(settings, "enable_mitre_attack_resolution", True):
@@ -367,6 +385,7 @@ class OTXProcessor:
                 title=title,
                 graph_candidate_policy=self.graph_candidate_policy,
                 graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
+                graph_deduplication_index=self.graph_deduplication_index,
             ),
         )
 
@@ -398,6 +417,7 @@ class OTXProcessor:
             title=title,
             graph_candidate_policy=self.graph_candidate_policy,
             graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
+            graph_deduplication_index=self.graph_deduplication_index,
         )
         if truncated:
             metadata["raw_snapshot_truncated"] = True

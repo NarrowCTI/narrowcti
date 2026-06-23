@@ -45,6 +45,7 @@ class MISPSettings:
     graph_allowed_entity_types: list[str]
     graph_allowed_stix_object_types: list[str]
     graph_export_mode: str
+    graph_dedup_state_file: str
     state_file: str
     decision_audit_file: str
     quarantine_repository_file: str = ""
@@ -186,6 +187,7 @@ def load_settings():
         graph_export_mode=normalize_graph_export_mode(
             os.getenv("NARROWCTI_GRAPH_EXPORT_MODE", "audit")
         ),
+        graph_dedup_state_file=os.getenv("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
         state_file=os.getenv("MISP_STATE_FILE", "/app/state/misp_state.json"),
         decision_audit_file=os.getenv("MISP_DECISION_AUDIT_FILE", ""),
         quarantine_repository_file=os.getenv(

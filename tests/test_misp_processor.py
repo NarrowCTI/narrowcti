@@ -322,6 +322,25 @@ class MISPProcessorTests(unittest.TestCase):
             any(action["action"] == "would_create" for action in graph_plan["actions"])
         )
 
+    def test_decision_metadata_uses_graph_dedup_known_keys(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        prepared = SimpleNamespace(event=enriched_event(), score_details={})
+
+        metadata = decision_metadata(
+            candidate_ref,
+            prepared,
+            graph_export_mode="dry-run",
+            graph_deduplication_index=FirstActionEntityKnownIndex(),
+        )
+
+        graph_plan = metadata["graph_export_plan"]
+        self.assertEqual(1, graph_plan["deduplicated_entity_count"])
+        self.assertEqual(
+            graph_plan["accepted_count"] - 1,
+            graph_plan["would_create_object_count"],
+        )
+        self.assertIn("graph_export_plan_known_keys", metadata)
+
     def test_process_event_skips_when_all_artifacts_are_known(self):
         records = []
         marked = []
@@ -584,6 +603,14 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual([], marked)
         self.assertEqual("error", records[0].action)
         self.assertIn("MISP ingest failed: tlp green event error=OpenCTI unavailable", logs)
+
+
+class FirstActionEntityKnownIndex:
+    def known_keys_for_plan(self, plan):
+        return {
+            "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
+            "relationship_keys": [],
+        }
 
 
 if __name__ == "__main__":

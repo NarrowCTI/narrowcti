@@ -133,6 +133,7 @@ source payload
   -> graph_evidence
   -> graph_candidates
   -> graph_candidate_policy
+  -> optional local graph dedup known-key lookup
   -> graph_export_plan
   -> decision audit and quarantine metadata
   -> stable Report + Indicator STIX bundle
@@ -266,10 +267,11 @@ Current modes are:
 This gives operators an early view of graph promotion intent without changing
 OpenCTI graph state. The current deduplication is intra-plan only: it prevents
 obvious duplicate entity/relationship intent inside the same decision record
-and produces audit evidence. The local graph deduplication index can persist
-entity and relationship keys for future graph promotion, but it is not wired to
-mark dry-run plans as exported and it does not replace future OpenCTI-side graph
-lookup before real export.
+and produces audit evidence. OTX and MISP can also read
+`NARROWCTI_GRAPH_DEDUP_STATE_FILE` as an optional local known-key index when
+building `graph_export_plan`; matching keys are reported as deduplicated in the
+plan. v0.7 still does not mark dry-run plans as exported, and the local index
+does not replace future OpenCTI-side graph lookup before real export.
 
 ## Policy Surface
 
@@ -284,6 +286,7 @@ NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE=false
 NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=
 NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=
 NARROWCTI_GRAPH_EXPORT_MODE=audit
+NARROWCTI_GRAPH_DEDUP_STATE_FILE=
 ```
 
 These are deliberately permissive by default because the current graph layer
@@ -323,6 +326,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Graph candidate policy | Implemented as audit-only accepted and held candidate output. |
 | Graph export planning | Implemented as audit/dry-run/blocked export metadata for OTX and MISP decisions, including intra-plan entity and relationship deduplication evidence. |
 | Local graph deduplication index | Implemented in `core/graph_deduplication.py` for persisted entity/relationship keys and source sightings, ready for future graph export wiring. |
+| Read-only graph known-key lookup | Implemented for OTX and MISP `graph_export_plan` metadata through optional `NARROWCTI_GRAPH_DEDUP_STATE_FILE`; this marks known local entity/relationship keys in the plan without marking anything exported. |
 | Decision audit metadata | Implemented for OTX and MISP processors. |
 | Decision audit graph export reporting | Implemented in `gateway.decisions` with graph export modes, statuses, actions, would-create counts, deduplicated counts, held reasons, source rollups and query rollups. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
@@ -333,7 +337,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Area | Target |
 | --- | --- |
 | Graph-aware STIX builder | Create OpenCTI-compatible STIX objects and relationships from accepted graph candidates. |
-| Graph deduplication runtime wiring | Connect the local graph deduplication index to real graph export and add OpenCTI entity/relationship lookup before promotion. |
+| Graph deduplication runtime promotion | Mark successfully exported graph objects in the local graph index and add OpenCTI entity/relationship lookup before promotion. |
 | Graph export dry-run reporting | Extend implemented decision-audit graph export rollups into OpenCTI lab comparison evidence and future enterprise CTI reports. |
 | MISP rich mapping | Extract galaxies, clusters, objects, object relations and ATT&CK/victimology context more deeply. |
 | OTX rich mapping | Expand pulse lifecycle, author, vote, vulnerability and indicator timing metadata. |

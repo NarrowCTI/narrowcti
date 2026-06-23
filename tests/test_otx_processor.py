@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 
 from connectors.otx.models import PulseCandidate, QuerySummary
-from connectors.otx.processor import OTXProcessor
+from connectors.otx.processor import OTXProcessor, decision_metadata
 
 
 class ProcessorTests(unittest.TestCase):
@@ -407,6 +407,47 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(graph_policy["accepted_count"], graph_plan["accepted_count"])
         self.assertEqual(0, graph_plan["would_create_object_count"])
 
+    def test_decision_metadata_uses_graph_dedup_known_keys(self):
+        candidate = SimpleNamespace(
+            pulse={
+                "id": "pulse-1",
+                "name": "Technique pulse",
+                "attack_ids": ["T1059"],
+                "indicators": [],
+            },
+            name="Technique pulse",
+            score_details={},
+        )
+        mitre_resolver = SimpleNamespace(
+            resolve=lambda attack_ids: [
+                {
+                    "attack_id": attack_ids[0],
+                    "found": True,
+                    "name": "Command and Scripting Interpreter",
+                    "tactics": ["execution"],
+                }
+            ]
+        )
+
+        metadata = decision_metadata(
+            candidate,
+            mitre_resolver=mitre_resolver,
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Technique pulse",
+            graph_export_mode="dry-run",
+            graph_deduplication_index=FirstActionEntityKnownIndex(),
+        )
+
+        graph_plan = metadata["graph_export_plan"]
+        self.assertGreaterEqual(graph_plan["deduplicated_entity_count"], 1)
+        self.assertLess(
+            graph_plan["would_create_object_count"],
+            graph_plan["accepted_count"],
+        )
+        self.assertGreaterEqual(graph_plan["would_create_relationship_count"], 1)
+        self.assertIn("graph_export_plan_known_keys", metadata)
+
     def test_process_pulse_writes_quarantine_record(self):
         records = []
         queued = []
@@ -800,6 +841,15 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("ok", records[0].reason)
         self.assertIn("scoring", records[0].metadata)
         self.assertIn("Dry-run: LummaC2 fresh", logs[1])
+
+
+class FirstActionEntityKnownIndex:
+    def known_keys_for_plan(self, plan):
+        return {
+            "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
+            "relationship_keys": [],
+        }
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -93,6 +93,11 @@ detailed graph-enrichment design is tracked in
   model for persisted entity/relationship keys and source sightings. It is a
   future graph export foundation and is not used to mark dry-run plans as
   exported knowledge.
+- Wired OTX and MISP `graph_export_plan` metadata to optionally read local
+  graph known keys from `NARROWCTI_GRAPH_DEDUP_STATE_FILE`. This is read-only
+  planning evidence: matching local keys are marked as deduplicated, but v0.7
+  still does not mark dry-run plans as exported or replace future OpenCTI graph
+  lookup.
 
 ## Validation Target
 
@@ -105,6 +110,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 215 tests
+Ran 219 tests
 OK
 ```
