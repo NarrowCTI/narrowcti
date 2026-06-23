@@ -214,8 +214,10 @@ infrastructure, vulnerabilities, campaigns, sectors, locations, ATT&CK
 techniques and relationships, and keep those relationships explainable before
 they affect the OpenCTI graph.
 
-The detailed design is tracked in `docs/graph-enrichment-v0.7.md`, and the
-development release notes are tracked in `docs/release-v0.7.0.md`. MISP
+The consolidated architecture is tracked in `docs/architecture-v0.7.md`. The
+detailed graph-enrichment design is tracked in
+`docs/graph-enrichment-v0.7.md`, and the development release notes are tracked
+in `docs/release-v0.7.0.md`. MISP
 compatibility with the official OpenCTI connector mapping is tracked in
 `docs/misp-official-connector-mapping-v0.7.md`, and OTX compatibility with the
 official AlienVault connector mapping is tracked in
@@ -491,6 +493,7 @@ docs/release-v0.5.0.md
 docs/release-v0.6.0.md
 docs/release-v0.7.0.md
 docs/quarantine-enrichment-v0.6.md
+docs/architecture-v0.7.md
 docs/graph-enrichment-v0.7.md
 docs/metadata-validation-v0.7.md
 docs/contextual-scoring-reference-v0.7.md

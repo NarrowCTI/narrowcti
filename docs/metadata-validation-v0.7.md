@@ -5,6 +5,9 @@
 This document validates how far NarrowCTI currently maps OTX and MITRE ATT&CK
 metadata toward the v0.7 graph-enrichment objective.
 
+The consolidated v0.7 architecture and graph promotion boundary is tracked in
+`docs/architecture-v0.7.md`.
+
 The target is not to copy every source field into OpenCTI. The target is to
 decide, with evidence, which fields should become graph objects,
 relationships, labels, markings, external references, scoring inputs,

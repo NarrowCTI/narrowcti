@@ -13,7 +13,9 @@ richer STIX/OpenCTI graph enrichment. The release should validate source
 metadata broadly enough to decide what can safely become graph knowledge and
 what must remain as evidence, labels, notes or quarantine context.
 
-The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
+The consolidated architecture is tracked in `docs/architecture-v0.7.md`. The
+detailed graph-enrichment design is tracked in
+`docs/graph-enrichment-v0.7.md`.
 
 ## Initial Scope
 
@@ -32,6 +34,9 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 
 ## Implemented Foundation
 
+- Added `docs/architecture-v0.7.md` to consolidate the product architecture,
+  runtime modes, graph evidence contracts, graph candidate policy surface,
+  implemented foundation and pending graph-export work.
 - Added `core/graph_evidence.py` as the first shared graph-evidence model.
 - Added `core/graph_candidates.py` as the first normalized graph-candidate
   model for future graph-aware STIX export.

@@ -145,6 +145,7 @@ Status: in development.
 
 Detailed design:
 
+- `docs/architecture-v0.7.md`
 - `docs/graph-enrichment-v0.7.md`
 - `docs/contextual-scoring-reference-v0.7.md`
 - `docs/source-ingestion-modes-v0.7.md`

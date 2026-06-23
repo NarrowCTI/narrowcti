@@ -79,6 +79,10 @@ from the OpenCTI scoring-calculator connector are tracked in
 The source ingestion architecture for direct, MISP collector and hybrid modes
 is tracked in `docs/source-ingestion-modes-v0.7.md`.
 
+The consolidated v0.7 architecture, including runtime boundaries, current
+contracts, policy surface and graph-export promotion path, is tracked in
+`docs/architecture-v0.7.md`.
+
 ## Initial Source Focus
 
 ### OTX

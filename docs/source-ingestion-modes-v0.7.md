@@ -10,6 +10,9 @@ event hub when an organization already has it, but NarrowCTI's product role is
 broader: it is the pre-ingestion curation gateway that decides what should
 enter OpenCTI and how that intelligence should populate the graph.
 
+The consolidated v0.7 architecture is tracked in
+`docs/architecture-v0.7.md`.
+
 ## Product Decision
 
 NarrowCTI should support three ingestion modes:
