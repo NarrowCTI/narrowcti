@@ -35,8 +35,10 @@ NarrowCTI v0.7 currently has an audit-first graph evidence layer:
 - `core/mitre_attack.py` normalizes Enterprise ATT&CK techniques.
 - `core/graph_evidence.py` converts OTX, MISP and MITRE metadata into
   `graph_evidence` records.
-- OTX and MISP processors write `graph_evidence` into decision audit and
-  quarantine metadata.
+- `core/graph_candidates.py` converts evidence into normalized
+  `graph_candidates` for audit and future STIX graph export.
+- OTX and MISP processors write `graph_evidence` and `graph_candidates` into
+  decision audit and quarantine metadata.
 - The STIX exporter still emits the stable v0.6 `Report + Indicator` bundle.
 
 This is intentional. v0.7 should validate graph candidates before creating new
@@ -106,11 +108,11 @@ The remaining gap is not basic extraction; it is intelligent promotion:
 | ATT&CK external id `Txxxx` / `Txxxx.xxx` | Stored as `attack_id`, resolver key | Human-readable technique key, policy filter | Implemented |
 | `name` | Stored and exposed in resolver | `attack-pattern.name` | Implemented |
 | `description` | Stored in normalized cache | Technique description / note / relationship context | Implemented in v0.7 |
-| `external_references.url` | Stored as `url` | External reference to ATT&CK page | Implemented |
-| `kill_chain_phases` | Normalized into tactics | Tactic filters and ATT&CK phase context | Implemented |
-| `x_mitre_platforms` | Stored as `platforms` | Target platform filters and detection context | Implemented in v0.7 |
-| `x_mitre_data_sources` | Stored as `data_sources` | Hunting/detection guidance context | Implemented in v0.7 |
-| `x_mitre_detection` | Stored as `detection` | Analyst guidance and future detection mapping | Implemented in v0.7 |
+| `external_references.url` | Stored as `url` and emitted as `external_reference` candidate | External reference to ATT&CK page | Candidate audit-ready |
+| `kill_chain_phases` | Normalized into tactics and kill chain phase attributes | Tactic filters and ATT&CK phase context | Candidate audit-ready |
+| `x_mitre_platforms` | Stored as `platforms` and emitted as `attack_platform` candidates | Target platform filters and detection context | Candidate audit-ready |
+| `x_mitre_data_sources` | Stored as `data_sources` and emitted as `attack_data_source` candidates | Hunting/detection guidance context | Candidate audit-ready |
+| `x_mitre_detection` | Stored as `detection` and emitted as `detection_guidance` note candidates | Analyst guidance and future detection mapping | Candidate audit-ready |
 | `x_mitre_domains` | Stored as `domains` | Enterprise/mobile/ICS scope filter | Implemented in v0.7 |
 | `x_mitre_version` | Stored as `version` | ATT&CK object lifecycle provenance | Implemented in v0.7 |
 | `x_mitre_attack_spec_version` | Stored as `attack_spec_version` | Parser compatibility/audit | Implemented in v0.7 |
@@ -129,7 +131,9 @@ The remaining gap is not basic extraction; it is intelligent promotion:
 
 NarrowCTI now preserves enough technique-level metadata to enrich OTX-derived
 ATT&CK ids with technique name, tactic, platforms, data sources, detection text,
-domain, versioning and lifecycle state.
+domain, versioning and lifecycle state. Technique-level MITRE context is now
+also emitted as normalized graph candidates for external references, kill chain
+phase attributes, platforms, data sources and detection guidance.
 
 The main v0.7 gap is broader ATT&CK graph coverage. MITRE is not just a
 technique lookup table. For the product goal, NarrowCTI eventually needs to
@@ -147,6 +151,7 @@ OTX raw pulse
   -> otx_entities metadata
   -> mitre_attack resolved metadata
   -> graph_evidence audit records
+  -> graph_candidates audit records
   -> stable Report + Indicator STIX export
 ```
 

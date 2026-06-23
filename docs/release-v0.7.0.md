@@ -66,6 +66,9 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 - Expanded MITRE technique cache metadata to preserve description, platforms,
   data sources, detection text, domains, versioning, created/modified timestamps
   and sub-technique state.
+- MITRE technique resolution now emits reusable audit-only graph candidates for
+  ATT&CK external references, kill chain phase attributes, platforms, data
+  sources and detection guidance.
 
 ## Validation Target
 
@@ -78,6 +81,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 196 tests
+Ran 197 tests
 OK
 ```

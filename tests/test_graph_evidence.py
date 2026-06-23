@@ -54,8 +54,12 @@ class GraphEvidenceTests(unittest.TestCase):
 
         self.assertEqual("v0.7.0-dev", evidence["version"])
         self.assertEqual("alienvault:otx", evidence["source_key"])
-        self.assertEqual(4, evidence["record_count"])
+        self.assertEqual(8, evidence["record_count"])
         self.assertEqual(2, evidence["counts"]["attack_pattern"])
+        self.assertEqual(1, evidence["counts"]["attack_platform"])
+        self.assertEqual(1, evidence["counts"]["attack_data_source"])
+        self.assertEqual(1, evidence["counts"]["detection_guidance"])
+        self.assertEqual(1, evidence["counts"]["external_reference"])
         self.assertIn(
             {
                 "entity_type": "threat_actor",
@@ -97,6 +101,76 @@ class GraphEvidenceTests(unittest.TestCase):
         self.assertEqual(
             "Monitor process execution.",
             technique["attributes"]["detection"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "source_name": "mitre-attack",
+                    "external_id": "T1059",
+                    "url": "https://attack.mitre.org/techniques/T1059/",
+                }
+            ],
+            technique["attributes"]["external_references"],
+        )
+        self.assertEqual(
+            [{"kill_chain_name": "mitre-attack", "phase_name": "execution"}],
+            technique["attributes"]["kill_chain_phases"],
+        )
+        self.assertIn(
+            {
+                "entity_type": "external_reference",
+                "value": "https://attack.mitre.org/techniques/T1059/",
+                "stix_object_type": "external-reference",
+                "relationship_type": "references",
+                "source_key": "alienvault:otx",
+                "source_name": "mitre-attack",
+                "source_field": "mitre_attack.resolved.url",
+                "confidence": 90,
+                "display_name": "MITRE ATT&CK T1059",
+                "attributes": {
+                    "source_name": "mitre-attack",
+                    "external_id": "T1059",
+                    "technique": "T1059",
+                    "url": "https://attack.mitre.org/techniques/T1059/",
+                },
+            },
+            evidence["records"],
+        )
+        self.assertIn(
+            {
+                "entity_type": "attack_platform",
+                "value": "Windows",
+                "stix_object_type": "x-narrowcti-attack-platform",
+                "relationship_type": "applies-to",
+                "source_key": "alienvault:otx",
+                "source_name": "mitre-attack",
+                "source_field": "mitre_attack.resolved.platforms",
+                "confidence": 75,
+                "attributes": {"technique": "T1059"},
+            },
+            evidence["records"],
+        )
+        self.assertIn(
+            {
+                "entity_type": "attack_data_source",
+                "value": "Process: Process Creation",
+                "stix_object_type": "x-mitre-data-source",
+                "relationship_type": "detects",
+                "source_key": "alienvault:otx",
+                "source_name": "mitre-attack",
+                "source_field": "mitre_attack.resolved.data_sources",
+                "confidence": 80,
+                "attributes": {"technique": "T1059"},
+            },
+            evidence["records"],
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "detection_guidance"
+                and record["display_name"] == "Detection guidance for T1059"
+                and record["value"] == "Monitor process execution."
+                for record in evidence["records"]
+            )
         )
 
     def test_builds_misp_provenance_tags_and_marking_evidence(self):

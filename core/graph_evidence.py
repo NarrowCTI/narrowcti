@@ -19,6 +19,9 @@ ENTITY_TARGETS = {
     "tag": ("label", "labels"),
     "marking": ("marking-definition", "marked-with"),
     "external_reference": ("external-reference", "references"),
+    "attack_platform": ("x-narrowcti-attack-platform", "applies-to"),
+    "attack_data_source": ("x-mitre-data-source", "detects"),
+    "detection_guidance": ("note", "documents"),
 }
 
 
@@ -71,16 +74,25 @@ def mitre_attack_evidence(mitre_attack, source_key=""):
             continue
         attack_id = clean_string(technique.get("attack_id"))
         name = clean_string(technique.get("name"))
+        tactics = clean_values(technique.get("tactics"))
+        platforms = clean_values(technique.get("platforms"))
+        data_sources = clean_values(technique.get("data_sources"))
+        domains = clean_values(technique.get("domains"))
+        detection = clean_string(technique.get("detection"))
+        url = clean_string(technique.get("url"))
+        external_references = mitre_external_references(attack_id, url)
         attributes = {
             "name": name,
             "description": clean_string(technique.get("description")),
-            "tactics": list(technique.get("tactics") or []),
+            "tactics": tactics,
             "stix_id": clean_string(technique.get("stix_id")),
-            "url": clean_string(technique.get("url")),
-            "platforms": list(technique.get("platforms") or []),
-            "data_sources": list(technique.get("data_sources") or []),
-            "detection": clean_string(technique.get("detection")),
-            "domains": list(technique.get("domains") or []),
+            "url": url,
+            "external_references": external_references,
+            "kill_chain_phases": mitre_kill_chain_phases(tactics),
+            "platforms": platforms,
+            "data_sources": data_sources,
+            "detection": detection,
+            "domains": domains,
             "version": clean_string(technique.get("version")),
             "attack_spec_version": clean_string(
                 technique.get("attack_spec_version")
@@ -103,7 +115,25 @@ def mitre_attack_evidence(mitre_attack, source_key=""):
         )
         if record:
             records.append(record)
-        for tactic in attributes["tactics"]:
+        if url:
+            records.append(
+                evidence_record(
+                    entity_type="external_reference",
+                    value=url,
+                    source_key=source_key,
+                    source_name="mitre-attack",
+                    source_field="mitre_attack.resolved.url",
+                    confidence=90,
+                    display_name=f"MITRE ATT&CK {attack_id}",
+                    attributes={
+                        "source_name": "mitre-attack",
+                        "external_id": attack_id,
+                        "technique": attack_id,
+                        "url": url,
+                    },
+                )
+            )
+        for tactic in tactics:
             tactic_record = evidence_record(
                 entity_type="attack_tactic",
                 value=tactic,
@@ -115,6 +145,43 @@ def mitre_attack_evidence(mitre_attack, source_key=""):
             )
             if tactic_record:
                 records.append(tactic_record)
+        for platform in platforms:
+            platform_record = evidence_record(
+                entity_type="attack_platform",
+                value=platform,
+                source_key=source_key,
+                source_name="mitre-attack",
+                source_field="mitre_attack.resolved.platforms",
+                confidence=75,
+                attributes={"technique": attack_id},
+            )
+            if platform_record:
+                records.append(platform_record)
+        for data_source in data_sources:
+            data_source_record = evidence_record(
+                entity_type="attack_data_source",
+                value=data_source,
+                source_key=source_key,
+                source_name="mitre-attack",
+                source_field="mitre_attack.resolved.data_sources",
+                confidence=80,
+                attributes={"technique": attack_id},
+            )
+            if data_source_record:
+                records.append(data_source_record)
+        if detection:
+            records.append(
+                evidence_record(
+                    entity_type="detection_guidance",
+                    value=detection,
+                    source_key=source_key,
+                    source_name="mitre-attack",
+                    source_field="mitre_attack.resolved.detection",
+                    confidence=70,
+                    display_name=f"Detection guidance for {attack_id}",
+                    attributes={"technique": attack_id},
+                )
+            )
     return records
 
 
@@ -227,6 +294,29 @@ def compact_mapping(value):
 
 def clean_string(value):
     return " ".join(str(value or "").strip().split())
+
+
+def clean_values(values):
+    return [clean_string(value) for value in values or [] if clean_string(value)]
+
+
+def mitre_external_references(attack_id, url):
+    if not attack_id and not url:
+        return []
+    reference = {"source_name": "mitre-attack"}
+    if attack_id:
+        reference["external_id"] = attack_id
+    if url:
+        reference["url"] = url
+    return [reference]
+
+
+def mitre_kill_chain_phases(tactics):
+    return [
+        {"kill_chain_name": "mitre-attack", "phase_name": tactic}
+        for tactic in tactics or []
+        if clean_string(tactic)
+    ]
 
 
 def clamp_confidence(value):

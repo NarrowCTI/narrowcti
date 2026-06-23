@@ -379,7 +379,9 @@ v0.7 should not be considered complete until:
    and `graph_candidates`; MISP official connector compatibility has been
    validated as the graph baseline; MISP galaxy extraction remains pending.
 4. Extend MITRE cache usage beyond technique names into reusable graph
-   references.
+   references. Technique-level external references, kill chain phase
+   attributes, platforms, data sources and detection guidance are now emitted
+   as audit-only graph evidence/candidates.
 5. Build a graph-aware STIX exporter.
 6. Add relationship confidence and provenance.
 7. Add enterprise graph filters.

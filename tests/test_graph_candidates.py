@@ -5,6 +5,7 @@ from core.graph_candidates import (
     candidate_fingerprint,
     graph_candidate_from_record,
 )
+from core.graph_evidence import build_graph_evidence
 
 
 class GraphCandidateTests(unittest.TestCase):
@@ -64,6 +65,70 @@ class GraphCandidateTests(unittest.TestCase):
             "Command and Scripting Interpreter",
             candidate_dict["display_name"],
         )
+
+    def test_builds_mitre_reference_candidates_from_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "mitre_attack": {
+                    "available": True,
+                    "resolved": [
+                        {
+                            "attack_id": "T1059",
+                            "found": True,
+                            "name": "Command and Scripting Interpreter",
+                            "tactics": ["execution"],
+                            "stix_id": "attack-pattern--1",
+                            "url": "https://attack.mitre.org/techniques/T1059/",
+                            "platforms": ["Windows"],
+                            "data_sources": ["Process: Process Creation"],
+                            "detection": "Monitor process execution.",
+                        }
+                    ],
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Technique pulse",
+        )
+
+        candidates = build_graph_candidates(evidence)
+
+        self.assertEqual(6, candidates.candidate_count)
+        self.assertEqual(1, candidates.counts["attack_pattern"])
+        self.assertEqual(1, candidates.counts["attack_tactic"])
+        self.assertEqual(1, candidates.counts["attack_platform"])
+        self.assertEqual(1, candidates.counts["attack_data_source"])
+        self.assertEqual(1, candidates.counts["detection_guidance"])
+        self.assertEqual(1, candidates.counts["external_reference"])
+
+        attack_pattern = next(
+            candidate
+            for candidate in candidates.candidates
+            if candidate.entity_type == "attack_pattern"
+        )
+        self.assertEqual(
+            [
+                {
+                    "source_name": "mitre-attack",
+                    "external_id": "T1059",
+                    "url": "https://attack.mitre.org/techniques/T1059/",
+                }
+            ],
+            attack_pattern.attributes["external_references"],
+        )
+        self.assertEqual(
+            [{"kill_chain_name": "mitre-attack", "phase_name": "execution"}],
+            attack_pattern.attributes["kill_chain_phases"],
+        )
+
+        detection = next(
+            candidate
+            for candidate in candidates.candidates
+            if candidate.entity_type == "detection_guidance"
+        )
+        self.assertEqual("note", detection.stix_object_type)
+        self.assertEqual("Detection guidance for T1059", detection.name)
+        self.assertEqual("Monitor process execution.", detection.value)
 
     def test_filters_candidates_by_confidence_and_type(self):
         candidates = build_graph_candidates(
