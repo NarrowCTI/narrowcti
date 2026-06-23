@@ -40,6 +40,9 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
   STIX builder and OpenCTI validation are implemented.
 - Added `docs/metadata-validation-v0.7.md` to validate OTX and MITRE metadata
   coverage, current mapping depth and remaining intelligent-mapping gaps.
+- Added `docs/misp-official-connector-mapping-v0.7.md` to validate the
+  official OpenCTI MISP connector mapping model and define it as the
+  compatibility baseline for NarrowCTI curated MISP graph export.
 - Expanded OTX metadata normalization to handle `target_countries` aliases and
   object `display_name` values from OTX metadata fields.
 - Expanded MITRE technique cache metadata to preserve description, platforms,

@@ -69,7 +69,8 @@ For every supported source, NarrowCTI should document and test:
 - Which validation rule prevents bad graph enrichment.
 
 OTX and MITRE ATT&CK metadata coverage is tracked in
-`docs/metadata-validation-v0.7.md`.
+`docs/metadata-validation-v0.7.md`. MISP official connector compatibility is
+tracked in `docs/misp-official-connector-mapping-v0.7.md`.
 
 ## Initial Source Focus
 
@@ -93,7 +94,10 @@ OTX v0.6 already extracts useful entity hints. v0.7 should validate and map:
 ### MISP
 
 MISP must receive a broader validation pass than v0.6. The NarrowCTI MISP
-adapter should inspect representative raw MISP events and map:
+adapter should inspect representative raw MISP events and map them against the
+official OpenCTI MISP connector behavior. The official connector is the
+compatibility baseline for how curated MISP evidence should land in the OpenCTI
+graph, while NarrowCTI remains responsible for curation before graph promotion.
 
 | MISP evidence | STIX/OpenCTI target | Notes |
 | --- | --- | --- |
@@ -107,6 +111,13 @@ adapter should inspect representative raw MISP events and map:
 | Sector/geography tags | sector `identity`, `location` | Victimology context. |
 | CVE attributes/tags | `vulnerability` | Can connect reports, malware and exploited technology. |
 | Organization/sharing/TLP | markings and provenance | Do not lose handling constraints. |
+
+The code-level baseline from `opencti/connector-misp:6.9.4` shows that direct
+MISP import can create reports, indicators, observables, notes, labels,
+markings, Intrusion Sets, Malware, Tools, Attack Patterns, sectors, countries,
+regions and relationships such as `based-on`, `indicates`, `related-to` and
+`uses`. NarrowCTI should reproduce those graph semantics only when evidence
+passes its scoring, policy, deduplication, guardrail and confidence checks.
 
 ### MITRE ATT&CK
 
@@ -300,8 +311,9 @@ v0.7 should not be considered complete until:
 2. Expand OTX metadata mapping into graph candidates. Initial OTX and MITRE
    evidence mapping is now present in decision and quarantine metadata.
 3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
-   original-source, TLP and tag evidence mapping is present; MISP galaxy
-   extraction remains pending.
+   original-source, TLP and tag evidence mapping is present; MISP official
+   connector compatibility has been validated as the graph baseline; MISP
+   galaxy extraction remains pending.
 4. Extend MITRE cache usage beyond technique names into reusable graph
    references.
 5. Build a graph-aware STIX exporter.
@@ -310,6 +322,8 @@ v0.7 should not be considered complete until:
 8. Add graph deduplication and optional OpenCTI graph lookup.
 9. Add graph export dry-run reporting.
 10. Validate in OpenCTI with OTX and MISP samples.
+11. Compare a direct official MISP connector import with a NarrowCTI-curated
+    import for the same event and document object/relationship differences.
 
 ## Decision
 
