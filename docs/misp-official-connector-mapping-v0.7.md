@@ -191,7 +191,7 @@ it should remain only one input to NarrowCTI's broader curation score.
 | Attribute coverage | Broad observable and indicator mapping. | Bounded IoC extraction for common indicator types. | Expand to official-compatible observable and indicator mapping. |
 | Observables | Creates STIX/OpenCTI observables. | Not emitted by current exporter. | Emit observables in graph-aware STIX builder. |
 | Indicators | Creates indicators with observable-derived patterns and score metadata. | Creates simple STIX indicators for selected types. | Preserve official pattern semantics plus NarrowCTI score evidence. |
-| Galaxies | Converts known galaxies to entities. | Not yet parsed into strong graph candidates. | Add MISP galaxy extraction fixtures and graph candidates. |
+| Galaxies | Converts known galaxies to entities. | Parses common event/object/attribute GalaxyCluster metadata into audit-only graph evidence and candidates for ATT&CK, actor, intrusion set, malware, tool and victimology context. | Convert accepted candidates into official-compatible graph STIX objects after policy, deduplication and OpenCTI validation. |
 | Tags | Labels, markings and optional entity extraction. | TLP and generic tags are audit evidence only. | Parse known taxonomy tags, keep weak tags as labels or evidence. |
 | Relationships | Creates `based-on`, `indicates`, `related-to`, `uses`, sightings and object-reference links. | Not emitted by current exporter. | Add relationship policy with confidence and provenance. |
 | Guardrails | Disables relationship generation for very large events. | Has explicit max events, max attributes, max IoCs and oversized-event policy. | Keep NarrowCTI guardrails before official-compatible export. |

@@ -138,6 +138,14 @@ regions and relationships such as `based-on`, `indicates`, `related-to` and
 `uses`. NarrowCTI should reproduce those graph semantics only when evidence
 passes its scoring, policy, deduplication, guardrail and confidence checks.
 
+The first MISP Galaxy audit layer is now implemented. NarrowCTI extracts
+event-level, object-level and attribute-level `Galaxy` / `GalaxyCluster`
+metadata into `misp_galaxies`, then converts known clusters into audit-only
+graph evidence and candidates for ATT&CK attack patterns, threat actors,
+intrusion sets, malware, tools, sectors, countries and regions. This does not
+yet create OpenCTI graph entities; it gives the future graph-aware STIX builder
+clean, policy-filterable evidence with provenance.
+
 ### MITRE ATT&CK
 
 MITRE remains reference data, not an IoC feed. v0.7 should use the local cache
@@ -424,9 +432,11 @@ v0.7 should not be considered complete until:
    in decision/quarantine metadata, and the official AlienVault connector
    mapping has been validated as the source-specific graph baseline.
 3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
-   original-source, TLP and tag evidence mapping is present as `graph_evidence`
-   and `graph_candidates`; MISP official connector compatibility has been
-   validated as the graph baseline; MISP galaxy extraction remains pending.
+   original-source, TLP, tag and common Galaxy/Cluster evidence mapping is
+   present as `graph_evidence` and `graph_candidates`; MISP official connector
+   compatibility has been validated as the graph baseline; deeper object
+   relationships, sightings, EventReport notes and CVE/vulnerability context
+   remain pending.
 4. Extend MITRE cache usage beyond technique names into reusable graph
    references. Technique-level external references, kill chain phase
    attributes, platforms, data sources and detection guidance are now emitted

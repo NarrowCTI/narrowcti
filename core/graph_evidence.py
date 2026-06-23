@@ -1,3 +1,4 @@
+import re
 from collections import Counter
 from collections.abc import Mapping
 
@@ -8,12 +9,14 @@ GRAPH_EVIDENCE_VERSION = "v0.7.0-dev"
 
 ENTITY_TARGETS = {
     "threat_actor": ("threat-actor", "attributed-to"),
+    "intrusion_set": ("intrusion-set", "attributed-to"),
     "malware": ("malware", "uses"),
     "tool": ("tool", "uses"),
     "attack_pattern": ("attack-pattern", "uses"),
     "attack_tactic": ("x-mitre-tactic", "uses"),
     "target_sector": ("identity", "targets"),
     "target_country": ("location", "targets"),
+    "target_region": ("location", "targets"),
     "source_identity": ("identity", "originated-from"),
     "collector": ("identity", "collected-by"),
     "tag": ("label", "labels"),
@@ -24,6 +27,8 @@ ENTITY_TARGETS = {
     "detection_guidance": ("note", "documents"),
 }
 
+ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
+
 
 def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     metadata = metadata if isinstance(metadata, Mapping) else {}
@@ -31,6 +36,7 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     records.extend(otx_entity_evidence(metadata.get("otx_entities"), source_key))
     records.extend(mitre_attack_evidence(metadata.get("mitre_attack"), source_key))
     records.extend(misp_metadata_evidence(metadata, source_key))
+    records.extend(misp_galaxy_evidence(metadata.get("misp_galaxies"), source_key))
 
     return {
         "version": GRAPH_EVIDENCE_VERSION,
@@ -244,6 +250,99 @@ def misp_metadata_evidence(metadata, source_key=""):
     return records
 
 
+def misp_galaxy_evidence(clusters, source_key=""):
+    records = []
+    for cluster in clusters or []:
+        if not isinstance(cluster, Mapping):
+            continue
+        entity_type, confidence = classify_misp_galaxy(cluster)
+        if not entity_type:
+            continue
+        value = misp_galaxy_value(entity_type, cluster)
+        attributes = misp_galaxy_attributes(cluster)
+        record = evidence_record(
+            entity_type=entity_type,
+            value=value,
+            source_key=source_key,
+            source_name="misp-galaxy",
+            source_field=cluster.get("source_field") or "misp_galaxies",
+            confidence=confidence,
+            display_name=cluster.get("value"),
+            attributes=attributes,
+        )
+        if record:
+            records.append(record)
+    return records
+
+
+def classify_misp_galaxy(cluster):
+    kind = " ".join(
+        clean_string(cluster.get(field)).casefold()
+        for field in ("type", "galaxy_type", "galaxy_name", "tag_name")
+        if clean_string(cluster.get(field))
+    )
+    if not kind:
+        return "", 0
+    if "attack-pattern" in kind or "mitre-attack-pattern" in kind:
+        return "attack_pattern", 85
+    if "intrusion-set" in kind:
+        return "intrusion_set", 80
+    if "threat-actor" in kind or "threat actor" in kind:
+        return "threat_actor", 80
+    if "malpedia" in kind or "ransomware" in kind or "malware" in kind:
+        return "malware", 80
+    if "tool" in kind:
+        return "tool", 75
+    if "sector" in kind:
+        return "target_sector", 70
+    if "country" in kind:
+        return "target_country", 70
+    if "region" in kind:
+        return "target_region", 65
+    return "", 0
+
+
+def misp_galaxy_value(entity_type, cluster):
+    if entity_type == "attack_pattern":
+        attack_id = first_attack_id_from_cluster(cluster)
+        if attack_id:
+            return attack_id
+    return clean_string(cluster.get("value"))
+
+
+def first_attack_id_from_cluster(cluster):
+    values = [
+        cluster.get("value"),
+        cluster.get("tag_name"),
+        cluster.get("description"),
+    ]
+    meta = compact_mapping(cluster.get("meta"))
+    for key in ("external_id", "external-id", "mitre_id", "mitre-id", "id", "refs"):
+        values.extend(flatten_values(meta.get(key)))
+    for value in values:
+        match = ATTACK_ID_PATTERN.search(clean_string(value))
+        if match:
+            return match.group(0).upper()
+    return ""
+
+
+def misp_galaxy_attributes(cluster):
+    meta = compact_mapping(cluster.get("meta"))
+    attributes = {
+        "galaxy_type": clean_string(cluster.get("galaxy_type")),
+        "galaxy_name": clean_string(cluster.get("galaxy_name")),
+        "cluster_type": clean_string(cluster.get("type")),
+        "cluster_uuid": clean_string(cluster.get("uuid")),
+        "tag_name": clean_string(cluster.get("tag_name")),
+        "description": clean_string(cluster.get("description")),
+        "meta": meta,
+    }
+    attack_id = first_attack_id_from_cluster(cluster)
+    if attack_id:
+        attributes["external_id"] = attack_id
+    return compact_mapping(attributes)
+
+
 def evidence_record(
     entity_type,
     value,
@@ -298,6 +397,20 @@ def clean_string(value):
 
 def clean_values(values):
     return [clean_string(value) for value in values or [] if clean_string(value)]
+
+
+def flatten_values(value):
+    if isinstance(value, Mapping):
+        flattened = []
+        for item in value.values():
+            flattened.extend(flatten_values(item))
+        return flattened
+    if isinstance(value, (list, tuple, set)):
+        flattened = []
+        for item in value:
+            flattened.extend(flatten_values(item))
+        return flattened
+    return [value] if value not in ("", None, [], {}) else []
 
 
 def mitre_external_references(attack_id, url):

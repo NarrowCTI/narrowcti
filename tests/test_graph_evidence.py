@@ -214,6 +214,65 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_builds_misp_galaxy_graph_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "collector": "misp",
+                "misp_galaxies": [
+                    {
+                        "type": "mitre-attack-pattern",
+                        "value": "Command and Scripting Interpreter - T1059",
+                        "uuid": "cluster-attack",
+                        "tag_name": 'misp-galaxy:mitre-attack-pattern="T1059"',
+                        "galaxy_type": "mitre-attack-pattern",
+                        "galaxy_name": "MITRE ATT&CK",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "external_id": ["T1059"],
+                            "refs": ["https://attack.mitre.org/techniques/T1059/"],
+                        },
+                    },
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Example",
+                        "uuid": "cluster-actor",
+                        "galaxy_type": "threat-actor",
+                        "galaxy_name": "Threat Actor",
+                        "source_field": "Galaxy",
+                        "meta": {"synonyms": ["Example Group"]},
+                    },
+                    {
+                        "type": "sector",
+                        "value": "Finance",
+                        "galaxy_type": "sector",
+                        "source_field": "Galaxy",
+                    },
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(4, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["attack_pattern"])
+        self.assertEqual(1, evidence["counts"]["threat_actor"])
+        self.assertEqual(1, evidence["counts"]["target_sector"])
+        attack = next(
+            record for record in evidence["records"] if record["entity_type"] == "attack_pattern"
+        )
+        self.assertEqual("T1059", attack["value"])
+        self.assertEqual("attack-pattern", attack["stix_object_type"])
+        self.assertEqual(
+            "Command and Scripting Interpreter - T1059",
+            attack["display_name"],
+        )
+        self.assertEqual("T1059", attack["attributes"]["external_id"])
+        self.assertEqual(
+            ["https://attack.mitre.org/techniques/T1059/"],
+            attack["attributes"]["meta"]["refs"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

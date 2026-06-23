@@ -98,6 +98,10 @@ detailed graph-enrichment design is tracked in
   planning evidence: matching local keys are marked as deduplicated, but v0.7
   still does not mark dry-run plans as exported or replace future OpenCTI graph
   lookup.
+- Added MISP Galaxy/Cluster audit mapping for event, object and attribute
+  metadata. Known clusters now produce graph evidence and candidates for ATT&CK
+  attack patterns, threat actors, intrusion sets, malware, tools, target
+  sectors, countries and regions before future graph-aware STIX export.
 
 ## Validation Target
 
@@ -110,6 +114,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 219 tests
+Ran 221 tests
 OK
 ```

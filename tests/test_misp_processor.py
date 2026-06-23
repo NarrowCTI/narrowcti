@@ -301,6 +301,88 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(2, graph_plan["accepted_count"])
         self.assertEqual(1, graph_plan["held_count"])
 
+    def test_decision_metadata_extracts_misp_galaxies(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Galaxy"] = [
+            {
+                "type": "mitre-attack-pattern",
+                "name": "MITRE ATT&CK",
+                "GalaxyCluster": [
+                    {
+                        "type": "mitre-attack-pattern",
+                        "value": "Command and Scripting Interpreter - T1059",
+                        "uuid": "cluster-attack",
+                        "tag_name": 'misp-galaxy:mitre-attack-pattern="T1059"',
+                        "meta": {
+                            "external_id": ["T1059"],
+                            "refs": ["https://attack.mitre.org/techniques/T1059/"],
+                        },
+                    }
+                ],
+            },
+            {
+                "type": "threat-actor",
+                "name": "Threat Actor",
+                "GalaxyCluster": [
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Example",
+                        "uuid": "cluster-actor",
+                        "meta": {"synonyms": ["Example Group"]},
+                    }
+                ],
+            },
+        ]
+        event["Object"] = [
+            {
+                "name": "victimology",
+                "GalaxyCluster": [
+                    {
+                        "type": "sector",
+                        "value": "Finance",
+                        "uuid": "cluster-sector",
+                    }
+                ],
+            }
+        ]
+        event["Attribute"] = {
+            "type": "md5",
+            "value": "a" * 32,
+            "GalaxyCluster": {
+                "type": "malware",
+                "value": "LummaC2",
+                "uuid": "cluster-malware",
+            },
+        }
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(4, len(metadata["misp_galaxies"]))
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["attack_pattern"])
+        self.assertEqual(1, graph_evidence["counts"]["threat_actor"])
+        self.assertEqual(1, graph_evidence["counts"]["malware"])
+        self.assertEqual(1, graph_evidence["counts"]["target_sector"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "attack_pattern"
+                and candidate["value"] == "T1059"
+                and candidate["name"] == "Command and Scripting Interpreter - T1059"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "target_sector"
+                and candidate["value"] == "Finance"
+                and candidate["source_field"] == "Object[0].GalaxyCluster"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_builds_dry_run_graph_export_plan(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         prepared = SimpleNamespace(event=enriched_event(), score_details={})

@@ -54,6 +54,9 @@ def decision_metadata(
         "misp_event_uuid": provenance.get("misp_event_uuid") or candidate_ref.external_id,
         "tags": list(tags),
     }
+    misp_galaxies = extract_misp_galaxies(source)
+    if misp_galaxies:
+        metadata["misp_galaxies"] = misp_galaxies
     if controls:
         metadata["guardrails"] = controls
     score_details = getattr(candidate, "score_details", None)
@@ -83,6 +86,131 @@ def decision_metadata(
     if lookup_error:
         metadata["graph_export_plan_lookup_error"] = lookup_error
     return metadata
+
+
+def extract_misp_galaxies(event):
+    event = compact_mapping(event)
+    clusters = []
+    for container in misp_galaxy_containers(event):
+        galaxy = compact_mapping(container.get("galaxy"))
+        for cluster in container.get("clusters") or []:
+            normalized = normalize_misp_galaxy_cluster(
+                cluster,
+                galaxy,
+                container.get("source_field", "Galaxy"),
+            )
+            if normalized:
+                clusters.append(normalized)
+    return deduplicate_misp_galaxies(clusters)
+
+
+def misp_galaxy_containers(event):
+    containers = []
+    containers.extend(galaxy_containers_from_mapping(event, "Galaxy"))
+    for index, attribute in enumerate(list_values(event.get("Attribute"))):
+        if isinstance(attribute, Mapping):
+            containers.extend(
+                galaxy_containers_from_mapping(attribute, f"Attribute[{index}].Galaxy")
+            )
+    for object_index, misp_object in enumerate(list_values(event.get("Object"))):
+        if not isinstance(misp_object, Mapping):
+            continue
+        containers.extend(
+            galaxy_containers_from_mapping(misp_object, f"Object[{object_index}].Galaxy")
+        )
+        for attribute_index, attribute in enumerate(
+            list_values(misp_object.get("Attribute"))
+        ):
+            if isinstance(attribute, Mapping):
+                containers.extend(
+                    galaxy_containers_from_mapping(
+                        attribute,
+                        f"Object[{object_index}].Attribute[{attribute_index}].Galaxy",
+                    )
+                )
+    return containers
+
+
+def galaxy_containers_from_mapping(value, source_field):
+    value = compact_mapping(value)
+    containers = []
+    for galaxy in list_values(value.get("Galaxy")):
+        galaxy = compact_mapping(galaxy)
+        clusters = list_values(
+            galaxy.get("GalaxyCluster") or galaxy.get("GalaxyClusters")
+        )
+        if clusters:
+            containers.append(
+                {
+                    "galaxy": galaxy,
+                    "clusters": clusters,
+                    "source_field": source_field,
+                }
+            )
+    direct_clusters = list_values(
+        value.get("GalaxyCluster") or value.get("GalaxyClusters")
+    )
+    if direct_clusters:
+        containers.append(
+            {
+                "galaxy": {},
+                "clusters": direct_clusters,
+                "source_field": source_field.replace("Galaxy", "GalaxyCluster"),
+            }
+        )
+    return containers
+
+
+def list_values(value):
+    if isinstance(value, Mapping):
+        return [value]
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    return []
+
+
+def normalize_misp_galaxy_cluster(cluster, galaxy, source_field):
+    cluster = compact_mapping(cluster)
+    if not cluster:
+        return {}
+    galaxy = compact_mapping(galaxy)
+    meta = compact_mapping(cluster.get("meta"))
+    value = (
+        cluster.get("value")
+        or cluster.get("name")
+        or cluster.get("tag_name")
+        or cluster.get("uuid")
+        or ""
+    )
+    if not value:
+        return {}
+    return {
+        "value": value,
+        "type": cluster.get("type") or galaxy.get("type") or galaxy.get("name") or "",
+        "description": cluster.get("description", ""),
+        "uuid": cluster.get("uuid", ""),
+        "tag_name": cluster.get("tag_name", ""),
+        "galaxy_type": galaxy.get("type", ""),
+        "galaxy_name": galaxy.get("name", ""),
+        "source_field": source_field,
+        "meta": meta,
+    }
+
+
+def deduplicate_misp_galaxies(clusters):
+    seen = set()
+    deduplicated = []
+    for cluster in clusters:
+        key = (
+            str(cluster.get("type", "")).casefold(),
+            str(cluster.get("value", "")).casefold(),
+            str(cluster.get("uuid", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(cluster)
+    return deduplicated
 
 
 class MISPProcessor:
