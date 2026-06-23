@@ -236,12 +236,12 @@ vulnerability and observation pivots from a curated OTX pulse.
 | Capability | Official AlienVault connector | Current NarrowCTI v0.7 state | v0.7 target |
 | --- | --- | --- | --- |
 | Runtime retrieval | Subscribed pulses through `getsince`. | Custom OTX search/enrichment flow. | Keep NarrowCTI runtime; use official mapping as export baseline. |
-| Report metadata | Rich pulse report with status, labels, markings and refs. | Stable generic report export. | Add OTX-compatible report fields after curation. |
-| Author/provider identity | AlienVault plus pulse author. | Connector identity only in current export. | Preserve provider and source author as graph/provenance evidence. |
-| OTX entity extraction | Promotes adversary, malware, ATT&CK, sectors, countries and CVEs. | Extracts most of these into audit-only `graph_evidence`. | Promote only after confidence and policy validation. |
+| Report metadata | Rich pulse report with status, labels, markings and refs. | Stable generic report export; pulse lifecycle, votes and indicator observation windows are preserved in audit metadata. | Add OTX-compatible report fields after curation. |
+| Author/provider identity | AlienVault plus pulse author. | OTX author/source identity is captured as audit-only graph evidence. | Preserve provider and source author as graph/provenance evidence. |
+| OTX entity extraction | Promotes adversary, malware, ATT&CK, sectors, countries and CVEs. | Extracts these into audit-only `graph_evidence` and graph candidates when source evidence exists. | Promote only after confidence and policy validation. |
 | Observables | Emits supported SCO/custom observables. | Not emitted by current exporter. | Add observable output in graph-aware STIX builder. |
 | Indicators | Emits supported STIX/YARA indicators with score metadata. | Emits selected STIX indicators. | Preserve official-compatible indicator semantics plus NarrowCTI scoring evidence. |
-| Vulnerabilities | Creates CVE vulnerabilities from indicators and optional tag guessing. | CVE graph mapping is pending. | Add vulnerability candidates with NVD references and policy controls. |
+| Vulnerabilities | Creates CVE vulnerabilities from indicators and optional tag guessing. | CVE values from OTX fields, indicators, tags and references become audit-only vulnerability candidates. | Add NVD references, enrichment and relationship policy controls before export. |
 | Relationships | Emits `uses`, `targets`, `based-on` and `indicates`. | Relationships are audit evidence only. | Add relationship policy with confidence/provenance. |
 | Country handling | Country locations use placeholder `ZZ`. | Extracts target countries as evidence. | Normalize countries properly before export. |
 | MITRE enrichment | Uses ATT&CK id as object name and `x_mitre_id`. | Resolves technique metadata through local MITRE cache. | Use NarrowCTI's richer MITRE resolver. |
@@ -285,7 +285,9 @@ complete:
 4. Use local MITRE cache data to enrich official-compatible ATT&CK objects
    beyond the raw technique id.
 5. Add vulnerability mapping for OTX CVE indicators and optional tag-derived
-   CVEs, with tag guessing disabled or audited by default.
+   CVEs, with tag guessing disabled or audited by default. Initial audit-only
+   CVE extraction is implemented; NVD references, enrichment and relationship
+   export remain pending.
 6. Add official-compatible relationship policy for `uses`, `targets`,
    `based-on` and `indicates`.
 7. Add graph-aware STIX export dry-run output that shows what would be created,

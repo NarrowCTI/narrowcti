@@ -102,6 +102,10 @@ detailed graph-enrichment design is tracked in
   metadata. Known clusters now produce graph evidence and candidates for ATT&CK
   attack patterns, threat actors, intrusion sets, malware, tools, target
   sectors, countries and regions before future graph-aware STIX export.
+- Expanded OTX audit extraction with CVE vulnerability candidates and
+  author/source identity evidence. Pulse lifecycle, vote summary and indicator
+  first/last-seen windows are now preserved in audit metadata for future
+  report/indicator STIX enrichment.
 
 ## Validation Target
 
@@ -114,6 +118,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 221 tests
+Ran 222 tests
 OK
 ```

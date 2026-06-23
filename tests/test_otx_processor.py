@@ -299,9 +299,14 @@ class ProcessorTests(unittest.TestCase):
                 "name": "LummaC2 actor pulse",
                 "description": "description",
                 "created": "2026-04-01T00:00:00Z",
+                "modified": "2026-04-03T00:00:00Z",
+                "author_name": "AlienVault Research",
+                "upvotes_count": 7,
+                "downvotes_count": 1,
                 "adversary": "APT Example",
                 "malware_families": ["LummaC2"],
                 "attack_ids": ["T1059"],
+                "cves": ["CVE-2024-12345"],
                 "industries": ["Finance"],
                 "targeted_countries": ["BR"],
                 "TLP": "tlp:green",
@@ -346,8 +351,12 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(["APT Example"], entities["adversaries"])
         self.assertEqual(["LummaC2"], entities["malware_families"])
         self.assertEqual(["T1059"], entities["attack_ids"])
+        self.assertEqual(["CVE-2024-12345"], entities["vulnerabilities"])
         self.assertEqual(["Finance"], entities["industries"])
         self.assertEqual(["BR"], entities["targeted_countries"])
+        self.assertEqual(["AlienVault Research"], entities["authors"])
+        self.assertEqual("2026-04-03T00:00:00Z", entities["lifecycle"]["modified"])
+        self.assertEqual(7, entities["vote_summary"]["upvotes"])
         self.assertEqual(["green"], entities["tlp"])
         mitre_attack = records[0].metadata["mitre_attack"]
         self.assertTrue(mitre_attack["available"])
@@ -360,11 +369,20 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("v0.7.0-dev", graph_evidence["version"])
         self.assertEqual("alienvault:otx", graph_evidence["source_key"])
         self.assertEqual(2, graph_evidence["counts"]["attack_pattern"])
+        self.assertEqual(1, graph_evidence["counts"]["vulnerability"])
         self.assertTrue(
             any(
                 record["entity_type"] == "threat_actor"
                 and record["value"] == "APT Example"
                 and record["stix_object_type"] == "threat-actor"
+                for record in graph_evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "vulnerability"
+                and record["value"] == "CVE-2024-12345"
+                and record["stix_object_type"] == "vulnerability"
                 for record in graph_evidence["records"]
             )
         )
@@ -383,6 +401,7 @@ class ProcessorTests(unittest.TestCase):
             graph_candidates["candidate_count"],
         )
         self.assertEqual(2, graph_candidates["counts"]["attack_pattern"])
+        self.assertEqual(1, graph_candidates["counts"]["vulnerability"])
         self.assertTrue(
             any(
                 candidate["entity_type"] == "threat_actor"

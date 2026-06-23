@@ -21,6 +21,12 @@ class GraphEvidenceTests(unittest.TestCase):
                             "source_field": "attack_ids",
                             "confidence": 70,
                         },
+                        {
+                            "entity_type": "vulnerability",
+                            "value": "CVE-2024-12345",
+                            "source_field": "vulnerabilities",
+                            "confidence": 75,
+                        },
                     ]
                 },
                 "mitre_attack": {
@@ -54,8 +60,9 @@ class GraphEvidenceTests(unittest.TestCase):
 
         self.assertEqual("v0.7.0-dev", evidence["version"])
         self.assertEqual("alienvault:otx", evidence["source_key"])
-        self.assertEqual(8, evidence["record_count"])
+        self.assertEqual(9, evidence["record_count"])
         self.assertEqual(2, evidence["counts"]["attack_pattern"])
+        self.assertEqual(1, evidence["counts"]["vulnerability"])
         self.assertEqual(1, evidence["counts"]["attack_platform"])
         self.assertEqual(1, evidence["counts"]["attack_data_source"])
         self.assertEqual(1, evidence["counts"]["detection_guidance"])
@@ -70,6 +77,19 @@ class GraphEvidenceTests(unittest.TestCase):
                 "source_name": "otx",
                 "source_field": "adversary",
                 "confidence": 60,
+            },
+            evidence["records"],
+        )
+        self.assertIn(
+            {
+                "entity_type": "vulnerability",
+                "value": "CVE-2024-12345",
+                "stix_object_type": "vulnerability",
+                "relationship_type": "related-to",
+                "source_key": "alienvault:otx",
+                "source_name": "otx",
+                "source_field": "vulnerabilities",
+                "confidence": 75,
             },
             evidence["records"],
         )

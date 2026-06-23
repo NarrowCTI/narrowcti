@@ -12,6 +12,7 @@ ENTITY_TARGETS = {
     "intrusion_set": ("intrusion-set", "attributed-to"),
     "malware": ("malware", "uses"),
     "tool": ("tool", "uses"),
+    "vulnerability": ("vulnerability", "related-to"),
     "attack_pattern": ("attack-pattern", "uses"),
     "attack_tactic": ("x-mitre-tactic", "uses"),
     "target_sector": ("identity", "targets"),
@@ -65,6 +66,8 @@ def otx_entity_evidence(entities, source_key=""):
             source_name="otx",
             source_field=item.get("source_field"),
             confidence=item.get("confidence"),
+            display_name=item.get("display_name"),
+            attributes=item.get("attributes"),
         )
         if record:
             records.append(record)

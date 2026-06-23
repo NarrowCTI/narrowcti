@@ -95,9 +95,13 @@ OTX v0.6 already extracts useful entity hints. v0.7 should validate and map:
 | `adversary` | `threat-actor` or `intrusion-set` | Requires confidence and alias handling. |
 | `malware_families` | `malware` or `tool` | Should not be treated as high-confidence attribution by itself. |
 | `attack_ids` | `attack-pattern` | Resolve through local MITRE cache and include tactics. |
+| `cve`, `cves`, `vulnerabilities`, CVE indicators/tags | `vulnerability` | CVEs become audit-only graph candidates before future NVD enrichment and relationship export. |
 | `industries` | sector `identity` or OpenCTI sector entity | Treat as victimology evidence. |
 | `targeted_countries` | `location` | Treat as victimology/geography evidence. |
 | `target_countries` | `location` | Alias accepted from normalized OTX schemas. |
+| `author_name`, `author`, `creator`, `owner`, `submitter` | source `identity` | Preserved as author/source evidence, not automatic attribution. |
+| `created`, `modified`, `revision`, `public`, votes | report metadata | Captured in audit metadata for future report-compatible STIX output. |
+| indicator `first_seen` / `last_seen` | observation timing metadata | Captured as an observation window for future indicator/observable enrichment. |
 | `references` | `external_references` | Preserve evidence trail. |
 | TLP fields/tags | `marking-definition` / OpenCTI marking | Must preserve sharing constraints. |
 | `tags` | labels plus extraction candidates | Tags are weak unless mapped to a known taxonomy. |
@@ -429,8 +433,11 @@ v0.7 should not be considered complete until:
    in `core/graph_candidates.py` and attached to OTX/MISP audit metadata.
 2. Expand OTX metadata mapping into graph candidates. Initial OTX and MITRE
    evidence mapping is now present as `graph_evidence` and `graph_candidates`
-   in decision/quarantine metadata, and the official AlienVault connector
-   mapping has been validated as the source-specific graph baseline.
+   in decision/quarantine metadata, including CVE vulnerability candidates and
+   OTX author identity evidence. Pulse lifecycle, vote summary and indicator
+   observation windows are captured as audit metadata for future
+   report/indicator STIX output. The official AlienVault connector mapping has
+   been validated as the source-specific graph baseline.
 3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
    original-source, TLP, tag and common Galaxy/Cluster evidence mapping is
    present as `graph_evidence` and `graph_candidates`; MISP official connector
