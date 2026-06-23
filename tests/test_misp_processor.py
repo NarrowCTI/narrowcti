@@ -439,6 +439,54 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_misp_event_reports(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["EventReport"] = [
+            {
+                "uuid": "event-report-1",
+                "name": "Initial analyst report",
+                "content": "The event describes exploitation activity.",
+                "timestamp": "1782004900",
+            },
+            {
+                "uuid": "event-report-deleted",
+                "name": "Deleted report",
+                "content": "Should not be represented.",
+                "deleted": "1",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(1, len(metadata["misp_event_reports"]))
+        self.assertEqual(
+            "Initial analyst report",
+            metadata["misp_event_reports"][0]["title"],
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["event_report"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "event_report"
+                and record["stix_object_type"] == "note"
+                and record["attributes"]["content"]
+                == "The event describes exploitation activity."
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["event_report"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "event_report"
+                and candidate["name"] == "Initial analyst report"
+                and candidate["relationship_type"] == "documents"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_builds_dry_run_graph_export_plan(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         prepared = SimpleNamespace(event=enriched_event(), score_details={})

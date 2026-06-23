@@ -187,7 +187,7 @@ it should remain only one input to NarrowCTI's broader curation score.
 
 | Capability | Official MISP connector | Current NarrowCTI v0.7 state | v0.7 target |
 | --- | --- | --- | --- |
-| Event report semantics | Rich `misp-event` report with dates, refs, markings, files and notes. | Stable generic report export through `exporters/stix_builder.py`. | Add MISP-compatible report fields after curation. |
+| Event report semantics | Rich `misp-event` report with dates, refs, markings, files and notes. | Stable generic report export through `exporters/stix_builder.py`; EventReport content is parsed into audit-only `event_report` / `note` candidates. | Add MISP-compatible report fields and STIX Note export after curation. |
 | Attribute coverage | Broad observable and indicator mapping. | Bounded IoC extraction for common indicator types. | Expand to official-compatible observable and indicator mapping. |
 | Observables | Creates STIX/OpenCTI observables. | Not emitted by current exporter. | Emit observables in graph-aware STIX builder. |
 | Indicators | Creates indicators with observable-derived patterns and score metadata. | Creates simple STIX indicators for selected types. | Preserve official pattern semantics plus NarrowCTI score evidence. |

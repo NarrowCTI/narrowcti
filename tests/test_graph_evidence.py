@@ -354,6 +354,45 @@ class GraphEvidenceTests(unittest.TestCase):
         self.assertEqual("CVE-2023-9999", galaxy_vulnerability["value"])
         self.assertEqual("CVE-2023-9999", galaxy_vulnerability["attributes"]["external_id"])
 
+    def test_builds_misp_event_report_note_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_event_reports": [
+                    {
+                        "title": "Initial analyst report",
+                        "content": "The event describes exploitation activity.",
+                        "uuid": "event-report-1",
+                        "timestamp": "1782004900",
+                        "source_field": "EventReport[0]",
+                    }
+                ]
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["event_report"])
+        self.assertIn(
+            {
+                "entity_type": "event_report",
+                "value": "Initial analyst report",
+                "stix_object_type": "note",
+                "relationship_type": "documents",
+                "source_key": "misp:misp",
+                "source_name": "misp",
+                "source_field": "EventReport[0]",
+                "confidence": 70,
+                "attributes": {
+                    "content": "The event describes exploitation activity.",
+                    "event_report_uuid": "event-report-1",
+                    "timestamp": "1782004900",
+                },
+            },
+            evidence["records"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

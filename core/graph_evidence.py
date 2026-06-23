@@ -26,6 +26,7 @@ ENTITY_TARGETS = {
     "attack_platform": ("x-narrowcti-attack-platform", "applies-to"),
     "attack_data_source": ("x-mitre-data-source", "detects"),
     "detection_guidance": ("note", "documents"),
+    "event_report": ("note", "documents"),
 }
 
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
@@ -41,6 +42,9 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     records.extend(misp_galaxy_evidence(metadata.get("misp_galaxies"), source_key))
     records.extend(
         misp_vulnerability_evidence(metadata.get("misp_vulnerabilities"), source_key)
+    )
+    records.extend(
+        misp_event_report_evidence(metadata.get("misp_event_reports"), source_key)
     )
 
     return {
@@ -399,6 +403,39 @@ def misp_vulnerability_evidence(vulnerabilities, source_key=""):
             source_name="misp",
             source_field=vulnerability.get("source_field"),
             confidence=75,
+            attributes=attributes,
+        )
+        if record:
+            records.append(record)
+    return records
+
+
+def misp_event_report_evidence(event_reports, source_key=""):
+    records = []
+    for event_report in event_reports or []:
+        event_report = compact_mapping(event_report)
+        if not event_report:
+            continue
+        title = clean_string(event_report.get("title"))
+        content = clean_string(event_report.get("content"))
+        value = title or content[:120]
+        attributes = compact_mapping(
+            {
+                "content": content,
+                "event_report_uuid": event_report.get("uuid"),
+                "timestamp": event_report.get("timestamp"),
+                "created": event_report.get("created"),
+                "modified": event_report.get("modified"),
+            }
+        )
+        record = evidence_record(
+            entity_type="event_report",
+            value=value,
+            source_key=source_key,
+            source_name="misp",
+            source_field=event_report.get("source_field") or "EventReport",
+            confidence=70,
+            display_name=title,
             attributes=attributes,
         )
         if record:

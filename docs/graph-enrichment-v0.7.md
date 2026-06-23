@@ -133,6 +133,7 @@ graph, while NarrowCTI remains responsible for curation before graph promotion.
 | Malware/tool galaxies | `malware` or `tool` | Useful for Arsenal enrichment. |
 | Sector/geography tags | sector `identity`, `location` | Victimology context. |
 | CVE attributes/tags | `vulnerability` | CVEs from tags, event text, attributes and object attributes become audit-only vulnerability candidates before future NVD enrichment and relationship export. |
+| EventReport / analyst notes | `note` | EventReport content becomes audit-only note evidence and candidates before future STIX note export. |
 | Organization/sharing/TLP | markings and provenance | Do not lose handling constraints. |
 
 The code-level baseline from `opencti/connector-misp:6.9.4` shows that direct
@@ -155,6 +156,13 @@ MISP tags, event titles/descriptions, attributes and object attributes into
 `misp_vulnerabilities`, then emits audit-only `vulnerability` graph evidence
 and candidates. Galaxy clusters that represent vulnerabilities are also mapped
 to `vulnerability` when a CVE id is present.
+
+MISP EventReport audit extraction is implemented as the first note-oriented
+mapping layer. NarrowCTI ignores deleted reports, normalizes report title,
+content, UUID and timestamps into `misp_event_reports`, then emits audit-only
+`event_report` / `note` graph evidence and candidates. This preserves analyst
+context for future graph-aware STIX export without bypassing curation,
+deduplication or OpenCTI validation.
 
 ### MITRE ATT&CK
 
@@ -445,11 +453,11 @@ v0.7 should not be considered complete until:
    report/indicator STIX output. The official AlienVault connector mapping has
    been validated as the source-specific graph baseline.
 3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
-   original-source, TLP, tag, CVE vulnerability and common Galaxy/Cluster
+   original-source, TLP, tag, EventReport note, CVE vulnerability and common Galaxy/Cluster
    evidence mapping is present as `graph_evidence` and `graph_candidates`;
    MISP official connector compatibility has been validated as the graph
-   baseline; deeper object relationships, sightings, EventReport notes and NVD
-   vulnerability enrichment remain pending.
+   baseline; deeper object relationships, sightings and NVD vulnerability
+   enrichment remain pending.
 4. Extend MITRE cache usage beyond technique names into reusable graph
    references. Technique-level external references, kill chain phase
    attributes, platforms, data sources and detection guidance are now emitted

@@ -64,6 +64,9 @@ def decision_metadata(
     misp_vulnerabilities = extract_misp_vulnerabilities(source, tags)
     if misp_vulnerabilities:
         metadata["misp_vulnerabilities"] = misp_vulnerabilities
+    misp_event_reports = extract_misp_event_reports(source)
+    if misp_event_reports:
+        metadata["misp_event_reports"] = misp_event_reports
     if controls:
         metadata["guardrails"] = controls
     score_details = getattr(candidate, "score_details", None)
@@ -352,6 +355,75 @@ def deduplicate_misp_vulnerabilities(findings):
         seen.add(key)
         deduplicated.append(finding)
     return deduplicated
+
+
+def extract_misp_event_reports(event):
+    event = compact_mapping(event)
+    reports = []
+    for index, report in enumerate(list_values(event.get("EventReport"))):
+        normalized = normalize_misp_event_report(report, f"EventReport[{index}]")
+        if normalized:
+            reports.append(normalized)
+    return deduplicate_misp_event_reports(reports)
+
+
+def normalize_misp_event_report(report, source_field):
+    report = compact_mapping(report)
+    if not report or is_truthy(report.get("deleted")):
+        return {}
+    title = clean_text(
+        report.get("name")
+        or report.get("title")
+        or report.get("event_report_title")
+        or report.get("uuid")
+    )
+    content = clean_text(
+        report.get("content")
+        or report.get("text")
+        or report.get("body")
+        or report.get("value")
+    )
+    if not title and content:
+        title = content[:120]
+    if not title and not content:
+        return {}
+    return compact_mapping(
+        {
+            "title": title,
+            "content": content,
+            "uuid": report.get("uuid"),
+            "timestamp": report.get("timestamp"),
+            "created": report.get("created"),
+            "modified": report.get("modified"),
+            "source_field": source_field,
+        }
+    )
+
+
+def deduplicate_misp_event_reports(reports):
+    seen = set()
+    deduplicated = []
+    for report in reports:
+        key = (
+            str(report.get("uuid", "")).casefold(),
+            str(report.get("title", "")).casefold(),
+            str(report.get("content", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(report)
+    return deduplicated
+
+
+def clean_text(value):
+    return " ".join(str(value or "").strip().split())
+
+
+def is_truthy(value):
+    if value is True:
+        return True
+    return clean_text(value).casefold() in {"1", "true", "yes"}
 
 
 class MISPProcessor:
