@@ -21,6 +21,9 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 - Expand OTX, MISP and MITRE evidence mapping into graph-aware candidate data.
 - Add enterprise filters for actor, arsenal, ATT&CK, sector, geography,
   artifact criticality and graph state.
+- Define contextual scoring based on graph evidence so actor, arsenal, TTP,
+  sector, geography and author relevance can influence decisions without
+  bypassing policy.
 - Introduce relationship confidence, provenance and audit evidence.
 - Extend graph hygiene beyond indicator deduplication into entity and
   relationship quality controls.
@@ -47,6 +50,9 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
   official OpenCTI AlienVault connector mapping model and define it as the
   source-specific compatibility baseline for NarrowCTI curated OTX graph
   export.
+- Added `docs/contextual-scoring-reference-v0.7.md` to evaluate the OpenCTI
+  scoring-calculator connector as a reference for NarrowCTI contextual
+  pre-ingestion scoring.
 - Expanded OTX metadata normalization to handle `target_countries` aliases and
   object `display_name` values from OTX metadata fields.
 - Expanded MITRE technique cache metadata to preserve description, platforms,

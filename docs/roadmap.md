@@ -146,6 +146,7 @@ Status: in development.
 Detailed design:
 
 - `docs/graph-enrichment-v0.7.md`
+- `docs/contextual-scoring-reference-v0.7.md`
 
 Development notes:
 
@@ -160,6 +161,8 @@ Purpose:
   geography, artifact criticality and graph state.
 - Add confidence and provenance controls for relationships inferred from source
   fields.
+- Add contextual scoring design based on graph evidence for threat, arsenal,
+  sector, geography, TTP and author relevance.
 - Expand graph hygiene from indicator deduplication into relationship and entity
   quality controls.
 
@@ -170,6 +173,8 @@ Expected outcomes:
 - Analysts can filter intake by monitored actors, sectors, tactics, malware
   families and infrastructure classes.
 - Relationship evidence is auditable before it becomes graph knowledge.
+- Score decisions can account for high-value graph context without hiding the
+  base score or bypassing policy.
 - Source metadata validation is broad enough for OTX, MISP and MITRE evidence
   to enrich OpenCTI graph views with high-signal CTI context instead of only
   reports and indicators.
@@ -202,7 +207,7 @@ Purpose:
 - Ship a stable, documented and installable product.
 - Finalize commercial license and support terms.
 - Ship the enterprise curation engine with quarantine release, graph enrichment,
-  explainable policy and measurable graph-quality outcomes.
+  contextual scoring, explainable policy and measurable graph-quality outcomes.
 - Provide enterprise CTI reporting that explains what was ingested, what was
   filtered, how policy was applied, which sources contributed, and how graph
   quality improved.

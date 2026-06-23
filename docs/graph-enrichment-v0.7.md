@@ -72,7 +72,9 @@ OTX and MITRE ATT&CK metadata coverage is tracked in
 `docs/metadata-validation-v0.7.md`. MISP official connector compatibility is
 tracked in `docs/misp-official-connector-mapping-v0.7.md`, and OTX official
 connector compatibility is tracked in
-`docs/otx-official-connector-mapping-v0.7.md`.
+`docs/otx-official-connector-mapping-v0.7.md`. Contextual scoring references
+from the OpenCTI scoring-calculator connector are tracked in
+`docs/contextual-scoring-reference-v0.7.md`.
 
 ## Initial Source Focus
 
@@ -227,6 +229,29 @@ Confidence should be policy-driven. Example:
 | Generic tag containing actor/malware-like text | Low |
 | Analyst-released quarantine item | Configurable boost with audit evidence |
 
+## Contextual Scoring
+
+v0.7 should treat graph evidence as a future scoring input, not only as export
+metadata. The OpenCTI `scoring-calculator` internal enrichment connector
+validates a useful pattern: indicator scores can be increased by high-value
+context across Threat, Toolbox, Location, Sector, TTP and Author categories.
+
+NarrowCTI should adapt that pattern before ingestion. The current base score in
+`core/scoring.py` should remain responsible for source confidence, query
+relevance, indicator volume and recency. A contextual scoring layer should then
+apply a bounded relative impact based on graph evidence:
+
+```text
+contextual_score = base_score + ((100 - base_score) * impact_ratio)
+```
+
+The first implementation must run in dry-run/audit mode and record every
+contextual adjustment with category, priority, matched value, source field and
+impact. It must not bypass TLP, quarantine, confidence or provenance policy.
+
+The detailed design and backlog are tracked in
+`docs/contextual-scoring-reference-v0.7.md`.
+
 ## Enterprise Filters
 
 v0.7 should add visible policy controls for graph-aware curation:
@@ -336,6 +361,8 @@ v0.7 should not be considered complete until:
 10. Validate in OpenCTI with OTX and MISP samples.
 11. Compare a direct official MISP connector import with a NarrowCTI-curated
     import for the same event and document object/relationship differences.
+12. Add contextual scoring dry-run evidence using graph categories inspired by
+    the OpenCTI scoring-calculator reference.
 
 ## Decision
 

@@ -256,6 +256,7 @@ Recommended placement:
 | v0.6 | Add local MITRE ATT&CK cache and technique/tactic resolver. | Required for ATT&CK filters and TTP graph enrichment. |
 | v0.7 | Export richer STIX objects and relationships to OpenCTI. | Starts feeding more OpenCTI tabs and graph pivots. |
 | v0.7 | Add enterprise policy variables for actor, arsenal, ATT&CK, sector and geography filters. | Safe after extraction and quarantine exist. |
+| v0.7 | Add contextual scoring design and dry-run evidence based on graph categories. | Lets actor, arsenal, TTP, sector, location and author relevance influence decisions without hiding the base score. |
 | v0.8 | Add analyst review API/UI and value reporting. | Turns governance into product workflow. |
 | v1.0 | Stable enterprise policy engine with explainable scoring, release, enrichment, graph quality metrics and enterprise CTI report output. | Production-grade target. |
 
@@ -263,6 +264,10 @@ The centralized v0.7 graph enrichment design is tracked in
 `docs/graph-enrichment-v0.7.md`. That document should drive implementation of
 source metadata validation, graph candidate modeling, STIX/OpenCTI object
 mapping, relationship confidence and enterprise graph filters.
+
+The contextual scoring reference is tracked in
+`docs/contextual-scoring-reference-v0.7.md`. It should guide how NarrowCTI
+separates base score from graph-context score and explains every adjustment.
 
 The enterprise CTI report should be built after reliable evidence exists from
 gateway summaries, decision audit, quarantine/release actions, artifact
