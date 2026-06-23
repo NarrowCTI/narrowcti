@@ -245,6 +245,8 @@ It records:
 - Candidate, accepted and held counts.
 - Held reason counts.
 - Accepted object and relationship counts.
+- Deterministic local entity and relationship deduplication keys.
+- Duplicate entity, duplicate relationship and duplicate candidate counts.
 - Dry-run would-create counts when dry-run mode is enabled.
 - Per-candidate actions.
 
@@ -257,7 +259,10 @@ Current modes are:
   graph-aware STIX builder and OpenCTI validation are implemented.
 
 This gives operators an early view of graph promotion intent without changing
-OpenCTI graph state.
+OpenCTI graph state. The current deduplication is intra-plan only: it prevents
+obvious duplicate entity/relationship intent inside the same decision record
+and produces audit evidence, but it does not replace future OpenCTI-side graph
+lookup before real export.
 
 ## Policy Surface
 
@@ -309,9 +314,9 @@ NarrowCTI applies it automatically and records the decision trail.
 | Relationship provenance | Implemented on graph candidates. |
 | Relationship confidence | Implemented on graph candidates. |
 | Graph candidate policy | Implemented as audit-only accepted and held candidate output. |
-| Graph export planning | Implemented as audit/dry-run/blocked export metadata for OTX and MISP decisions. |
+| Graph export planning | Implemented as audit/dry-run/blocked export metadata for OTX and MISP decisions, including intra-plan entity and relationship deduplication evidence. |
 | Decision audit metadata | Implemented for OTX and MISP processors. |
-| Decision audit graph export reporting | Implemented in `gateway.decisions` with graph export modes, statuses, actions, would-create counts, held reasons, source rollups and query rollups. |
+| Decision audit graph export reporting | Implemented in `gateway.decisions` with graph export modes, statuses, actions, would-create counts, deduplicated counts, held reasons, source rollups and query rollups. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
 | Stable STIX export | Implemented as current `Report + Indicator` bundle. |
 
@@ -320,7 +325,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Area | Target |
 | --- | --- |
 | Graph-aware STIX builder | Create OpenCTI-compatible STIX objects and relationships from accepted graph candidates. |
-| Graph deduplication | Check existing OpenCTI entities and relationships before promotion. |
+| Graph deduplication | Extend implemented intra-plan graph deduplication with persisted graph dedup state and OpenCTI entity/relationship lookup before promotion. |
 | Graph export dry-run reporting | Extend implemented decision-audit graph export rollups into OpenCTI lab comparison evidence and future enterprise CTI reports. |
 | MISP rich mapping | Extract galaxies, clusters, objects, object relations and ATT&CK/victimology context more deeply. |
 | OTX rich mapping | Expand pulse lifecycle, author, vote, vulnerability and indicator timing metadata. |

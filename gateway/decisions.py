@@ -298,6 +298,9 @@ def empty_graph_export_summary(include_breakdowns=True):
         "candidate_count": 0,
         "accepted_count": 0,
         "held_count": 0,
+        "deduplicated_candidate_count": 0,
+        "deduplicated_entity_count": 0,
+        "deduplicated_relationship_count": 0,
         "would_create_object_count": 0,
         "would_create_relationship_count": 0,
         "modes": {},
@@ -339,6 +342,15 @@ def merge_graph_export_plan(summary, plan):
     summary["candidate_count"] += int(plan.get("candidate_count", 0) or 0)
     summary["accepted_count"] += int(plan.get("accepted_count", 0) or 0)
     summary["held_count"] += int(plan.get("held_count", 0) or 0)
+    summary["deduplicated_candidate_count"] += int(
+        plan.get("deduplicated_candidate_count", 0) or 0
+    )
+    summary["deduplicated_entity_count"] += int(
+        plan.get("deduplicated_entity_count", 0) or 0
+    )
+    summary["deduplicated_relationship_count"] += int(
+        plan.get("deduplicated_relationship_count", 0) or 0
+    )
     summary["would_create_object_count"] += int(
         plan.get("would_create_object_count", 0) or 0
     )
@@ -506,6 +518,10 @@ def format_graph_export_summary(summary):
         f"candidates={summary.get('candidate_count', 0)} "
         f"accepted={summary.get('accepted_count', 0)} "
         f"held={summary.get('held_count', 0)} "
+        f"deduplicated={summary.get('deduplicated_candidate_count', 0)} "
+        f"deduplicated_entities={summary.get('deduplicated_entity_count', 0)} "
+        f"deduplicated_relationships="
+        f"{summary.get('deduplicated_relationship_count', 0)} "
         f"would_create_objects={summary.get('would_create_object_count', 0)} "
         f"would_create_relationships="
         f"{summary.get('would_create_relationship_count', 0)} "

@@ -85,6 +85,10 @@ detailed graph-enrichment design is tracked in
 - Extended the decision audit report to aggregate `graph_export_plan` evidence
   by mode, status, action, held reason, source and query, including
   would-create object and relationship counts for graph export dry-runs.
+- Added intra-plan graph deduplication to `graph_export_plan`, with
+  deterministic entity and relationship keys, duplicate counts and adjusted
+  dry-run would-create object/relationship totals before real graph export
+  exists.
 
 ## Validation Target
 
@@ -97,6 +101,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 207 tests
+Ran 209 tests
 OK
 ```

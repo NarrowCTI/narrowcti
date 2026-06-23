@@ -1,5 +1,6 @@
 from collections import Counter
 from collections.abc import Mapping
+from hashlib import sha256
 
 from core.graph_candidates import GRAPH_CANDIDATE_VERSION
 
@@ -27,16 +28,10 @@ def build_graph_export_plan(graph_candidate_policy, mode="audit"):
     policy = graph_candidate_policy if isinstance(graph_candidate_policy, Mapping) else {}
     accepted = clean_candidates(policy.get("accepted"))
     held = clean_held(policy.get("held"))
+    accepted_actions = planned_accepted_actions(accepted, mode)
 
     actions = []
-    for candidate in accepted:
-        actions.append(
-            {
-                "action": accepted_action(mode),
-                "reason": accepted_reason(mode),
-                "candidate": candidate_summary(candidate),
-            }
-        )
+    actions.extend(accepted_actions)
     for item in held:
         actions.append(
             {
@@ -47,6 +42,15 @@ def build_graph_export_plan(graph_candidate_policy, mode="audit"):
         )
 
     would_create = mode == "dry-run"
+    create_actions = [
+        action for action in accepted_actions if action.get("action") == "would_create"
+    ]
+    duplicate_actions = [
+        action
+        for action in accepted_actions
+        if action.get("deduplication", {}).get("entity_duplicate")
+        or action.get("deduplication", {}).get("relationship_duplicate")
+    ]
     return {
         "version": GRAPH_EXPORT_PLAN_VERSION,
         "mode": mode,
@@ -60,17 +64,82 @@ def build_graph_export_plan(graph_candidate_policy, mode="audit"):
         "held_reasons": held_reason_counts(policy, held),
         "accepted_object_counts": count_field(accepted, "stix_object_type"),
         "accepted_relationship_counts": count_field(accepted, "relationship_type"),
-        "would_create_object_count": len(accepted) if would_create else 0,
-        "would_create_relationship_count": (
-            len([item for item in accepted if clean_string(item.get("relationship_type"))])
-            if would_create
-            else 0
+        "deduplicated_candidate_count": len(duplicate_actions),
+        "deduplicated_entity_count": count_deduplicated(
+            duplicate_actions,
+            "entity_duplicate",
         ),
+        "deduplicated_relationship_count": count_deduplicated(
+            duplicate_actions,
+            "relationship_duplicate",
+        ),
+        "would_create_object_count": len(
+            [
+                action
+                for action in create_actions
+                if not action.get("deduplication", {}).get("entity_duplicate")
+            ]
+        )
+        if would_create
+        else 0,
+        "would_create_relationship_count": len(
+            [
+                action
+                for action in create_actions
+                if action.get("deduplication", {}).get("relationship_key")
+                and not action.get("deduplication", {}).get("relationship_duplicate")
+            ]
+        )
+        if would_create
+        else 0,
         "actions": actions,
     }
 
 
-def accepted_action(mode):
+def planned_accepted_actions(accepted, mode):
+    entity_keys = set()
+    relationship_keys = set()
+    actions = []
+
+    for candidate in accepted:
+        entity_key = graph_entity_key(candidate)
+        relationship_key = graph_relationship_key(candidate, entity_key)
+        entity_duplicate = entity_key in entity_keys if entity_key else False
+        relationship_duplicate = (
+            relationship_key in relationship_keys if relationship_key else False
+        )
+        if entity_key:
+            entity_keys.add(entity_key)
+        if relationship_key:
+            relationship_keys.add(relationship_key)
+
+        action = {
+            "action": planned_accepted_action(
+                mode,
+                entity_duplicate=entity_duplicate,
+                relationship_duplicate=relationship_duplicate,
+            ),
+            "reason": planned_accepted_reason(
+                mode,
+                entity_duplicate=entity_duplicate,
+                relationship_duplicate=relationship_duplicate,
+            ),
+            "candidate": candidate_summary(candidate),
+            "deduplication": {
+                "entity_key": entity_key,
+                "relationship_key": relationship_key,
+                "entity_duplicate": entity_duplicate,
+                "relationship_duplicate": relationship_duplicate,
+            },
+        }
+        actions.append(action)
+
+    return actions
+
+
+def planned_accepted_action(mode, entity_duplicate=False, relationship_duplicate=False):
+    if relationship_duplicate:
+        return "deduplicated"
     if mode == "dry-run":
         return "would_create"
     if mode == "export":
@@ -78,12 +147,28 @@ def accepted_action(mode):
     return "audit_only"
 
 
-def accepted_reason(mode):
+def planned_accepted_reason(mode, entity_duplicate=False, relationship_duplicate=False):
+    if entity_duplicate and relationship_duplicate:
+        return "graph_plan_duplicate_entity_and_relationship"
+    if entity_duplicate:
+        return "graph_plan_duplicate_entity"
+    if relationship_duplicate:
+        return "graph_plan_duplicate_relationship"
     if mode == "dry-run":
         return "graph_export_dry_run"
     if mode == "export":
         return "graph_export_not_implemented"
     return "graph_export_mode_audit"
+
+
+def count_deduplicated(actions, field):
+    return len(
+        [
+            action
+            for action in actions
+            if action.get("deduplication", {}).get(field)
+        ]
+    )
 
 
 def plan_status(mode):
@@ -167,6 +252,39 @@ def candidate_summary(candidate):
     if provenance:
         summary["provenance"] = provenance
     return summary
+
+
+def graph_entity_key(candidate):
+    candidate = mapping_from(candidate)
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    value = normalized_key_value(candidate.get("value") or candidate.get("name"))
+    if not stix_object_type or not value:
+        return ""
+    return stable_key("entity", stix_object_type, value)
+
+
+def graph_relationship_key(candidate, entity_key=""):
+    candidate = mapping_from(candidate)
+    relationship_type = clean_string(candidate.get("relationship_type")).lower()
+    if not relationship_type or not entity_key:
+        return ""
+    return stable_key(
+        "relationship",
+        clean_string(candidate.get("source_key")).lower(),
+        clean_string(candidate.get("external_id")).lower(),
+        relationship_type,
+        entity_key,
+    )
+
+
+def stable_key(*parts):
+    material = "|".join(clean_string(part).lower() for part in parts)
+    digest = sha256(material.encode("utf-8")).hexdigest()
+    return f"{parts[0]}:{digest[:24]}"
+
+
+def normalized_key_value(value):
+    return clean_string(value).casefold()
 
 
 def mapping_from(value):

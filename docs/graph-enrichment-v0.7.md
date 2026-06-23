@@ -329,10 +329,18 @@ relationships that would be attempted later. `export` mode is explicitly
 blocked until the graph-aware STIX builder, graph deduplication and OpenCTI
 validation are complete.
 
+`graph_export_plan` now also performs intra-plan graph hygiene. It creates
+deterministic entity and relationship deduplication keys, marks duplicate
+entities and duplicate relationships, and reduces dry-run would-create object
+or relationship counts when duplicate graph intent appears inside the same
+decision record. This is not yet OpenCTI-side deduplication; it is the first
+safe dedup layer before persisted graph lookup and real export.
+
 The decision audit report now aggregates `graph_export_plan` evidence across
 decision audit records. Operators can see graph export modes, statuses,
 actions, accepted and held candidate counts, would-create object/relationship
-counts, held reasons and source/query rollups without reading raw JSONL.
+counts, deduplicated entity/relationship counts, held reasons and source/query
+rollups without reading raw JSONL.
 
 ## Graph Hygiene
 
@@ -420,7 +428,10 @@ v0.7 should not be considered complete until:
 7. Add enterprise graph filters. Initial audit-only candidate policy is
    implemented for entity confidence, relationship confidence, provenance and
    allowed graph entity/STIX object types.
-8. Add graph deduplication and optional OpenCTI graph lookup.
+8. Add graph deduplication and optional OpenCTI graph lookup. Initial
+   intra-plan entity and relationship deduplication is implemented in
+   `graph_export_plan`; persisted graph state and OpenCTI lookup remain
+   pending.
 9. Add graph export dry-run reporting. Initial per-decision
    `graph_export_plan` metadata and decision-audit aggregate rollups are
    implemented for audit/dry-run visibility; OpenCTI comparison evidence

@@ -68,7 +68,10 @@ future graph promotion decision visible in decision audit and quarantine
 metadata through `graph_candidate_policy` and `graph_export_plan`. The
 decision audit report also aggregates graph export plan evidence so operators
 can review modes, statuses, actions, would-create counts, held reasons and
-source/query rollups without reading raw JSONL records.
+source/query rollups without reading raw JSONL records. v0.7 graph export
+plans also include local intra-plan entity and relationship deduplication
+evidence. This reduces duplicate dry-run intent inside one decision record, but
+does not replace future OpenCTI graph lookup.
 
 ## Source Examples
 

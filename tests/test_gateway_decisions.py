@@ -91,6 +91,9 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                         candidate_count=3,
                         accepted_count=2,
                         held_count=1,
+                        deduplicated_candidate_count=1,
+                        deduplicated_entity_count=1,
+                        deduplicated_relationship_count=1,
                         would_create_object_count=2,
                         would_create_relationship_count=2,
                         actions=["would_create", "would_create", "held"],
@@ -129,6 +132,9 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(4, graph["candidate_count"])
         self.assertEqual(3, graph["accepted_count"])
         self.assertEqual(1, graph["held_count"])
+        self.assertEqual(1, graph["deduplicated_candidate_count"])
+        self.assertEqual(1, graph["deduplicated_entity_count"])
+        self.assertEqual(1, graph["deduplicated_relationship_count"])
         self.assertEqual(2, graph["would_create_object_count"])
         self.assertEqual(2, graph["would_create_relationship_count"])
         self.assertEqual({"audit": 1, "dry-run": 1}, graph["modes"])
@@ -337,6 +343,9 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                             candidate_count=2,
                             accepted_count=2,
                             held_count=0,
+                            deduplicated_candidate_count=1,
+                            deduplicated_entity_count=1,
+                            deduplicated_relationship_count=0,
                             would_create_object_count=2,
                             would_create_relationship_count=1,
                             actions=["would_create", "would_create"],
@@ -351,6 +360,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         text = format_text_report(report)
 
         self.assertIn("graph_export:", text)
+        self.assertIn("deduplicated=1", text)
         self.assertIn("would_create_objects=2", text)
         self.assertIn("actions=would_create:2", text)
         self.assertIn("graph_export_by_source:", text)
@@ -386,6 +396,9 @@ def graph_export_plan(
     candidate_count=0,
     accepted_count=0,
     held_count=0,
+    deduplicated_candidate_count=0,
+    deduplicated_entity_count=0,
+    deduplicated_relationship_count=0,
     would_create_object_count=0,
     would_create_relationship_count=0,
     actions=None,
@@ -401,6 +414,9 @@ def graph_export_plan(
         "candidate_count": candidate_count,
         "accepted_count": accepted_count,
         "held_count": held_count,
+        "deduplicated_candidate_count": deduplicated_candidate_count,
+        "deduplicated_entity_count": deduplicated_entity_count,
+        "deduplicated_relationship_count": deduplicated_relationship_count,
         "held_reasons": held_reasons or {},
         "accepted_object_counts": accepted_object_counts or {},
         "accepted_relationship_counts": accepted_relationship_counts or {},
