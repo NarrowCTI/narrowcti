@@ -293,6 +293,67 @@ class GraphEvidenceTests(unittest.TestCase):
             attack["attributes"]["meta"]["refs"],
         )
 
+    def test_builds_misp_vulnerability_graph_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_vulnerabilities": [
+                    {
+                        "value": "CVE-2024-12345",
+                        "source_field": "Attribute[0]",
+                        "source_type": "attribute",
+                        "attribute_type": "vulnerability",
+                        "attribute_category": "External analysis",
+                        "attribute_uuid": "attr-cve",
+                        "tags": ["exploit:known"],
+                    }
+                ],
+                "misp_galaxies": [
+                    {
+                        "type": "branded-vulnerability",
+                        "value": "CVE-2023-9999",
+                        "uuid": "cluster-cve",
+                        "galaxy_type": "branded-vulnerability",
+                        "galaxy_name": "Branded Vulnerability",
+                        "source_field": "Galaxy",
+                        "meta": {"refs": ["https://nvd.nist.gov/vuln/detail/CVE-2023-9999"]},
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(2, evidence["record_count"])
+        self.assertEqual(2, evidence["counts"]["vulnerability"])
+        self.assertIn(
+            {
+                "entity_type": "vulnerability",
+                "value": "CVE-2024-12345",
+                "stix_object_type": "vulnerability",
+                "relationship_type": "related-to",
+                "source_key": "misp:misp",
+                "source_name": "misp",
+                "source_field": "Attribute[0]",
+                "confidence": 75,
+                "attributes": {
+                    "source_type": "attribute",
+                    "attribute_type": "vulnerability",
+                    "attribute_category": "External analysis",
+                    "attribute_uuid": "attr-cve",
+                    "tags": ["exploit:known"],
+                },
+            },
+            evidence["records"],
+        )
+        galaxy_vulnerability = next(
+            record
+            for record in evidence["records"]
+            if record["source_name"] == "misp-galaxy"
+        )
+        self.assertEqual("CVE-2023-9999", galaxy_vulnerability["value"])
+        self.assertEqual("CVE-2023-9999", galaxy_vulnerability["attributes"]["external_id"])
+
 
 if __name__ == "__main__":
     unittest.main()

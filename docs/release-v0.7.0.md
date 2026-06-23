@@ -106,6 +106,10 @@ detailed graph-enrichment design is tracked in
   author/source identity evidence. Pulse lifecycle, vote summary and indicator
   first/last-seen windows are now preserved in audit metadata for future
   report/indicator STIX enrichment.
+- Added MISP CVE/vulnerability audit extraction from tags, event text,
+  attributes and object attributes. CVE ids now produce audit-only
+  `vulnerability` graph evidence and candidates, including vulnerability
+  Galaxy/Cluster evidence when present.
 
 ## Validation Target
 
@@ -118,6 +122,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 222 tests
+Ran 224 tests
 OK
 ```

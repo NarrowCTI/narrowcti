@@ -29,6 +29,7 @@ ENTITY_TARGETS = {
 }
 
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
+CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 
 
 def build_graph_evidence(metadata, source_key="", external_id="", title=""):
@@ -38,6 +39,9 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     records.extend(mitre_attack_evidence(metadata.get("mitre_attack"), source_key))
     records.extend(misp_metadata_evidence(metadata, source_key))
     records.extend(misp_galaxy_evidence(metadata.get("misp_galaxies"), source_key))
+    records.extend(
+        misp_vulnerability_evidence(metadata.get("misp_vulnerabilities"), source_key)
+    )
 
     return {
         "version": GRAPH_EVIDENCE_VERSION,
@@ -290,6 +294,8 @@ def classify_misp_galaxy(cluster):
         return "attack_pattern", 85
     if "intrusion-set" in kind:
         return "intrusion_set", 80
+    if "vulnerability" in kind or "cve" in kind:
+        return "vulnerability", 80
     if "threat-actor" in kind or "threat actor" in kind:
         return "threat_actor", 80
     if "malpedia" in kind or "ransomware" in kind or "malware" in kind:
@@ -310,6 +316,10 @@ def misp_galaxy_value(entity_type, cluster):
         attack_id = first_attack_id_from_cluster(cluster)
         if attack_id:
             return attack_id
+    if entity_type == "vulnerability":
+        cve_id = first_cve_id_from_cluster(cluster)
+        if cve_id:
+            return cve_id
     return clean_string(cluster.get("value"))
 
 
@@ -329,6 +339,22 @@ def first_attack_id_from_cluster(cluster):
     return ""
 
 
+def first_cve_id_from_cluster(cluster):
+    values = [
+        cluster.get("value"),
+        cluster.get("tag_name"),
+        cluster.get("description"),
+    ]
+    meta = compact_mapping(cluster.get("meta"))
+    for key in ("external_id", "external-id", "cve", "cves", "id", "refs"):
+        values.extend(flatten_values(meta.get(key)))
+    for value in values:
+        match = CVE_ID_PATTERN.search(clean_string(value))
+        if match:
+            return match.group(0).upper()
+    return ""
+
+
 def misp_galaxy_attributes(cluster):
     meta = compact_mapping(cluster.get("meta"))
     attributes = {
@@ -343,7 +369,41 @@ def misp_galaxy_attributes(cluster):
     attack_id = first_attack_id_from_cluster(cluster)
     if attack_id:
         attributes["external_id"] = attack_id
+    cve_id = first_cve_id_from_cluster(cluster)
+    if cve_id:
+        attributes["external_id"] = cve_id
     return compact_mapping(attributes)
+
+
+def misp_vulnerability_evidence(vulnerabilities, source_key=""):
+    records = []
+    for vulnerability in vulnerabilities or []:
+        vulnerability = compact_mapping(vulnerability)
+        if not vulnerability:
+            continue
+        attributes = compact_mapping(
+            {
+                "source_type": vulnerability.get("source_type"),
+                "attribute_type": vulnerability.get("attribute_type"),
+                "attribute_category": vulnerability.get("attribute_category"),
+                "attribute_uuid": vulnerability.get("attribute_uuid"),
+                "object_name": vulnerability.get("object_name"),
+                "object_uuid": vulnerability.get("object_uuid"),
+                "tags": vulnerability.get("tags"),
+            }
+        )
+        record = evidence_record(
+            entity_type="vulnerability",
+            value=vulnerability.get("value"),
+            source_key=source_key,
+            source_name="misp",
+            source_field=vulnerability.get("source_field"),
+            confidence=75,
+            attributes=attributes,
+        )
+        if record:
+            records.append(record)
+    return records
 
 
 def evidence_record(

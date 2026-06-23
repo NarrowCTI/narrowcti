@@ -1,3 +1,4 @@
+import re
 import time
 from collections.abc import Mapping
 
@@ -21,6 +22,9 @@ from exporters.opencti import send_bundle
 
 from connectors.misp.feed_adapter import MISPFeedAdapter, event_to_feed_candidate
 from connectors.misp.models import MISPEventCandidate
+
+
+CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 
 
 def age_label(age):
@@ -57,6 +61,9 @@ def decision_metadata(
     misp_galaxies = extract_misp_galaxies(source)
     if misp_galaxies:
         metadata["misp_galaxies"] = misp_galaxies
+    misp_vulnerabilities = extract_misp_vulnerabilities(source, tags)
+    if misp_vulnerabilities:
+        metadata["misp_vulnerabilities"] = misp_vulnerabilities
     if controls:
         metadata["guardrails"] = controls
     score_details = getattr(candidate, "score_details", None)
@@ -210,6 +217,140 @@ def deduplicate_misp_galaxies(clusters):
             continue
         seen.add(key)
         deduplicated.append(cluster)
+    return deduplicated
+
+
+def extract_misp_vulnerabilities(event, tags=None):
+    findings = []
+    for source in misp_vulnerability_sources(event, tags or []):
+        for cve_id in normalize_cve_ids(source.get("value")):
+            findings.append(
+                compact_mapping(
+                    {
+                        "value": cve_id,
+                        "source_field": source.get("source_field"),
+                        "source_type": source.get("source_type"),
+                        "attribute_type": source.get("attribute_type"),
+                        "attribute_category": source.get("attribute_category"),
+                        "attribute_uuid": source.get("attribute_uuid"),
+                        "object_name": source.get("object_name"),
+                        "object_uuid": source.get("object_uuid"),
+                        "tags": source.get("tags"),
+                    }
+                )
+            )
+    return deduplicate_misp_vulnerabilities(findings)
+
+
+def misp_vulnerability_sources(event, tags):
+    event = compact_mapping(event)
+    sources = []
+    for index, tag in enumerate(tags or []):
+        sources.append(
+            {
+                "value": tag,
+                "source_field": f"tags[{index}]",
+                "source_type": "tag",
+            }
+        )
+    for field in ("info", "name", "description"):
+        sources.append(
+            {
+                "value": event.get(field),
+                "source_field": field,
+                "source_type": "event",
+            }
+        )
+    for index, attribute in enumerate(list_values(event.get("Attribute"))):
+        if isinstance(attribute, Mapping):
+            sources.append(
+                misp_attribute_vulnerability_source(
+                    attribute,
+                    f"Attribute[{index}]",
+                )
+            )
+    for object_index, misp_object in enumerate(list_values(event.get("Object"))):
+        if not isinstance(misp_object, Mapping):
+            continue
+        for attribute_index, attribute in enumerate(
+            list_values(misp_object.get("Attribute"))
+        ):
+            if isinstance(attribute, Mapping):
+                sources.append(
+                    misp_attribute_vulnerability_source(
+                        attribute,
+                        f"Object[{object_index}].Attribute[{attribute_index}]",
+                        misp_object=misp_object,
+                    )
+                )
+    return sources
+
+
+def misp_attribute_vulnerability_source(attribute, source_field, misp_object=None):
+    attribute = compact_mapping(attribute)
+    misp_object = compact_mapping(misp_object)
+    return compact_mapping(
+        {
+            "value": attribute.get("value"),
+            "source_field": source_field,
+            "source_type": "attribute",
+            "attribute_type": attribute.get("type"),
+            "attribute_category": attribute.get("category"),
+            "attribute_uuid": attribute.get("uuid"),
+            "object_name": misp_object.get("name"),
+            "object_uuid": misp_object.get("uuid"),
+            "tags": [tag_name for tag_name in attribute_tags(attribute) if tag_name],
+        }
+    )
+
+
+def attribute_tags(attribute):
+    tags = []
+    for tag in list_values(attribute.get("Tag")):
+        if isinstance(tag, Mapping):
+            value = tag.get("name") or tag.get("Name")
+        else:
+            value = tag
+        if value:
+            tags.append(value)
+    return tags
+
+
+def normalize_cve_ids(value):
+    cve_ids = []
+    for item in flatten_text(value):
+        for match in CVE_ID_PATTERN.findall(str(item or "")):
+            normalized = match.upper()
+            if normalized not in cve_ids:
+                cve_ids.append(normalized)
+    return cve_ids
+
+
+def flatten_text(value):
+    if value is None:
+        return []
+    if isinstance(value, Mapping):
+        values = []
+        for item in value.values():
+            values.extend(flatten_text(item))
+        return values
+    if isinstance(value, (list, tuple, set)):
+        values = []
+        for item in value:
+            values.extend(flatten_text(item))
+        return values
+    return [value]
+
+
+def deduplicate_misp_vulnerabilities(findings):
+    seen = set()
+    deduplicated = []
+    for finding in findings:
+        key = str(finding.get("value", "")).casefold()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(finding)
     return deduplicated
 
 

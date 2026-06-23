@@ -383,6 +383,62 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_misp_vulnerabilities(self):
+        candidate_ref = candidate(
+            external_id="event-1",
+            raw={"tags": ["tlp:green", "cve:CVE-2024-12345"]},
+        )
+        event = enriched_event(name="Exploit chain for CVE-2022-1111")
+        event["tags"] = ["tlp:green", "cve:CVE-2024-12345"]
+        event["Attribute"] = [
+            {
+                "type": "vulnerability",
+                "category": "External analysis",
+                "value": "CVE-2023-9999",
+                "uuid": "attr-cve",
+                "Tag": [{"name": "exploit:known"}],
+            }
+        ]
+        event["Object"] = [
+            {
+                "name": "vulnerability",
+                "uuid": "object-cve",
+                "Attribute": {
+                    "type": "text",
+                    "value": "Observed exploitation of CVE-2021-0001",
+                    "uuid": "object-attr-cve",
+                },
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(
+            ["CVE-2024-12345", "CVE-2022-1111", "CVE-2023-9999", "CVE-2021-0001"],
+            [item["value"] for item in metadata["misp_vulnerabilities"]],
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(4, graph_evidence["counts"]["vulnerability"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "vulnerability"
+                and record["value"] == "CVE-2023-9999"
+                and record["attributes"]["attribute_type"] == "vulnerability"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(4, graph_candidates["counts"]["vulnerability"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "vulnerability"
+                and candidate["value"] == "CVE-2021-0001"
+                and candidate["source_field"] == "Object[0].Attribute[0]"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_builds_dry_run_graph_export_plan(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         prepared = SimpleNamespace(event=enriched_event(), score_details={})
