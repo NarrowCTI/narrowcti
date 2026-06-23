@@ -69,6 +69,8 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 - MITRE technique resolution now emits reusable audit-only graph candidates for
   ATT&CK external references, kill chain phase attributes, platforms, data
   sources and detection guidance.
+- Graph candidates now carry explicit `relationship_confidence` and normalized
+  source `provenance` for future graph-aware STIX relationship creation.
 
 ## Validation Target
 
@@ -81,6 +83,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 197 tests
+Ran 198 tests
 OK
 ```

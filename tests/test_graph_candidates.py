@@ -27,6 +27,7 @@ class GraphCandidateTests(unittest.TestCase):
                         "source_name": "mitre-attack",
                         "source_field": "mitre_attack.resolved",
                         "confidence": 90,
+                        "relationship_confidence": 82,
                         "attributes": {
                             "tactics": ["execution"],
                             "stix_id": "attack-pattern--1",
@@ -46,6 +47,15 @@ class GraphCandidateTests(unittest.TestCase):
         self.assertEqual("Command and Scripting Interpreter", candidate.name)
         self.assertEqual("attack-pattern", candidate.stix_object_type)
         self.assertEqual("uses", candidate.relationship_type)
+        self.assertEqual(82, candidate.relationship_confidence)
+        self.assertEqual(
+            {
+                "source_key": "alienvault:otx",
+                "source_name": "mitre-attack",
+                "source_field": "mitre_attack.resolved",
+            },
+            candidate.provenance,
+        )
         self.assertEqual(["execution"], candidate.attributes["tactics"])
         self.assertEqual(
             candidate_fingerprint(
@@ -64,6 +74,11 @@ class GraphCandidateTests(unittest.TestCase):
         self.assertEqual(
             "Command and Scripting Interpreter",
             candidate_dict["display_name"],
+        )
+        self.assertEqual(82, candidate_dict["relationship_confidence"])
+        self.assertEqual(
+            "mitre_attack.resolved",
+            candidate_dict["provenance"]["source_field"],
         )
 
     def test_builds_mitre_reference_candidates_from_evidence(self):
@@ -129,6 +144,11 @@ class GraphCandidateTests(unittest.TestCase):
         self.assertEqual("note", detection.stix_object_type)
         self.assertEqual("Detection guidance for T1059", detection.name)
         self.assertEqual("Monitor process execution.", detection.value)
+        self.assertEqual(70, detection.relationship_confidence)
+        self.assertEqual(
+            "mitre_attack.resolved.detection",
+            detection.provenance["source_field"],
+        )
 
     def test_filters_candidates_by_confidence_and_type(self):
         candidates = build_graph_candidates(
@@ -183,7 +203,34 @@ class GraphCandidateTests(unittest.TestCase):
         self.assertEqual(1, candidates.candidate_count)
         candidate = candidates.candidates[0]
         self.assertEqual(100, candidate.confidence)
+        self.assertEqual(100, candidate.relationship_confidence)
         self.assertEqual("related-to", candidate.relationship_type)
+
+    def test_candidate_preserves_explicit_provenance(self):
+        candidate = graph_candidate_from_record(
+            {
+                "entity_type": "malware",
+                "value": "ExampleMalware",
+                "stix_object_type": "malware",
+                "relationship_type": "uses",
+                "confidence": 70,
+                "relationship_confidence": 55,
+                "source_key": "alienvault:otx",
+                "source_name": "otx",
+                "source_field": "malware_families",
+                "provenance": {
+                    "raw_value": "Example Malware",
+                    "extractor": "otx_entities",
+                },
+            }
+        )
+
+        self.assertEqual(55, candidate.relationship_confidence)
+        self.assertEqual("Example Malware", candidate.provenance["raw_value"])
+        self.assertEqual("otx_entities", candidate.provenance["extractor"])
+        self.assertEqual("alienvault:otx", candidate.provenance["source_key"])
+        self.assertEqual("otx", candidate.provenance["source_name"])
+        self.assertEqual("malware_families", candidate.provenance["source_field"])
 
     def test_record_without_required_fields_does_not_build_candidate(self):
         self.assertIsNone(

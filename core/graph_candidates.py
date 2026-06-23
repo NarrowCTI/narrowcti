@@ -19,7 +19,9 @@ class GraphCandidate:
     source_name: str = ""
     source_field: str = ""
     confidence: int = 50
+    relationship_confidence: int = 50
     display_name: str = ""
+    provenance: Mapping[str, object] = field(default_factory=dict)
     attributes: Mapping[str, object] = field(default_factory=dict)
     external_id: str = ""
     title: str = ""
@@ -50,9 +52,12 @@ class GraphCandidate:
             "source_name": self.source_name,
             "source_field": self.source_field,
             "confidence": self.confidence,
+            "relationship_confidence": self.relationship_confidence,
         }
         if self.display_name:
             candidate["display_name"] = self.display_name
+        if self.provenance:
+            candidate["provenance"] = dict(self.provenance)
         if self.attributes:
             candidate["attributes"] = dict(self.attributes)
         if self.external_id:
@@ -158,7 +163,11 @@ def graph_candidate_from_record(
         source_name=clean_string(record.get("source_name")),
         source_field=clean_string(record.get("source_field")),
         confidence=clamp_confidence(record.get("confidence")),
+        relationship_confidence=clamp_confidence(
+            record.get("relationship_confidence", record.get("confidence"))
+        ),
         display_name=clean_string(record.get("display_name")),
+        provenance=candidate_provenance(record, default_source_key),
         attributes=compact_mapping(record.get("attributes")),
         external_id=clean_string(external_id),
         title=clean_string(title),
@@ -196,6 +205,20 @@ def compact_mapping(value):
 
 def normalize_exclusions(values):
     return {clean_string(value) for value in values or [] if clean_string(value)}
+
+
+def candidate_provenance(record, default_source_key=""):
+    provenance = compact_mapping(record.get("provenance"))
+    source_key = clean_string(record.get("source_key")) or clean_string(default_source_key)
+    source_name = clean_string(record.get("source_name"))
+    source_field = clean_string(record.get("source_field"))
+    if source_key:
+        provenance.setdefault("source_key", source_key)
+    if source_name:
+        provenance.setdefault("source_name", source_name)
+    if source_field:
+        provenance.setdefault("source_field", source_field)
+    return provenance
 
 
 def clean_string(value):

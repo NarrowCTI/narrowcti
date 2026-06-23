@@ -36,7 +36,9 @@ NarrowCTI v0.7 currently has an audit-first graph evidence layer:
 - `core/graph_evidence.py` converts OTX, MISP and MITRE metadata into
   `graph_evidence` records.
 - `core/graph_candidates.py` converts evidence into normalized
-  `graph_candidates` for audit and future STIX graph export.
+  `graph_candidates` for audit and future STIX graph export. Each candidate
+  carries object confidence, relationship confidence and normalized source
+  provenance.
 - OTX and MISP processors write `graph_evidence` and `graph_candidates` into
   decision audit and quarantine metadata.
 - The STIX exporter still emits the stable v0.6 `Report + Indicator` bundle.
@@ -170,6 +172,9 @@ required:
 - Confidence policy by source field and source reputation.
 - Relationship policy that distinguishes `related-to`, `uses`, `targets`,
   `indicates` and `attributed-to`.
+- Relationship confidence and source provenance are now present in normalized
+  graph candidates, but still need graph-aware STIX export and OpenCTI import
+  validation.
 - Vocabulary normalization for sectors, countries, platforms and tactics.
 - Revoked/deprecated handling for MITRE objects.
 - Duplicate graph entity detection before STIX export.

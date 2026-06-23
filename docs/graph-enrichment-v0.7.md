@@ -244,6 +244,12 @@ Every graph candidate should carry:
 - References.
 - Created/modified/published timestamps when available.
 
+The current audit-only `core/graph_candidates.py` model now carries explicit
+`relationship_confidence` and normalized `provenance` derived from source
+evidence. This gives the future graph-aware STIX builder enough context to
+explain why an object or relationship would be created before the gateway
+promotes it into OpenCTI.
+
 Confidence should be policy-driven. Example:
 
 | Evidence type | Default confidence |
@@ -383,7 +389,8 @@ v0.7 should not be considered complete until:
    attributes, platforms, data sources and detection guidance are now emitted
    as audit-only graph evidence/candidates.
 5. Build a graph-aware STIX exporter.
-6. Add relationship confidence and provenance.
+6. Add relationship confidence and provenance. Initial audit-only support is
+   implemented in `core/graph_candidates.py`.
 7. Add enterprise graph filters.
 8. Add graph deduplication and optional OpenCTI graph lookup.
 9. Add graph export dry-run reporting.
