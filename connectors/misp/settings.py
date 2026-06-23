@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 
 from connectors.misp.feed_adapter import MISPAdapterLimits
+from core.graph_export_plan import normalize_graph_export_mode
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class MISPSettings:
     graph_require_relationship_provenance: bool
     graph_allowed_entity_types: list[str]
     graph_allowed_stix_object_types: list[str]
+    graph_export_mode: str
     state_file: str
     decision_audit_file: str
     quarantine_repository_file: str = ""
@@ -180,6 +182,9 @@ def load_settings():
         graph_allowed_entity_types=env_list("NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES"),
         graph_allowed_stix_object_types=env_list(
             "NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES"
+        ),
+        graph_export_mode=normalize_graph_export_mode(
+            os.getenv("NARROWCTI_GRAPH_EXPORT_MODE", "audit")
         ),
         state_file=os.getenv("MISP_STATE_FILE", "/app/state/misp_state.json"),
         decision_audit_file=os.getenv("MISP_DECISION_AUDIT_FILE", ""),

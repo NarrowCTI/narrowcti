@@ -78,6 +78,10 @@ detailed graph-enrichment design is tracked in
   source `provenance` for future graph-aware STIX relationship creation.
 - OTX and MISP decision/quarantine metadata now include audit-only
   `graph_candidate_policy` results with accepted and held graph candidates.
+- Added `core/graph_export_plan.py` so OTX and MISP decision/quarantine
+  metadata can record graph export intent in `audit` or `dry-run` mode without
+  creating OpenCTI graph objects yet. `export` mode is blocked until the
+  graph-aware STIX builder and OpenCTI validation are implemented.
 
 ## Validation Target
 
@@ -90,6 +94,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 199 tests
+Ran 204 tests
 OK
 ```

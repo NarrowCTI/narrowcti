@@ -295,6 +295,32 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(2, graph_policy["accepted_count"])
         self.assertEqual(1, graph_policy["held_count"])
         self.assertEqual({"entity_type_not_allowed": 1}, graph_policy["held_reasons"])
+        graph_plan = metadata["graph_export_plan"]
+        self.assertEqual("audit", graph_plan["mode"])
+        self.assertEqual("audit-only", graph_plan["status"])
+        self.assertEqual(2, graph_plan["accepted_count"])
+        self.assertEqual(1, graph_plan["held_count"])
+
+    def test_decision_metadata_builds_dry_run_graph_export_plan(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        prepared = SimpleNamespace(event=enriched_event(), score_details={})
+
+        metadata = decision_metadata(
+            candidate_ref,
+            prepared,
+            graph_export_mode="dry-run",
+        )
+
+        graph_plan = metadata["graph_export_plan"]
+        self.assertEqual("dry-run", graph_plan["mode"])
+        self.assertEqual("dry-run", graph_plan["status"])
+        self.assertEqual(
+            graph_plan["accepted_count"],
+            graph_plan["would_create_object_count"],
+        )
+        self.assertTrue(
+            any(action["action"] == "would_create" for action in graph_plan["actions"])
+        )
 
     def test_process_event_skips_when_all_artifacts_are_known(self):
         records = []

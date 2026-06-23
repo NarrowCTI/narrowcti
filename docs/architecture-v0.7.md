@@ -128,13 +128,15 @@ source payload
   -> graph_evidence
   -> graph_candidates
   -> graph_candidate_policy
+  -> graph_export_plan
   -> decision audit and quarantine metadata
   -> stable Report + Indicator STIX bundle
   -> OpenCTI
 ```
 
-At this stage, graph evidence and graph candidates are audit metadata. They do
-not yet create new graph entities or relationships in the exported STIX bundle.
+At this stage, graph evidence, graph candidates and graph export plans are
+audit metadata. They do not yet create new graph entities or relationships in
+the exported STIX bundle.
 
 This keeps v0.7 safe while the project validates source metadata depth,
 relationship confidence, official connector compatibility and OpenCTI import
@@ -230,6 +232,33 @@ Current reasons include:
 In v0.7, "accepted" means accepted for audit readiness, not automatically
 exported as OpenCTI graph objects.
 
+### graph_export_plan
+
+`graph_export_plan` converts the graph candidate policy result into an
+operator-visible plan.
+
+It records:
+
+- Graph export plan version.
+- Graph export mode.
+- Plan status.
+- Candidate, accepted and held counts.
+- Held reason counts.
+- Accepted object and relationship counts.
+- Dry-run would-create counts when dry-run mode is enabled.
+- Per-candidate actions.
+
+Current modes are:
+
+- `audit`: default. Records candidates as audit-only.
+- `dry-run`: records accepted candidates as `would_create` actions and counts
+  the objects/relationships that would be attempted later.
+- `export`: accepted by configuration but explicitly blocked until the
+  graph-aware STIX builder and OpenCTI validation are implemented.
+
+This gives operators an early view of graph promotion intent without changing
+OpenCTI graph state.
+
 ## Policy Surface
 
 Graph curation policy must remain visible and configurable.
@@ -242,16 +271,18 @@ NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE=0
 NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE=false
 NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=
 NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=
+NARROWCTI_GRAPH_EXPORT_MODE=audit
 ```
 
-These are deliberately permissive by default because the current graph layer is
-audit-only. Once graph export is enabled, production examples should use more
-restrictive thresholds and allow-lists.
+These are deliberately permissive by default because the current graph layer
+still does not create graph objects. `NARROWCTI_GRAPH_EXPORT_MODE=dry-run`
+enables graph export planning evidence without importing graph entities or
+relationships. Once graph export is enabled, production examples should use
+more restrictive thresholds and allow-lists.
 
 Future graph export controls should include:
 
 ```text
-NARROWCTI_GRAPH_EXPORT_MODE=audit|dry-run|export
 NARROWCTI_GRAPH_REQUIRE_OPENCTI_LOOKUP=true
 NARROWCTI_GRAPH_DEDUP_MODE=source|opencti|hybrid
 NARROWCTI_ALLOWED_ATTACK_TACTICS=
@@ -278,6 +309,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Relationship provenance | Implemented on graph candidates. |
 | Relationship confidence | Implemented on graph candidates. |
 | Graph candidate policy | Implemented as audit-only accepted and held candidate output. |
+| Graph export planning | Implemented as audit/dry-run/blocked export metadata for OTX and MISP decisions. |
 | Decision audit metadata | Implemented for OTX and MISP processors. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
 | Stable STIX export | Implemented as current `Report + Indicator` bundle. |
@@ -288,7 +320,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | --- | --- |
 | Graph-aware STIX builder | Create OpenCTI-compatible STIX objects and relationships from accepted graph candidates. |
 | Graph deduplication | Check existing OpenCTI entities and relationships before promotion. |
-| Graph export dry-run | Produce operator-visible reports showing what would be created, linked, held or skipped. |
+| Graph export dry-run reporting | Promote per-decision graph export plans into aggregate operator reports and OpenCTI lab comparison evidence. |
 | MISP rich mapping | Extract galaxies, clusters, objects, object relations and ATT&CK/victimology context more deeply. |
 | OTX rich mapping | Expand pulse lifecycle, author, vote, vulnerability and indicator timing metadata. |
 | Contextual scoring | Use graph candidates as scoring signals without hiding base score decisions. |

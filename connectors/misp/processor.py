@@ -5,6 +5,7 @@ from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.feed_contract import FeedRunSummary
 from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
 from core.graph_evidence import build_graph_evidence
+from core.graph_export_plan import build_graph_export_plan
 from core.indicator_policy import filter_indicators_by_type
 from core.policy import PolicyConfig, should_ingest
 from core.quarantine import (
@@ -31,7 +32,12 @@ def compact_mapping(value):
     return dict(value) if isinstance(value, Mapping) else {}
 
 
-def decision_metadata(candidate_ref, candidate=None, graph_candidate_policy=None):
+def decision_metadata(
+    candidate_ref,
+    candidate=None,
+    graph_candidate_policy=None,
+    graph_export_mode="audit",
+):
     event = compact_mapping(candidate.event if candidate else {})
     reference = compact_mapping(candidate_ref.raw)
     source = event or reference
@@ -59,10 +65,15 @@ def decision_metadata(candidate_ref, candidate=None, graph_candidate_policy=None
     )
     graph_candidates = build_graph_candidates(metadata["graph_evidence"])
     metadata["graph_candidates"] = graph_candidates.to_dict()
-    metadata["graph_candidate_policy"] = apply_graph_candidate_policy(
+    graph_policy = apply_graph_candidate_policy(
         graph_candidates,
         **(graph_candidate_policy or {}),
     ).to_dict()
+    metadata["graph_candidate_policy"] = graph_policy
+    metadata["graph_export_plan"] = build_graph_export_plan(
+        graph_policy,
+        mode=graph_export_mode,
+    )
     return metadata
 
 
@@ -328,6 +339,7 @@ class MISPProcessor:
                 candidate_ref,
                 candidate,
                 graph_candidate_policy=self.graph_candidate_policy,
+                graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
             ),
         )
 
@@ -354,6 +366,7 @@ class MISPProcessor:
             candidate_ref,
             candidate,
             graph_candidate_policy=self.graph_candidate_policy,
+            graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
         )
         if truncated:
             metadata["raw_snapshot_truncated"] = True

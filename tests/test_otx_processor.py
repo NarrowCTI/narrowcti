@@ -401,6 +401,11 @@ class ProcessorTests(unittest.TestCase):
             graph_policy["accepted_count"],
         )
         self.assertEqual(0, graph_policy["held_count"])
+        graph_plan = records[0].metadata["graph_export_plan"]
+        self.assertEqual("audit", graph_plan["mode"])
+        self.assertEqual("audit-only", graph_plan["status"])
+        self.assertEqual(graph_policy["accepted_count"], graph_plan["accepted_count"])
+        self.assertEqual(0, graph_plan["would_create_object_count"])
 
     def test_process_pulse_writes_quarantine_record(self):
         records = []

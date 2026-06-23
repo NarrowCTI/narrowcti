@@ -321,6 +321,14 @@ optional provenance requirements and allowed graph entity/STIX object filters.
 This does not block source ingestion or export yet; it makes the future graph
 promotion decision visible and testable first.
 
+OTX and MISP metadata also include `graph_export_plan`. This turns the
+candidate policy result into an operator-visible plan. In `audit` mode the plan
+records candidates as audit-only. In `dry-run` mode it records accepted
+candidates as `would_create` actions and counts the graph objects and
+relationships that would be attempted later. `export` mode is explicitly
+blocked until the graph-aware STIX builder, graph deduplication and OpenCTI
+validation are complete.
+
 ## Graph Hygiene
 
 v0.7 graph enrichment must avoid polluting OpenCTI.
@@ -408,7 +416,9 @@ v0.7 should not be considered complete until:
    implemented for entity confidence, relationship confidence, provenance and
    allowed graph entity/STIX object types.
 8. Add graph deduplication and optional OpenCTI graph lookup.
-9. Add graph export dry-run reporting.
+9. Add graph export dry-run reporting. Initial per-decision
+   `graph_export_plan` metadata is implemented for audit/dry-run visibility;
+   aggregate operator reports and OpenCTI comparison evidence remain pending.
 10. Validate in OpenCTI with OTX and MISP samples.
 11. Compare a direct official MISP connector import with a NarrowCTI-curated
     import for the same event and document object/relationship differences.

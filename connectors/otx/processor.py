@@ -3,6 +3,7 @@ import time
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
 from core.graph_evidence import build_graph_evidence
+from core.graph_export_plan import build_graph_export_plan
 from core.indicator_policy import filter_indicators_by_type
 from core.mitre_attack import MITREAttackResolver
 from core.policy import PolicyConfig, should_ingest
@@ -40,6 +41,7 @@ def decision_metadata(
     external_id="",
     title="",
     graph_candidate_policy=None,
+    graph_export_mode="audit",
 ):
     score_details = getattr(candidate, "score_details", None)
     if not candidate:
@@ -58,10 +60,15 @@ def decision_metadata(
     )
     graph_candidates = build_graph_candidates(metadata["graph_evidence"])
     metadata["graph_candidates"] = graph_candidates.to_dict()
-    metadata["graph_candidate_policy"] = apply_graph_candidate_policy(
+    graph_policy = apply_graph_candidate_policy(
         graph_candidates,
         **(graph_candidate_policy or {}),
     ).to_dict()
+    metadata["graph_candidate_policy"] = graph_policy
+    metadata["graph_export_plan"] = build_graph_export_plan(
+        graph_policy,
+        mode=graph_export_mode,
+    )
     return metadata
 
 
@@ -359,6 +366,7 @@ class OTXProcessor:
                 external_id=candidate_ref.external_id,
                 title=title,
                 graph_candidate_policy=self.graph_candidate_policy,
+                graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
             ),
         )
 
@@ -389,6 +397,7 @@ class OTXProcessor:
             external_id=candidate_ref.external_id,
             title=title,
             graph_candidate_policy=self.graph_candidate_policy,
+            graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
         )
         if truncated:
             metadata["raw_snapshot_truncated"] = True

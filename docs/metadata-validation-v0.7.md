@@ -182,6 +182,9 @@ required:
 - Relationship confidence and source provenance are now present in normalized
   graph candidates, but still need graph-aware STIX export and OpenCTI import
   validation.
+- Graph export intent is now recorded as `graph_export_plan` audit/dry-run
+  metadata, but still needs graph-aware STIX export, graph deduplication and
+  OpenCTI import validation before promotion.
 - Vocabulary normalization for sectors, countries, platforms and tactics.
 - Revoked/deprecated handling for MITRE objects.
 - Duplicate graph entity detection before STIX export.
@@ -198,7 +201,8 @@ For OTX and MITRE, v0.7 should not be considered complete until:
   sub-technique, tactic, platform, data source and detection context.
 - Weak OTX actor/malware/tag values remain low-confidence until corroborated.
 - Deprecated or revoked ATT&CK objects are not promoted as clean current facts.
-- The graph-aware STIX builder can dry-run the objects and relationships that
-  would be exported.
+- Per-decision `graph_export_plan` metadata can dry-run the objects and
+  relationships that would be attempted; the later graph-aware STIX builder
+  must turn that plan into validated STIX output.
 - OpenCTI validation confirms entities and relationships land in the expected
   graph areas without duplicate or misleading nodes.
