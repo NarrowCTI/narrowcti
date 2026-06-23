@@ -268,6 +268,19 @@ class MISPProcessorTests(unittest.TestCase):
                 for record in graph_evidence["records"]
             )
         )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual("v0.7.0-dev", graph_candidates["version"])
+        self.assertEqual("event-1", graph_candidates["external_id"])
+        self.assertEqual(3, graph_candidates["candidate_count"])
+        self.assertEqual(1, graph_candidates["counts"]["marking"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "source_identity"
+                and candidate["value"] == "AlienVault"
+                and candidate["stix_object_type"] == "identity"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
 
     def test_process_event_skips_when_all_artifacts_are_known(self):
         records = []
@@ -379,6 +392,10 @@ class MISPProcessorTests(unittest.TestCase):
                 for record in queued[0]["metadata"]["graph_evidence"]["records"]
                 if record["entity_type"] == "source_identity"
             ),
+        )
+        self.assertEqual(
+            2,
+            queued[0]["metadata"]["graph_candidates"]["candidate_count"],
         )
         self.assertTrue(
             any("MISP quarantine queued: old weak misp event" in log for log in logs)

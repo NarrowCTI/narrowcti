@@ -39,12 +39,14 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
   built from OTX entity extraction and resolved MITRE ATT&CK context.
 - MISP decision and quarantine metadata now include `graph_evidence` records
   built from collector provenance, original source and TLP/tag evidence.
+- OTX and MISP decision/quarantine metadata now include normalized
+  `graph_candidates` derived from `graph_evidence`, still audit-only.
 - Each evidence record carries the logical entity type, suggested STIX/OpenCTI
   object type, intended relationship type, confidence, source field and source
   provenance.
 - The STIX exporter still emits the existing stable `Report + Indicator`
-  bundle. v0.7 graph evidence is deliberately audit-only until the graph-aware
-  STIX builder and OpenCTI validation are implemented.
+  bundle. v0.7 graph evidence and candidates are deliberately audit-only until
+  the graph-aware STIX builder and OpenCTI validation are implemented.
 - Added `docs/metadata-validation-v0.7.md` to validate OTX and MITRE metadata
   coverage, current mapping depth and remaining intelligent-mapping gaps.
 - Added `docs/misp-official-connector-mapping-v0.7.md` to validate the
@@ -76,6 +78,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 192 tests
+Ran 196 tests
 OK
 ```

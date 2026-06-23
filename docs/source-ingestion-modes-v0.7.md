@@ -248,7 +248,8 @@ The safe v0.7 scope is:
 1. Add a source adapter onboarding checklist.
 2. Add a source mapping validation template based on the MISP and OTX official
    connector mapping documents.
-3. Create the shared graph candidate model.
+3. Create the shared graph candidate model. Initial model and OTX/MISP
+   audit metadata attachment are implemented.
 4. Add adapter-level metadata extractor conventions.
 5. Add preflight output showing enabled ingestion mode:
    `direct`, `misp-collector` or `hybrid`.

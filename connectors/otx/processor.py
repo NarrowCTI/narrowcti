@@ -1,6 +1,7 @@
 import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
+from core.graph_candidates import build_graph_candidates
 from core.graph_evidence import build_graph_evidence
 from core.indicator_policy import filter_indicators_by_type
 from core.mitre_attack import MITREAttackResolver
@@ -54,6 +55,9 @@ def decision_metadata(
         external_id=external_id or candidate.pulse.get("id", ""),
         title=title or candidate.name,
     )
+    metadata["graph_candidates"] = build_graph_candidates(
+        metadata["graph_evidence"]
+    ).to_dict()
     return metadata
 
 

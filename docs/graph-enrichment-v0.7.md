@@ -369,15 +369,15 @@ v0.7 should not be considered complete until:
 
 1. Create a shared graph candidate model. Initial audit-only foundation added
    in `core/graph_evidence.py`; normalized graph candidates are now represented
-   in `core/graph_candidates.py`.
+   in `core/graph_candidates.py` and attached to OTX/MISP audit metadata.
 2. Expand OTX metadata mapping into graph candidates. Initial OTX and MITRE
-   evidence mapping is now present in decision and quarantine metadata, and the
-   official AlienVault connector mapping has been validated as the
-   source-specific graph baseline.
+   evidence mapping is now present as `graph_evidence` and `graph_candidates`
+   in decision/quarantine metadata, and the official AlienVault connector
+   mapping has been validated as the source-specific graph baseline.
 3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
-   original-source, TLP and tag evidence mapping is present; MISP official
-   connector compatibility has been validated as the graph baseline; MISP
-   galaxy extraction remains pending.
+   original-source, TLP and tag evidence mapping is present as `graph_evidence`
+   and `graph_candidates`; MISP official connector compatibility has been
+   validated as the graph baseline; MISP galaxy extraction remains pending.
 4. Extend MITRE cache usage beyond technique names into reusable graph
    references.
 5. Build a graph-aware STIX exporter.

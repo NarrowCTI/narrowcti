@@ -375,6 +375,22 @@ class ProcessorTests(unittest.TestCase):
                 for record in graph_evidence["records"]
             )
         )
+        graph_candidates = records[0].metadata["graph_candidates"]
+        self.assertEqual("v0.7.0-dev", graph_candidates["version"])
+        self.assertEqual("pulse-1", graph_candidates["external_id"])
+        self.assertEqual(
+            graph_evidence["record_count"],
+            graph_candidates["candidate_count"],
+        )
+        self.assertEqual(2, graph_candidates["counts"]["attack_pattern"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "threat_actor"
+                and candidate["value"] == "APT Example"
+                and candidate["relationship_type"] == "attributed-to"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
 
     def test_process_pulse_writes_quarantine_record(self):
         records = []
@@ -427,6 +443,10 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("domain", queued[0]["indicators"][0]["type"])
         self.assertEqual([], queued[0]["metadata"]["otx_entities"]["attack_ids"])
         self.assertEqual(0, queued[0]["metadata"]["graph_evidence"]["record_count"])
+        self.assertEqual(
+            0,
+            queued[0]["metadata"]["graph_candidates"]["candidate_count"],
+        )
         self.assertTrue(any("Quarantine queued: Old weak pulse" in log for log in logs))
 
     def test_process_pulse_records_missing_mitre_cache_evidence(self):
