@@ -71,7 +71,9 @@ can review modes, statuses, actions, would-create counts, held reasons and
 source/query rollups without reading raw JSONL records. v0.7 graph export
 plans also include local intra-plan entity and relationship deduplication
 evidence. This reduces duplicate dry-run intent inside one decision record, but
-does not replace future OpenCTI graph lookup.
+does not replace future OpenCTI graph lookup. The local graph deduplication
+state model exists in code for future graph export wiring, but it is not a
+runtime configuration surface yet.
 
 ## Source Examples
 

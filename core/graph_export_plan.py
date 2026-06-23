@@ -23,12 +23,22 @@ def normalize_graph_export_mode(mode):
     return normalized
 
 
-def build_graph_export_plan(graph_candidate_policy, mode="audit"):
+def build_graph_export_plan(
+    graph_candidate_policy,
+    mode="audit",
+    known_entity_keys=None,
+    known_relationship_keys=None,
+):
     mode = normalize_graph_export_mode(mode)
     policy = graph_candidate_policy if isinstance(graph_candidate_policy, Mapping) else {}
     accepted = clean_candidates(policy.get("accepted"))
     held = clean_held(policy.get("held"))
-    accepted_actions = planned_accepted_actions(accepted, mode)
+    accepted_actions = planned_accepted_actions(
+        accepted,
+        mode,
+        known_entity_keys=known_entity_keys,
+        known_relationship_keys=known_relationship_keys,
+    )
 
     actions = []
     actions.extend(accepted_actions)
@@ -96,9 +106,18 @@ def build_graph_export_plan(graph_candidate_policy, mode="audit"):
     }
 
 
-def planned_accepted_actions(accepted, mode):
-    entity_keys = set()
-    relationship_keys = set()
+def planned_accepted_actions(
+    accepted,
+    mode,
+    known_entity_keys=None,
+    known_relationship_keys=None,
+):
+    entity_keys = {clean_string(key) for key in known_entity_keys or [] if clean_string(key)}
+    relationship_keys = {
+        clean_string(key)
+        for key in known_relationship_keys or []
+        if clean_string(key)
+    }
     actions = []
 
     for candidate in accepted:

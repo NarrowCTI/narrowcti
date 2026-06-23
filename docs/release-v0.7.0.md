@@ -89,6 +89,10 @@ detailed graph-enrichment design is tracked in
   deterministic entity and relationship keys, duplicate counts and adjusted
   dry-run would-create object/relationship totals before real graph export
   exists.
+- Added `core/graph_deduplication.py` as the local graph deduplication state
+  model for persisted entity/relationship keys and source sightings. It is a
+  future graph export foundation and is not used to mark dry-run plans as
+  exported knowledge.
 
 ## Validation Target
 
@@ -101,6 +105,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 209 tests
+Ran 215 tests
 OK
 ```

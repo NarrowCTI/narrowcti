@@ -113,6 +113,37 @@ class GraphExportPlanTests(unittest.TestCase):
             plan["actions"][1]["deduplication"]["relationship_duplicate"]
         )
 
+    def test_uses_known_graph_keys_for_persistent_deduplication(self):
+        policy = apply_graph_candidate_policy(
+            build_graph_candidates(
+                {
+                    "version": "v0.7.0-dev",
+                    "source_key": "alienvault:otx",
+                    "external_id": "pulse-1",
+                    "records": [accepted_attack_pattern_record()],
+                }
+            )
+        ).to_dict()
+        probe_plan = build_graph_export_plan(policy, mode="dry-run")
+        known_entity_key = probe_plan["actions"][0]["deduplication"]["entity_key"]
+
+        plan = build_graph_export_plan(
+            policy,
+            mode="dry-run",
+            known_entity_keys=[known_entity_key],
+        )
+
+        self.assertEqual(1, plan["deduplicated_candidate_count"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertEqual(0, plan["deduplicated_relationship_count"])
+        self.assertEqual(0, plan["would_create_object_count"])
+        self.assertEqual(1, plan["would_create_relationship_count"])
+        self.assertEqual("would_create", plan["actions"][0]["action"])
+        self.assertEqual(
+            "graph_plan_duplicate_entity",
+            plan["actions"][0]["reason"],
+        )
+
     def test_export_mode_is_blocked_until_graph_export_exists(self):
         policy = self.graph_policy().to_dict()
 

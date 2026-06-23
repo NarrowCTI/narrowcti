@@ -99,6 +99,11 @@ core/graph_candidates.py
   -> relationship confidence
   -> graph candidate policy result
 
+core/graph_deduplication.py
+  -> local graph entity and relationship state model
+  -> persisted graph deduplication records
+  -> source sightings for future graph promotion audit
+
 core/quarantine.py
 core/state_repository.py
 core/decision_audit.py
@@ -261,7 +266,9 @@ Current modes are:
 This gives operators an early view of graph promotion intent without changing
 OpenCTI graph state. The current deduplication is intra-plan only: it prevents
 obvious duplicate entity/relationship intent inside the same decision record
-and produces audit evidence, but it does not replace future OpenCTI-side graph
+and produces audit evidence. The local graph deduplication index can persist
+entity and relationship keys for future graph promotion, but it is not wired to
+mark dry-run plans as exported and it does not replace future OpenCTI-side graph
 lookup before real export.
 
 ## Policy Surface
@@ -315,6 +322,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Relationship confidence | Implemented on graph candidates. |
 | Graph candidate policy | Implemented as audit-only accepted and held candidate output. |
 | Graph export planning | Implemented as audit/dry-run/blocked export metadata for OTX and MISP decisions, including intra-plan entity and relationship deduplication evidence. |
+| Local graph deduplication index | Implemented in `core/graph_deduplication.py` for persisted entity/relationship keys and source sightings, ready for future graph export wiring. |
 | Decision audit metadata | Implemented for OTX and MISP processors. |
 | Decision audit graph export reporting | Implemented in `gateway.decisions` with graph export modes, statuses, actions, would-create counts, deduplicated counts, held reasons, source rollups and query rollups. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
@@ -325,7 +333,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Area | Target |
 | --- | --- |
 | Graph-aware STIX builder | Create OpenCTI-compatible STIX objects and relationships from accepted graph candidates. |
-| Graph deduplication | Extend implemented intra-plan graph deduplication with persisted graph dedup state and OpenCTI entity/relationship lookup before promotion. |
+| Graph deduplication runtime wiring | Connect the local graph deduplication index to real graph export and add OpenCTI entity/relationship lookup before promotion. |
 | Graph export dry-run reporting | Extend implemented decision-audit graph export rollups into OpenCTI lab comparison evidence and future enterprise CTI reports. |
 | MISP rich mapping | Extract galaxies, clusters, objects, object relations and ATT&CK/victimology context more deeply. |
 | OTX rich mapping | Expand pulse lifecycle, author, vote, vulnerability and indicator timing metadata. |
