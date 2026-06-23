@@ -30,10 +30,19 @@ class GraphEvidenceTests(unittest.TestCase):
                             "attack_id": "T1059",
                             "found": True,
                             "name": "Command and Scripting Interpreter",
+                            "description": "Interpreters execute commands.",
                             "tactics": ["execution"],
                             "stix_id": "attack-pattern--1",
                             "source_name": "mitre-attack",
                             "url": "https://attack.mitre.org/techniques/T1059/",
+                            "platforms": ["Windows"],
+                            "data_sources": ["Process: Process Creation"],
+                            "detection": "Monitor process execution.",
+                            "domains": ["enterprise-attack"],
+                            "version": "2.6",
+                            "attack_spec_version": "3.3.0",
+                            "created": "2020-01-01T00:00:00.000Z",
+                            "modified": "2026-01-01T00:00:00.000Z",
                         }
                     ],
                 },
@@ -73,6 +82,21 @@ class GraphEvidenceTests(unittest.TestCase):
                 "attributes": {"technique": "T1059"},
             },
             evidence["records"],
+        )
+        technique = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "attack_pattern"
+            and record["source_field"] == "mitre_attack.resolved"
+        )
+        self.assertEqual(["Windows"], technique["attributes"]["platforms"])
+        self.assertEqual(
+            ["Process: Process Creation"],
+            technique["attributes"]["data_sources"],
+        )
+        self.assertEqual(
+            "Monitor process execution.",
+            technique["attributes"]["detection"],
         )
 
     def test_builds_misp_provenance_tags_and_marking_evidence(self):

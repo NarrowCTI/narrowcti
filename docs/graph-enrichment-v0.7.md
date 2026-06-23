@@ -68,6 +68,9 @@ For every supported source, NarrowCTI should document and test:
 - Which confidence value should be applied by default.
 - Which validation rule prevents bad graph enrichment.
 
+OTX and MITRE ATT&CK metadata coverage is tracked in
+`docs/metadata-validation-v0.7.md`.
+
 ## Initial Source Focus
 
 ### OTX
@@ -82,6 +85,7 @@ OTX v0.6 already extracts useful entity hints. v0.7 should validate and map:
 | `attack_ids` | `attack-pattern` | Resolve through local MITRE cache and include tactics. |
 | `industries` | sector `identity` or OpenCTI sector entity | Treat as victimology evidence. |
 | `targeted_countries` | `location` | Treat as victimology/geography evidence. |
+| `target_countries` | `location` | Alias accepted from normalized OTX schemas. |
 | `references` | `external_references` | Preserve evidence trail. |
 | TLP fields/tags | `marking-definition` / OpenCTI marking | Must preserve sharing constraints. |
 | `tags` | labels plus extraction candidates | Tags are weak unless mapped to a known taxonomy. |
@@ -113,6 +117,8 @@ to create or enrich:
 | --- | --- |
 | Technique/sub-technique | `attack-pattern` |
 | Tactic | `kill_chain_phases` and tactic filters |
+| Platforms and domains | filtering and detection context |
+| Data sources and detection text | hunting and detection guidance |
 | Group | `intrusion-set` |
 | Software | `malware` or `tool` |
 | Campaign | `campaign` |

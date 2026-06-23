@@ -38,6 +38,13 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 - The STIX exporter still emits the existing stable `Report + Indicator`
   bundle. v0.7 graph evidence is deliberately audit-only until the graph-aware
   STIX builder and OpenCTI validation are implemented.
+- Added `docs/metadata-validation-v0.7.md` to validate OTX and MITRE metadata
+  coverage, current mapping depth and remaining intelligent-mapping gaps.
+- Expanded OTX metadata normalization to handle `target_countries` aliases and
+  object `display_name` values from OTX metadata fields.
+- Expanded MITRE technique cache metadata to preserve description, platforms,
+  data sources, detection text, domains, versioning, created/modified timestamps
+  and sub-technique state.
 
 ## Validation Target
 

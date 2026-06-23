@@ -22,7 +22,9 @@ def extract_otx_entities(pulse):
         "malware_families": normalize_values(pulse.get("malware_families")),
         "attack_ids": normalize_attack_ids(pulse.get("attack_ids")),
         "industries": normalize_values(pulse.get("industries")),
-        "targeted_countries": normalize_values(pulse.get("targeted_countries")),
+        "targeted_countries": normalize_values(
+            pulse.get("targeted_countries") or pulse.get("target_countries")
+        ),
         "tlp": normalize_tlp(pulse),
         "references": normalize_references(pulse.get("references")),
         "tags": normalize_values(pulse.get("tags")),
@@ -151,6 +153,7 @@ def normalize_value(value):
     if isinstance(value, dict):
         value = (
             value.get("name")
+            or value.get("display_name")
             or value.get("value")
             or value.get("id")
             or value.get("url")

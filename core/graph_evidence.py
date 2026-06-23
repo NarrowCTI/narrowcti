@@ -73,9 +73,21 @@ def mitre_attack_evidence(mitre_attack, source_key=""):
         name = clean_string(technique.get("name"))
         attributes = {
             "name": name,
+            "description": clean_string(technique.get("description")),
             "tactics": list(technique.get("tactics") or []),
             "stix_id": clean_string(technique.get("stix_id")),
             "url": clean_string(technique.get("url")),
+            "platforms": list(technique.get("platforms") or []),
+            "data_sources": list(technique.get("data_sources") or []),
+            "detection": clean_string(technique.get("detection")),
+            "domains": list(technique.get("domains") or []),
+            "version": clean_string(technique.get("version")),
+            "attack_spec_version": clean_string(
+                technique.get("attack_spec_version")
+            ),
+            "created": clean_string(technique.get("created")),
+            "modified": clean_string(technique.get("modified")),
+            "is_subtechnique": bool(technique.get("is_subtechnique", False)),
             "revoked": bool(technique.get("revoked", False)),
             "deprecated": bool(technique.get("deprecated", False)),
         }

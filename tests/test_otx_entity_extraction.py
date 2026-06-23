@@ -13,10 +13,13 @@ class OTXEntityExtractionTests(unittest.TestCase):
         entities = extract_otx_entities(
             {
                 "adversary": "APT Example",
-                "malware_families": ["LummaC2", {"name": "Stealc"}],
+                "malware_families": [
+                    "LummaC2",
+                    {"display_name": "Stealc", "id": "malware-1"},
+                ],
                 "attack_ids": ["T1059", "Uses T1105 and T1059.001"],
                 "industries": "Finance, Healthcare",
-                "targeted_countries": ["BR", "US"],
+                "target_countries": ["BR", "US"],
                 "TLP": "TLP:AMBER",
                 "references": [
                     "https://example.com/report",

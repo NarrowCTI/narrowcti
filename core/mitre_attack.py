@@ -18,16 +18,29 @@ ATTACK_ID_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
 class MITRETechnique:
     attack_id: str
     name: str
+    description: str = ""
     tactics: tuple[str, ...] = ()
     stix_id: str = ""
     source_name: str = "mitre-attack"
     url: str = ""
+    platforms: tuple[str, ...] = ()
+    data_sources: tuple[str, ...] = ()
+    detection: str = ""
+    domains: tuple[str, ...] = ()
+    version: str = ""
+    attack_spec_version: str = ""
+    created: str = ""
+    modified: str = ""
+    is_subtechnique: bool = False
     revoked: bool = False
     deprecated: bool = False
 
     def to_dict(self):
         data = asdict(self)
         data["tactics"] = list(self.tactics)
+        data["platforms"] = list(self.platforms)
+        data["data_sources"] = list(self.data_sources)
+        data["domains"] = list(self.domains)
         return data
 
 
@@ -91,9 +104,21 @@ def build_attack_cache(stix_bundle):
         technique = MITRETechnique(
             attack_id=attack_id,
             name=str(item.get("name") or "").strip(),
+            description=str(item.get("description") or "").strip(),
             tactics=tuple(tactics_from_kill_chain_phases(item.get("kill_chain_phases"))),
             stix_id=str(item.get("id") or "").strip(),
             url=reference_url(item.get("external_references")),
+            platforms=tuple(normalize_string_list(item.get("x_mitre_platforms"))),
+            data_sources=tuple(normalize_string_list(item.get("x_mitre_data_sources"))),
+            detection=str(item.get("x_mitre_detection") or "").strip(),
+            domains=tuple(normalize_string_list(item.get("x_mitre_domains"))),
+            version=str(item.get("x_mitre_version") or "").strip(),
+            attack_spec_version=str(
+                item.get("x_mitre_attack_spec_version") or ""
+            ).strip(),
+            created=str(item.get("created") or "").strip(),
+            modified=str(item.get("modified") or "").strip(),
+            is_subtechnique=bool(item.get("x_mitre_is_subtechnique", False)),
             revoked=bool(item.get("revoked", False)),
             deprecated=bool(item.get("x_mitre_deprecated", False)),
         )
@@ -122,6 +147,7 @@ def normalize_attack_cache(data):
         techniques[normalized_id] = MITRETechnique(
             attack_id=normalized_id,
             name=str(technique.get("name") or "").strip(),
+            description=str(technique.get("description") or "").strip(),
             tactics=tuple(
                 tactic
                 for tactic in (
@@ -132,6 +158,17 @@ def normalize_attack_cache(data):
             stix_id=str(technique.get("stix_id") or "").strip(),
             source_name=str(technique.get("source_name") or "mitre-attack").strip(),
             url=str(technique.get("url") or "").strip(),
+            platforms=tuple(normalize_string_list(technique.get("platforms"))),
+            data_sources=tuple(normalize_string_list(technique.get("data_sources"))),
+            detection=str(technique.get("detection") or "").strip(),
+            domains=tuple(normalize_string_list(technique.get("domains"))),
+            version=str(technique.get("version") or "").strip(),
+            attack_spec_version=str(
+                technique.get("attack_spec_version") or ""
+            ).strip(),
+            created=str(technique.get("created") or "").strip(),
+            modified=str(technique.get("modified") or "").strip(),
+            is_subtechnique=bool(technique.get("is_subtechnique", False)),
             revoked=bool(technique.get("revoked", False)),
             deprecated=bool(technique.get("deprecated", False)),
         ).to_dict()
@@ -196,10 +233,20 @@ class MITREAttackResolver:
             "attack_id": normalized_id,
             "found": True,
             "name": technique.get("name", ""),
+            "description": technique.get("description", ""),
             "tactics": list(technique.get("tactics") or []),
             "stix_id": technique.get("stix_id", ""),
             "source_name": technique.get("source_name", "mitre-attack"),
             "url": technique.get("url", ""),
+            "platforms": list(technique.get("platforms") or []),
+            "data_sources": list(technique.get("data_sources") or []),
+            "detection": technique.get("detection", ""),
+            "domains": list(technique.get("domains") or []),
+            "version": technique.get("version", ""),
+            "attack_spec_version": technique.get("attack_spec_version", ""),
+            "created": technique.get("created", ""),
+            "modified": technique.get("modified", ""),
+            "is_subtechnique": bool(technique.get("is_subtechnique", False)),
             "revoked": bool(technique.get("revoked", False)),
             "deprecated": bool(technique.get("deprecated", False)),
         }
@@ -212,10 +259,31 @@ class MITREAttackResolver:
             "attack_id": attack_id,
             "found": False,
             "name": "",
+            "description": "",
             "tactics": [],
             "stix_id": "",
             "source_name": "mitre-attack",
             "url": "",
+            "platforms": [],
+            "data_sources": [],
+            "detection": "",
+            "domains": [],
+            "version": "",
+            "attack_spec_version": "",
+            "created": "",
+            "modified": "",
+            "is_subtechnique": False,
             "revoked": False,
             "deprecated": False,
         }
+
+
+def normalize_string_list(values):
+    if isinstance(values, str):
+        values = [values]
+    normalized = []
+    for value in values or []:
+        item = str(value or "").strip()
+        if item and item not in normalized:
+            normalized.append(item)
+    return normalized

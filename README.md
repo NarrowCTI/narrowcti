@@ -485,6 +485,7 @@ docs/release-v0.6.0.md
 docs/release-v0.7.0.md
 docs/quarantine-enrichment-v0.6.md
 docs/graph-enrichment-v0.7.md
+docs/metadata-validation-v0.7.md
 docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.6.md
 docs/configuration-reference-v0.5.md
