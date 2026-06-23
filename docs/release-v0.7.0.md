@@ -33,6 +33,8 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 ## Implemented Foundation
 
 - Added `core/graph_evidence.py` as the first shared graph-evidence model.
+- Added `core/graph_candidates.py` as the first normalized graph-candidate
+  model for future graph-aware STIX export.
 - OTX decision and quarantine metadata now include `graph_evidence` records
   built from OTX entity extraction and resolved MITRE ATT&CK context.
 - MISP decision and quarantine metadata now include `graph_evidence` records

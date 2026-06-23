@@ -368,7 +368,8 @@ v0.7 should not be considered complete until:
 ## Implementation Backlog
 
 1. Create a shared graph candidate model. Initial audit-only foundation added
-   in `core/graph_evidence.py`.
+   in `core/graph_evidence.py`; normalized graph candidates are now represented
+   in `core/graph_candidates.py`.
 2. Expand OTX metadata mapping into graph candidates. Initial OTX and MITRE
    evidence mapping is now present in decision and quarantine metadata, and the
    official AlienVault connector mapping has been validated as the
