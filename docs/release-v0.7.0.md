@@ -43,6 +43,10 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 - Added `docs/misp-official-connector-mapping-v0.7.md` to validate the
   official OpenCTI MISP connector mapping model and define it as the
   compatibility baseline for NarrowCTI curated MISP graph export.
+- Added `docs/otx-official-connector-mapping-v0.7.md` to validate the
+  official OpenCTI AlienVault connector mapping model and define it as the
+  source-specific compatibility baseline for NarrowCTI curated OTX graph
+  export.
 - Expanded OTX metadata normalization to handle `target_countries` aliases and
   object `display_name` values from OTX metadata fields.
 - Expanded MITRE technique cache metadata to preserve description, platforms,

@@ -70,7 +70,9 @@ For every supported source, NarrowCTI should document and test:
 
 OTX and MITRE ATT&CK metadata coverage is tracked in
 `docs/metadata-validation-v0.7.md`. MISP official connector compatibility is
-tracked in `docs/misp-official-connector-mapping-v0.7.md`.
+tracked in `docs/misp-official-connector-mapping-v0.7.md`, and OTX official
+connector compatibility is tracked in
+`docs/otx-official-connector-mapping-v0.7.md`.
 
 ## Initial Source Focus
 
@@ -90,6 +92,14 @@ OTX v0.6 already extracts useful entity hints. v0.7 should validate and map:
 | `references` | `external_references` | Preserve evidence trail. |
 | TLP fields/tags | `marking-definition` / OpenCTI marking | Must preserve sharing constraints. |
 | `tags` | labels plus extraction candidates | Tags are weak unless mapped to a known taxonomy. |
+
+The code-level baseline from `opencti/connector-alienvault:6.9.4` shows that
+direct OTX import can create reports, observables, indicators, Intrusion Sets,
+Malware, Attack Patterns, sector identities, country locations, vulnerabilities
+and relationships such as `uses`, `targets`, `based-on` and `indicates`.
+NarrowCTI should keep its custom OTX runtime and curation controls, but the
+official connector is the source-specific compatibility baseline for how OTX
+evidence should eventually land in the OpenCTI graph.
 
 ### MISP
 
@@ -309,7 +319,9 @@ v0.7 should not be considered complete until:
 1. Create a shared graph candidate model. Initial audit-only foundation added
    in `core/graph_evidence.py`.
 2. Expand OTX metadata mapping into graph candidates. Initial OTX and MITRE
-   evidence mapping is now present in decision and quarantine metadata.
+   evidence mapping is now present in decision and quarantine metadata, and the
+   official AlienVault connector mapping has been validated as the
+   source-specific graph baseline.
 3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
    original-source, TLP and tag evidence mapping is present; MISP official
    connector compatibility has been validated as the graph baseline; MISP

@@ -20,6 +20,8 @@ quarantine context or audit-only provenance.
   `https://github.com/mitre-attack/attack-stix-data`
 - MITRE ATT&CK Data Model schema:
   `https://mitre-attack.github.io/attack-data-model/schemas/`
+- Official OpenCTI AlienVault connector image:
+  `opencti/connector-alienvault:6.9.4`
 - Local validation snapshot:
   `state/mitre_attack_cache.json`, generated `2026-06-22T23:22:23Z`,
   `858` techniques, `858` with tactics, `858` with STIX ids, `12`
@@ -77,6 +79,12 @@ OpenCTI entities and relationships.
 Current OTX graph-evidence coverage is good for the high-value CTI fields:
 actor hint, malware family, ATT&CK ids, sectors, countries, TLP, references and
 tags.
+
+The official OpenCTI AlienVault connector mapping was also validated in
+`docs/otx-official-connector-mapping-v0.7.md`. It confirms that OTX-specific
+graph export should cover reports, observables, indicators, Intrusion Sets,
+Malware, Attack Patterns, sectors, countries, vulnerabilities and relationships
+such as `uses`, `targets`, `based-on` and `indicates`.
 
 The remaining gap is not basic extraction; it is intelligent promotion:
 

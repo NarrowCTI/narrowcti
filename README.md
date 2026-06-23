@@ -217,7 +217,9 @@ they affect the OpenCTI graph.
 The detailed design is tracked in `docs/graph-enrichment-v0.7.md`, and the
 development release notes are tracked in `docs/release-v0.7.0.md`. MISP
 compatibility with the official OpenCTI connector mapping is tracked in
-`docs/misp-official-connector-mapping-v0.7.md`.
+`docs/misp-official-connector-mapping-v0.7.md`, and OTX compatibility with the
+official AlienVault connector mapping is tracked in
+`docs/otx-official-connector-mapping-v0.7.md`.
 
 ## Curation Configuration
 
@@ -489,6 +491,7 @@ docs/quarantine-enrichment-v0.6.md
 docs/graph-enrichment-v0.7.md
 docs/metadata-validation-v0.7.md
 docs/misp-official-connector-mapping-v0.7.md
+docs/otx-official-connector-mapping-v0.7.md
 docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.6.md
 docs/configuration-reference-v0.5.md
