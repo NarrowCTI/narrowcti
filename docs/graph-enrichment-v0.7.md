@@ -301,12 +301,21 @@ NARROWCTI_ALLOWED_VULNERABILITIES=
 NARROWCTI_MIN_ENTITY_CONFIDENCE=50
 NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE=60
 NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE=true
+NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=attack_pattern,malware,threat_actor
+NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=attack-pattern,malware,threat-actor
 NARROWCTI_GRAPH_EXPORT_MODE=dry-run
 ```
 
 These filters must not hide decisions. If intelligence is blocked because it is
 outside actor, arsenal, tactic, sector or geography policy, the decision audit
 must explain that clearly.
+
+The first implemented v0.7 filter layer is audit-only. OTX and MISP metadata
+now include `graph_candidate_policy` with accepted and held candidates, held
+reason counts, entity confidence checks, relationship confidence checks,
+optional provenance requirements and allowed graph entity/STIX object filters.
+This does not block source ingestion or export yet; it makes the future graph
+promotion decision visible and testable first.
 
 ## Graph Hygiene
 
@@ -391,7 +400,9 @@ v0.7 should not be considered complete until:
 5. Build a graph-aware STIX exporter.
 6. Add relationship confidence and provenance. Initial audit-only support is
    implemented in `core/graph_candidates.py`.
-7. Add enterprise graph filters.
+7. Add enterprise graph filters. Initial audit-only candidate policy is
+   implemented for entity confidence, relationship confidence, provenance and
+   allowed graph entity/STIX object types.
 8. Add graph deduplication and optional OpenCTI graph lookup.
 9. Add graph export dry-run reporting.
 10. Validate in OpenCTI with OTX and MISP samples.

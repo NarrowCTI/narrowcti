@@ -71,6 +71,8 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
   sources and detection guidance.
 - Graph candidates now carry explicit `relationship_confidence` and normalized
   source `provenance` for future graph-aware STIX relationship creation.
+- OTX and MISP decision/quarantine metadata now include audit-only
+  `graph_candidate_policy` results with accepted and held graph candidates.
 
 ## Validation Target
 
@@ -83,6 +85,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 198 tests
+Ran 199 tests
 OK
 ```

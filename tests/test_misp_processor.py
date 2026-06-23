@@ -247,7 +247,16 @@ class MISPProcessorTests(unittest.TestCase):
             score_details={"final_score": 100, "source_confidence": 50},
         )
 
-        metadata = decision_metadata(candidate_ref, prepared)
+        metadata = decision_metadata(
+            candidate_ref,
+            prepared,
+            graph_candidate_policy={
+                "min_entity_confidence": 50,
+                "min_relationship_confidence": 50,
+                "allowed_entity_types": ["source_identity", "collector"],
+                "require_relationship_provenance": True,
+            },
+        )
 
         self.assertEqual("misp", metadata["collector"])
         self.assertEqual("AlienVault", metadata["original_source"])
@@ -281,6 +290,11 @@ class MISPProcessorTests(unittest.TestCase):
                 for candidate in graph_candidates["candidates"]
             )
         )
+        graph_policy = metadata["graph_candidate_policy"]
+        self.assertEqual(3, graph_policy["candidate_count"])
+        self.assertEqual(2, graph_policy["accepted_count"])
+        self.assertEqual(1, graph_policy["held_count"])
+        self.assertEqual({"entity_type_not_allowed": 1}, graph_policy["held_reasons"])
 
     def test_process_event_skips_when_all_artifacts_are_known(self):
         records = []

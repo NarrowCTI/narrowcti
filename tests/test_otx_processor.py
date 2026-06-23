@@ -391,6 +391,16 @@ class ProcessorTests(unittest.TestCase):
                 for candidate in graph_candidates["candidates"]
             )
         )
+        graph_policy = records[0].metadata["graph_candidate_policy"]
+        self.assertEqual(
+            graph_candidates["candidate_count"],
+            graph_policy["candidate_count"],
+        )
+        self.assertEqual(
+            graph_candidates["candidate_count"],
+            graph_policy["accepted_count"],
+        )
+        self.assertEqual(0, graph_policy["held_count"])
 
     def test_process_pulse_writes_quarantine_record(self):
         records = []

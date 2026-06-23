@@ -3,7 +3,7 @@ from collections.abc import Mapping
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.feed_contract import FeedRunSummary
-from core.graph_candidates import build_graph_candidates
+from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
 from core.graph_evidence import build_graph_evidence
 from core.indicator_policy import filter_indicators_by_type
 from core.policy import PolicyConfig, should_ingest
@@ -31,7 +31,7 @@ def compact_mapping(value):
     return dict(value) if isinstance(value, Mapping) else {}
 
 
-def decision_metadata(candidate_ref, candidate=None):
+def decision_metadata(candidate_ref, candidate=None, graph_candidate_policy=None):
     event = compact_mapping(candidate.event if candidate else {})
     reference = compact_mapping(candidate_ref.raw)
     source = event or reference
@@ -57,8 +57,11 @@ def decision_metadata(candidate_ref, candidate=None):
         external_id=candidate_ref.external_id,
         title=getattr(candidate, "name", "") or candidate_ref.title,
     )
-    metadata["graph_candidates"] = build_graph_candidates(
-        metadata["graph_evidence"]
+    graph_candidates = build_graph_candidates(metadata["graph_evidence"])
+    metadata["graph_candidates"] = graph_candidates.to_dict()
+    metadata["graph_candidate_policy"] = apply_graph_candidate_policy(
+        graph_candidates,
+        **(graph_candidate_policy or {}),
     ).to_dict()
     return metadata
 
@@ -105,6 +108,7 @@ class MISPProcessor:
             min_score_for_old_pulse=settings.min_score_for_old_event,
             max_days_hard_filter=settings.max_days_hard_filter,
         )
+        self.graph_candidate_policy = graph_candidate_policy_from_settings(settings)
 
     def build_quarantine_repository(self, settings):
         repository_file = getattr(settings, "quarantine_repository_file", "")
@@ -320,7 +324,11 @@ class MISPProcessor:
             score=score,
             age_days=candidate_age,
             indicator_count=indicator_count,
-            metadata=decision_metadata(candidate_ref, candidate),
+            metadata=decision_metadata(
+                candidate_ref,
+                candidate,
+                graph_candidate_policy=self.graph_candidate_policy,
+            ),
         )
 
         try:
@@ -342,7 +350,11 @@ class MISPProcessor:
             raw_source,
             getattr(self.settings, "quarantine_raw_snapshot_max_bytes", 65536),
         )
-        metadata = decision_metadata(candidate_ref, candidate)
+        metadata = decision_metadata(
+            candidate_ref,
+            candidate,
+            graph_candidate_policy=self.graph_candidate_policy,
+        )
         if truncated:
             metadata["raw_snapshot_truncated"] = True
 
@@ -514,3 +526,25 @@ class MISPProcessor:
             score=score_details["final_score"],
             score_details=score_details,
         )
+
+
+def graph_candidate_policy_from_settings(settings):
+    return {
+        "min_entity_confidence": getattr(settings, "graph_min_entity_confidence", 0),
+        "min_relationship_confidence": getattr(
+            settings,
+            "graph_min_relationship_confidence",
+            0,
+        ),
+        "allowed_entity_types": getattr(settings, "graph_allowed_entity_types", []),
+        "allowed_stix_object_types": getattr(
+            settings,
+            "graph_allowed_stix_object_types",
+            [],
+        ),
+        "require_relationship_provenance": getattr(
+            settings,
+            "graph_require_relationship_provenance",
+            False,
+        ),
+    }

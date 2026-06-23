@@ -97,6 +97,41 @@ class GraphCandidateSet:
         }
 
 
+@dataclass(frozen=True)
+class GraphCandidatePolicyResult:
+    version: str
+    candidate_count: int
+    accepted: tuple[GraphCandidate, ...] = ()
+    held: tuple[Mapping[str, object], ...] = ()
+
+    @property
+    def accepted_count(self):
+        return len(self.accepted)
+
+    @property
+    def held_count(self):
+        return len(self.held)
+
+    @property
+    def held_reasons(self):
+        reasons = Counter()
+        for item in self.held:
+            for reason in item.get("reasons") or []:
+                reasons[reason] += 1
+        return dict(sorted(reasons.items()))
+
+    def to_dict(self):
+        return {
+            "version": self.version,
+            "candidate_count": self.candidate_count,
+            "accepted_count": self.accepted_count,
+            "held_count": self.held_count,
+            "held_reasons": self.held_reasons,
+            "accepted": [candidate.to_dict() for candidate in self.accepted],
+            "held": [dict(item) for item in self.held],
+        }
+
+
 def build_graph_candidates(
     graph_evidence,
     min_confidence=0,
@@ -135,6 +170,71 @@ def build_graph_candidates(
         title=title,
         candidates=tuple(candidates),
     )
+
+
+def apply_graph_candidate_policy(
+    candidate_set,
+    min_entity_confidence=0,
+    min_relationship_confidence=0,
+    allowed_entity_types=None,
+    allowed_stix_object_types=None,
+    require_relationship_provenance=False,
+):
+    allowed_entity_types = normalize_exclusions(allowed_entity_types)
+    allowed_stix_object_types = normalize_exclusions(allowed_stix_object_types)
+    accepted = []
+    held = []
+
+    for candidate in candidate_set.candidates:
+        reasons = graph_candidate_policy_reasons(
+            candidate,
+            min_entity_confidence=min_entity_confidence,
+            min_relationship_confidence=min_relationship_confidence,
+            allowed_entity_types=allowed_entity_types,
+            allowed_stix_object_types=allowed_stix_object_types,
+            require_relationship_provenance=require_relationship_provenance,
+        )
+        if reasons:
+            held.append(
+                {
+                    "candidate": candidate.to_dict(),
+                    "reasons": reasons,
+                }
+            )
+        else:
+            accepted.append(candidate)
+
+    return GraphCandidatePolicyResult(
+        version=candidate_set.version,
+        candidate_count=candidate_set.candidate_count,
+        accepted=tuple(accepted),
+        held=tuple(held),
+    )
+
+
+def graph_candidate_policy_reasons(
+    candidate,
+    min_entity_confidence=0,
+    min_relationship_confidence=0,
+    allowed_entity_types=None,
+    allowed_stix_object_types=None,
+    require_relationship_provenance=False,
+):
+    reasons = []
+    if candidate.confidence < min_entity_confidence:
+        reasons.append("entity_confidence_below_min")
+    if candidate.relationship_confidence < min_relationship_confidence:
+        reasons.append("relationship_confidence_below_min")
+    if allowed_entity_types and candidate.entity_type not in allowed_entity_types:
+        reasons.append("entity_type_not_allowed")
+    if (
+        allowed_stix_object_types
+        and candidate.stix_object_type not in allowed_stix_object_types
+    ):
+        reasons.append("stix_object_type_not_allowed")
+    if require_relationship_provenance and not candidate.provenance:
+        reasons.append("relationship_provenance_required")
+    return reasons
 
 
 def graph_candidate_from_record(

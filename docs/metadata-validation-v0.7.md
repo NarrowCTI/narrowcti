@@ -41,6 +41,9 @@ NarrowCTI v0.7 currently has an audit-first graph evidence layer:
   provenance.
 - OTX and MISP processors write `graph_evidence` and `graph_candidates` into
   decision audit and quarantine metadata.
+- OTX and MISP processors also write `graph_candidate_policy` into decision
+  audit and quarantine metadata so operators can see accepted and held graph
+  candidates before any graph export exists.
 - The STIX exporter still emits the stable v0.6 `Report + Indicator` bundle.
 
 This is intentional. v0.7 should validate graph candidates before creating new
@@ -158,7 +161,8 @@ OTX raw pulse
 ```
 
 This means v0.7 has crossed the first important line: the gateway can now
-explain which graph objects and relationships it could create, and why.
+explain which graph objects and relationships it could create, why they were
+accepted by graph policy or why they were held back.
 
 It has not yet crossed the second line: creating those graph objects and
 relationships in OpenCTI.

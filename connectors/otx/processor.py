@@ -1,7 +1,7 @@
 import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
-from core.graph_candidates import build_graph_candidates
+from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
 from core.graph_evidence import build_graph_evidence
 from core.indicator_policy import filter_indicators_by_type
 from core.mitre_attack import MITREAttackResolver
@@ -39,6 +39,7 @@ def decision_metadata(
     source_key="",
     external_id="",
     title="",
+    graph_candidate_policy=None,
 ):
     score_details = getattr(candidate, "score_details", None)
     if not candidate:
@@ -55,8 +56,11 @@ def decision_metadata(
         external_id=external_id or candidate.pulse.get("id", ""),
         title=title or candidate.name,
     )
-    metadata["graph_candidates"] = build_graph_candidates(
-        metadata["graph_evidence"]
+    graph_candidates = build_graph_candidates(metadata["graph_evidence"])
+    metadata["graph_candidates"] = graph_candidates.to_dict()
+    metadata["graph_candidate_policy"] = apply_graph_candidate_policy(
+        graph_candidates,
+        **(graph_candidate_policy or {}),
     ).to_dict()
     return metadata
 
@@ -119,6 +123,7 @@ class OTXProcessor:
             min_score_for_old_pulse=settings.min_score_for_old_pulse,
             max_days_hard_filter=settings.max_days_hard_filter,
         )
+        self.graph_candidate_policy = graph_candidate_policy_from_settings(settings)
 
     def build_quarantine_repository(self, settings):
         repository_file = getattr(settings, "quarantine_repository_file", "")
@@ -353,6 +358,7 @@ class OTXProcessor:
                 source_key=candidate_ref.source.key,
                 external_id=candidate_ref.external_id,
                 title=title,
+                graph_candidate_policy=self.graph_candidate_policy,
             ),
         )
 
@@ -382,6 +388,7 @@ class OTXProcessor:
             source_key=candidate_ref.source.key,
             external_id=candidate_ref.external_id,
             title=title,
+            graph_candidate_policy=self.graph_candidate_policy,
         )
         if truncated:
             metadata["raw_snapshot_truncated"] = True
@@ -529,3 +536,25 @@ class OTXProcessor:
             score=score_details["final_score"],
             score_details=score_details,
         )
+
+
+def graph_candidate_policy_from_settings(settings):
+    return {
+        "min_entity_confidence": getattr(settings, "graph_min_entity_confidence", 0),
+        "min_relationship_confidence": getattr(
+            settings,
+            "graph_min_relationship_confidence",
+            0,
+        ),
+        "allowed_entity_types": getattr(settings, "graph_allowed_entity_types", []),
+        "allowed_stix_object_types": getattr(
+            settings,
+            "graph_allowed_stix_object_types",
+            [],
+        ),
+        "require_relationship_provenance": getattr(
+            settings,
+            "graph_require_relationship_provenance",
+            False,
+        ),
+    }

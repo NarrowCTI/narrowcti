@@ -1,6 +1,7 @@
 import unittest
 
 from core.graph_candidates import (
+    apply_graph_candidate_policy,
     build_graph_candidates,
     candidate_fingerprint,
     graph_candidate_from_record,
@@ -181,6 +182,57 @@ class GraphCandidateTests(unittest.TestCase):
 
         self.assertEqual(1, candidates.candidate_count)
         self.assertEqual("collector", candidates.candidates[0].entity_type)
+
+    def test_applies_graph_candidate_policy_without_dropping_candidates(self):
+        candidates = build_graph_candidates(
+            {
+                "source_key": "alienvault:otx",
+                "records": [
+                    {
+                        "entity_type": "threat_actor",
+                        "value": "APT Example",
+                        "stix_object_type": "threat-actor",
+                        "relationship_type": "attributed-to",
+                        "confidence": 45,
+                        "relationship_confidence": 40,
+                        "source_field": "adversary",
+                    },
+                    {
+                        "entity_type": "attack_pattern",
+                        "value": "T1059",
+                        "stix_object_type": "attack-pattern",
+                        "relationship_type": "uses",
+                        "confidence": 90,
+                        "relationship_confidence": 85,
+                        "source_field": "mitre_attack.resolved",
+                    },
+                ],
+            }
+        )
+
+        result = apply_graph_candidate_policy(
+            candidates,
+            min_entity_confidence=50,
+            min_relationship_confidence=60,
+            allowed_entity_types={"attack_pattern"},
+            require_relationship_provenance=True,
+        )
+
+        self.assertEqual(2, result.candidate_count)
+        self.assertEqual(1, result.accepted_count)
+        self.assertEqual(1, result.held_count)
+        self.assertEqual("attack_pattern", result.accepted[0].entity_type)
+        self.assertEqual(
+            {
+                "entity_confidence_below_min": 1,
+                "entity_type_not_allowed": 1,
+                "relationship_confidence_below_min": 1,
+            },
+            result.held_reasons,
+        )
+        policy = result.to_dict()
+        self.assertEqual(2, policy["candidate_count"])
+        self.assertEqual("threat_actor", policy["held"][0]["candidate"]["entity_type"])
 
     def test_skips_malformed_records_and_clamps_confidence(self):
         candidates = build_graph_candidates(
