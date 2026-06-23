@@ -221,6 +221,8 @@ compatibility with the official OpenCTI connector mapping is tracked in
 official AlienVault connector mapping is tracked in
 `docs/otx-official-connector-mapping-v0.7.md`. Contextual scoring research is
 tracked in `docs/contextual-scoring-reference-v0.7.md`.
+The direct source, MISP collector and hybrid ingestion architecture is tracked
+in `docs/source-ingestion-modes-v0.7.md`.
 
 ## Curation Configuration
 
@@ -492,6 +494,7 @@ docs/quarantine-enrichment-v0.6.md
 docs/graph-enrichment-v0.7.md
 docs/metadata-validation-v0.7.md
 docs/contextual-scoring-reference-v0.7.md
+docs/source-ingestion-modes-v0.7.md
 docs/misp-official-connector-mapping-v0.7.md
 docs/otx-official-connector-mapping-v0.7.md
 docs/gateway-runtime-v0.5.md

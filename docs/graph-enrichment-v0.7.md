@@ -76,6 +76,9 @@ connector compatibility is tracked in
 from the OpenCTI scoring-calculator connector are tracked in
 `docs/contextual-scoring-reference-v0.7.md`.
 
+The source ingestion architecture for direct, MISP collector and hybrid modes
+is tracked in `docs/source-ingestion-modes-v0.7.md`.
+
 ## Initial Source Focus
 
 ### OTX
@@ -170,6 +173,29 @@ v0.7 should introduce a richer STIX builder that can create and link:
 - `note` for weak or analyst-review context
 - `relationship`
 - future `sighting`
+
+## Ingestion Modes
+
+NarrowCTI must support environments with and without MISP. The target product
+architecture supports three modes:
+
+```text
+Direct source mode:
+  External source -> NarrowCTI -> OpenCTI
+
+MISP collector mode:
+  External sources -> MISP -> NarrowCTI -> OpenCTI
+
+Hybrid mode:
+  Some sources -> MISP -> NarrowCTI
+  Other sources -> NarrowCTI directly
+  NarrowCTI -> OpenCTI
+```
+
+Official OpenCTI connectors should be used as mapping references for graph
+compatibility, not as replacements for NarrowCTI's curation path. Future
+direct sources should enter through source adapters and produce graph evidence
+and graph candidates before STIX export.
 
 ## Relationship Model
 
@@ -363,6 +389,8 @@ v0.7 should not be considered complete until:
     import for the same event and document object/relationship differences.
 12. Add contextual scoring dry-run evidence using graph categories inspired by
     the OpenCTI scoring-calculator reference.
+13. Document and preflight the active ingestion mode: direct, MISP collector or
+    hybrid.
 
 ## Decision
 

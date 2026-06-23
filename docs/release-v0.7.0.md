@@ -24,6 +24,8 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 - Define contextual scoring based on graph evidence so actor, arsenal, TTP,
   sector, geography and author relevance can influence decisions without
   bypassing policy.
+- Define direct source, MISP collector and hybrid ingestion modes so NarrowCTI
+  does not depend on MISP to act as the OpenCTI curation gateway.
 - Introduce relationship confidence, provenance and audit evidence.
 - Extend graph hygiene beyond indicator deduplication into entity and
   relationship quality controls.
@@ -53,6 +55,8 @@ The detailed design is tracked in `docs/graph-enrichment-v0.7.md`.
 - Added `docs/contextual-scoring-reference-v0.7.md` to evaluate the OpenCTI
   scoring-calculator connector as a reference for NarrowCTI contextual
   pre-ingestion scoring.
+- Added `docs/source-ingestion-modes-v0.7.md` to formalize direct source, MISP
+  collector and hybrid ingestion modes.
 - Expanded OTX metadata normalization to handle `target_countries` aliases and
   object `display_name` values from OTX metadata fields.
 - Expanded MITRE technique cache metadata to preserve description, platforms,

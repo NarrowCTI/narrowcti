@@ -147,6 +147,7 @@ Detailed design:
 
 - `docs/graph-enrichment-v0.7.md`
 - `docs/contextual-scoring-reference-v0.7.md`
+- `docs/source-ingestion-modes-v0.7.md`
 
 Development notes:
 
@@ -163,6 +164,8 @@ Purpose:
   fields.
 - Add contextual scoring design based on graph evidence for threat, arsenal,
   sector, geography, TTP and author relevance.
+- Document direct source, MISP collector and hybrid ingestion modes so
+  NarrowCTI can be deployed with or without MISP.
 - Expand graph hygiene from indicator deduplication into relationship and entity
   quality controls.
 
@@ -175,6 +178,8 @@ Expected outcomes:
 - Relationship evidence is auditable before it becomes graph knowledge.
 - Score decisions can account for high-value graph context without hiding the
   base score or bypassing policy.
+- The product architecture clearly supports organizations that use MISP and
+  organizations that need NarrowCTI to ingest direct sources into OpenCTI.
 - Source metadata validation is broad enough for OTX, MISP and MITRE evidence
   to enrich OpenCTI graph views with high-signal CTI context instead of only
   reports and indicators.

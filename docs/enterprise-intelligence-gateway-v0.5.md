@@ -31,6 +31,11 @@ OpenCTI remains the knowledge graph, visualization and analyst platform.
 NarrowCTI owns the decision logic, source normalization, score, policy,
 deduplication, quarantine, enrichment and graph-shaping before import.
 
+NarrowCTI must support direct source, MISP collector and hybrid ingestion
+modes. MISP is an optional collector and hub, not a hard product dependency.
+The detailed v0.7 ingestion-mode decision is tracked in
+`docs/source-ingestion-modes-v0.7.md`.
+
 The product should move from IoC forwarding to intelligence shaping:
 
 - Which threat actor or intrusion set is involved?
@@ -257,6 +262,7 @@ Recommended placement:
 | v0.7 | Export richer STIX objects and relationships to OpenCTI. | Starts feeding more OpenCTI tabs and graph pivots. |
 | v0.7 | Add enterprise policy variables for actor, arsenal, ATT&CK, sector and geography filters. | Safe after extraction and quarantine exist. |
 | v0.7 | Add contextual scoring design and dry-run evidence based on graph categories. | Lets actor, arsenal, TTP, sector, location and author relevance influence decisions without hiding the base score. |
+| v0.7 | Document direct source, MISP collector and hybrid ingestion modes. | Ensures NarrowCTI can be used by teams with or without MISP. |
 | v0.8 | Add analyst review API/UI and value reporting. | Turns governance into product workflow. |
 | v1.0 | Stable enterprise policy engine with explainable scoring, release, enrichment, graph quality metrics and enterprise CTI report output. | Production-grade target. |
 
@@ -268,6 +274,10 @@ mapping, relationship confidence and enterprise graph filters.
 The contextual scoring reference is tracked in
 `docs/contextual-scoring-reference-v0.7.md`. It should guide how NarrowCTI
 separates base score from graph-context score and explains every adjustment.
+
+The source ingestion mode reference is tracked in
+`docs/source-ingestion-modes-v0.7.md`. It should guide how new direct source
+adapters enter the product without bypassing curation.
 
 The enterprise CTI report should be built after reliable evidence exists from
 gateway summaries, decision audit, quarantine/release actions, artifact
