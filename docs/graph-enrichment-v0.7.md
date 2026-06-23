@@ -329,6 +329,11 @@ relationships that would be attempted later. `export` mode is explicitly
 blocked until the graph-aware STIX builder, graph deduplication and OpenCTI
 validation are complete.
 
+The decision audit report now aggregates `graph_export_plan` evidence across
+decision audit records. Operators can see graph export modes, statuses,
+actions, accepted and held candidate counts, would-create object/relationship
+counts, held reasons and source/query rollups without reading raw JSONL.
+
 ## Graph Hygiene
 
 v0.7 graph enrichment must avoid polluting OpenCTI.
@@ -417,8 +422,9 @@ v0.7 should not be considered complete until:
    allowed graph entity/STIX object types.
 8. Add graph deduplication and optional OpenCTI graph lookup.
 9. Add graph export dry-run reporting. Initial per-decision
-   `graph_export_plan` metadata is implemented for audit/dry-run visibility;
-   aggregate operator reports and OpenCTI comparison evidence remain pending.
+   `graph_export_plan` metadata and decision-audit aggregate rollups are
+   implemented for audit/dry-run visibility; OpenCTI comparison evidence
+   remains pending.
 10. Validate in OpenCTI with OTX and MISP samples.
 11. Compare a direct official MISP connector import with a NarrowCTI-curated
     import for the same event and document object/relationship differences.

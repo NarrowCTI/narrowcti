@@ -311,6 +311,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Graph candidate policy | Implemented as audit-only accepted and held candidate output. |
 | Graph export planning | Implemented as audit/dry-run/blocked export metadata for OTX and MISP decisions. |
 | Decision audit metadata | Implemented for OTX and MISP processors. |
+| Decision audit graph export reporting | Implemented in `gateway.decisions` with graph export modes, statuses, actions, would-create counts, held reasons, source rollups and query rollups. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
 | Stable STIX export | Implemented as current `Report + Indicator` bundle. |
 
@@ -320,7 +321,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | --- | --- |
 | Graph-aware STIX builder | Create OpenCTI-compatible STIX objects and relationships from accepted graph candidates. |
 | Graph deduplication | Check existing OpenCTI entities and relationships before promotion. |
-| Graph export dry-run reporting | Promote per-decision graph export plans into aggregate operator reports and OpenCTI lab comparison evidence. |
+| Graph export dry-run reporting | Extend implemented decision-audit graph export rollups into OpenCTI lab comparison evidence and future enterprise CTI reports. |
 | MISP rich mapping | Extract galaxies, clusters, objects, object relations and ATT&CK/victimology context more deeply. |
 | OTX rich mapping | Expand pulse lifecycle, author, vote, vulnerability and indicator timing metadata. |
 | Contextual scoring | Use graph candidates as scoring signals without hiding base score decisions. |

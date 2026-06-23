@@ -65,7 +65,10 @@ graph enrichment layer.
 
 Current graph controls do not create new OpenCTI graph objects. They make the
 future graph promotion decision visible in decision audit and quarantine
-metadata through `graph_candidate_policy` and `graph_export_plan`.
+metadata through `graph_candidate_policy` and `graph_export_plan`. The
+decision audit report also aggregates graph export plan evidence so operators
+can review modes, statuses, actions, would-create counts, held reasons and
+source/query rollups without reading raw JSONL records.
 
 ## Source Examples
 

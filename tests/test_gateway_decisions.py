@@ -5,6 +5,7 @@ import unittest
 
 from gateway.decisions import (
     build_decision_audit_report,
+    build_graph_export_summary,
     build_score_summary,
     format_text_report,
     read_decision_records,
@@ -64,6 +65,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         )
         self.assertEqual(1, report.sources["misp"]["actions"]["skip"])
         self.assertEqual([], report.quarantined)
+        self.assertEqual(0, report.graph_export["record_count"])
         self.assertEqual(2, len(report.queries))
         self.assertEqual("otx", report.queries[0]["source_key"])
         self.assertEqual("sample", report.queries[0]["query"])
@@ -74,6 +76,85 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             report.queries[0]["score_summary"]["records_with_score"],
         )
         json.dumps(report.to_dict())
+
+    def test_report_aggregates_graph_export_plan_metadata(self):
+        records = [
+            decision_record(
+                "2026-06-22T10:00:00Z",
+                "otx",
+                "dry-run",
+                "ok",
+                metadata={
+                    "graph_export_plan": graph_export_plan(
+                        mode="dry-run",
+                        status="dry-run",
+                        candidate_count=3,
+                        accepted_count=2,
+                        held_count=1,
+                        would_create_object_count=2,
+                        would_create_relationship_count=2,
+                        actions=["would_create", "would_create", "held"],
+                        held_reasons={"entity_confidence_below_min": 1},
+                        accepted_object_counts={"attack-pattern": 1, "malware": 1},
+                        accepted_relationship_counts={"uses": 2},
+                    )
+                },
+                query="lummac2",
+            ),
+            decision_record(
+                "2026-06-22T10:01:00Z",
+                "misp",
+                "ingest",
+                "ok",
+                metadata={
+                    "graph_export_plan": graph_export_plan(
+                        mode="audit",
+                        status="audit-only",
+                        candidate_count=1,
+                        accepted_count=1,
+                        held_count=0,
+                        actions=["audit_only"],
+                        accepted_object_counts={"identity": 1},
+                        accepted_relationship_counts={"originated-from": 1},
+                    )
+                },
+                query="tlp:green",
+            ),
+        ]
+
+        report = build_decision_audit_report(records)
+        graph = report.graph_export
+
+        self.assertEqual(2, graph["record_count"])
+        self.assertEqual(4, graph["candidate_count"])
+        self.assertEqual(3, graph["accepted_count"])
+        self.assertEqual(1, graph["held_count"])
+        self.assertEqual(2, graph["would_create_object_count"])
+        self.assertEqual(2, graph["would_create_relationship_count"])
+        self.assertEqual({"audit": 1, "dry-run": 1}, graph["modes"])
+        self.assertEqual({"audit-only": 1, "dry-run": 1}, graph["statuses"])
+        self.assertEqual(
+            {"audit_only": 1, "held": 1, "would_create": 2},
+            graph["actions"],
+        )
+        self.assertEqual({"entity_confidence_below_min": 1}, graph["held_reasons"])
+        self.assertEqual(3, graph["by_source"]["otx"]["candidate_count"])
+        self.assertEqual(1, graph["by_source"]["misp"]["candidate_count"])
+        by_query = {
+            (item["source_key"], item["query"]): item
+            for item in graph["by_query"]
+        }
+        self.assertEqual(3, by_query[("otx", "lummac2")]["candidate_count"])
+        self.assertEqual(1, by_query[("misp", "tlp:green")]["candidate_count"])
+
+    def test_graph_export_summary_ignores_records_without_plan(self):
+        summary = build_graph_export_summary(
+            [decision_record("2026-06-22T10:00:00Z", "otx", "drop", "old")]
+        )
+
+        self.assertEqual(0, summary["record_count"])
+        self.assertEqual({}, summary["by_source"])
+        self.assertEqual([], summary["by_query"])
 
     def test_score_summary_ignores_records_without_score(self):
         summary = build_score_summary(
@@ -101,6 +182,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual([], report.quarantined)
         self.assertEqual([], report.queries)
         self.assertEqual(0, report.score_summary["overall"]["records_with_score"])
+        self.assertEqual(0, report.graph_export["record_count"])
         json.dumps(report.to_dict())
 
     def test_report_lists_recent_quarantined_candidates(self):
@@ -240,6 +322,39 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("- otx query=sample records=1", text)
         self.assertIn("- otx records=1", text)
 
+    def test_text_report_includes_graph_export_summary(self):
+        report = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-22T10:00:00Z",
+                    "otx",
+                    "dry-run",
+                    "ok",
+                    metadata={
+                        "graph_export_plan": graph_export_plan(
+                            mode="dry-run",
+                            status="dry-run",
+                            candidate_count=2,
+                            accepted_count=2,
+                            held_count=0,
+                            would_create_object_count=2,
+                            would_create_relationship_count=1,
+                            actions=["would_create", "would_create"],
+                            accepted_object_counts={"attack-pattern": 2},
+                            accepted_relationship_counts={"uses": 1},
+                        )
+                    },
+                )
+            ]
+        )
+
+        text = format_text_report(report)
+
+        self.assertIn("graph_export:", text)
+        self.assertIn("would_create_objects=2", text)
+        self.assertIn("actions=would_create:2", text)
+        self.assertIn("graph_export_by_source:", text)
+
 
 def decision_record(
     recorded_at,
@@ -262,6 +377,36 @@ def decision_record(
         "age_days": 1,
         "indicator_count": 1,
         "metadata": metadata or {},
+    }
+
+
+def graph_export_plan(
+    mode="audit",
+    status="audit-only",
+    candidate_count=0,
+    accepted_count=0,
+    held_count=0,
+    would_create_object_count=0,
+    would_create_relationship_count=0,
+    actions=None,
+    held_reasons=None,
+    accepted_object_counts=None,
+    accepted_relationship_counts=None,
+):
+    return {
+        "version": "v0.7.0-dev",
+        "mode": mode,
+        "status": status,
+        "export_enabled": False,
+        "candidate_count": candidate_count,
+        "accepted_count": accepted_count,
+        "held_count": held_count,
+        "held_reasons": held_reasons or {},
+        "accepted_object_counts": accepted_object_counts or {},
+        "accepted_relationship_counts": accepted_relationship_counts or {},
+        "would_create_object_count": would_create_object_count,
+        "would_create_relationship_count": would_create_relationship_count,
+        "actions": [{"action": action} for action in actions or []],
     }
 
 

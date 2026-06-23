@@ -29,6 +29,7 @@ class DecisionAuditReport:
     quarantined: list
     queries: list
     score_summary: dict
+    graph_export: dict
     sources: dict
 
     def to_dict(self):
@@ -41,6 +42,7 @@ class DecisionAuditReport:
             "quarantined": self.quarantined,
             "queries": self.queries,
             "score_summary": self.score_summary,
+            "graph_export": self.graph_export,
             "sources": self.sources,
         }
 
@@ -85,6 +87,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
                 "overall": build_score_summary([]),
                 "by_action": {},
             },
+            graph_export=build_graph_export_summary([]),
             sources={},
         )
 
@@ -153,6 +156,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
                 for action, action_records in sorted(records_by_action.items())
             },
         },
+        graph_export=build_graph_export_summary(records),
         sources=sources,
     )
 
@@ -232,6 +236,145 @@ def quarantine_record(record):
     }
 
 
+def build_graph_export_summary(records):
+    summary = empty_graph_export_summary()
+    by_source = {}
+    by_query = {}
+
+    for record in records or ():
+        plan = graph_export_plan(record)
+        if not plan:
+            continue
+        source_key = normalize_value(record.get("source_key"), "unknown")
+        query = normalize_value(record.get("query"), "(none)")
+        merge_graph_export_plan(summary, plan)
+        merge_graph_export_plan(
+            by_source.setdefault(source_key, empty_graph_export_summary(False)),
+            plan,
+        )
+        merge_graph_export_plan(
+            by_query.setdefault(
+                (source_key, query),
+                {
+                    "source_key": source_key,
+                    "query": query,
+                    **empty_graph_export_summary(False),
+                },
+            ),
+            plan,
+        )
+
+    summary["modes"] = dict(sorted(summary["modes"].items()))
+    summary["statuses"] = dict(sorted(summary["statuses"].items()))
+    summary["actions"] = dict(sorted(summary["actions"].items()))
+    summary["held_reasons"] = dict(sorted(summary["held_reasons"].items()))
+    summary["accepted_object_counts"] = dict(
+        sorted(summary["accepted_object_counts"].items())
+    )
+    summary["accepted_relationship_counts"] = dict(
+        sorted(summary["accepted_relationship_counts"].items())
+    )
+    summary["by_source"] = {
+        source: normalize_graph_export_summary(source_summary)
+        for source, source_summary in sorted(by_source.items())
+    }
+    summary["by_query"] = [
+        normalize_graph_export_summary(query_summary)
+        for _, query_summary in sorted(
+            by_query.items(),
+            key=lambda item: (
+                -int(item[1].get("record_count", 0) or 0),
+                item[1].get("source_key", ""),
+                item[1].get("query", ""),
+            ),
+        )
+    ]
+    return summary
+
+
+def empty_graph_export_summary(include_breakdowns=True):
+    summary = {
+        "record_count": 0,
+        "candidate_count": 0,
+        "accepted_count": 0,
+        "held_count": 0,
+        "would_create_object_count": 0,
+        "would_create_relationship_count": 0,
+        "modes": {},
+        "statuses": {},
+        "actions": {},
+        "held_reasons": {},
+        "accepted_object_counts": {},
+        "accepted_relationship_counts": {},
+    }
+    if include_breakdowns:
+        summary["by_source"] = {}
+        summary["by_query"] = []
+    return summary
+
+
+def normalize_graph_export_summary(summary):
+    for field in (
+        "modes",
+        "statuses",
+        "actions",
+        "held_reasons",
+        "accepted_object_counts",
+        "accepted_relationship_counts",
+    ):
+        summary[field] = dict(sorted(summary.get(field, {}).items()))
+    return summary
+
+
+def graph_export_plan(record):
+    metadata = record.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return {}
+    plan = metadata.get("graph_export_plan")
+    return dict(plan) if isinstance(plan, Mapping) else {}
+
+
+def merge_graph_export_plan(summary, plan):
+    summary["record_count"] += 1
+    summary["candidate_count"] += int(plan.get("candidate_count", 0) or 0)
+    summary["accepted_count"] += int(plan.get("accepted_count", 0) or 0)
+    summary["held_count"] += int(plan.get("held_count", 0) or 0)
+    summary["would_create_object_count"] += int(
+        plan.get("would_create_object_count", 0) or 0
+    )
+    summary["would_create_relationship_count"] += int(
+        plan.get("would_create_relationship_count", 0) or 0
+    )
+    increment_count(summary["modes"], normalize_value(plan.get("mode"), "unknown"))
+    increment_count(summary["statuses"], normalize_value(plan.get("status"), "unknown"))
+    merge_counts(summary["held_reasons"], plan.get("held_reasons"))
+    merge_counts(summary["accepted_object_counts"], plan.get("accepted_object_counts"))
+    merge_counts(
+        summary["accepted_relationship_counts"],
+        plan.get("accepted_relationship_counts"),
+    )
+    for action in plan.get("actions") or []:
+        if isinstance(action, Mapping):
+            increment_count(
+                summary["actions"],
+                normalize_value(action.get("action"), "unknown"),
+            )
+
+
+def merge_counts(target, counts):
+    if not isinstance(counts, Mapping):
+        return
+    for key, value in counts.items():
+        target[normalize_value(key, "unknown")] = target.get(
+            normalize_value(key, "unknown"),
+            0,
+        ) + int(value or 0)
+
+
+def increment_count(target, key):
+    target[key] = target.get(key, 0) + 1
+
+
 def build_score_summary(records):
     scores = [
         score
@@ -292,6 +435,21 @@ def format_text_report(report):
                 f"- action={item['action']} count={item['count']} "
                 f"reason={item['reason']}"
             )
+    if report.graph_export.get("record_count", 0):
+        graph = report.graph_export
+        lines.append("graph_export:")
+        lines.append("- " + format_graph_export_summary(graph))
+        if graph.get("by_source"):
+            lines.append("graph_export_by_source:")
+            for source_key, source in graph["by_source"].items():
+                lines.append(f"- source={source_key} {format_graph_export_summary(source)}")
+        if graph.get("by_query"):
+            lines.append("graph_export_by_query:")
+            for query in graph["by_query"]:
+                lines.append(
+                    f"- {query['source_key']} query={query['query']} "
+                    f"{format_graph_export_summary(query)}"
+                )
     if report.quarantined:
         lines.append("quarantine_candidates:")
         for item in report.quarantined:
@@ -340,6 +498,28 @@ def format_score_summary(summary):
         f"average_score={format_optional(summary.get('average_score'))} "
         f"bands={band_text}"
     )
+
+
+def format_graph_export_summary(summary):
+    return (
+        f"records={summary.get('record_count', 0)} "
+        f"candidates={summary.get('candidate_count', 0)} "
+        f"accepted={summary.get('accepted_count', 0)} "
+        f"held={summary.get('held_count', 0)} "
+        f"would_create_objects={summary.get('would_create_object_count', 0)} "
+        f"would_create_relationships="
+        f"{summary.get('would_create_relationship_count', 0)} "
+        f"modes={format_compact_counts(summary.get('modes', {}))} "
+        f"statuses={format_compact_counts(summary.get('statuses', {}))} "
+        f"actions={format_compact_counts(summary.get('actions', {}))} "
+        f"held_reasons={format_compact_counts(summary.get('held_reasons', {}))}"
+    )
+
+
+def format_compact_counts(counts):
+    if not counts:
+        return "(none)"
+    return ",".join(f"{key}:{counts.get(key, 0)}" for key in sorted(counts))
 
 
 def format_optional(value):

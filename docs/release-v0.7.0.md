@@ -82,6 +82,9 @@ detailed graph-enrichment design is tracked in
   metadata can record graph export intent in `audit` or `dry-run` mode without
   creating OpenCTI graph objects yet. `export` mode is blocked until the
   graph-aware STIX builder and OpenCTI validation are implemented.
+- Extended the decision audit report to aggregate `graph_export_plan` evidence
+  by mode, status, action, held reason, source and query, including
+  would-create object and relationship counts for graph export dry-runs.
 
 ## Validation Target
 
@@ -94,6 +97,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 204 tests
+Ran 207 tests
 OK
 ```

@@ -281,6 +281,11 @@ ingest, filter, quarantine and skip behavior instead of raw feed volume. The
 same report lists recent quarantine candidates for review, and
 `--quarantine-limit <count>` controls how many held candidates are displayed;
 `0` includes all quarantined records in the selected audit input.
+In v0.7, when source decision metadata includes `graph_export_plan`, the
+decision audit report also aggregates graph export planning evidence by mode,
+status, action, held reason, source and query. This shows how many graph
+objects and relationships would be attempted in dry-run mode before graph-aware
+STIX export is enabled.
 
 The local artifact deduplication index can also be summarized:
 
