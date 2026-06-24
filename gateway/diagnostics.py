@@ -140,6 +140,18 @@ def write_support_bundle(snapshot, bundle_file):
     }
 
 
+def write_html_snapshot(snapshot, html_file):
+    html_file = str(html_file or "").strip()
+    if not html_file:
+        raise ValueError("html_file is required")
+    directory = os.path.dirname(html_file)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(html_file, "w", encoding="utf-8") as handle:
+        handle.write(format_html_snapshot(snapshot) + "\n")
+    return html_file
+
+
 def collect_evidence_inventory(preflight_report):
     paths = preflight_report.evidence_paths or {}
     items = [
@@ -599,6 +611,11 @@ def main():
         default="",
         help="Write a support-safe zip bundle. Requires --redaction-profile support.",
     )
+    parser.add_argument(
+        "--html-file",
+        default="",
+        help="Write an HTML diagnostic snapshot.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -618,15 +635,25 @@ def main():
             bundle_result = write_support_bundle(snapshot, args.bundle_file)
         except ValueError as exc:
             raise SystemExit(str(exc))
+    html_result = None
+    if args.html_file:
+        try:
+            html_result = write_html_snapshot(snapshot, args.html_file)
+        except ValueError as exc:
+            raise SystemExit(str(exc))
     if args.json:
         output = snapshot.to_dict()
         if bundle_result:
             output["support_bundle"] = bundle_result
+        if html_result:
+            output["html_file"] = html_result
         print(json.dumps(output, sort_keys=True))
     else:
         print(format_text_snapshot(snapshot))
         if bundle_result:
             print(f"support_bundle={bundle_result['bundle_file']}")
+        if html_result:
+            print(f"html_file={html_result}")
 
 
 if __name__ == "__main__":

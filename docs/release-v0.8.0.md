@@ -104,6 +104,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   `python -m gateway.diagnostics --redaction-profile support --bundle-file ...`.
   The zip contains only redacted JSON, text and HTML snapshots plus a manifest;
   raw evidence files are deliberately excluded.
+- Added standalone HTML diagnostic output through
+  `python -m gateway.diagnostics --html-file ...` for local support review and
+  shareable redacted snapshots.
 
 ## Promotion Boundary
 

@@ -9,6 +9,7 @@ from gateway.diagnostics import (
     format_html_snapshot,
     format_text_snapshot,
     normalize_redaction_profile,
+    write_html_snapshot,
     write_support_bundle,
 )
 from tests.test_gateway_curation_report import (
@@ -215,6 +216,26 @@ class GatewayDiagnosticsTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 write_support_bundle(snapshot, os.path.join(tmpdir, "support.zip"))
+
+    def test_write_html_snapshot_creates_parent_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            snapshot = build_support_diagnostics(
+                make_settings(state_dir=tmpdir),
+                env={"OTX_DRY_RUN": "true"},
+                generated_at="2026-06-24T10:02:00Z",
+                redaction_profile="support",
+            )
+            html_file = os.path.join(tmpdir, "diagnostics", "support.html")
+
+            result = write_html_snapshot(snapshot, html_file)
+
+            with open(html_file, "r", encoding="utf-8") as handle:
+                html = handle.read()
+
+        self.assertEqual(html_file, result)
+        self.assertIn("<!doctype html>", html)
+        self.assertIn("NarrowCTI support diagnostics", html)
+        self.assertIn("redaction_profile", html)
 
     def test_html_snapshot_escapes_dynamic_content(self):
         with tempfile.TemporaryDirectory() as tmpdir:

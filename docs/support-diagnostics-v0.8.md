@@ -29,6 +29,7 @@ It exposes:
 - `collect_evidence_inventory`
 - `redact_snapshot_dict`
 - `write_support_bundle`
+- `write_html_snapshot`
 - `format_text_snapshot`
 - CLI entrypoint: `python -m gateway.diagnostics`
 
@@ -72,6 +73,18 @@ removes detailed query/failure/quarantine lists from the embedded curation
 report and keeps aggregate counts, graph-readiness counters, preflight posture
 and evidence availability. This profile is intended for sharing with support
 without exposing local workstation paths or customer context.
+
+HTML snapshot:
+
+```powershell
+python -m gateway.diagnostics `
+  --redaction-profile support `
+  --html-file state\narrowcti-support.html
+```
+
+`--html-file` writes the same read-only diagnostic snapshot as a local HTML
+file. Use `--redaction-profile support` before sharing it outside the local
+environment.
 
 Support bundle:
 
