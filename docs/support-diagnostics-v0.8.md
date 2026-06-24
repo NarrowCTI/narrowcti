@@ -28,6 +28,7 @@ It exposes:
 - `build_support_diagnostics`
 - `collect_evidence_inventory`
 - `redact_snapshot_dict`
+- `write_support_bundle`
 - `format_text_snapshot`
 - CLI entrypoint: `python -m gateway.diagnostics`
 
@@ -72,6 +73,24 @@ report and keeps aggregate counts, graph-readiness counters, preflight posture
 and evidence availability. This profile is intended for sharing with support
 without exposing local workstation paths or customer context.
 
+Support bundle:
+
+```powershell
+python -m gateway.diagnostics `
+  --redaction-profile support `
+  --bundle-file state\narrowcti-support.zip
+```
+
+The bundle is a zip file containing only:
+
+- `support-diagnostics.json`
+- `support-diagnostics.txt`
+- `manifest.json`
+
+The command refuses to write a bundle unless the snapshot uses
+`--redaction-profile support`. Raw logs, state files, decision audit JSONL,
+quarantine records and release audit files are not included in the bundle.
+
 ## Snapshot Sections
 
 The current snapshot contains:
@@ -85,6 +104,8 @@ The current snapshot contains:
 - `support_warnings`: deterministic support hints for blocking preflight
   errors, preflight warnings, missing evidence and empty curation evidence.
 - `redaction_profile`: selected redaction mode, currently `none` or `support`.
+- `support_bundle`: optional CLI-only output metadata when `--bundle-file` is
+  used with JSON output.
 
 ## Product Boundary
 
@@ -98,12 +119,12 @@ customer or support engineer answer:
 - Is graph promotion still held behind audit and validation controls?
 - Can this snapshot be shared safely with support using the `support` redaction
   profile?
+- Can a support bundle be generated without collecting raw evidence files?
 
 This preserves the NarrowCTI product boundary: the gateway remains the
 curation, governance and explanation layer before OpenCTI graph promotion.
 
 ## Future Work
 
-- Add optional archive generation once the safe file allowlist is stable.
 - Add HTML/PDF diagnostic summaries after the report schema matures.
 - Add UI/API access once analyst review surfaces are introduced.

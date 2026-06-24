@@ -2,6 +2,7 @@ import argparse
 import copy
 import json
 import os
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -90,6 +91,49 @@ def snapshot_from_dict(data):
         curation_report=data.get("curation_report") or {},
         support_warnings=data.get("support_warnings") or [],
     )
+
+
+def write_support_bundle(snapshot, bundle_file):
+    if snapshot.redaction_profile != "support":
+        raise ValueError("support bundle requires redaction_profile=support")
+    bundle_file = str(bundle_file or "").strip()
+    if not bundle_file:
+        raise ValueError("bundle_file is required")
+
+    directory = os.path.dirname(bundle_file)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    snapshot_json = json.dumps(snapshot.to_dict(), sort_keys=True, indent=2)
+    snapshot_text = format_text_snapshot(snapshot)
+    manifest = {
+        "schema_version": "support-bundle/v0.8",
+        "generated_at": snapshot.generated_at,
+        "snapshot_schema_version": snapshot.schema_version,
+        "redaction_profile": snapshot.redaction_profile,
+        "files": [
+            "support-diagnostics.json",
+            "support-diagnostics.txt",
+            "manifest.json",
+        ],
+        "raw_evidence_included": False,
+        "notes": [
+            "This bundle contains only the redacted support diagnostic snapshot.",
+            "Raw logs, state files, decision audit JSONL and quarantine records are not included.",
+        ],
+    }
+    with zipfile.ZipFile(bundle_file, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("support-diagnostics.json", snapshot_json + "\n")
+        archive.writestr("support-diagnostics.txt", snapshot_text + "\n")
+        archive.writestr(
+            "manifest.json",
+            json.dumps(manifest, sort_keys=True, indent=2) + "\n",
+        )
+    return {
+        "bundle_file": bundle_file,
+        "files": manifest["files"],
+        "raw_evidence_included": False,
+    }
 
 
 def collect_evidence_inventory(preflight_report):
@@ -428,6 +472,11 @@ def main():
         default="none",
         help="Redact sensitive local details for support sharing.",
     )
+    parser.add_argument(
+        "--bundle-file",
+        default="",
+        help="Write a support-safe zip bundle. Requires --redaction-profile support.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -441,10 +490,21 @@ def main():
         limit=args.limit,
         redaction_profile=args.redaction_profile,
     )
+    bundle_result = None
+    if args.bundle_file:
+        try:
+            bundle_result = write_support_bundle(snapshot, args.bundle_file)
+        except ValueError as exc:
+            raise SystemExit(str(exc))
     if args.json:
-        print(json.dumps(snapshot.to_dict(), sort_keys=True))
+        output = snapshot.to_dict()
+        if bundle_result:
+            output["support_bundle"] = bundle_result
+        print(json.dumps(output, sort_keys=True))
     else:
         print(format_text_snapshot(snapshot))
+        if bundle_result:
+            print(f"support_bundle={bundle_result['bundle_file']}")
 
 
 if __name__ == "__main__":

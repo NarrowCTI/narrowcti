@@ -2,11 +2,13 @@ import json
 import os
 import tempfile
 import unittest
+import zipfile
 
 from gateway.diagnostics import (
     build_support_diagnostics,
     format_text_snapshot,
     normalize_redaction_profile,
+    write_support_bundle,
 )
 from tests.test_gateway_curation_report import (
     decision_record,
@@ -157,6 +159,56 @@ class GatewayDiagnosticsTests(unittest.TestCase):
     def test_rejects_unknown_redaction_profile(self):
         with self.assertRaises(ValueError):
             normalize_redaction_profile("external")
+
+    def test_support_bundle_contains_only_redacted_snapshot_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            settings = make_settings(
+                state_dir=tmpdir,
+                decision_audit_dir=os.path.join(tmpdir, "audit"),
+                run_summary_file=os.path.join(tmpdir, "gateway_runs.jsonl"),
+                quarantine_repository_file=os.path.join(tmpdir, "quarantine.jsonl"),
+            )
+            snapshot = build_support_diagnostics(
+                settings,
+                env={"OTX_DRY_RUN": "true"},
+                generated_at="2026-06-24T10:02:00Z",
+                redaction_profile="support",
+            )
+            bundle_file = os.path.join(tmpdir, "support.zip")
+
+            result = write_support_bundle(snapshot, bundle_file)
+
+            with zipfile.ZipFile(bundle_file) as archive:
+                names = sorted(archive.namelist())
+                manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
+                snapshot_data = archive.read("support-diagnostics.json").decode("utf-8")
+                snapshot_text = archive.read("support-diagnostics.txt").decode("utf-8")
+
+        self.assertEqual(
+            [
+                "manifest.json",
+                "support-diagnostics.json",
+                "support-diagnostics.txt",
+            ],
+            names,
+        )
+        self.assertFalse(manifest["raw_evidence_included"])
+        self.assertEqual("support", manifest["redaction_profile"])
+        self.assertEqual(result["files"], manifest["files"])
+        self.assertNotIn(tmpdir, snapshot_data)
+        self.assertIn("[redacted-path]", snapshot_data)
+        self.assertIn("redaction_profile=support", snapshot_text)
+
+    def test_support_bundle_rejects_unredacted_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            snapshot = build_support_diagnostics(
+                make_settings(state_dir=tmpdir),
+                env={"OTX_DRY_RUN": "true"},
+                generated_at="2026-06-24T10:02:00Z",
+            )
+
+            with self.assertRaises(ValueError):
+                write_support_bundle(snapshot, os.path.join(tmpdir, "support.zip"))
 
 
 if __name__ == "__main__":

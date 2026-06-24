@@ -97,6 +97,10 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added `reports.support_diagnostics` to the preflight-visible capability
   inventory so the support snapshot is represented in the product operations
   model.
+- Added support-safe diagnostic bundle generation through
+  `python -m gateway.diagnostics --redaction-profile support --bundle-file ...`.
+  The zip contains only redacted JSON/text snapshots and a manifest; raw
+  evidence files are deliberately excluded.
 
 ## Promotion Boundary
 
