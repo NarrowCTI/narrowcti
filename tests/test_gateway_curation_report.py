@@ -341,6 +341,26 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual(2.0, insight["graph_evidence"]["candidate_density"])
         self.assertEqual(3, insight["graph_evidence"]["lookup_match_count"])
         self.assertEqual(100.0, insight["graph_evidence"]["lookup_match_rate_pct"])
+        self.assertEqual(
+            [{"type": "attack-pattern", "count": 3}],
+            insight["graph_evidence"]["top_accepted_objects"],
+        )
+        self.assertEqual(
+            [{"type": "uses", "count": 6}],
+            insight["graph_evidence"]["top_accepted_relationships"],
+        )
+        self.assertEqual(
+            [{"type": "attack-pattern", "count": 3}],
+            insight["graph_evidence"]["top_lookup_objects"],
+        )
+        self.assertEqual(
+            [{"type": "attack-pattern", "count": 3}, {"type": "malware", "count": 3}],
+            insight["graph_evidence"]["top_stix_objects"],
+        )
+        self.assertEqual(
+            [{"type": "uses", "count": 6}],
+            insight["graph_evidence"]["top_stix_relationships"],
+        )
         self.assertEqual(9, insight["context_quality"]["accepted_candidate_count"])
         self.assertEqual(3.0, insight["context_quality"]["candidate_density"])
         self.assertEqual(
@@ -368,6 +388,8 @@ class GatewayCurationReportTests(unittest.TestCase):
         )
         self.assertIn("scores=records=3 min=30 max=80 average=50.0 low=2", text)
         self.assertIn("graph=candidates=6 density=2.0", text)
+        self.assertIn("accepted_object_types=attack-pattern:3", text)
+        self.assertIn("stix_relationship_types=uses:6", text)
         self.assertIn("context=records=3 accepted_context=9 density=3.0", text)
         self.assertIn("categories=ttp:6,threat:3", text)
         self.assertIn("quarantine_reasons=quarantine:low score=3", text)
@@ -614,6 +636,8 @@ def graph_metadata():
             "held_count": 1,
             "would_create_object_count": 1,
             "would_create_relationship_count": 2,
+            "accepted_object_counts": {"attack-pattern": 1},
+            "accepted_relationship_counts": {"uses": 2},
             "actions": [{"action": "would_create"}, {"action": "held"}],
         },
         "graph_export_plan_lookup_matches": [
@@ -625,6 +649,16 @@ def graph_metadata():
                 },
             }
         ],
+        "graph_stix_preview": {
+            "status": "dry-run",
+            "bundle_type": "bundle",
+            "accepted_candidate_count": 1,
+            "bundle_object_count": 5,
+            "graph_object_count": 2,
+            "graph_relationship_count": 2,
+            "object_counts": {"attack-pattern": 1, "malware": 1},
+            "relationship_counts": {"uses": 2},
+        },
     }
 
 

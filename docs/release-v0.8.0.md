@@ -126,6 +126,10 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added graph evidence density to curation policy insights so analysts can see
   graph candidate volume, lookup matches and relationship-ready evidence per
   source before any graph promotion.
+- Added graph type composition to curation policy insights and support
+  diagnostics so source-level reports show top accepted object types, accepted
+  relationship types, lookup object types and STIX preview object/relationship
+  types.
 - Added context-quality metrics to curation policy insights so analyst reports
   show contextual scoring volume, score delta and top CTI categories per source
   without applying contextual score to final ingest decisions.

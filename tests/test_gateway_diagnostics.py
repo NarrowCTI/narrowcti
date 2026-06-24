@@ -133,6 +133,14 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             format_text_snapshot(snapshot),
         )
         self.assertIn(
+            "accepted_relationship_types=uses:2",
+            format_text_snapshot(snapshot),
+        )
+        self.assertIn(
+            "stix_object_types=attack-pattern:1,malware:1",
+            format_text_snapshot(snapshot),
+        )
+        self.assertIn(
             "context=records=1 accepted_context=3 density=3.0",
             format_text_snapshot(snapshot),
         )

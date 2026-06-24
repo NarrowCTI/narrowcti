@@ -375,6 +375,11 @@ def empty_graph_evidence_summary():
         "candidate_density": 0.0,
         "relationship_density": 0.0,
         "lookup_match_rate_pct": 0.0,
+        "top_accepted_objects": [],
+        "top_accepted_relationships": [],
+        "top_lookup_objects": [],
+        "top_stix_objects": [],
+        "top_stix_relationships": [],
     }
 
 
@@ -410,6 +415,11 @@ def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
         "graph_relationship_count",
         "relationship_count",
     )
+    accepted_object_counts = graph_export.get("accepted_object_counts") or {}
+    accepted_relationship_counts = graph_export.get("accepted_relationship_counts") or {}
+    lookup_object_counts = graph_export.get("lookup_match_object_counts") or {}
+    stix_object_counts = graph_preview.get("object_counts") or {}
+    stix_relationship_counts = graph_preview.get("relationship_counts") or {}
     return {
         "decision_records": decision_records,
         "candidate_count": candidate_count,
@@ -432,6 +442,11 @@ def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
             candidate_count,
         ),
         "lookup_match_rate_pct": percent(lookup_match_count, accepted_count),
+        "top_accepted_objects": top_count_entries(accepted_object_counts),
+        "top_accepted_relationships": top_count_entries(accepted_relationship_counts),
+        "top_lookup_objects": top_count_entries(lookup_object_counts),
+        "top_stix_objects": top_count_entries(stix_object_counts),
+        "top_stix_relationships": top_count_entries(stix_relationship_counts),
     }
 
 
@@ -653,6 +668,21 @@ def top_category_entries(category_counts, limit=3):
             "count": int(count or 0),
         }
         for category, count in items[:limit]
+    ]
+
+
+def top_count_entries(counts, limit=3):
+    items = sorted(
+        (counts or {}).items(),
+        key=lambda item: (-int(item[1] or 0), str(item[0])),
+    )
+    return [
+        {
+            "type": str(item_type),
+            "count": int(count or 0),
+        }
+        for item_type, count in items[:limit]
+        if int(count or 0) > 0
     ]
 
 
@@ -1084,7 +1114,15 @@ def format_graph_evidence_summary(summary):
         f"{summary.get('would_create_relationship_count', 0)} "
         f"relationship_density={summary.get('relationship_density', 0.0)} "
         f"stix_objects={summary.get('stix_object_count', 0)} "
-        f"stix_relationships={summary.get('stix_relationship_count', 0)}"
+        f"stix_relationships={summary.get('stix_relationship_count', 0)} "
+        f"accepted_object_types="
+        f"{format_count_entries(summary.get('top_accepted_objects'))} "
+        f"accepted_relationship_types="
+        f"{format_count_entries(summary.get('top_accepted_relationships'))} "
+        f"lookup_object_types={format_count_entries(summary.get('top_lookup_objects'))} "
+        f"stix_object_types={format_count_entries(summary.get('top_stix_objects'))} "
+        f"stix_relationship_types="
+        f"{format_count_entries(summary.get('top_stix_relationships'))}"
     )
 
 
@@ -1109,6 +1147,19 @@ def format_category_entries(entries):
     return ",".join(
         "{}:{}".format(
             entry.get("category", "unknown"),
+            entry.get("count", 0),
+        )
+        for entry in entries
+    )
+
+
+def format_count_entries(entries):
+    entries = list(entries or [])
+    if not entries:
+        return "none"
+    return ",".join(
+        "{}:{}".format(
+            entry.get("type", "unknown"),
             entry.get("count", 0),
         )
         for entry in entries

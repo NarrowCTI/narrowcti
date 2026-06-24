@@ -189,7 +189,10 @@ policy.
 The graph evidence summary includes source-level candidate count, accepted and
 held graph candidates, OpenCTI lookup matches, would-create object/relationship
 counts and density ratios. It is evidence for review and promotion readiness,
-not an automatic export trigger.
+not an automatic export trigger. It also surfaces the top accepted graph object
+types, accepted relationship types, OpenCTI lookup object types and STIX preview
+object/relationship types so an analyst can see whether a source is carrying
+ATT&CK, malware, vulnerability or relationship-rich context before promotion.
 
 The executive graph-readiness summary reads the current decision-audit
 `graph_stix_preview` counters: preview record count as STIX bundle count,
