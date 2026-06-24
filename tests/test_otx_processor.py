@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 
 from connectors.otx.models import PulseCandidate, QuerySummary
-from connectors.otx.processor import OTXProcessor
+from connectors.otx.processor import OTXProcessor, decision_metadata
 
 
 class ProcessorTests(unittest.TestCase):
@@ -299,14 +299,26 @@ class ProcessorTests(unittest.TestCase):
                 "name": "LummaC2 actor pulse",
                 "description": "description",
                 "created": "2026-04-01T00:00:00Z",
+                "modified": "2026-04-03T00:00:00Z",
+                "author_name": "AlienVault Research",
+                "upvotes_count": 7,
+                "downvotes_count": 1,
                 "adversary": "APT Example",
                 "malware_families": ["LummaC2"],
                 "attack_ids": ["T1059"],
+                "cves": ["CVE-2024-12345"],
                 "industries": ["Finance"],
                 "targeted_countries": ["BR"],
                 "TLP": "tlp:green",
                 "references": ["https://example.com/report"],
-                "indicators": [],
+                "indicators": [
+                    {
+                        "id": "indicator-yara-1",
+                        "type": "YARA",
+                        "indicator": "rule SuspiciousRule { condition: true }",
+                        "description": "Suspicious YARA rule",
+                    }
+                ],
             }
         )
         state = SimpleNamespace(
@@ -346,8 +358,12 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(["APT Example"], entities["adversaries"])
         self.assertEqual(["LummaC2"], entities["malware_families"])
         self.assertEqual(["T1059"], entities["attack_ids"])
+        self.assertEqual(["CVE-2024-12345"], entities["vulnerabilities"])
         self.assertEqual(["Finance"], entities["industries"])
         self.assertEqual(["BR"], entities["targeted_countries"])
+        self.assertEqual(["AlienVault Research"], entities["authors"])
+        self.assertEqual("2026-04-03T00:00:00Z", entities["lifecycle"]["modified"])
+        self.assertEqual(7, entities["vote_summary"]["upvotes"])
         self.assertEqual(["green"], entities["tlp"])
         mitre_attack = records[0].metadata["mitre_attack"]
         self.assertTrue(mitre_attack["available"])
@@ -356,6 +372,145 @@ class ProcessorTests(unittest.TestCase):
             "Command and Scripting Interpreter",
             mitre_attack["resolved"][0]["name"],
         )
+        graph_evidence = records[0].metadata["graph_evidence"]
+        self.assertEqual("v0.7.0-dev", graph_evidence["version"])
+        self.assertEqual("alienvault:otx", graph_evidence["source_key"])
+        self.assertEqual(2, graph_evidence["counts"]["attack_pattern"])
+        self.assertEqual(1, graph_evidence["counts"]["vulnerability"])
+        self.assertEqual(1, graph_evidence["counts"]["detection_rule"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "threat_actor"
+                and record["value"] == "APT Example"
+                and record["stix_object_type"] == "threat-actor"
+                for record in graph_evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "vulnerability"
+                and record["value"] == "CVE-2024-12345"
+                and record["stix_object_type"] == "vulnerability"
+                for record in graph_evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "attack_tactic"
+                and record["value"] == "execution"
+                for record in graph_evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "detection_rule"
+                and record["value"] == "Suspicious YARA rule"
+                and record["attributes"]["pattern_type"] == "yara"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = records[0].metadata["graph_candidates"]
+        self.assertEqual("v0.7.0-dev", graph_candidates["version"])
+        self.assertEqual("pulse-1", graph_candidates["external_id"])
+        self.assertEqual(
+            graph_evidence["record_count"],
+            graph_candidates["candidate_count"],
+        )
+        self.assertEqual(2, graph_candidates["counts"]["attack_pattern"])
+        self.assertEqual(1, graph_candidates["counts"]["vulnerability"])
+        self.assertEqual(1, graph_candidates["counts"]["detection_rule"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "threat_actor"
+                and candidate["value"] == "APT Example"
+                and candidate["relationship_type"] == "attributed-to"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["relationship_type"] == "detects"
+                and candidate["attributes"]["pattern"]
+                == "rule SuspiciousRule { condition: true }"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        graph_policy = records[0].metadata["graph_candidate_policy"]
+        self.assertEqual(
+            graph_candidates["candidate_count"],
+            graph_policy["candidate_count"],
+        )
+        self.assertEqual(
+            graph_candidates["candidate_count"],
+            graph_policy["accepted_count"],
+        )
+        self.assertEqual(0, graph_policy["held_count"])
+        graph_plan = records[0].metadata["graph_export_plan"]
+        self.assertEqual("audit", graph_plan["mode"])
+        self.assertEqual("audit-only", graph_plan["status"])
+        self.assertEqual(graph_policy["accepted_count"], graph_plan["accepted_count"])
+        self.assertEqual(0, graph_plan["would_create_object_count"])
+        contextual_scoring = records[0].metadata["contextual_scoring"]
+        self.assertEqual("dry-run", contextual_scoring["mode"])
+        self.assertFalse(contextual_scoring["applied_to_decision"])
+        self.assertEqual(
+            graph_policy["accepted_count"],
+            contextual_scoring["accepted_candidate_count"],
+        )
+        self.assertGreater(contextual_scoring["contextual_score"], 0)
+        self.assertIn("ttp", contextual_scoring["category_counts"])
+        graph_preview = records[0].metadata["graph_stix_preview"]
+        self.assertEqual("preview", graph_preview["status"])
+        self.assertFalse(graph_preview["export_enabled"])
+        self.assertEqual("bundle", graph_preview["bundle_type"])
+        self.assertEqual(
+            graph_policy["accepted_count"],
+            graph_preview["accepted_candidate_count"],
+        )
+        self.assertGreater(graph_preview["graph_object_count"], 0)
+        self.assertGreater(graph_preview["graph_relationship_count"], 0)
+
+    def test_decision_metadata_uses_graph_dedup_known_keys(self):
+        candidate = SimpleNamespace(
+            pulse={
+                "id": "pulse-1",
+                "name": "Technique pulse",
+                "attack_ids": ["T1059"],
+                "indicators": [],
+            },
+            name="Technique pulse",
+            score_details={},
+        )
+        mitre_resolver = SimpleNamespace(
+            resolve=lambda attack_ids: [
+                {
+                    "attack_id": attack_ids[0],
+                    "found": True,
+                    "name": "Command and Scripting Interpreter",
+                    "tactics": ["execution"],
+                }
+            ]
+        )
+
+        metadata = decision_metadata(
+            candidate,
+            mitre_resolver=mitre_resolver,
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Technique pulse",
+            graph_export_mode="dry-run",
+            graph_deduplication_index=FirstActionEntityKnownIndex(),
+        )
+
+        graph_plan = metadata["graph_export_plan"]
+        self.assertGreaterEqual(graph_plan["deduplicated_entity_count"], 1)
+        self.assertLess(
+            graph_plan["would_create_object_count"],
+            graph_plan["accepted_count"],
+        )
+        self.assertGreaterEqual(graph_plan["would_create_relationship_count"], 1)
+        self.assertIn("graph_export_plan_known_keys", metadata)
 
     def test_process_pulse_writes_quarantine_record(self):
         records = []
@@ -407,6 +562,15 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(1, queued[0]["indicator_count"])
         self.assertEqual("domain", queued[0]["indicators"][0]["type"])
         self.assertEqual([], queued[0]["metadata"]["otx_entities"]["attack_ids"])
+        self.assertEqual(1, queued[0]["metadata"]["graph_evidence"]["record_count"])
+        self.assertEqual(
+            1,
+            queued[0]["metadata"]["graph_evidence"]["counts"]["observable"],
+        )
+        self.assertEqual(
+            1,
+            queued[0]["metadata"]["graph_candidates"]["candidate_count"],
+        )
         self.assertTrue(any("Quarantine queued: Old weak pulse" in log for log in logs))
 
     def test_process_pulse_records_missing_mitre_cache_evidence(self):
@@ -745,6 +909,15 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("ok", records[0].reason)
         self.assertIn("scoring", records[0].metadata)
         self.assertIn("Dry-run: LummaC2 fresh", logs[1])
+
+
+class FirstActionEntityKnownIndex:
+    def known_keys_for_plan(self, plan):
+        return {
+            "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
+            "relationship_keys": [],
+        }
+
 
 if __name__ == "__main__":
     unittest.main()

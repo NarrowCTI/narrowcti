@@ -247,7 +247,16 @@ class MISPProcessorTests(unittest.TestCase):
             score_details={"final_score": 100, "source_confidence": 50},
         )
 
-        metadata = decision_metadata(candidate_ref, prepared)
+        metadata = decision_metadata(
+            candidate_ref,
+            prepared,
+            graph_candidate_policy={
+                "min_entity_confidence": 50,
+                "min_relationship_confidence": 50,
+                "allowed_entity_types": ["source_identity", "collector"],
+                "require_relationship_provenance": True,
+            },
+        )
 
         self.assertEqual("misp", metadata["collector"])
         self.assertEqual("AlienVault", metadata["original_source"])
@@ -256,6 +265,454 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(["tlp:green"], metadata["tags"])
         self.assertFalse(metadata["guardrails"]["oversized"])
         self.assertEqual(100, metadata["scoring"]["final_score"])
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual("v0.7.0-dev", graph_evidence["version"])
+        self.assertEqual("misp:misp", graph_evidence["source_key"])
+        self.assertEqual(3, graph_evidence["record_count"])
+        self.assertEqual(1, graph_evidence["counts"]["marking"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "source_identity"
+                and record["value"] == "AlienVault"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual("v0.7.0-dev", graph_candidates["version"])
+        self.assertEqual("event-1", graph_candidates["external_id"])
+        self.assertEqual(3, graph_candidates["candidate_count"])
+        self.assertEqual(1, graph_candidates["counts"]["marking"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "source_identity"
+                and candidate["value"] == "AlienVault"
+                and candidate["stix_object_type"] == "identity"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        graph_policy = metadata["graph_candidate_policy"]
+        self.assertEqual(3, graph_policy["candidate_count"])
+        self.assertEqual(2, graph_policy["accepted_count"])
+        self.assertEqual(1, graph_policy["held_count"])
+        self.assertEqual({"entity_type_not_allowed": 1}, graph_policy["held_reasons"])
+        graph_plan = metadata["graph_export_plan"]
+        self.assertEqual("audit", graph_plan["mode"])
+        self.assertEqual("audit-only", graph_plan["status"])
+        self.assertEqual(2, graph_plan["accepted_count"])
+        self.assertEqual(1, graph_plan["held_count"])
+        contextual_scoring = metadata["contextual_scoring"]
+        self.assertEqual("dry-run", contextual_scoring["mode"])
+        self.assertFalse(contextual_scoring["applied_to_decision"])
+        self.assertEqual(2, contextual_scoring["accepted_candidate_count"])
+        self.assertGreaterEqual(contextual_scoring["contextual_score"], 100)
+        self.assertIn("author", contextual_scoring["category_counts"])
+        graph_preview = metadata["graph_stix_preview"]
+        self.assertEqual("preview", graph_preview["status"])
+        self.assertFalse(graph_preview["export_enabled"])
+        self.assertEqual("bundle", graph_preview["bundle_type"])
+        self.assertEqual(2, graph_preview["accepted_candidate_count"])
+        self.assertGreaterEqual(graph_preview["graph_object_count"], 1)
+        self.assertGreaterEqual(graph_preview["bundle_object_count"], 2)
+
+    def test_decision_metadata_extracts_misp_galaxies(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Galaxy"] = [
+            {
+                "type": "mitre-attack-pattern",
+                "name": "MITRE ATT&CK",
+                "GalaxyCluster": [
+                    {
+                        "type": "mitre-attack-pattern",
+                        "value": "Command and Scripting Interpreter - T1059",
+                        "uuid": "cluster-attack",
+                        "tag_name": 'misp-galaxy:mitre-attack-pattern="T1059"',
+                        "meta": {
+                            "external_id": ["T1059"],
+                            "refs": ["https://attack.mitre.org/techniques/T1059/"],
+                        },
+                    }
+                ],
+            },
+            {
+                "type": "threat-actor",
+                "name": "Threat Actor",
+                "GalaxyCluster": [
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Example",
+                        "uuid": "cluster-actor",
+                        "meta": {
+                            "synonyms": ["Example Group"],
+                            "targeted-sector": ["Activists"],
+                        },
+                    }
+                ],
+            },
+        ]
+        event["Object"] = [
+            {
+                "name": "victimology",
+                "GalaxyCluster": [
+                    {
+                        "type": "sector",
+                        "value": "Finance",
+                        "uuid": "cluster-sector",
+                    }
+                ],
+            }
+        ]
+        event["Attribute"] = {
+            "type": "md5",
+            "value": "a" * 32,
+            "GalaxyCluster": {
+                "type": "malware",
+                "value": "LummaC2",
+                "uuid": "cluster-malware",
+            },
+        }
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(4, len(metadata["misp_galaxies"]))
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["attack_pattern"])
+        self.assertEqual(1, graph_evidence["counts"]["threat_actor"])
+        self.assertEqual(1, graph_evidence["counts"]["malware"])
+        self.assertEqual(2, graph_evidence["counts"]["target_sector"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "attack_pattern"
+                and candidate["value"] == "T1059"
+                and candidate["name"] == "Command and Scripting Interpreter - T1059"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "target_sector"
+                and candidate["value"] == "Finance"
+                and candidate["source_field"] == "Object[0].GalaxyCluster"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "target_sector"
+                and candidate["value"] == "Activists"
+                and candidate["source_field"] == "Galaxy.meta.targeted-sector"
+                and candidate["attributes"]["parent_cluster_value"] == "APT Example"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_extracts_misp_vulnerabilities(self):
+        candidate_ref = candidate(
+            external_id="event-1",
+            raw={"tags": ["tlp:green", "cve:CVE-2024-12345"]},
+        )
+        event = enriched_event(name="Exploit chain for CVE-2022-1111")
+        event["tags"] = ["tlp:green", "cve:CVE-2024-12345"]
+        event["Attribute"] = [
+            {
+                "type": "vulnerability",
+                "category": "External analysis",
+                "value": "CVE-2023-9999",
+                "uuid": "attr-cve",
+                "Tag": [{"name": "exploit:known"}],
+            }
+        ]
+        event["Object"] = [
+            {
+                "name": "vulnerability",
+                "uuid": "object-cve",
+                "Attribute": {
+                    "type": "text",
+                    "value": "Observed exploitation of CVE-2021-0001",
+                    "uuid": "object-attr-cve",
+                },
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(
+            ["CVE-2024-12345", "CVE-2022-1111", "CVE-2023-9999", "CVE-2021-0001"],
+            [item["value"] for item in metadata["misp_vulnerabilities"]],
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(4, graph_evidence["counts"]["vulnerability"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "vulnerability"
+                and record["value"] == "CVE-2023-9999"
+                and record["attributes"]["attribute_type"] == "vulnerability"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(4, graph_candidates["counts"]["vulnerability"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "vulnerability"
+                and candidate["value"] == "CVE-2021-0001"
+                and candidate["source_field"] == "Object[0].Attribute[0]"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_extracts_misp_event_reports(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["EventReport"] = [
+            {
+                "uuid": "event-report-1",
+                "name": "Initial analyst report",
+                "content": "The event describes exploitation activity.",
+                "timestamp": "1782004900",
+            },
+            {
+                "uuid": "event-report-deleted",
+                "name": "Deleted report",
+                "content": "Should not be represented.",
+                "deleted": "1",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(1, len(metadata["misp_event_reports"]))
+        self.assertEqual(
+            "Initial analyst report",
+            metadata["misp_event_reports"][0]["title"],
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["event_report"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "event_report"
+                and record["stix_object_type"] == "note"
+                and record["attributes"]["content"]
+                == "The event describes exploitation activity."
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["event_report"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "event_report"
+                and candidate["name"] == "Initial analyst report"
+                and candidate["relationship_type"] == "documents"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_extracts_misp_sightings(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-1",
+                "type": "domain",
+                "category": "Network activity",
+                "value": "evil.example",
+                "Sighting": [
+                    {
+                        "id": "42",
+                        "type": "0",
+                        "date_sighting": "1782004900",
+                        "source": "SOC",
+                        "Organisation": {
+                            "uuid": "org-1",
+                            "name": "Example Org",
+                        },
+                    },
+                    {
+                        "id": "43",
+                        "value": "ignored.example",
+                        "deleted": "1",
+                    },
+                ],
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(1, len(metadata["misp_sightings"]))
+        self.assertEqual("evil.example", metadata["misp_sightings"][0]["value"])
+        self.assertEqual("Example Org", metadata["misp_sightings"][0]["organization"])
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["sighting"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "sighting"
+                and record["stix_object_type"] == "sighting"
+                and record["attributes"]["organization"] == "Example Org"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["sighting"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "sighting"
+                and candidate["value"] == "evil.example"
+                and candidate["relationship_type"] == "sighting-of"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_extracts_misp_object_references(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Object"] = [
+            {
+                "uuid": "object-1",
+                "name": "malware",
+                "meta-category": "misc",
+                "ObjectReference": [
+                    {
+                        "uuid": "reference-1",
+                        "relationship_type": "uses",
+                        "referenced_uuid": "object-2",
+                        "referenced_type": "object",
+                        "comment": "Malware uses this infrastructure.",
+                    },
+                    {
+                        "uuid": "reference-deleted",
+                        "relationship_type": "uses",
+                        "referenced_uuid": "object-3",
+                        "deleted": "1",
+                    },
+                ],
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(1, len(metadata["misp_object_references"]))
+        self.assertEqual(
+            "object-1 uses object-2",
+            metadata["misp_object_references"][0]["value"],
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["object_reference"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "object_reference"
+                and record["stix_object_type"] == "relationship"
+                and record["relationship_type"] == "uses"
+                and record["attributes"]["target_uuid"] == "object-2"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["object_reference"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "object_reference"
+                and candidate["relationship_type"] == "uses"
+                and candidate["stix_object_type"] == "relationship"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_extracts_misp_detection_rules(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-rule-1",
+                "type": "sigma",
+                "category": "Payload delivery",
+                "value": "title: Suspicious PowerShell",
+                "comment": "Suspicious PowerShell",
+                "Tag": [{"name": "tlp:green"}],
+            },
+            {
+                "uuid": "attribute-rule-deleted",
+                "type": "yara",
+                "value": "rule DeletedRule { condition: true }",
+                "deleted": "1",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(1, len(metadata["misp_detection_rules"]))
+        self.assertEqual("sigma", metadata["misp_detection_rules"][0]["rule_type"])
+        self.assertEqual(
+            "title: Suspicious PowerShell",
+            metadata["misp_detection_rules"][0]["pattern"],
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["detection_rule"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "detection_rule"
+                and record["stix_object_type"] == "indicator"
+                and record["attributes"]["pattern_type"] == "sigma"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["detection_rule"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["relationship_type"] == "detects"
+                and candidate["attributes"]["pattern"] == "title: Suspicious PowerShell"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_builds_dry_run_graph_export_plan(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        prepared = SimpleNamespace(event=enriched_event(), score_details={})
+
+        metadata = decision_metadata(
+            candidate_ref,
+            prepared,
+            graph_export_mode="dry-run",
+        )
+
+        graph_plan = metadata["graph_export_plan"]
+        self.assertEqual("dry-run", graph_plan["mode"])
+        self.assertEqual("dry-run", graph_plan["status"])
+        self.assertEqual(
+            graph_plan["accepted_count"],
+            graph_plan["would_create_object_count"],
+        )
+        self.assertTrue(
+            any(action["action"] == "would_create" for action in graph_plan["actions"])
+        )
+
+    def test_decision_metadata_uses_graph_dedup_known_keys(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        prepared = SimpleNamespace(event=enriched_event(), score_details={})
+
+        metadata = decision_metadata(
+            candidate_ref,
+            prepared,
+            graph_export_mode="dry-run",
+            graph_deduplication_index=FirstActionEntityKnownIndex(),
+        )
+
+        graph_plan = metadata["graph_export_plan"]
+        self.assertEqual(1, graph_plan["deduplicated_entity_count"])
+        self.assertEqual(
+            graph_plan["accepted_count"] - 1,
+            graph_plan["would_create_object_count"],
+        )
+        self.assertIn("graph_export_plan_known_keys", metadata)
 
     def test_process_event_skips_when_all_artifacts_are_known(self):
         records = []
@@ -360,6 +817,18 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("low score", queued[0]["reason"])
         self.assertEqual(1, queued[0]["indicator_count"])
         self.assertEqual("AlienVault", queued[0]["metadata"]["original_source"])
+        self.assertEqual(
+            "AlienVault",
+            next(
+                record["value"]
+                for record in queued[0]["metadata"]["graph_evidence"]["records"]
+                if record["entity_type"] == "source_identity"
+            ),
+        )
+        self.assertEqual(
+            2,
+            queued[0]["metadata"]["graph_candidates"]["candidate_count"],
+        )
         self.assertTrue(
             any("MISP quarantine queued: old weak misp event" in log for log in logs)
         )
@@ -507,6 +976,14 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual([], marked)
         self.assertEqual("error", records[0].action)
         self.assertIn("MISP ingest failed: tlp green event error=OpenCTI unavailable", logs)
+
+
+class FirstActionEntityKnownIndex:
+    def known_keys_for_plan(self, plan):
+        return {
+            "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
+            "relationship_keys": [],
+        }
 
 
 if __name__ == "__main__":

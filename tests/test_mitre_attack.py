@@ -21,6 +21,9 @@ def sample_attack_bundle():
                 "type": "attack-pattern",
                 "id": "attack-pattern--1059",
                 "name": "Command and Scripting Interpreter",
+                "description": "Interpreters execute commands and scripts.",
+                "created": "2020-01-01T00:00:00.000Z",
+                "modified": "2026-01-01T00:00:00.000Z",
                 "external_references": [
                     {
                         "source_name": "mitre-attack",
@@ -34,11 +37,18 @@ def sample_attack_bundle():
                         "phase_name": "execution",
                     }
                 ],
+                "x_mitre_platforms": ["Windows", "Linux", "macOS"],
+                "x_mitre_data_sources": ["Process: Process Creation"],
+                "x_mitre_detection": "Monitor process execution.",
+                "x_mitre_domains": ["enterprise-attack"],
+                "x_mitre_version": "2.6",
+                "x_mitre_attack_spec_version": "3.3.0",
             },
             {
                 "type": "attack-pattern",
                 "id": "attack-pattern--1059-001",
                 "name": "PowerShell",
+                "x_mitre_is_subtechnique": True,
                 "external_references": [
                     {
                         "source_name": "mitre-attack",
@@ -74,6 +84,33 @@ class MITREAttackTests(unittest.TestCase):
         )
         self.assertEqual(["execution"], cache["techniques"]["T1059"]["tactics"])
         self.assertEqual(
+            "Interpreters execute commands and scripts.",
+            cache["techniques"]["T1059"]["description"],
+        )
+        self.assertEqual(
+            ["Windows", "Linux", "macOS"],
+            cache["techniques"]["T1059"]["platforms"],
+        )
+        self.assertEqual(
+            ["Process: Process Creation"],
+            cache["techniques"]["T1059"]["data_sources"],
+        )
+        self.assertEqual(
+            "Monitor process execution.",
+            cache["techniques"]["T1059"]["detection"],
+        )
+        self.assertEqual(["enterprise-attack"], cache["techniques"]["T1059"]["domains"])
+        self.assertEqual("2.6", cache["techniques"]["T1059"]["version"])
+        self.assertEqual(
+            "3.3.0",
+            cache["techniques"]["T1059"]["attack_spec_version"],
+        )
+        self.assertEqual(
+            "2026-01-01T00:00:00.000Z",
+            cache["techniques"]["T1059"]["modified"],
+        )
+        self.assertTrue(cache["techniques"]["T1059.001"]["is_subtechnique"])
+        self.assertEqual(
             "https://attack.mitre.org/techniques/T1059/",
             cache["techniques"]["T1059"]["url"],
         )
@@ -87,10 +124,15 @@ class MITREAttackTests(unittest.TestCase):
         self.assertTrue(resolved[0]["found"])
         self.assertEqual("Command and Scripting Interpreter", resolved[0]["name"])
         self.assertEqual(["execution"], resolved[0]["tactics"])
+        self.assertEqual(["Windows", "Linux", "macOS"], resolved[0]["platforms"])
+        self.assertEqual(["Process: Process Creation"], resolved[0]["data_sources"])
+        self.assertEqual("Monitor process execution.", resolved[0]["detection"])
+        self.assertEqual(["enterprise-attack"], resolved[0]["domains"])
         self.assertEqual("T9999", resolved[1]["attack_id"])
         self.assertFalse(resolved[1]["found"])
         self.assertEqual("T1059.001", resolved[2]["attack_id"])
         self.assertEqual("PowerShell", resolved[2]["name"])
+        self.assertTrue(resolved[2]["is_subtechnique"])
 
     def test_load_attack_cache_accepts_raw_stix_bundle(self):
         with tempfile.TemporaryDirectory() as directory:

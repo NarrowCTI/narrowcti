@@ -1,6 +1,11 @@
 import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
+from core.contextual_scoring import build_contextual_score_evidence
+from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
+from core.graph_deduplication import GraphDeduplicationIndex
+from core.graph_evidence import build_graph_evidence
+from core.graph_export_plan import build_graph_export_plan_with_known_keys
 from core.indicator_policy import filter_indicators_by_type
 from core.mitre_attack import MITREAttackResolver
 from core.policy import PolicyConfig, should_ingest
@@ -13,6 +18,7 @@ from core.scoring import age_days, calculate_score_details
 from core.state_repository import PulseStateRepository
 from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
+from exporters.stix_builder import build_graph_report_bundle
 
 try:
     from .entity_extraction import extract_otx_entities
@@ -34,6 +40,12 @@ def decision_metadata(
     candidate=None,
     enable_entity_extraction=True,
     mitre_resolver=None,
+    source_key="",
+    external_id="",
+    title="",
+    graph_candidate_policy=None,
+    graph_export_mode="audit",
+    graph_deduplication_index=None,
 ):
     score_details = getattr(candidate, "score_details", None)
     if not candidate:
@@ -44,7 +56,60 @@ def decision_metadata(
     if enable_entity_extraction:
         metadata["otx_entities"] = extract_otx_entities(candidate.pulse)
         enrich_mitre_attack_metadata(metadata, mitre_resolver)
+    metadata["graph_evidence"] = build_graph_evidence(
+        metadata,
+        source_key=source_key,
+        external_id=external_id or candidate.pulse.get("id", ""),
+        title=title or candidate.name,
+    )
+    graph_candidates = build_graph_candidates(metadata["graph_evidence"])
+    metadata["graph_candidates"] = graph_candidates.to_dict()
+    graph_policy = apply_graph_candidate_policy(
+        graph_candidates,
+        **(graph_candidate_policy or {}),
+    ).to_dict()
+    metadata["graph_candidate_policy"] = graph_policy
+    metadata["contextual_scoring"] = build_contextual_score_evidence(
+        candidate_score(candidate),
+        graph_policy,
+    )
+    graph_plan, known_keys, lookup_error = build_graph_export_plan_with_known_keys(
+        graph_policy,
+        mode=graph_export_mode,
+        graph_deduplication_index=graph_deduplication_index,
+    )
+    metadata["graph_export_plan"] = graph_plan
+    metadata["graph_stix_preview"] = graph_stix_preview(
+        candidate,
+        graph_policy,
+        identity_name=getattr(candidate, "identity_name", "NarrowCTI Gateway"),
+    )
+    if known_keys["entity_keys"] or known_keys["relationship_keys"]:
+        metadata["graph_export_plan_known_keys"] = known_keys
+    if lookup_error:
+        metadata["graph_export_plan_lookup_error"] = lookup_error
     return metadata
+
+
+def graph_stix_preview(candidate, graph_policy, identity_name="NarrowCTI Gateway"):
+    pulse = getattr(candidate, "pulse", {}) or {}
+    bundle, summary = build_graph_report_bundle(
+        getattr(candidate, "name", "") or pulse.get("name", "NarrowCTI graph preview"),
+        pulse.get("description", ""),
+        candidate_score(candidate),
+        graph_candidate_policy=graph_policy,
+        identity_name=identity_name,
+    )
+    preview = dict(summary)
+    preview["status"] = "preview"
+    preview["export_enabled"] = False
+    preview["bundle_type"] = bundle.type
+    return preview
+
+
+def candidate_score(candidate):
+    score_details = getattr(candidate, "score_details", {}) or {}
+    return score_details.get("final_score", getattr(candidate, "score", 50))
 
 
 def enrich_mitre_attack_metadata(metadata, mitre_resolver=None):
@@ -81,6 +146,7 @@ class OTXProcessor:
         artifact_dedup=None,
         quarantine_repository=None,
         mitre_resolver=None,
+        graph_deduplication_index=None,
     ):
         self.settings = settings
         self.otx_client = otx_client
@@ -97,6 +163,9 @@ class OTXProcessor:
             settings
         )
         self.mitre_resolver = mitre_resolver or self.build_mitre_resolver(settings)
+        self.graph_deduplication_index = (
+            graph_deduplication_index or self.build_graph_deduplication_index(settings)
+        )
         self.policy_config = PolicyConfig(
             quarantine_score_threshold=settings.quarantine_score_threshold,
             enable_quarantine=settings.enable_quarantine,
@@ -105,12 +174,19 @@ class OTXProcessor:
             min_score_for_old_pulse=settings.min_score_for_old_pulse,
             max_days_hard_filter=settings.max_days_hard_filter,
         )
+        self.graph_candidate_policy = graph_candidate_policy_from_settings(settings)
 
     def build_quarantine_repository(self, settings):
         repository_file = getattr(settings, "quarantine_repository_file", "")
         if not repository_file:
             return None
         return QuarantineRepository(repository_file)
+
+    def build_graph_deduplication_index(self, settings):
+        state_file = getattr(settings, "graph_dedup_state_file", "")
+        if not state_file:
+            return None
+        return GraphDeduplicationIndex(state_file)
 
     def build_mitre_resolver(self, settings):
         if not getattr(settings, "enable_mitre_attack_resolution", True):
@@ -336,6 +412,12 @@ class OTXProcessor:
                 candidate,
                 getattr(self.settings, "enable_otx_entity_extraction", True),
                 self.mitre_resolver,
+                source_key=candidate_ref.source.key,
+                external_id=candidate_ref.external_id,
+                title=title,
+                graph_candidate_policy=self.graph_candidate_policy,
+                graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
+                graph_deduplication_index=self.graph_deduplication_index,
             ),
         )
 
@@ -362,6 +444,12 @@ class OTXProcessor:
             candidate,
             getattr(self.settings, "enable_otx_entity_extraction", True),
             self.mitre_resolver,
+            source_key=candidate_ref.source.key,
+            external_id=candidate_ref.external_id,
+            title=title,
+            graph_candidate_policy=self.graph_candidate_policy,
+            graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
+            graph_deduplication_index=self.graph_deduplication_index,
         )
         if truncated:
             metadata["raw_snapshot_truncated"] = True
@@ -509,3 +597,25 @@ class OTXProcessor:
             score=score_details["final_score"],
             score_details=score_details,
         )
+
+
+def graph_candidate_policy_from_settings(settings):
+    return {
+        "min_entity_confidence": getattr(settings, "graph_min_entity_confidence", 0),
+        "min_relationship_confidence": getattr(
+            settings,
+            "graph_min_relationship_confidence",
+            0,
+        ),
+        "allowed_entity_types": getattr(settings, "graph_allowed_entity_types", []),
+        "allowed_stix_object_types": getattr(
+            settings,
+            "graph_allowed_stix_object_types",
+            [],
+        ),
+        "require_relationship_provenance": getattr(
+            settings,
+            "graph_require_relationship_provenance",
+            False,
+        ),
+    }

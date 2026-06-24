@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 
+from core.graph_export_plan import normalize_graph_export_mode
 from core.mitre_attack import DEFAULT_MITRE_STIX_URL
 
 
@@ -30,6 +31,13 @@ class Settings:
     quarantine_score_threshold: int
     allowed_tlp: list[str]
     allowed_indicator_types: list[str]
+    graph_min_entity_confidence: int
+    graph_min_relationship_confidence: int
+    graph_require_relationship_provenance: bool
+    graph_allowed_entity_types: list[str]
+    graph_allowed_stix_object_types: list[str]
+    graph_export_mode: str
+    graph_dedup_state_file: str
     state_file: str
     decision_audit_file: str
     quarantine_repository_file: str = ""
@@ -132,6 +140,23 @@ def load_settings():
         ),
         allowed_tlp=env_list("NARROWCTI_ALLOWED_TLP"),
         allowed_indicator_types=env_list("NARROWCTI_ALLOWED_INDICATOR_TYPES"),
+        graph_min_entity_confidence=env_int("NARROWCTI_MIN_ENTITY_CONFIDENCE", 0),
+        graph_min_relationship_confidence=env_int(
+            "NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE",
+            0,
+        ),
+        graph_require_relationship_provenance=env_bool(
+            "NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE",
+            False,
+        ),
+        graph_allowed_entity_types=env_list("NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES"),
+        graph_allowed_stix_object_types=env_list(
+            "NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES"
+        ),
+        graph_export_mode=normalize_graph_export_mode(
+            os.getenv("NARROWCTI_GRAPH_EXPORT_MODE", "audit")
+        ),
+        graph_dedup_state_file=os.getenv("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
         state_file=os.getenv("STATE_FILE", "/app/state/state.json"),
         decision_audit_file=os.getenv("DECISION_AUDIT_FILE", ""),
         quarantine_repository_file=os.getenv(

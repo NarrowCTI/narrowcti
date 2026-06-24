@@ -11,13 +11,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.6.0
+v0.7.0
 ```
 
-`v0.6.0` is the current stable quarantine and enrichment foundation release.
-It extends the v0.5 gateway runtime with reviewable quarantine, release audit,
-controlled replay, source entity extraction and local MITRE ATT&CK reference
-resolution.
+`v0.7.0` is the graph enrichment and enterprise-filter foundation release. It
+keeps the stable curated `Report + Indicator` OpenCTI export path while adding
+audit-first graph evidence, graph candidates, STIX preview summaries,
+contextual scoring evidence and a clear MITRE ATT&CK curation architecture.
 
 ## Product Identity
 
@@ -85,6 +85,13 @@ ingestion model. The enterprise target is to enrich OpenCTI with actors,
 arsenal, MITRE tactics and techniques, victimology, infrastructure, campaigns,
 vulnerabilities and detection context when source evidence supports it. The v1.0
 market position is tracked in `docs/market-positioning-v1.0.md`.
+
+MITRE ATT&CK is treated as reference and curation context. The official MITRE
+connector should populate OpenCTI with the canonical ATT&CK baseline, while
+NarrowCTI uses ATT&CK ids found in OTX, MISP and future feeds to enrich, score,
+filter, deduplicate, audit and later relate curated intelligence to the OpenCTI
+graph. This decision is tracked in
+`docs/mitre-curation-architecture-v0.7.md`.
 
 ## Deduplication Posture
 
@@ -205,6 +212,28 @@ metadata-only: adversary, malware family, ATT&CK ids, industries, targeted
 countries, TLP, references and tags are preserved as structured evidence for
 future graph enrichment.
 
+## v0.7 Release
+
+The v0.7 release turns the enrichment evidence from v0.6 into graph-aware
+STIX/OpenCTI planning and preview output. The objective is to validate source
+metadata more deeply, map supported evidence into actors, intrusion sets,
+malware, tools, infrastructure, vulnerabilities, campaigns, sectors, locations,
+ATT&CK techniques and relationships, and keep those relationships explainable
+before they affect the OpenCTI graph.
+
+The consolidated architecture is tracked in `docs/architecture-v0.7.md`. The
+detailed graph-enrichment design is tracked in
+`docs/graph-enrichment-v0.7.md`, and the release notes are tracked in
+`docs/release-v0.7.0.md`. The MITRE curation architecture is tracked in
+`docs/mitre-curation-architecture-v0.7.md`. MISP
+compatibility with the official OpenCTI connector mapping is tracked in
+`docs/misp-official-connector-mapping-v0.7.md`, and OTX compatibility with the
+official AlienVault connector mapping is tracked in
+`docs/otx-official-connector-mapping-v0.7.md`. Contextual scoring research is
+tracked in `docs/contextual-scoring-reference-v0.7.md`.
+The direct source, MISP collector and hybrid ingestion architecture is tracked
+in `docs/source-ingestion-modes-v0.7.md`.
+
 ## Curation Configuration
 
 Curation controls must be visible in configuration and then applied
@@ -216,6 +245,19 @@ controls for shared policy, deduplication and source selection. Future
 enterprise controls should cover actor, arsenal, ATT&CK, victimology, graph
 state and quarantine release workflows without hiding those policy choices from
 operators.
+
+The v0.7 graph layer currently records `graph_candidate_policy` and
+`graph_export_plan` metadata. `NARROWCTI_GRAPH_EXPORT_MODE=audit` keeps the
+plan audit-only, while `dry-run` records what graph objects and relationships
+would be attempted later. The first graph-aware STIX builder foundation can
+convert accepted candidates into STIX objects for validation, and OTX/MISP
+decision metadata now records a safe `graph_stix_preview` summary with bundle,
+object, relationship and skipped-candidate counts. Real graph export remains
+blocked until controlled export wiring, deduplication promotion and OpenCTI
+validation are complete. The local graph deduplication state can be read with
+`NARROWCTI_GRAPH_DEDUP_STATE_FILE` so OTX and MISP export plans can mark known
+local graph keys as deduplicated. This is read-only planning evidence; dry-run
+plans are not marked as exported knowledge.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in
@@ -330,8 +372,12 @@ searches produced reviewed, handled, accepted and filtered candidates. The
 decision audit report aggregates ingest, drop, quarantine, skip, dry-run and
 error reasons from source audit JSONL files, plus score ranges, averages and
 per-query decision rollups for operator review. It also lists recent
-quarantined candidates. The correlation report summarizes the local artifact
-index, including cross-source fingerprints and source sighting counts.
+quarantined candidates. When v0.7 `graph_export_plan` metadata is present, it
+also aggregates graph export modes, statuses, actions, held reasons,
+source/query rollups, deduplicated entity/relationship counts and dry-run
+would-create object/relationship counts. The correlation report summarizes the
+local artifact index, including cross-source fingerprints and source sighting
+counts.
 
 The unified gateway entrypoint composes enabled source runtimes and isolates
 source failures. Keep source-specific runtimes available for debugging and
@@ -433,7 +479,7 @@ for the release. To inspect commands without executing Docker:
 Manual equivalent:
 
 ```powershell
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/entity_extraction.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/connector.py connectors/misp/feed_adapter.py connectors/misp/models.py connectors/misp/processor.py connectors/misp/runtime.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/indicator_policy.py core/mitre_attack.py core/quarantine.py core/scoring.py core/policy.py core/state_repository.py core/tlp.py exporters/opencti.py exporters/stix_builder.py
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/entity_extraction.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/connector.py connectors/misp/feed_adapter.py connectors/misp/models.py connectors/misp/processor.py connectors/misp/runtime.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/graph_candidates.py core/graph_evidence.py core/indicator_policy.py core/mitre_attack.py core/quarantine.py core/scoring.py core/policy.py core/state_repository.py core/tlp.py exporters/opencti.py exporters/stix_builder.py
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile gateway/preflight.py gateway/report.py gateway/decisions.py gateway/correlation.py gateway/mitre.py gateway/quarantine.py gateway/quarantine_export.py
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
 ```
@@ -447,10 +493,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-For this release:
+Current release:
 
 ```text
-v0.6.0
+v0.7.0
 ```
 
 ## Documentation
@@ -470,14 +516,23 @@ docs/misp-validation-v0.4.md
 docs/release-v0.4.0.md
 docs/release-v0.5.0.md
 docs/release-v0.6.0.md
+docs/release-v0.7.0.md
 docs/quarantine-enrichment-v0.6.md
+docs/architecture-v0.7.md
 docs/graph-enrichment-v0.7.md
+docs/mitre-curation-architecture-v0.7.md
+docs/metadata-validation-v0.7.md
+docs/contextual-scoring-reference-v0.7.md
+docs/source-ingestion-modes-v0.7.md
+docs/misp-official-connector-mapping-v0.7.md
+docs/otx-official-connector-mapping-v0.7.md
 docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.6.md
 docs/configuration-reference-v0.5.md
 docs/enterprise-intelligence-gateway-v0.5.md
 docs/product-architecture-validation-v0.5.md
 docs/market-positioning-v1.0.md
+docs/post-v1-ml-roadmap.md
 docs/roadmap.md
 docs/licensing-strategy.md
 ```
@@ -493,6 +548,9 @@ docs/licensing-strategy.md
 - Quarantine review and analyst release workflow.
 - Enterprise filters for actor, arsenal, MITRE ATT&CK, victimology and graph
   state.
+- Post-v1.0 ML-assisted curation for aliases, relationship suggestions,
+  semantic deduplication and prioritization after the deterministic v1.0 engine
+  is stable.
 
 ## Security Notes
 

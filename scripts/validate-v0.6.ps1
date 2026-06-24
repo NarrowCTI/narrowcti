@@ -30,6 +30,8 @@ $CoreModules = @(
     'connectors/misp/settings.py',
     'core/decision_audit.py',
     'core/feed_contract.py',
+    'core/graph_candidates.py',
+    'core/graph_evidence.py',
     'core/indicator_policy.py',
     'core/mitre_attack.py',
     'core/quarantine.py',

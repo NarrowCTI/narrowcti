@@ -4,7 +4,11 @@ import tempfile
 import unittest
 
 from core.mitre_attack import build_attack_cache, save_attack_cache
-from gateway.preflight import build_preflight_report, format_text_report
+from gateway.preflight import (
+    active_ingestion_mode,
+    build_preflight_report,
+    format_text_report,
+)
 from gateway.settings import GatewaySettings
 
 
@@ -51,6 +55,7 @@ class GatewayPreflightTests(unittest.TestCase):
         )
 
         self.assertTrue(report.ok)
+        self.assertEqual("hybrid", report.ingestion_mode)
         self.assertEqual(("otx", "misp"), report.enabled_sources)
         self.assertEqual("hybrid", report.settings["dedup_mode"])
         self.assertEqual(60, report.settings["min_score_to_ingest"])
@@ -80,6 +85,26 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertTrue(report.source_controls["otx"]["dry_run"])
         self.assertTrue(report.source_controls["misp"]["dry_run"])
         self.assertEqual([], [issue for issue in report.issues if issue.severity == "error"])
+
+    def test_preflight_reports_direct_ingestion_mode(self):
+        settings = make_settings(enabled_sources=["otx"])
+
+        report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
+
+        self.assertEqual("direct", report.ingestion_mode)
+        self.assertEqual("direct", report.to_dict()["ingestion_mode"])
+
+    def test_preflight_reports_misp_collector_ingestion_mode(self):
+        settings = make_settings(enabled_sources=["misp"])
+
+        report = build_preflight_report(settings, env={"MISP_DRY_RUN": "true"})
+
+        self.assertEqual("misp-collector", report.ingestion_mode)
+
+    def test_active_ingestion_mode_normalizes_sources(self):
+        self.assertEqual("hybrid", active_ingestion_mode([" OTX ", "MISP"]))
+        self.assertEqual("misp-collector", active_ingestion_mode(["misp"]))
+        self.assertEqual("direct", active_ingestion_mode(["otx", "nvd"]))
 
     def test_preflight_reports_unknown_sources_as_errors(self):
         settings = make_settings(enabled_sources=["otx", "unknown"])
@@ -252,6 +277,7 @@ class GatewayPreflightTests(unittest.TestCase):
         data = report.to_dict()
 
         self.assertIn("NarrowCTI gateway preflight", text)
+        self.assertIn("ingestion_mode=direct", text)
         self.assertIn("state_dir=/app/state", text)
         self.assertIn("decision_audit_dir=/app/state/audit", text)
         self.assertIn("run_summary_file=(disabled)", text)
