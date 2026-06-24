@@ -129,6 +129,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added context-quality metrics to curation policy insights so analyst reports
   show contextual scoring volume, score delta and top CTI categories per source
   without applying contextual score to final ingest decisions.
+- Added source-level quarantine reason rollups to policy insights so repeated
+  hold conditions from decision audit are visible next to analyst release/reject
+  feedback.
 - Added a `support` redaction profile to `gateway.curation_report` so
   standalone curation reports can be shared with aggregate evidence while
   removing detailed failures, queries and quarantined-candidate lists.

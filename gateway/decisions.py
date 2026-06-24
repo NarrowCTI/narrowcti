@@ -121,12 +121,15 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
                 "records": 0,
                 "actions": empty_actions(),
                 "reasons": {},
+                "action_reasons": {},
                 "score_summary": {},
             },
         )
         source_report["records"] += 1
         source_report["actions"][action] = source_report["actions"].get(action, 0) + 1
         source_report["reasons"][reason] = source_report["reasons"].get(reason, 0) + 1
+        source_action_reasons = source_report["action_reasons"].setdefault(action, {})
+        source_action_reasons[reason] = source_action_reasons.get(reason, 0) + 1
         query_report = queries.setdefault(
             (source_key, query),
             {
@@ -146,6 +149,12 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
 
     for source_key, source_records in records_by_source.items():
         sources[source_key]["score_summary"] = build_score_summary(source_records)
+        sources[source_key]["action_reasons"] = {
+            action: dict(sorted(reasons.items()))
+            for action, reasons in sorted(
+                (sources[source_key].get("action_reasons") or {}).items()
+            )
+        }
 
     return DecisionAuditReport(
         record_count=len(records),

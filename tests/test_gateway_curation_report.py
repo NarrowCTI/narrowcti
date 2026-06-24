@@ -309,6 +309,10 @@ class GatewayCurationReportTests(unittest.TestCase):
             insight["context_quality"]["top_categories"],
         )
         self.assertEqual(
+            [{"action": "quarantine", "reason": "low score", "count": 3}],
+            insight["top_quarantine_reasons"],
+        )
+        self.assertEqual(
             [
                 {
                     "action": "reject",
@@ -327,6 +331,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("graph=candidates=6 density=2.0", text)
         self.assertIn("context=records=3 accepted_context=9 density=3.0", text)
         self.assertIn("categories=ttp:6,threat:3", text)
+        self.assertIn("quarantine_reasons=quarantine:low score=3", text)
         self.assertIn("top_reasons=reject:Out of scope=2", text)
         self.assertIn("Out of scope", html)
         self.assertIn("review-source-policy-insights", recommendation_codes)

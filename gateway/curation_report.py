@@ -466,6 +466,10 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
         top_review_reasons = flatten_source_reasons(
             (review_actions.get("source_top_reasons") or {}).get(source_key) or {}
         )
+        top_quarantine_reasons = source_action_reason_entries(
+            decision_source.get("action_reasons") or {},
+            "quarantine",
+        )
         score_summary = decision_source.get("score_summary") or empty_score_summary()
         graph_evidence = build_graph_evidence_summary(
             ((decisions.get("graph_export") or {}).get("by_source") or {}).get(
@@ -519,6 +523,7 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
             + statuses.get("partially-released", 0),
             "review_actions": dict(sorted(review_action_counts.items())),
             "top_review_reasons": top_review_reasons,
+            "top_quarantine_reasons": top_quarantine_reasons,
             "release_count": release_count,
             "reject_count": reject_count,
         }
@@ -561,6 +566,7 @@ def build_policy_insights(source_summaries):
             "release_rate_pct": percent(release_count, review_decision_count),
             "reject_rate_pct": percent(reject_count, review_decision_count),
             "top_reasons": source.get("top_review_reasons", []),
+            "top_quarantine_reasons": source.get("top_quarantine_reasons", []),
             "score_summary": source.get("score_summary", empty_score_summary()),
             "average_score": source.get("average_score"),
             "low_score_count": source.get("low_score_count", 0),
@@ -627,6 +633,18 @@ def top_category_entries(category_counts, limit=3):
             "count": int(count or 0),
         }
         for category, count in items[:limit]
+    ]
+
+
+def source_action_reason_entries(action_reasons, action, limit=3):
+    reason_counts = (action_reasons or {}).get(action) or {}
+    return [
+        {
+            "action": action,
+            "reason": item["reason"],
+            "count": item["count"],
+        }
+        for item in top_reason_entries(reason_counts, limit=limit)
     ]
 
 
@@ -774,6 +792,8 @@ def format_text_report(report, redaction_profile="none"):
                 f"scores={format_policy_score_summary(insight.get('score_summary'))} "
                 f"graph={format_graph_evidence_summary(insight.get('graph_evidence'))} "
                 f"context={format_context_quality_summary(insight.get('context_quality'))} "
+                f"quarantine_reasons="
+                f"{format_reason_entries(insight.get('top_quarantine_reasons'))} "
                 f"top_reasons={format_reason_entries(insight.get('top_reasons'))}: "
                 f"{insight['message']}"
             )
@@ -829,6 +849,7 @@ def format_html_report(report, redaction_profile="none"):
             format_policy_score_summary(insight.get("score_summary")),
             format_graph_evidence_summary(insight.get("graph_evidence")),
             format_context_quality_summary(insight.get("context_quality")),
+            format_reason_entries(insight.get("top_quarantine_reasons")),
             format_reason_entries(insight.get("top_reasons")),
             insight.get("message"),
         )
@@ -844,6 +865,7 @@ def format_html_report(report, redaction_profile="none"):
             0,
             0,
             0,
+            "",
             "",
             "",
             "",
@@ -915,7 +937,7 @@ def format_html_report(report, redaction_profile="none"):
   <section>
     <h2>Policy Insights</h2>
     <table>
-      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>context quality</th><th>top reasons</th><th>message</th></tr>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>context quality</th><th>quarantine reasons</th><th>top reasons</th><th>message</th></tr>
       {policy_rows}
     </table>
   </section>

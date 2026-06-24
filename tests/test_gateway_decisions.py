@@ -67,6 +67,10 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             2,
             report.sources["otx"]["score_summary"]["records_with_score"],
         )
+        self.assertEqual(
+            {"below minimum score": 2},
+            report.sources["otx"]["action_reasons"]["drop"],
+        )
         self.assertEqual(1, report.sources["misp"]["actions"]["skip"])
         self.assertEqual([], report.quarantined)
         self.assertEqual(0, report.graph_export["record_count"])
