@@ -95,11 +95,22 @@ python -m gateway.curation_report `
   --json
 ```
 
+External-safe report:
+
+```powershell
+python -m gateway.curation_report `
+  --redaction-profile external `
+  --html-file state\curation-report-external.html
+```
+
 `--redaction-profile none` is the default and keeps the complete local report.
 `--redaction-profile support` keeps aggregate counts, source posture, graph
 readiness and recommendations, but removes detailed failure, query and
 quarantined-candidate lists from the rendered output. Use it before sharing a
-curation report outside the local environment.
+curation report with support.
+`--redaction-profile external` uses the same conservative aggregate-only report
+shape for customer-safe or external report delivery when raw local evidence
+should not be exposed.
 
 When arguments are omitted, the command falls back to the corresponding
 `NARROWCTI_*` settings. Missing evidence is treated as empty input so an
@@ -215,4 +226,5 @@ quarantine policy automatically.
 - Add PDF export once the report schema stabilizes.
 - Add richer per-actor, per-sector and per-ATT&CK narratives.
 - Add graph-quality deltas after controlled graph promotion is enabled.
-- Add additional customer-safe redaction profiles for external report delivery.
+- Add profile-specific redaction policy controls for future tenant-specific
+  external report delivery.

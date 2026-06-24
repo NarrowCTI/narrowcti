@@ -17,7 +17,7 @@ from gateway.review import AnalystReviewService, ReviewSummary, read_audit_event
 from gateway.settings import load_settings
 
 
-REDACTION_PROFILES = ("none", "support")
+REDACTION_PROFILES = ("none", "support", "external")
 
 
 @dataclass(frozen=True)

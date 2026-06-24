@@ -26,7 +26,7 @@ from gateway.settings import load_settings
 
 
 SCHEMA_VERSION = "support-diagnostics/v0.8"
-REDACTION_PROFILES = ("none", "support")
+REDACTION_PROFILES = ("none", "support", "external")
 
 
 @dataclass(frozen=True)

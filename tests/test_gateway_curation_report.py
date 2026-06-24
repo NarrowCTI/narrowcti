@@ -224,9 +224,54 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("NarrowCTI curation report", text)
         self.assertIn("NarrowCTI curation report", html)
 
+    def test_external_redaction_uses_customer_safe_report_shape(self):
+        operational = build_operational_report(
+            [
+                gateway_record(
+                    "2026-06-24T10:00:00Z",
+                    [
+                        source_result(
+                            "misp",
+                            False,
+                            errors=1,
+                        )
+                    ],
+                )
+            ]
+        )
+        decisions = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-24T10:01:00Z",
+                    "misp",
+                    "quarantine",
+                    "customer-specific finding",
+                )
+            ]
+        )
+        review = ReviewSummary(
+            record_count=0,
+            status_counts={},
+            source_counts={},
+            pending_count=0,
+            exportable_count=0,
+        )
+        report = build_curation_report(operational, decisions, review)
+
+        redacted = report_to_dict(report, redaction_profile="external")
+        text = format_text_report(report, redaction_profile="external")
+
+        self.assertEqual([], redacted["operational"]["failures"])
+        self.assertEqual([], redacted["operational"]["queries"])
+        self.assertEqual([], redacted["operational"]["sources"]["misp"]["failures"])
+        self.assertEqual([], redacted["decisions"]["quarantined"])
+        self.assertEqual([], redacted["decisions"]["queries"])
+        self.assertEqual(1, redacted["executive_summary"]["decision_record_count"])
+        self.assertIn("NarrowCTI curation report", text)
+
     def test_rejects_unknown_redaction_profile(self):
         with self.assertRaises(ValueError):
-            normalize_redaction_profile("external")
+            normalize_redaction_profile("unsafe")
 
     def test_builds_review_action_summary_from_release_audit(self):
         with tempfile.TemporaryDirectory() as tmpdir:

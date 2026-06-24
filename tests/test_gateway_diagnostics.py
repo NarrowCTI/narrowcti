@@ -240,9 +240,65 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertIn("redaction_profile=support", format_text_snapshot(snapshot))
         self.assertIn("NarrowCTI support diagnostics", format_html_snapshot(snapshot))
 
+    def test_external_redaction_masks_paths_and_customer_context(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audit_dir = os.path.join(tmpdir, "audit")
+            os.makedirs(audit_dir)
+            summary_file = os.path.join(tmpdir, "gateway_runs.jsonl")
+            decision_file = os.path.join(audit_dir, "otx_decisions.jsonl")
+            with open(summary_file, "w", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(
+                        gateway_record(
+                            "2026-06-24T10:00:00Z",
+                            [source_result("otx", True, reviewed=1, dry_run=1)],
+                        )
+                    )
+                    + "\n"
+                )
+            with open(decision_file, "w", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(
+                        decision_record(
+                            "2026-06-24T10:01:00Z",
+                            "otx",
+                            "quarantine",
+                            "local path " + tmpdir,
+                        )
+                    )
+                    + "\n"
+                )
+            settings = make_settings(
+                state_dir=tmpdir,
+                decision_audit_dir=audit_dir,
+                run_summary_file=summary_file,
+                quarantine_repository_file=os.path.join(tmpdir, "quarantine.jsonl"),
+                release_audit_file=os.path.join(audit_dir, "releases.jsonl"),
+                license_customer_id="customer-a",
+            )
+
+            snapshot = build_support_diagnostics(
+                settings,
+                env={"OTX_DRY_RUN": "true"},
+                generated_at="2026-06-24T10:02:00Z",
+                redaction_profile="external",
+            )
+
+        data = snapshot.to_dict()
+        serialized = json.dumps(data)
+
+        self.assertEqual("external", data["redaction_profile"])
+        self.assertEqual("[redacted]", data["preflight"]["settings"]["license_customer_id"])
+        self.assertNotIn(tmpdir, serialized)
+        self.assertIn("[redacted-path]", serialized)
+        self.assertEqual([], data["curation_report"]["decisions"]["quarantined"])
+        self.assertEqual([], data["curation_report"]["decisions"]["queries"])
+        self.assertIn("redaction_profile=external", format_text_snapshot(snapshot))
+        self.assertIn("NarrowCTI support diagnostics", format_html_snapshot(snapshot))
+
     def test_rejects_unknown_redaction_profile(self):
         with self.assertRaises(ValueError):
-            normalize_redaction_profile("external")
+            normalize_redaction_profile("unsafe")
 
     def test_support_bundle_contains_only_redacted_snapshot_files(self):
         with tempfile.TemporaryDirectory() as tmpdir:

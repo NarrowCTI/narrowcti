@@ -69,12 +69,23 @@ python -m gateway.diagnostics `
   --json
 ```
 
+External-safe redaction:
+
+```powershell
+python -m gateway.diagnostics `
+  --redaction-profile external `
+  --html-file state\narrowcti-external.html
+```
+
 `--redaction-profile none` is the default and is intended for local use.
 `--redaction-profile support` masks local paths and customer identifiers,
 removes detailed query/failure/quarantine lists from the embedded curation
 report and keeps aggregate counts, graph-readiness counters, preflight posture
 and evidence availability. This profile is intended for sharing with support
 without exposing local workstation paths or customer context.
+`--redaction-profile external` uses the same conservative aggregate-only
+redaction model for customer-safe or external report delivery without raw local
+evidence.
 
 HTML snapshot:
 
@@ -131,7 +142,8 @@ The current snapshot contains:
 - `support_warnings`: deterministic support hints for blocking preflight
   errors, preflight warnings, missing evidence, empty curation evidence and
   operational validation failures or missing evidence.
-- `redaction_profile`: selected redaction mode, currently `none` or `support`.
+- `redaction_profile`: selected redaction mode, currently `none`, `support` or
+  `external`.
 - `support_bundle`: optional CLI-only output metadata when `--bundle-file` is
   used with JSON output.
 

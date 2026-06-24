@@ -149,6 +149,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added the first support-safe diagnostic redaction profile. Operators can use
   `python -m gateway.diagnostics --redaction-profile support` to mask local
   paths and customer identifiers while preserving aggregate support evidence.
+- Added an `external` redaction profile for curation reports and support
+  diagnostics so customer-safe report delivery can reuse the conservative
+  aggregate-only redaction model without exposing raw local evidence.
 - Added `reports.support_diagnostics` to the preflight-visible capability
   inventory so the support snapshot is represented in the product operations
   model.
@@ -235,9 +238,10 @@ The support diagnostics foundation is also read-only. It inventories configured
 local evidence paths and summarizes preflight and curation posture without
 collecting secrets, calling OpenCTI or changing runtime state.
 
-The `support` redaction profile is intentionally conservative. It preserves
-aggregate counts and graph-readiness evidence, but removes detailed lists that
-can expose local paths, customer identifiers or sensitive queue context.
+The `support` and `external` redaction profiles are intentionally conservative.
+They preserve aggregate counts and graph-readiness evidence, but remove detailed
+lists that can expose local paths, customer identifiers or sensitive queue
+context.
 
 ## Validation
 

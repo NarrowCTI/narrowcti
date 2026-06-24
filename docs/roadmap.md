@@ -213,8 +213,8 @@ Purpose:
   quarantine and graph-readiness evidence.
 - Provide a cleaner installation and upgrade path.
 - Add read-only support diagnostics for preflight, evidence inventory and
-  curation posture. v0.8 includes a support redaction profile for shareable
-  diagnostic snapshots.
+  curation posture. v0.8 includes support and external redaction profiles for
+  shareable diagnostic snapshots and customer-safe report delivery.
 - Add deployment templates. v0.8 starts with a safe gateway compose template
   and env example for existing OpenCTI Docker networks.
 - Add controlled graph promotion with OpenCTI entity/relationship lookup,
