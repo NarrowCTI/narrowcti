@@ -11,6 +11,8 @@ from gateway.decisions import (
     build_score_summary,
     format_text_report,
     read_decision_records,
+    render_report,
+    write_report,
 )
 
 
@@ -527,6 +529,32 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("queries:", text)
         self.assertIn("- otx query=sample records=1", text)
         self.assertIn("- otx records=1", text)
+
+    def test_renders_and_writes_decision_report_files(self):
+        report = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-22T10:00:00Z",
+                    "otx",
+                    "dry-run",
+                    "would ingest",
+                )
+            ]
+        )
+
+        text = render_report(report, output_format="text")
+        data = json.loads(render_report(report, output_format="json"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_file = os.path.join(tmpdir, "reports", "decisions.json")
+            result = write_report(report, output_file, output_format="json")
+            with open(output_file, "r", encoding="utf-8") as handle:
+                written = json.load(handle)
+
+        self.assertIn("NarrowCTI decision audit report", text)
+        self.assertEqual(1, data["record_count"])
+        self.assertEqual(output_file, result)
+        self.assertEqual(1, written["record_count"])
 
     def test_text_report_includes_graph_export_summary(self):
         report = build_decision_audit_report(

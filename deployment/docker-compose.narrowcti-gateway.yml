@@ -63,6 +63,33 @@ services:
     networks:
       - opencti
 
+  narrowcti-decision-report:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.decisions
+      - --dir
+      - /app/state/audit
+      - --output-file
+      - /app/state/decision-audit-report.txt
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+      - narrowcti-licenses:/licenses:ro
+    networks:
+      - opencti
+
   narrowcti-operational-validation:
     build:
       context: ..

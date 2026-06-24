@@ -43,6 +43,7 @@ commands:
 | --- | --- |
 | `narrowcti-preflight` | Runs `python -m gateway.preflight`. |
 | `narrowcti-curation-report` | Builds text output and writes `/app/state/curation-report.html`. |
+| `narrowcti-decision-report` | Builds `/app/state/decision-audit-report.txt` from `/app/state/audit`. |
 | `narrowcti-operational-validation` | Builds `/app/state/operational-validation.html` from preflight, decision audit and optional manual evidence. |
 | `narrowcti-support-diagnostics` | Builds a support-redacted HTML snapshot and support bundle under `/app/state`. |
 
@@ -75,6 +76,7 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml build narrowct
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml up --force-recreate narrowcti-gateway
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml logs --tail 120 narrowcti-gateway
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-decision-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-curation-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-operational-validation
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-support-diagnostics

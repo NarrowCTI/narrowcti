@@ -101,8 +101,13 @@ Expected evidence:
 After a dry-run, summarize decision audit evidence:
 
 ```powershell
-python -m gateway.decisions --file state\audit\otx_decisions.jsonl
-python -m gateway.decisions --file state\audit\misp_decisions.jsonl
+python -m gateway.decisions `
+  --file state\audit\otx_decisions.jsonl `
+  --output-file state\reports\otx-decision-audit.txt
+
+python -m gateway.decisions `
+  --file state\audit\misp_decisions.jsonl `
+  --output-file state\reports\misp-decision-audit.txt
 ```
 
 For v0.8, the `graph_export` section should include:
