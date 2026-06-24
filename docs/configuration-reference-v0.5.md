@@ -298,8 +298,10 @@ applied to ingest/quarantine decisions.
 
 When source decision metadata includes `graph_stix_preview`, the report
 aggregates bundle object counts, graph object counts, graph relationship
-counts, skipped candidates and STIX object/relationship type rollups. This
-helps validate graph-aware STIX readiness before OpenCTI import is enabled.
+counts, semantic relationship counts, report-context relationship counts,
+skipped candidates, STIX object/relationship type rollups and proposed
+relationship type rollups. This helps validate graph-aware STIX readiness
+before OpenCTI import is enabled.
 
 The local artifact deduplication index can also be summarized:
 

@@ -44,6 +44,12 @@ ENTITY_SPECS = (
     ("authors", "author", "source_identity", 60),
     ("tags", "tags", "tag", 35),
 )
+ACTOR_ANCHORED_ENTITY_TYPES = {
+    "attack_pattern",
+    "malware",
+    "target_country",
+    "target_sector",
+}
 
 
 def extract_otx_entities(pulse):
@@ -384,6 +390,7 @@ def extraction_records(entities):
     records = []
     for key, source_field, entity_type, confidence in ENTITY_SPECS:
         for value in entities.get(key) or []:
+            attributes = relationship_anchor_attributes(entities, entity_type)
             record = {
                 "entity_type": entity_type,
                 "value": value,
@@ -391,7 +398,9 @@ def extraction_records(entities):
                 "confidence": confidence,
             }
             if entity_type == "source_identity":
-                record["attributes"] = {"role": "otx-author"}
+                attributes["role"] = "otx-author"
+            if attributes:
+                record["attributes"] = attributes
             records.append(record)
     for value in entities.get("tlp") or []:
         records.append(
@@ -449,6 +458,19 @@ def extraction_records(entities):
             }
         )
     return records
+
+
+def relationship_anchor_attributes(entities, entity_type):
+    if entity_type not in ACTOR_ANCHORED_ENTITY_TYPES:
+        return {}
+    adversaries = entities.get("adversaries") or []
+    if len(adversaries) != 1:
+        return {}
+    return {
+        "relationship_source_stix_object_type": "threat-actor",
+        "relationship_source_value": adversaries[0],
+        "relationship_source_field": "adversary",
+    }
 
 
 def flatten(value):

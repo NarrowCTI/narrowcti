@@ -1,15 +1,17 @@
-# NarrowCTI v0.7.0 Development Notes
+# NarrowCTI v0.7.0 Release Notes
 
 ## Status
 
-`v0.7.0-dev` is the active graph enrichment and enterprise-filter development
-track. `v0.6.0` remains the latest stable release until v0.7 completes
-implementation, validation, merge and tag.
+`v0.7.0` closes the graph enrichment and enterprise-filter foundation. The
+release remains conservative: stable OpenCTI export continues through the
+curated `Report + Indicator` path, while richer graph objects and relationships
+are validated through audit metadata, graph export planning and in-memory STIX
+preview before real OpenCTI graph promotion is enabled.
 
 ## Purpose
 
-v0.7 should move NarrowCTI from curated `Report + Indicator` export toward
-richer STIX/OpenCTI graph enrichment. The release should validate source
+v0.7 moves NarrowCTI from curated `Report + Indicator` export toward richer
+STIX/OpenCTI graph enrichment. The release validates source
 metadata broadly enough to decide what can safely become graph knowledge and
 what must remain as evidence, labels, notes or quarantine context.
 
@@ -18,6 +20,40 @@ detailed graph-enrichment design is tracked in
 `docs/graph-enrichment-v0.7.md`.
 Operational dry-run validation evidence is tracked in
 `docs/operational-validation-v0.7.md`.
+
+The MITRE ATT&CK curation architecture is tracked in
+`docs/mitre-curation-architecture-v0.7.md`.
+
+## MITRE Curation Decision
+
+v0.7 closes the MITRE role as curation context, not a competing ATT&CK import
+path:
+
+```text
+Official MITRE connector
+  -> populates OpenCTI with the canonical ATT&CK baseline
+
+NarrowCTI
+  -> uses MITRE to enrich OTX, MISP and future source evidence
+  -> creates curated relationships only when source evidence supports them
+```
+
+The NarrowCTI target flow is:
+
+```text
+OTX / MISP / raw feed
+  -> find ATT&CK ids such as T1059
+  -> resolve name, tactic, kill chain, platform, data sources and detection
+     guidance through MITRE reference data
+  -> relate with actor, malware, sector or geography when provenance supports it
+  -> apply score, filters, TLP, deduplication, policy and audit
+  -> send contextualized intelligence to OpenCTI
+```
+
+In v0.7, this is implemented through local MITRE resolution, graph evidence,
+graph candidates, contextual scoring evidence and safe STIX preview summaries.
+Canonical OpenCTI ATT&CK lookup and real graph relationship promotion remain the
+next controlled implementation gate.
 
 ## Initial Scope
 
@@ -72,6 +108,9 @@ Operational dry-run validation evidence is tracked in
   metadata-mapping, adapter contract, testing, documentation and promotion-gate
   requirements for future adapters, including adapter-level metadata extractor
   conventions.
+- Added `docs/mitre-curation-architecture-v0.7.md` to formalize the product
+  boundary between the official MITRE connector as the canonical ATT&CK loader
+  and NarrowCTI as the MITRE-aware curation gateway.
 - Added preflight ingestion-mode reporting. `gateway.preflight` now emits
   `ingestion_mode=direct`, `misp-collector` or `hybrid` in text and JSON
   output based on enabled sources.
@@ -98,14 +137,20 @@ Operational dry-run validation evidence is tracked in
   report references, audit-preserving relationships and skipped-candidate
   summary evidence. The runtime still does not promote graph export
   automatically.
+- Added trusted semantic relationship previews to the graph STIX builder.
+  Candidates with a safe source anchor, such as MISP Galaxy parent cluster
+  metadata, can now preview object-to-object relationships like
+  `threat-actor -> targets -> sector`; candidates without a safe source anchor
+  still fall back to report-context `related-to` relationships.
 - Wired OTX and MISP decision metadata to build a safe `graph_stix_preview`
   summary from accepted candidates. This validates bundle construction,
-  object/relationship counts and skipped candidates in memory without importing
-  graph objects into OpenCTI.
+  object/relationship counts, semantic/report-context relationship split and
+  skipped candidates in memory without importing graph objects into OpenCTI.
 - Extended the decision audit report to aggregate `graph_stix_preview`
   evidence by source and query, including bundle object counts, graph object
-  counts, relationship counts, skipped candidates, STIX object types and
-  relationship types.
+  counts, actual relationship counts, proposed relationship counts, semantic
+  relationship counts, report-context relationship counts, skipped candidates,
+  STIX object types and relationship types.
 - Added contextual scoring dry-run evidence from accepted graph candidates.
   OTX and MISP decision metadata now include `contextual_scoring` with base
   score, suggested contextual score, category counts, impact ratio and every
@@ -145,6 +190,12 @@ Operational dry-run validation evidence is tracked in
   author/source identity evidence. Pulse lifecycle, vote summary and indicator
   first/last-seen windows are now preserved in audit metadata for future
   report/indicator STIX enrichment.
+- Added actor-anchored OTX relationship source metadata. When an OTX pulse has
+  exactly one adversary, malware, ATT&CK technique, target sector and target
+  country candidates can now preview semantic graph relationships such as
+  `threat-actor -> uses -> malware/attack-pattern` and
+  `threat-actor -> targets -> sector/location`; multi-adversary pulses remain
+  report-context only until stronger attribution exists.
 - Added OTX YARA audit extraction. YARA pulse indicators now produce audit-only
   `detection_rule` / `indicator` graph evidence and candidates with pattern
   type, raw rule content, indicator id and observation timing.
@@ -156,8 +207,10 @@ Operational dry-run validation evidence is tracked in
   `vulnerability` graph evidence and candidates, including vulnerability
   Galaxy/Cluster evidence when present.
 - Added MISP EventReport audit extraction. Non-deleted EventReport entries now
-  produce audit-only `event_report` / `note` graph evidence and candidates so
-  analyst context can be preserved for future graph-aware STIX export.
+  produce audit-only `event_report` / `note` graph evidence and candidates.
+  Accepted note candidates now become STIX `note` objects in the safe
+  in-memory graph preview, preserving analyst context before controlled
+  OpenCTI export is enabled.
 - Added MISP attribute sighting audit extraction. Attribute and object-attribute
   sightings now produce audit-only `sighting` graph evidence and candidates
   with observed value, date, source, organization and attribute context.
@@ -179,17 +232,21 @@ Operational dry-run validation evidence is tracked in
   report so operator-facing source, query, reason and score rollups use one
   action vocabulary.
 
-## Validation Target
+## Closure Validation
 
-v0.7 is not complete until the test suite covers source metadata extraction,
-STIX object creation, relationship construction, enterprise filters,
-deduplication, quarantine release and OpenCTI import behavior for representative
-OTX, MISP and MITRE evidence.
+v0.7 closure is validated as an audit-first graph enrichment foundation. The
+test suite must cover source metadata extraction, STIX object creation,
+relationship construction, enterprise filters, deduplication, quarantine release
+and representative OTX, MISP and MITRE evidence.
+
+OpenCTI graph import behavior, canonical ATT&CK lookup against the OpenCTI graph
+and runtime graph-promotion marking remain blocked for the next controlled
+promotion gate.
 
 Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 251 tests
+Ran 254 tests
 OK
 ```

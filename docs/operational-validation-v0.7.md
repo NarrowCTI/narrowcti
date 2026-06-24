@@ -175,6 +175,23 @@ Observed graph metadata after victimology extraction:
 | `contextual_scoring` | base score 50, contextual score 80, delta 30 |
 | Context categories | author 2, sector 3, threat 1 |
 
+Relationship interpretation update:
+
+This Packrat evidence originally recorded proposed relationship types in the
+preview summary. The STIX builder now distinguishes actual relationship counts
+from proposed relationship counts. For MISP Galaxy victimology with parent
+cluster provenance, the expected graph preview shape is:
+
+```text
+Packrat -> targets -> Activists
+Packrat -> targets -> Journalist
+Packrat -> targets -> Political party
+```
+
+Other candidates that do not carry a trusted relationship source remain tied
+to the Report as report-context `related-to` relationships. A live OpenCTI
+import validation is still required before enabling real graph promotion.
+
 Fine-grained finding:
 
 The first Packrat run showed the `Galaxy.meta.targeted-sector` values in the

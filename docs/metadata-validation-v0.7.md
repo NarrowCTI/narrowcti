@@ -8,6 +8,9 @@ metadata toward the v0.7 graph-enrichment objective.
 The consolidated v0.7 architecture and graph promotion boundary is tracked in
 `docs/architecture-v0.7.md`.
 
+The MITRE curation boundary is tracked in
+`docs/mitre-curation-architecture-v0.7.md`.
+
 The target is not to copy every source field into OpenCTI. The target is to
 decide, with evidence, which fields should become graph objects,
 relationships, labels, markings, external references, scoring inputs,
@@ -64,11 +67,11 @@ OpenCTI entities and relationships.
 | `pulse_source` | Web/API origin | Preserved in raw snapshot only | Source provenance/scoring input | Pending |
 | `TLP` / `tlp` | Sharing marking | Extracted as `marking` evidence | `marking-definition` / OpenCTI marking | Audit-ready |
 | `tags` | Free labels | Extracted as low-confidence `tag` evidence | Labels, weak extraction candidates, policy filters | Audit-ready |
-| `industries` | Target sector hints | Extracted as `target_sector` evidence | Sector/victimology identity, `targets` relation | Audit-ready |
-| `targeted_countries` | Target country hints | Extracted as `target_country` evidence | `location`, `targets` relation | Audit-ready |
+| `industries` | Target sector hints | Extracted as `target_sector` evidence; actor-anchored when the pulse has exactly one adversary | Sector/victimology identity, `targets` relation | Preview-ready |
+| `targeted_countries` | Target country hints | Extracted as `target_country` evidence; actor-anchored when the pulse has exactly one adversary | `location`, `targets` relation | Preview-ready |
 | `target_countries` | Alternate country field seen in normalized OTX schemas | Extracted as alias for `targeted_countries` | `location`, `targets` relation | Implemented in v0.7 |
-| `malware_families` | Malware family objects or names | Extracted as `malware` evidence, including `display_name` objects | `malware` or `tool`, arsenal context | Audit-ready |
-| `attack_ids` | ATT&CK technique object/name/id hints | Extracted and resolved through MITRE cache | `attack-pattern`, tactic context | Audit-ready |
+| `malware_families` | Malware family objects or names | Extracted as `malware` evidence, including `display_name` objects; actor-anchored when the pulse has exactly one adversary | `malware` or `tool`, arsenal context | Preview-ready |
+| `attack_ids` | ATT&CK technique object/name/id hints | Extracted and resolved through MITRE cache; actor-anchored when the pulse has exactly one adversary | `attack-pattern`, tactic context | Preview-ready |
 | `references` | External report URLs | Extracted as `external_reference` evidence | External references on report/entities | Audit-ready |
 | `indicators` | IoCs | Existing indicator export and dedup | `indicator`, future SCO/observed-data/sighting | Partial |
 | `indicator_type_counts` | Aggregate indicator types | Preserved in raw snapshot only | Scoring, report summary, quality checks | Pending |
@@ -102,6 +105,10 @@ The remaining gap is not basic extraction; it is intelligent promotion:
   `intrusion-set` or `threat-actor` creation.
 - Malware family values need malware/tool classification and alias handling.
 - Sector/country values need controlled vocabulary normalization.
+- Actor-anchored OTX relationship previews are now allowed only when a pulse
+  has exactly one adversary, so `actor -> uses -> malware/ATT&CK` and
+  `actor -> targets -> sector/country` can be tested without assigning
+  ambiguous multi-actor pulses to one source entity.
 - OTX community signals should influence confidence but should not create graph
   entities.
 - Indicator-specific timestamps and expiration should feed indicator validity
@@ -120,7 +127,7 @@ The remaining gap is not basic extraction; it is intelligent promotion:
 | `kill_chain_phases` | Normalized into tactics and kill chain phase attributes | Tactic filters and ATT&CK phase context | Candidate audit-ready |
 | `x_mitre_platforms` | Stored as `platforms` and emitted as `attack_platform` candidates | Target platform filters and detection context | Candidate audit-ready |
 | `x_mitre_data_sources` | Stored as `data_sources` and emitted as `attack_data_source` candidates | Hunting/detection guidance context | Candidate audit-ready |
-| `x_mitre_detection` | Stored as `detection` and emitted as `detection_guidance` note candidates | Analyst guidance and future detection mapping | Candidate audit-ready |
+| `x_mitre_detection` | Stored as `detection` and emitted as `detection_guidance` note candidates | Analyst guidance and future detection mapping; accepted note candidates can be represented in STIX preview | Preview-ready |
 | `x_mitre_domains` | Stored as `domains` | Enterprise/mobile/ICS scope filter | Implemented in v0.7 |
 | `x_mitre_version` | Stored as `version` | ATT&CK object lifecycle provenance | Implemented in v0.7 |
 | `x_mitre_attack_spec_version` | Stored as `attack_spec_version` | Parser compatibility/audit | Implemented in v0.7 |
@@ -143,11 +150,16 @@ domain, versioning and lifecycle state. Technique-level MITRE context is now
 also emitted as normalized graph candidates for external references, kill chain
 phase attributes, platforms, data sources and detection guidance.
 
-The main v0.7 gap is broader ATT&CK graph coverage. MITRE is not just a
-technique lookup table. For the product goal, NarrowCTI eventually needs to
-understand ATT&CK groups, software, campaigns, data sources and relationship
-objects so OpenCTI can show richer pivots across actor, arsenal, technique and
-detection context.
+The v0.7 architectural decision is that NarrowCTI should not import the full
+ATT&CK corpus as a competing MITRE connector. The official MITRE connector can
+populate OpenCTI with canonical ATT&CK objects, while NarrowCTI uses MITRE
+metadata to curate source evidence before promotion.
+
+The main remaining gap is canonical graph linking. Before real graph export,
+NarrowCTI should look up existing OpenCTI ATT&CK objects by stable identifiers
+such as `T1059` or STIX id and relate curated source evidence to those objects
+instead of creating duplicates. Broader ATT&CK graph coverage for groups,
+software, campaigns, data sources and relationship objects remains future work.
 
 ## Current Mapping Depth
 
@@ -160,6 +172,7 @@ OTX raw pulse
   -> mitre_attack resolved metadata
   -> graph_evidence audit records
   -> graph_candidates audit records
+  -> graph_stix_preview audit summary
   -> stable Report + Indicator STIX export
 ```
 

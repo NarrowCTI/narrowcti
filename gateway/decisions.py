@@ -554,12 +554,15 @@ def empty_graph_stix_preview_summary(include_breakdowns=True):
         "bundle_object_count": 0,
         "graph_object_count": 0,
         "graph_relationship_count": 0,
+        "semantic_relationship_count": 0,
+        "report_relationship_count": 0,
         "skipped_candidate_count": 0,
         "export_enabled_count": 0,
         "statuses": {},
         "bundle_types": {},
         "object_counts": {},
         "relationship_counts": {},
+        "proposed_relationship_counts": {},
     }
     if include_breakdowns:
         summary["by_source"] = {}
@@ -573,6 +576,7 @@ def normalize_graph_stix_preview_summary(summary):
         "bundle_types",
         "object_counts",
         "relationship_counts",
+        "proposed_relationship_counts",
     ):
         summary[field] = dict(sorted(summary.get(field, {}).items()))
     return summary
@@ -596,6 +600,12 @@ def merge_graph_stix_preview(summary, preview):
     summary["graph_relationship_count"] += int(
         preview.get("graph_relationship_count", 0) or 0
     )
+    summary["semantic_relationship_count"] += int(
+        preview.get("semantic_relationship_count", 0) or 0
+    )
+    summary["report_relationship_count"] += int(
+        preview.get("report_relationship_count", 0) or 0
+    )
     summary["skipped_candidate_count"] += int(
         preview.get("skipped_candidate_count", 0) or 0
     )
@@ -608,6 +618,10 @@ def merge_graph_stix_preview(summary, preview):
     )
     merge_counts(summary["object_counts"], preview.get("object_counts"))
     merge_counts(summary["relationship_counts"], preview.get("relationship_counts"))
+    merge_counts(
+        summary["proposed_relationship_counts"],
+        preview.get("proposed_relationship_counts"),
+    )
 
 
 def merge_counts(target, counts):
@@ -830,13 +844,17 @@ def format_graph_stix_preview_summary(summary):
         f"bundle_objects={summary.get('bundle_object_count', 0)} "
         f"graph_objects={summary.get('graph_object_count', 0)} "
         f"graph_relationships={summary.get('graph_relationship_count', 0)} "
+        f"semantic_relationships={summary.get('semantic_relationship_count', 0)} "
+        f"report_relationships={summary.get('report_relationship_count', 0)} "
         f"skipped_candidates={summary.get('skipped_candidate_count', 0)} "
         f"export_enabled={summary.get('export_enabled_count', 0)} "
         f"statuses={format_compact_counts(summary.get('statuses', {}))} "
         f"bundle_types={format_compact_counts(summary.get('bundle_types', {}))} "
         f"objects={format_compact_counts(summary.get('object_counts', {}))} "
         f"relationships="
-        f"{format_compact_counts(summary.get('relationship_counts', {}))}"
+        f"{format_compact_counts(summary.get('relationship_counts', {}))} "
+        f"proposed_relationships="
+        f"{format_compact_counts(summary.get('proposed_relationship_counts', {}))}"
     )
 
 

@@ -277,9 +277,12 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                         bundle_object_count=8,
                         graph_object_count=3,
                         graph_relationship_count=3,
+                        semantic_relationship_count=2,
+                        report_relationship_count=1,
                         skipped_candidate_count=1,
                         object_counts={"attack-pattern": 1, "malware": 2},
-                        relationship_counts={"uses": 3},
+                        relationship_counts={"related-to": 1, "uses": 2},
+                        proposed_relationship_counts={"uses": 3},
                     )
                 },
                 query="lummac2",
@@ -295,8 +298,10 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                         bundle_object_count=4,
                         graph_object_count=1,
                         graph_relationship_count=1,
+                        report_relationship_count=1,
                         object_counts={"identity": 1},
-                        relationship_counts={"originated-from": 1},
+                        relationship_counts={"related-to": 1},
+                        proposed_relationship_counts={"originated-from": 1},
                     )
                 },
                 query="tlp:green",
@@ -311,6 +316,8 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(12, preview["bundle_object_count"])
         self.assertEqual(4, preview["graph_object_count"])
         self.assertEqual(4, preview["graph_relationship_count"])
+        self.assertEqual(2, preview["semantic_relationship_count"])
+        self.assertEqual(2, preview["report_relationship_count"])
         self.assertEqual(1, preview["skipped_candidate_count"])
         self.assertEqual({"preview": 2}, preview["statuses"])
         self.assertEqual({"bundle": 2}, preview["bundle_types"])
@@ -319,8 +326,12 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             preview["object_counts"],
         )
         self.assertEqual(
-            {"originated-from": 1, "uses": 3},
+            {"related-to": 2, "uses": 2},
             preview["relationship_counts"],
+        )
+        self.assertEqual(
+            {"originated-from": 1, "uses": 3},
+            preview["proposed_relationship_counts"],
         )
         self.assertEqual(4, preview["by_source"]["otx"]["accepted_candidate_count"])
         self.assertEqual(2, preview["by_source"]["misp"]["accepted_candidate_count"])
@@ -699,9 +710,12 @@ def graph_stix_preview(
     bundle_object_count=0,
     graph_object_count=0,
     graph_relationship_count=0,
+    semantic_relationship_count=0,
+    report_relationship_count=0,
     skipped_candidate_count=0,
     object_counts=None,
     relationship_counts=None,
+    proposed_relationship_counts=None,
 ):
     return {
         "status": "preview",
@@ -711,9 +725,12 @@ def graph_stix_preview(
         "bundle_object_count": bundle_object_count,
         "graph_object_count": graph_object_count,
         "graph_relationship_count": graph_relationship_count,
+        "semantic_relationship_count": semantic_relationship_count,
+        "report_relationship_count": report_relationship_count,
         "skipped_candidate_count": skipped_candidate_count,
         "object_counts": object_counts or {},
         "relationship_counts": relationship_counts or {},
+        "proposed_relationship_counts": proposed_relationship_counts or {},
         "skipped_candidates": [],
     }
 

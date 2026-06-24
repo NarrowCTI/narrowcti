@@ -11,13 +11,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.7.0-dev
+v0.7.0
 ```
 
-`v0.7.0-dev` is the current graph enrichment and enterprise-filter development
-track. `v0.6.0` remains the latest stable quarantine and enrichment foundation
-release, with reviewable quarantine, release audit, controlled replay, source
-entity extraction and local MITRE ATT&CK reference resolution.
+`v0.7.0` is the graph enrichment and enterprise-filter foundation release. It
+keeps the stable curated `Report + Indicator` OpenCTI export path while adding
+audit-first graph evidence, graph candidates, STIX preview summaries,
+contextual scoring evidence and a clear MITRE ATT&CK curation architecture.
 
 ## Product Identity
 
@@ -85,6 +85,13 @@ ingestion model. The enterprise target is to enrich OpenCTI with actors,
 arsenal, MITRE tactics and techniques, victimology, infrastructure, campaigns,
 vulnerabilities and detection context when source evidence supports it. The v1.0
 market position is tracked in `docs/market-positioning-v1.0.md`.
+
+MITRE ATT&CK is treated as reference and curation context. The official MITRE
+connector should populate OpenCTI with the canonical ATT&CK baseline, while
+NarrowCTI uses ATT&CK ids found in OTX, MISP and future feeds to enrich, score,
+filter, deduplicate, audit and later relate curated intelligence to the OpenCTI
+graph. This decision is tracked in
+`docs/mitre-curation-architecture-v0.7.md`.
 
 ## Deduplication Posture
 
@@ -205,19 +212,20 @@ metadata-only: adversary, malware family, ATT&CK ids, industries, targeted
 countries, TLP, references and tags are preserved as structured evidence for
 future graph enrichment.
 
-## v0.7 Development Track
+## v0.7 Release
 
-The v0.7 track turns the enrichment evidence from v0.6 into graph-aware
-STIX/OpenCTI output. The objective is to validate source metadata more deeply,
-map supported evidence into actors, intrusion sets, malware, tools,
-infrastructure, vulnerabilities, campaigns, sectors, locations, ATT&CK
-techniques and relationships, and keep those relationships explainable before
-they affect the OpenCTI graph.
+The v0.7 release turns the enrichment evidence from v0.6 into graph-aware
+STIX/OpenCTI planning and preview output. The objective is to validate source
+metadata more deeply, map supported evidence into actors, intrusion sets,
+malware, tools, infrastructure, vulnerabilities, campaigns, sectors, locations,
+ATT&CK techniques and relationships, and keep those relationships explainable
+before they affect the OpenCTI graph.
 
 The consolidated architecture is tracked in `docs/architecture-v0.7.md`. The
 detailed graph-enrichment design is tracked in
-`docs/graph-enrichment-v0.7.md`, and the development release notes are tracked
-in `docs/release-v0.7.0.md`. MISP
+`docs/graph-enrichment-v0.7.md`, and the release notes are tracked in
+`docs/release-v0.7.0.md`. The MITRE curation architecture is tracked in
+`docs/mitre-curation-architecture-v0.7.md`. MISP
 compatibility with the official OpenCTI connector mapping is tracked in
 `docs/misp-official-connector-mapping-v0.7.md`, and OTX compatibility with the
 official AlienVault connector mapping is tracked in
@@ -485,10 +493,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-For the current development track:
+Current release:
 
 ```text
-v0.7.0-dev
+v0.7.0
 ```
 
 ## Documentation
@@ -512,6 +520,7 @@ docs/release-v0.7.0.md
 docs/quarantine-enrichment-v0.6.md
 docs/architecture-v0.7.md
 docs/graph-enrichment-v0.7.md
+docs/mitre-curation-architecture-v0.7.md
 docs/metadata-validation-v0.7.md
 docs/contextual-scoring-reference-v0.7.md
 docs/source-ingestion-modes-v0.7.md
@@ -523,6 +532,7 @@ docs/configuration-reference-v0.5.md
 docs/enterprise-intelligence-gateway-v0.5.md
 docs/product-architecture-validation-v0.5.md
 docs/market-positioning-v1.0.md
+docs/post-v1-ml-roadmap.md
 docs/roadmap.md
 docs/licensing-strategy.md
 ```
@@ -538,6 +548,9 @@ docs/licensing-strategy.md
 - Quarantine review and analyst release workflow.
 - Enterprise filters for actor, arsenal, MITRE ATT&CK, victimology and graph
   state.
+- Post-v1.0 ML-assisted curation for aliases, relationship suggestions,
+  semantic deduplication and prioritization after the deterministic v1.0 engine
+  is stable.
 
 ## Security Notes
 

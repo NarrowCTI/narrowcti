@@ -14,6 +14,7 @@ from stix2 import (
     IntrusionSet,
     Location,
     Malware,
+    Note,
     Relationship,
     Report,
     ThreatActor,
@@ -21,6 +22,16 @@ from stix2 import (
     URL,
     Vulnerability,
 )
+
+
+SEMANTIC_RELATIONSHIP_TYPES = {
+    "attributed-to",
+    "based-on",
+    "detects",
+    "indicates",
+    "targets",
+    "uses",
+}
 
 
 def escape_pattern_value(value):
@@ -149,27 +160,46 @@ def build_graph_report_bundle(
     graph_relationships = []
     relationship_keys = set()
     relationship_counts = Counter()
+    proposed_relationship_counts = Counter()
+    semantic_relationship_count = 0
+    report_relationship_count = 0
     for candidate in accepted_candidates:
         target_ref = graph_object_ids.get(graph_object_key(candidate))
         if not target_ref:
             continue
-        relationship_key = (report.id, target_ref)
+        source_ref, relationship_type, relationship_mode = graph_relationship_endpoint(
+            candidate,
+            graph_object_ids,
+            report.id,
+            target_ref,
+        )
+        relationship_key = (source_ref, relationship_type, target_ref)
         if relationship_key in relationship_keys:
             continue
         relationship_keys.add(relationship_key)
         relationship = Relationship(
-            source_ref=report.id,
-            relationship_type="related-to",
+            source_ref=source_ref,
+            relationship_type=relationship_type,
             target_ref=target_ref,
             confidence=clamp_stix_confidence(
                 candidate.get("relationship_confidence", candidate.get("confidence"))
             ),
             created_by_ref=identity.id,
-            custom_properties=graph_custom_properties(candidate),
+            custom_properties=graph_relationship_custom_properties(
+                candidate,
+                relationship_mode,
+            ),
             allow_custom=True,
         )
         graph_relationships.append(relationship)
-        relationship_counts[candidate.get("relationship_type") or "related-to"] += 1
+        relationship_counts[relationship_type] += 1
+        proposed_relationship_counts[
+            clean_string(candidate.get("relationship_type")) or "related-to"
+        ] += 1
+        if relationship_mode == "semantic":
+            semantic_relationship_count += 1
+        else:
+            report_relationship_count += 1
 
     bundle = Bundle(
         objects=[identity, *graph_objects, *graph_relationships, report],
@@ -183,6 +213,11 @@ def build_graph_report_bundle(
         "skipped_candidate_count": len(skipped_candidates),
         "object_counts": dict(sorted(object_counts.items())),
         "relationship_counts": dict(sorted(relationship_counts.items())),
+        "proposed_relationship_counts": dict(
+            sorted(proposed_relationship_counts.items())
+        ),
+        "semantic_relationship_count": semantic_relationship_count,
+        "report_relationship_count": report_relationship_count,
         "skipped_candidates": skipped_candidates,
     }
     return bundle, summary
@@ -262,6 +297,16 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
             valid_from=now,
             **common,
         )
+    if stix_object_type == "note":
+        content = clean_string(attributes.get("content")) or value
+        if not content:
+            return None
+        return Note(
+            abstract=name,
+            content=content,
+            object_refs=[identity_id],
+            **common,
+        )
     if stix_object_type == "observable":
         return observable_candidate_to_stix(candidate, custom_properties)
     return None
@@ -331,6 +376,11 @@ def vulnerability_references(value):
 
 
 def graph_custom_properties(candidate):
+    attributes = (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
     custom = {
         "x_narrowcti_candidate_fingerprint": clean_string(candidate.get("fingerprint")),
         "x_narrowcti_entity_type": clean_string(candidate.get("entity_type")),
@@ -341,8 +391,98 @@ def graph_custom_properties(candidate):
         "x_narrowcti_proposed_relationship_type": clean_string(
             candidate.get("relationship_type")
         ),
+        "x_narrowcti_relationship_source_type": first_clean_value(
+            attributes.get("relationship_source_stix_object_type"),
+            attributes.get("source_stix_object_type"),
+            parent_cluster_stix_object_type(attributes),
+        ),
+        "x_narrowcti_relationship_source_value": first_clean_value(
+            attributes.get("relationship_source_value"),
+            attributes.get("source_value"),
+            attributes.get("parent_cluster_value"),
+        ),
+        "x_narrowcti_relationship_source_field": first_clean_value(
+            attributes.get("relationship_source_field"),
+            attributes.get("parent_tag_name"),
+            attributes.get("parent_cluster_uuid"),
+        ),
     }
     return {key: value for key, value in custom.items() if value}
+
+
+def graph_relationship_custom_properties(candidate, relationship_mode):
+    custom = graph_custom_properties(candidate)
+    custom["x_narrowcti_relationship_mode"] = relationship_mode
+    return custom
+
+
+def graph_relationship_endpoint(candidate, graph_object_ids, report_id, target_ref):
+    relationship_type = clean_string(candidate.get("relationship_type")) or "related-to"
+    source_key = graph_relationship_source_key(candidate)
+    source_ref = graph_object_ids.get(source_key) if source_key else ""
+    if (
+        source_ref
+        and source_ref != target_ref
+        and relationship_type in SEMANTIC_RELATIONSHIP_TYPES
+    ):
+        return source_ref, relationship_type, "semantic"
+    return report_id, "related-to", "report-context"
+
+
+def graph_relationship_source_key(candidate):
+    attributes = (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
+    source_type = first_clean_value(
+        attributes.get("relationship_source_stix_object_type"),
+        attributes.get("source_stix_object_type"),
+        parent_cluster_stix_object_type(attributes),
+    )
+    source_value = first_clean_value(
+        attributes.get("relationship_source_value"),
+        attributes.get("source_value"),
+        attributes.get("parent_cluster_value"),
+    )
+    if not source_type or not source_value:
+        return None
+    return (source_type.lower(), source_value.lower())
+
+
+def parent_cluster_stix_object_type(attributes):
+    kind = " ".join(
+        clean_string(attributes.get(field)).casefold()
+        for field in (
+            "parent_cluster_type",
+            "parent_galaxy_type",
+            "parent_galaxy_name",
+        )
+        if clean_string(attributes.get(field))
+    )
+    if "attack-pattern" in kind or "mitre-attack-pattern" in kind:
+        return "attack-pattern"
+    if "intrusion-set" in kind:
+        return "intrusion-set"
+    if "threat-actor" in kind or "threat actor" in kind:
+        return "threat-actor"
+    if "malpedia" in kind or "ransomware" in kind or "malware" in kind:
+        return "malware"
+    if "tool" in kind:
+        return "tool"
+    if "sector" in kind:
+        return "identity"
+    if "country" in kind or "region" in kind:
+        return "location"
+    return ""
+
+
+def first_clean_value(*values):
+    for value in values:
+        cleaned = clean_string(value)
+        if cleaned:
+            return cleaned
+    return ""
 
 
 def graph_object_key(candidate):

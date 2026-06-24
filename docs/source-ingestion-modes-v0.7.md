@@ -67,6 +67,10 @@ It is not the preferred product ingestion path because it bypasses:
 - Source-to-source correlation.
 - Enterprise curation reporting.
 
+MITRE ATT&CK is the exception for canonical reference loading. The official
+MITRE connector may populate OpenCTI with the ATT&CK baseline, while NarrowCTI
+uses MITRE as reference context for OTX, MISP and future feed curation.
+
 The correct NarrowCTI use of official connectors is:
 
 ```text
@@ -245,7 +249,9 @@ The safe v0.7 scope is:
 3. Define the source adapter and graph candidate direction for future direct
    feeds.
 4. Use official OpenCTI connectors as mapping references only.
-5. Keep graph enrichment focused on metadata validation, graph evidence,
+5. Treat MITRE as curation context and document the official MITRE connector as
+   the preferred canonical ATT&CK baseline loader for OpenCTI.
+6. Keep graph enrichment focused on metadata validation, graph evidence,
    graph candidates, relationship policy, contextual scoring and export
    dry-run behavior.
 
@@ -274,6 +280,8 @@ NarrowCTI should be deployable with or without MISP.
 
 MISP is an optional collector path, not a product dependency. Official OpenCTI
 connectors are compatibility references, not substitutes for the NarrowCTI
-curation engine. Future sources should enter through NarrowCTI source adapters
-so all intelligence receives the same governance, scoring, deduplication,
-quarantine, graph translation and audit treatment before it reaches OpenCTI.
+curation engine. MITRE is allowed to act as canonical reference data in OpenCTI;
+NarrowCTI should then link curated source evidence to that canonical context.
+Future sources should enter through NarrowCTI source adapters so all
+intelligence receives the same governance, scoring, deduplication, quarantine,
+graph translation and audit treatment before it reaches OpenCTI.

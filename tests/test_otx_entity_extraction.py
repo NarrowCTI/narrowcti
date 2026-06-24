@@ -96,14 +96,31 @@ class OTXEntityExtractionTests(unittest.TestCase):
             {"url": "https://vendor.example/ioc", "source_name": "Vendor"},
             entities["references"][1],
         )
-        self.assertIn(
+        attack_pattern = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "attack_pattern"
+            and record["value"] == "T1059.001"
+        )
+        self.assertEqual("attack_ids", attack_pattern["source_field"])
+        self.assertEqual(70, attack_pattern["confidence"])
+        self.assertEqual(
             {
-                "entity_type": "attack_pattern",
-                "value": "T1059.001",
-                "source_field": "attack_ids",
-                "confidence": 70,
+                "relationship_source_stix_object_type": "threat-actor",
+                "relationship_source_value": "APT Example",
+                "relationship_source_field": "adversary",
             },
-            entities["records"],
+            attack_pattern["attributes"],
+        )
+        sector = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "target_sector"
+            and record["value"] == "Finance"
+        )
+        self.assertEqual(
+            "APT Example",
+            sector["attributes"]["relationship_source_value"],
         )
         self.assertEqual(3, entities["counts"]["attack_ids"])
         self.assertEqual(2, entities["counts"]["vulnerabilities"])
@@ -163,6 +180,28 @@ class OTXEntityExtractionTests(unittest.TestCase):
                 for record in entities["records"]
             )
         )
+
+    def test_does_not_anchor_otx_relationships_with_multiple_adversaries(self):
+        entities = extract_otx_entities(
+            {
+                "adversary": ["APT One", "APT Two"],
+                "industries": ["Finance"],
+                "attack_ids": ["T1059"],
+            }
+        )
+
+        sector = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "target_sector"
+        )
+        attack_pattern = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "attack_pattern"
+        )
+        self.assertNotIn("attributes", sector)
+        self.assertNotIn("attributes", attack_pattern)
 
     def test_normalizes_cve_ids_from_nested_values(self):
         self.assertEqual(

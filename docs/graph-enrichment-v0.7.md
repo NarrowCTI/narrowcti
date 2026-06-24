@@ -2,8 +2,9 @@
 
 ## Purpose
 
-v0.7 must move NarrowCTI from curated `Report + Indicator` export into rich,
-validated STIX/OpenCTI graph enrichment.
+v0.7 moves NarrowCTI from curated `Report + Indicator` export toward rich,
+validated STIX/OpenCTI graph enrichment through audit-first evidence, policy and
+preview foundations.
 
 The goal is not only to send more objects to OpenCTI. The goal is to make
 OpenCTI more useful as an intelligence graph: analysts should pivot from a
@@ -83,6 +84,9 @@ The consolidated v0.7 architecture, including runtime boundaries, current
 contracts, policy surface and graph-export promotion path, is tracked in
 `docs/architecture-v0.7.md`.
 
+The MITRE ATT&CK curation architecture is tracked in
+`docs/mitre-curation-architecture-v0.7.md`.
+
 Operational dry-run validation evidence from the local OpenCTI/MISP lab is
 tracked in `docs/operational-validation-v0.7.md`.
 
@@ -151,7 +155,7 @@ graph, while NarrowCTI remains responsible for curation before graph promotion.
 | Malware/tool galaxies | `malware` or `tool` | Useful for Arsenal enrichment. |
 | Sector/geography tags | sector `identity`, `location` | Victimology context. |
 | CVE attributes/tags | `vulnerability` | CVEs from tags, event text, attributes and object attributes become audit-only vulnerability candidates before future NVD enrichment and relationship export. |
-| EventReport / analyst notes | `note` | EventReport content becomes audit-only note evidence and candidates before future STIX note export. |
+| EventReport / analyst notes | `note` | EventReport content becomes note evidence, candidates and safe in-memory STIX preview objects before controlled OpenCTI export. |
 | Attribute sightings | `sighting` | Attribute sightings become audit-only sighting evidence and candidates before future STIX sighting relationship export. |
 | Object references | `relationship` | MISP object references become audit-only relationship evidence and candidates before future STIX relationship export. |
 | Detection rule attributes | `indicator` | YARA, Sigma, Snort, Suricata and PCRE attributes become audit-only detection-rule candidates before future pattern-aware STIX indicator export. |
@@ -189,9 +193,11 @@ to `vulnerability` when a CVE id is present.
 MISP EventReport audit extraction is implemented as the first note-oriented
 mapping layer. NarrowCTI ignores deleted reports, normalizes report title,
 content, UUID and timestamps into `misp_event_reports`, then emits audit-only
-`event_report` / `note` graph evidence and candidates. This preserves analyst
-context for future graph-aware STIX export without bypassing curation,
-deduplication or OpenCTI validation.
+`event_report` / `note` graph evidence and candidates. The graph-aware STIX
+preview now converts accepted note candidates into STIX `note` objects with
+content, abstract and provenance-preserving custom properties. This preserves
+analyst context without bypassing curation, deduplication or OpenCTI
+validation.
 
 MISP attribute sighting audit extraction is implemented for event attributes
 and object attributes. NarrowCTI normalizes observed value, sighting id/type,
@@ -218,8 +224,17 @@ IoC indicators too early.
 
 ### MITRE ATT&CK
 
-MITRE remains reference data, not an IoC feed. v0.7 should use the local cache
-to create or enrich:
+MITRE ATT&CK is reference context for curation, not a competing direct import
+path for NarrowCTI. The official MITRE connector should populate OpenCTI with
+the canonical ATT&CK baseline, while NarrowCTI uses MITRE ids found in OTX, MISP
+or future feeds to enrich, score, filter, deduplicate, audit and preview curated
+graph output.
+
+The current v0.7 implementation closes the enrichment and preview side of this
+model. Canonical OpenCTI lookup and real graph promotion remain the next
+controlled promotion gate.
+
+v0.7 uses the local cache to create or enrich:
 
 | ATT&CK evidence | STIX/OpenCTI target |
 | --- | --- |
@@ -309,6 +324,36 @@ campaign
 
 When evidence is weak, use lower confidence, `related-to`, labels or notes
 instead of strong attribution.
+
+The current v0.7 STIX preview follows the same rule. It keeps the Report as
+the evidence container through `object_refs`, creates report-context
+`related-to` relationships when no safe source entity is known and creates
+semantic relationships only when the source is anchored by trusted metadata.
+For example, a MISP threat-actor Galaxy cluster with
+`meta.targeted-sector=["Activists"]` can produce:
+
+```text
+Packrat -> targets -> Activists
+```
+
+An OTX pulse with exactly one adversary can also preview actor-anchored
+relationships from curated fields:
+
+```text
+APT Example -> uses -> LummaC2
+APT Example -> uses -> T1059
+APT Example -> targets -> Finance
+APT Example -> targets -> BR
+```
+
+If an OTX pulse names multiple adversaries, NarrowCTI keeps those candidates in
+report context until a stronger source anchor exists.
+
+This is the difference between simply importing source metadata and preparing
+OpenCTI to show operational intelligence: actor, arsenal, ATT&CK techniques,
+kill chain context, victimology, infrastructure and vulnerabilities must be
+linked with provenance so the analyst can pivot, validate and hunt from the
+graph.
 
 ## Confidence And Provenance
 
@@ -439,8 +484,10 @@ rollups while the contextual score remains dry-run evidence only.
 
 The decision audit report also aggregates `graph_stix_preview` evidence. This
 lets operators compare bundle object counts, graph object counts, graph
-relationship counts, skipped candidates, STIX object types and relationship
-types across sources and queries before graph export is enabled.
+relationship counts, semantic relationship counts, report-context relationship
+counts, skipped candidates, STIX object types, actual relationship types and
+proposed relationship types across sources and queries before graph export is
+enabled.
 
 ## Graph Hygiene
 
@@ -532,12 +579,15 @@ v0.7 should not be considered complete until:
    as audit-only graph evidence/candidates.
 5. Build a graph-aware STIX exporter. An initial STIX builder foundation now
    converts accepted graph candidates into OpenCTI-compatible STIX objects,
-   report references and audit-preserving `related-to` relationships for the
-   first supported graph types. OTX and MISP decisions now include a safe
-   in-memory `graph_stix_preview` summary so operators can see bundle object
-   counts, graph object counts, relationship counts and skipped candidates
-   before export is enabled. OpenCTI import validation, controlled export mode
-   and post-export graph deduplication remain pending.
+   report references, STIX `note` preview objects, report-context
+   `related-to` relationships and trusted semantic relationship previews when
+   a candidate carries a safe source anchor. OTX and MISP decisions now include
+   a safe in-memory
+   `graph_stix_preview` summary so operators can see bundle object counts,
+   graph object counts, actual relationship counts, proposed relationship
+   counts, semantic relationship counts and skipped candidates before export
+   is enabled. OpenCTI import validation, controlled export mode and
+   post-export graph deduplication remain pending.
 6. Add relationship confidence and provenance. Initial audit-only support is
    implemented in `core/graph_candidates.py`.
 7. Add enterprise graph filters. Initial audit-only candidate policy is
