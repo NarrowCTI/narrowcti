@@ -210,7 +210,8 @@ Purpose:
 - Harden configuration defaults.
 - Document customer installation procedures.
 - Add technical license enforcement and feature gates by feed, environment or
-  capability.
+  capability. v0.8 starts with preflight-visible edition/capability inventory;
+  runtime entitlement blocking remains a later hardening step.
 
 Expected outcomes:
 

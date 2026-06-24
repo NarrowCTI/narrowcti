@@ -28,6 +28,11 @@ class GatewaySettings:
     graph_export_mode: str
     graph_dedup_state_file: str
     opencti_graph_lookup: bool
+    license_edition: str = "evaluation"
+    license_customer_id: str = ""
+    license_file: str = ""
+    licensed_capabilities: list[str] = None
+    feature_gates_enforced: bool = False
     release_audit_file: str = ""
     enable_mitre_attack_resolution: bool = True
     mitre_cache_file: str = ""
@@ -40,6 +45,8 @@ class GatewaySettings:
             raise ValueError("source_interval_seconds must be greater than zero")
         if self.dedup_mode not in ["off", "source", "artifact", "hybrid"]:
             raise ValueError("dedup_mode must be off, source, artifact or hybrid")
+        if self.licensed_capabilities is None:
+            object.__setattr__(self, "licensed_capabilities", [])
 
 
 def env_int(name, default):
@@ -129,6 +136,11 @@ def load_settings():
         ),
         graph_dedup_state_file=os.getenv("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
         opencti_graph_lookup=env_bool("NARROWCTI_OPENCTI_GRAPH_LOOKUP", False),
+        license_edition=os.getenv("NARROWCTI_LICENSE_EDITION", "evaluation"),
+        license_customer_id=os.getenv("NARROWCTI_LICENSE_CUSTOMER_ID", ""),
+        license_file=os.getenv("NARROWCTI_LICENSE_FILE", ""),
+        licensed_capabilities=env_list("NARROWCTI_LICENSED_CAPABILITIES"),
+        feature_gates_enforced=env_bool("NARROWCTI_FEATURE_GATES_ENFORCED", False),
         release_audit_file=os.getenv(
             "NARROWCTI_RELEASE_AUDIT_FILE",
             os.path.join(state_dir, "audit", "releases.jsonl"),

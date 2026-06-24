@@ -49,6 +49,8 @@ $CoreModules = @(
 )
 
 $GatewayModules = @(
+    'gateway/feature_gates.py',
+    'gateway/settings.py',
     'gateway/preflight.py',
     'gateway/report.py',
     'gateway/decisions.py',

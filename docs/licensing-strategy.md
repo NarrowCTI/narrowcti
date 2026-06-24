@@ -48,9 +48,9 @@ Potential editions:
 These edition names are placeholders. They should be validated against product
 strategy before customer-facing use.
 
-## Future Technical Enforcement
+## Technical Enforcement Foundation
 
-The recommended v0.7.0 licensing model is offline-first:
+The recommended licensing model is offline-first:
 
 ```text
 signed license file
@@ -64,6 +64,19 @@ signed license file
 Offline-first licensing is better aligned with security environments where
 internet access may be restricted.
 
+The v0.8 foundation introduces preflight-visible feature gate inventory, not
+full runtime entitlement blocking. The gateway can now report:
+
+- Declared product edition.
+- Optional customer or environment id.
+- Whether a signed license file path is configured.
+- Whether strict feature gate validation is enabled.
+- Which capabilities are active for the declared edition or explicit override.
+
+Runtime enforcement remains a later hardening step after legal review, license
+format selection and customer deployment validation. Until then, the foundation
+is designed for observability, supportability and low-risk product operations.
+
 ## Feature Gate Candidates
 
 Potential licensed capabilities:
@@ -76,6 +89,23 @@ Potential licensed capabilities:
 - Dry-run comparison reports.
 - Multi-environment support.
 - MSSP-oriented controls.
+
+Current v0.8 technical capability identifiers:
+
+```text
+source.otx
+source.misp
+enrichment.otx_entities
+enrichment.mitre_attack
+quarantine.review
+reports.operational
+graph.export.audit
+graph.export.dry_run
+graph.lookup.opencti
+graph.export.controlled
+deployment.templates
+mssp.multi_environment
+```
 
 ## Required Legal Review
 
@@ -109,3 +139,17 @@ For v0.3.0, licensing work is limited to:
 - Documentation of future license enforcement requirements.
 
 No runtime license enforcement is expected in v0.3.0.
+
+## v0.8.0 Deliverables
+
+For v0.8.0, licensing work is limited to:
+
+- Edition and capability inventory in code.
+- Offline license file path configuration.
+- Preflight reporting for license and feature gate state.
+- Strict preflight error when feature gates are marked enforced but no license
+  file path is configured.
+- Documentation of known capability identifiers.
+
+v0.8.0 does not parse signed license files and does not block source runtimes by
+capability yet.

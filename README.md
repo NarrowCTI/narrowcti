@@ -562,6 +562,8 @@ docs/licensing-strategy.md
 ## Roadmap
 
 - Product foundation and commercial licensing structure.
+- v0.8 preflight-visible edition and feature gate inventory for offline-first
+  commercial packaging.
 - Multi-feed support beyond the reference OTX adapter.
 - Advanced correlation scoring and analyst-facing source evidence.
 - Richer scoring model with source-specific weighting.

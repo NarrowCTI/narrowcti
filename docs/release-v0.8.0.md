@@ -67,6 +67,10 @@ Operational validation is tracked in `docs/operational-validation-v0.8.md`.
 - Added unit coverage for MITRE attack-pattern lookup, fail-open behavior,
   STIX-id fallback, unsupported candidate handling and composite lookup
   merging.
+- Added the first license and feature gate inventory foundation through
+  edition/capability defaults, `NARROWCTI_LICENSE_*` settings and preflight
+  reporting. This is observable product-operations plumbing only; runtime
+  entitlement blocking remains pending.
 
 ## Promotion Boundary
 
@@ -85,6 +89,15 @@ graph candidate
   -> controlled graph promotion
   -> post-export state marking
 ```
+
+## Product Operations Boundary
+
+The v0.8 license and feature gate foundation is intentionally non-invasive.
+`gateway.preflight` reports edition, customer id, license-file configuration,
+active capabilities and strict-gate status so support and deployment teams can
+verify product state before a run. If `NARROWCTI_FEATURE_GATES_ENFORCED=true`
+is configured without `NARROWCTI_LICENSE_FILE`, preflight fails. Source runtime
+blocking by capability is not enabled in this release.
 
 ## Validation
 

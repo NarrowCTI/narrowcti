@@ -65,6 +65,38 @@ graph enrichment layer.
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a read-only known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. v0.7 does not mark plans as exported from this setting. |
 | `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in read-only OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, starting with ATT&CK attack-patterns, before future graph promotion creates anything. |
 
+## v0.8 License And Feature Gate Controls
+
+These controls expose the first technical inventory for commercial packaging.
+They are intentionally preflight-visible before they become runtime blockers.
+This lets operators and support teams identify edition, customer and capability
+state without requiring internet activation.
+
+| Variable | Purpose |
+| --- | --- |
+| `NARROWCTI_LICENSE_EDITION` | Declared product edition. Current recognized values are `evaluation`, `professional`, `enterprise` and `mssp`. |
+| `NARROWCTI_LICENSE_CUSTOMER_ID` | Optional non-secret customer or environment identifier shown in preflight for support and entitlement tracing. |
+| `NARROWCTI_LICENSE_FILE` | Future signed offline license file path. Preflight reports only whether it is configured. |
+| `NARROWCTI_LICENSED_CAPABILITIES` | Optional comma-separated capability override. Empty uses the default capability set for the declared edition. |
+| `NARROWCTI_FEATURE_GATES_ENFORCED` | Enables strict preflight validation for license configuration. Runtime feature blocking is still pending broader product validation. |
+
+Known v0.8 capability identifiers:
+
+```text
+source.otx
+source.misp
+enrichment.otx_entities
+enrichment.mitre_attack
+quarantine.review
+reports.operational
+graph.export.audit
+graph.export.dry_run
+graph.lookup.opencti
+graph.export.controlled
+deployment.templates
+mssp.multi_environment
+```
+
 Current graph controls do not create new OpenCTI graph objects. They make the
 future graph promotion decision visible in decision audit and quarantine
 metadata through `graph_candidate_policy` and `graph_export_plan`. The
@@ -118,6 +150,16 @@ NARROWCTI_GRAPH_DEDUP_STATE_FILE=/app/state/graph_dedup.json
 NARROWCTI_OPENCTI_GRAPH_LOOKUP=false
 ```
 
+Feature gate inventory posture:
+
+```env
+NARROWCTI_LICENSE_EDITION=enterprise
+NARROWCTI_LICENSE_CUSTOMER_ID=customer-lab
+NARROWCTI_LICENSE_FILE=/licenses/customer-lab.lic
+NARROWCTI_LICENSED_CAPABILITIES=source.otx,source.misp,graph.lookup.opencti,reports.operational
+NARROWCTI_FEATURE_GATES_ENFORCED=false
+```
+
 MISP-specific review posture:
 
 ```env
@@ -166,4 +208,6 @@ gaps such as a missing MITRE cache are warnings instead of ingest blockers.
 In the v0.8 development track, `gateway.preflight` also reports
 `NARROWCTI_GRAPH_EXPORT_MODE`, `NARROWCTI_GRAPH_DEDUP_STATE_FILE` and
 `NARROWCTI_OPENCTI_GRAPH_LOOKUP` so operators can confirm the graph promotion
-gate before running OTX or MISP sources.
+gate before running OTX or MISP sources. It also reports license edition,
+customer id, whether a license file is configured, whether feature gates are
+enforced and which capabilities are active for the declared edition or override.
