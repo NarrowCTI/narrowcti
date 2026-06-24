@@ -115,6 +115,8 @@ The current snapshot contains:
   size and modification metadata.
 - `curation_report`: executive curation summary, decisions, analyst review and
   graph-readiness evidence.
+- `source_posture`: rendered text/HTML summary of per-source curation posture
+  from the embedded curation report.
 - `support_warnings`: deterministic support hints for blocking preflight
   errors, preflight warnings, missing evidence and empty curation evidence.
 - `redaction_profile`: selected redaction mode, currently `none` or `support`.
@@ -130,6 +132,7 @@ customer or support engineer answer:
 - Are run summaries and decision audit files being written?
 - Is quarantine/release audit evidence available?
 - Does the curation report have enough data to explain what happened?
+- Which source appears stable or needs attention from aggregate evidence?
 - Is graph promotion still held behind audit and validation controls?
 - Can this snapshot be shared safely with support using the `support` redaction
   profile?

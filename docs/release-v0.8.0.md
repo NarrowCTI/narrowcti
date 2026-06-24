@@ -119,6 +119,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added standalone HTML diagnostic output through
   `python -m gateway.diagnostics --html-file ...` for local support review and
   shareable redacted snapshots.
+- Added rendered source posture to support diagnostics text, HTML and bundle
+  output so support can spot source-level attention areas without opening raw
+  evidence.
 
 ## Promotion Boundary
 

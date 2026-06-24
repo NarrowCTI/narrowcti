@@ -76,6 +76,12 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         )
         self.assertTrue(inventory["run_summary_file"]["exists"])
         self.assertTrue(inventory["decision_audit_dir"]["exists"])
+        self.assertEqual(
+            "otx",
+            data["curation_report"]["source_summaries"][0]["source_key"],
+        )
+        self.assertIn("source_posture:", format_text_snapshot(snapshot))
+        self.assertIn("Source Posture", format_html_snapshot(snapshot))
         json.dumps(data)
 
     def test_reports_missing_evidence_as_support_warning(self):
@@ -203,6 +209,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertNotIn(tmpdir, snapshot_data)
         self.assertIn("[redacted-path]", snapshot_data)
         self.assertIn("redaction_profile=support", snapshot_text)
+        self.assertIn("Source Posture", snapshot_html)
         self.assertIn("<!doctype html>", snapshot_html)
         self.assertIn("redaction_profile", snapshot_html)
 

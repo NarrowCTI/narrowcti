@@ -403,7 +403,8 @@ def redact_path(path):
 def format_text_snapshot(snapshot):
     data = snapshot.to_dict()
     preflight = data["preflight"]
-    summary = data["curation_report"]["executive_summary"]
+    curation = data["curation_report"]
+    summary = curation["executive_summary"]
     lines = [
         "NarrowCTI support diagnostics",
         f"schema_version={data['schema_version']}",
@@ -436,6 +437,16 @@ def format_text_snapshot(snapshot):
         f"{summary.get('graph_would_create_relationship_count', 0)}",
         "evidence_inventory:",
     ]
+    if curation.get("source_summaries"):
+        lines.append("source_posture:")
+        for source in curation["source_summaries"]:
+            lines.append(
+                "- "
+                f"{source.get('source_key')} posture={source.get('posture')} "
+                f"runs={source.get('runs', 0)} failed={source.get('failed', 0)} "
+                f"decision_records={source.get('decision_records', 0)} "
+                f"pending_review={source.get('pending_review', 0)}"
+            )
     for item in data["evidence_inventory"]:
         lines.append(
             "- "
@@ -455,7 +466,21 @@ def format_html_snapshot(snapshot):
     data = snapshot.to_dict()
     preflight = data.get("preflight") or {}
     settings = preflight.get("settings") or {}
-    summary = (data.get("curation_report") or {}).get("executive_summary") or {}
+    curation = data.get("curation_report") or {}
+    summary = curation.get("executive_summary") or {}
+    source_rows = "\n".join(
+        html_table_row(
+            source.get("source_key"),
+            source.get("posture"),
+            source.get("runs"),
+            source.get("failed"),
+            source.get("decision_records"),
+            source.get("pending_review"),
+        )
+        for source in curation.get("source_summaries") or []
+    )
+    if not source_rows:
+        source_rows = html_table_row("none", "", 0, 0, 0, 0)
     evidence_rows = "\n".join(
         html_table_row(
             item.get("name"),
@@ -518,6 +543,13 @@ def format_html_snapshot(snapshot):
     </table>
   </section>
   <section>
+    <h2>Source Posture</h2>
+    <table>
+      <tr><th>source</th><th>posture</th><th>runs</th><th>failed</th><th>decision records</th><th>pending review</th></tr>
+      {source_rows}
+    </table>
+  </section>
+  <section>
     <h2>Evidence Inventory</h2>
     <table>
       <tr><th>name</th><th>exists</th><th>kind</th><th>size bytes</th><th>path</th></tr>
@@ -554,6 +586,7 @@ def format_html_snapshot(snapshot):
         would_create_relationships=escape(
             summary.get("graph_would_create_relationship_count", 0)
         ),
+        source_rows=source_rows,
         evidence_rows=evidence_rows,
         warning_items=warning_items,
     )
