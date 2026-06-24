@@ -125,6 +125,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added rendered source posture to support diagnostics text, HTML and bundle
   output so support can spot source-level attention areas without opening raw
   evidence.
+- Added rendered policy insights to support diagnostics text, HTML and bundle
+  output so support can identify source-level tuning signals from aggregate
+  release/reject evidence.
 
 ## Promotion Boundary
 

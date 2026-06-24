@@ -15,6 +15,7 @@ from gateway.diagnostics import (
 from tests.test_gateway_curation_report import (
     decision_record,
     gateway_record,
+    release_event,
     source_result,
 )
 from tests.test_gateway_preflight import make_settings
@@ -27,6 +28,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             os.makedirs(audit_dir)
             summary_file = os.path.join(tmpdir, "gateway_runs.jsonl")
             decision_file = os.path.join(audit_dir, "otx_decisions.jsonl")
+            release_audit_file = os.path.join(tmpdir, "releases.jsonl")
             with open(summary_file, "w", encoding="utf-8") as handle:
                 handle.write(
                     json.dumps(
@@ -49,12 +51,19 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                     )
                     + "\n"
                 )
+            with open(release_audit_file, "w", encoding="utf-8") as handle:
+                for event in [
+                    release_event("otx", "reject"),
+                    release_event("otx", "reject"),
+                    release_event("otx", "reject"),
+                ]:
+                    handle.write(json.dumps(event) + "\n")
             settings = make_settings(
                 state_dir=tmpdir,
                 decision_audit_dir=audit_dir,
                 run_summary_file=summary_file,
                 quarantine_repository_file=os.path.join(tmpdir, "quarantine.jsonl"),
-                release_audit_file=os.path.join(audit_dir, "releases.jsonl"),
+                release_audit_file=release_audit_file,
             )
 
             snapshot = build_support_diagnostics(
@@ -81,7 +90,9 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             data["curation_report"]["source_summaries"][0]["source_key"],
         )
         self.assertIn("source_posture:", format_text_snapshot(snapshot))
+        self.assertIn("policy_insights:", format_text_snapshot(snapshot))
         self.assertIn("Source Posture", format_html_snapshot(snapshot))
+        self.assertIn("Policy Insights", format_html_snapshot(snapshot))
         json.dumps(data)
 
     def test_reports_missing_evidence_as_support_warning(self):
@@ -210,6 +221,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertIn("[redacted-path]", snapshot_data)
         self.assertIn("redaction_profile=support", snapshot_text)
         self.assertIn("Source Posture", snapshot_html)
+        self.assertIn("Policy Insights", snapshot_html)
         self.assertIn("<!doctype html>", snapshot_html)
         self.assertIn("redaction_profile", snapshot_html)
 
