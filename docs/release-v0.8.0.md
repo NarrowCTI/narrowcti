@@ -18,6 +18,7 @@ evidence, policy, deduplication, canonical lookup and audit requirements are
 satisfied.
 
 The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`.
+Operational validation is tracked in `docs/operational-validation-v0.8.md`.
 
 ## Initial Scope
 
@@ -41,6 +42,8 @@ The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`.
   adapter.
 - Added `docs/graph-promotion-v0.8.md` to document the graph promotion boundary,
   canonical MITRE linking model and validation path.
+- Added `docs/operational-validation-v0.8.md` as the runbook for bounded
+  OpenCTI/MISP/OTX lab validation of the read-only graph lookup gate.
 - Added ATT&CK attack-pattern lookup by `x_mitre_id` first, then by STIX
   `standard_id` when a MITRE technique id is not available.
 - Made the lookup compatible with the existing `graph_export_plan` known-key

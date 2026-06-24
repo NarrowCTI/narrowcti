@@ -244,6 +244,8 @@ the official MITRE connector, before any real graph promotion is enabled.
 
 The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`, and
 the detailed development notes are tracked in `docs/release-v0.8.0.md`.
+Bounded lab validation for this track is described in
+`docs/operational-validation-v0.8.md`.
 
 ## Curation Configuration
 

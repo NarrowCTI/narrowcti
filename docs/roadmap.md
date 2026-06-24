@@ -194,6 +194,11 @@ Expected outcomes:
 
 Status: in development.
 
+Detailed design and validation:
+
+- `docs/graph-promotion-v0.8.md`
+- `docs/operational-validation-v0.8.md`
+
 Purpose:
 
 - Add analyst review API/UI for quarantine, release and policy tuning.
