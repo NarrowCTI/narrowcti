@@ -27,6 +27,7 @@ It exposes:
 
 - `build_support_diagnostics`
 - `collect_evidence_inventory`
+- `redact_snapshot_dict`
 - `format_text_snapshot`
 - CLI entrypoint: `python -m gateway.diagnostics`
 
@@ -56,6 +57,21 @@ python -m gateway.diagnostics `
 When arguments are omitted, the command falls back to the corresponding
 `NARROWCTI_*` settings.
 
+Support-safe redaction:
+
+```powershell
+python -m gateway.diagnostics `
+  --redaction-profile support `
+  --json
+```
+
+`--redaction-profile none` is the default and is intended for local use.
+`--redaction-profile support` masks local paths and customer identifiers,
+removes detailed query/failure/quarantine lists from the embedded curation
+report and keeps aggregate counts, graph-readiness counters, preflight posture
+and evidence availability. This profile is intended for sharing with support
+without exposing local workstation paths or customer context.
+
 ## Snapshot Sections
 
 The current snapshot contains:
@@ -68,6 +84,7 @@ The current snapshot contains:
   graph-readiness evidence.
 - `support_warnings`: deterministic support hints for blocking preflight
   errors, preflight warnings, missing evidence and empty curation evidence.
+- `redaction_profile`: selected redaction mode, currently `none` or `support`.
 
 ## Product Boundary
 
@@ -79,14 +96,14 @@ customer or support engineer answer:
 - Is quarantine/release audit evidence available?
 - Does the curation report have enough data to explain what happened?
 - Is graph promotion still held behind audit and validation controls?
+- Can this snapshot be shared safely with support using the `support` redaction
+  profile?
 
 This preserves the NarrowCTI product boundary: the gateway remains the
 curation, governance and explanation layer before OpenCTI graph promotion.
 
 ## Future Work
 
-- Add redaction profiles before sharing snapshots outside the customer
-  environment.
 - Add optional archive generation once the safe file allowlist is stable.
 - Add HTML/PDF diagnostic summaries after the report schema matures.
 - Add UI/API access once analyst review surfaces are introduced.

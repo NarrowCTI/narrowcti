@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 import os
 from dataclasses import dataclass
@@ -11,12 +12,14 @@ from gateway.settings import load_settings
 
 
 SCHEMA_VERSION = "support-diagnostics/v0.8"
+REDACTION_PROFILES = ("none", "support")
 
 
 @dataclass(frozen=True)
 class SupportDiagnosticSnapshot:
     schema_version: str
     generated_at: str
+    redaction_profile: str
     preflight: dict
     evidence_inventory: list
     curation_report: dict
@@ -26,6 +29,7 @@ class SupportDiagnosticSnapshot:
         return {
             "schema_version": self.schema_version,
             "generated_at": self.generated_at,
+            "redaction_profile": self.redaction_profile,
             "preflight": self.preflight,
             "evidence_inventory": list(self.evidence_inventory),
             "curation_report": self.curation_report,
@@ -42,6 +46,7 @@ def build_support_diagnostics(
     limit=0,
     env=None,
     generated_at="",
+    redaction_profile="none",
 ):
     preflight = build_preflight_report(settings, env=env)
     evidence = collect_evidence_inventory(preflight)
@@ -52,13 +57,38 @@ def build_support_diagnostics(
         release_audit_file=release_audit_file or settings.release_audit_file,
         limit=limit,
     )
-    return SupportDiagnosticSnapshot(
+    snapshot = SupportDiagnosticSnapshot(
         schema_version=SCHEMA_VERSION,
         generated_at=generated_at or utc_now(),
+        redaction_profile=normalize_redaction_profile(redaction_profile),
         preflight=preflight.to_dict(),
         evidence_inventory=evidence,
         curation_report=curation.to_dict(),
         support_warnings=build_support_warnings(preflight, evidence, curation),
+    )
+    if snapshot.redaction_profile == "none":
+        return snapshot
+    return snapshot_from_dict(redact_snapshot_dict(snapshot.to_dict()))
+
+
+def normalize_redaction_profile(value):
+    profile = str(value or "none").strip().lower()
+    if profile not in REDACTION_PROFILES:
+        raise ValueError(
+            "redaction_profile must be one of: " + ",".join(REDACTION_PROFILES)
+        )
+    return profile
+
+
+def snapshot_from_dict(data):
+    return SupportDiagnosticSnapshot(
+        schema_version=data["schema_version"],
+        generated_at=data["generated_at"],
+        redaction_profile=data.get("redaction_profile", "none"),
+        preflight=data.get("preflight") or {},
+        evidence_inventory=data.get("evidence_inventory") or [],
+        curation_report=data.get("curation_report") or {},
+        support_warnings=data.get("support_warnings") or [],
     )
 
 
@@ -184,6 +214,132 @@ def support_warning(code, message):
     }
 
 
+def redact_snapshot_dict(snapshot):
+    redacted = copy.deepcopy(snapshot)
+    known_paths = collect_sensitive_paths(redacted)
+    redact_preflight(redacted.get("preflight") or {}, known_paths)
+    redact_evidence_inventory(redacted.get("evidence_inventory") or [], known_paths)
+    redact_curation_report(redacted.get("curation_report") or {}, known_paths)
+    redact_warning_messages(redacted.get("support_warnings") or [], known_paths)
+    return redacted
+
+
+def collect_sensitive_paths(value):
+    paths = []
+    collect_paths(value, paths)
+    return sorted(set(paths), key=len, reverse=True)
+
+
+def collect_paths(value, paths):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if should_redact_path_key(key) and isinstance(item, str) and item.strip():
+                paths.append(item)
+            collect_paths(item, paths)
+    elif isinstance(value, list):
+        for item in value:
+            collect_paths(item, paths)
+
+
+def redact_preflight(preflight, known_paths):
+    settings = preflight.get("settings") or {}
+    if settings.get("license_customer_id"):
+        settings["license_customer_id"] = "[redacted]"
+    redact_paths(settings, known_paths)
+    redact_text_fields(settings, known_paths)
+    redact_paths(preflight.get("evidence_paths") or {}, known_paths)
+    redact_issue_messages(preflight.get("issues") or [], known_paths)
+
+
+def redact_evidence_inventory(inventory, known_paths):
+    for item in inventory:
+        if item.get("path"):
+            item["path"] = redact_path(item["path"])
+        if item.get("error"):
+            item["error"] = redact_text(item["error"], known_paths)
+
+
+def redact_curation_report(report, known_paths):
+    operational = report.get("operational") or {}
+    operational["failures"] = []
+    operational["queries"] = []
+    for source in (operational.get("sources") or {}).values():
+        if isinstance(source, dict):
+            source["failures"] = []
+
+    decisions = report.get("decisions") or {}
+    decisions["quarantined"] = []
+    decisions["queries"] = []
+
+    redact_text_fields(report, known_paths)
+
+
+def redact_warning_messages(warnings, known_paths):
+    for item in warnings:
+        if isinstance(item, dict) and item.get("message"):
+            item["message"] = redact_text(item["message"], known_paths)
+
+
+def redact_issue_messages(issues, known_paths):
+    for item in issues:
+        if isinstance(item, dict) and item.get("message"):
+            item["message"] = redact_text(item["message"], known_paths)
+
+
+def redact_paths(value, known_paths):
+    if isinstance(value, dict):
+        for key, item in list(value.items()):
+            if should_redact_path_key(key) and isinstance(item, str):
+                value[key] = redact_path(item)
+            else:
+                redact_paths(item, known_paths)
+    elif isinstance(value, list):
+        for item in value:
+            redact_paths(item, known_paths)
+
+
+def redact_text_fields(value, known_paths):
+    if isinstance(value, dict):
+        for key, item in list(value.items()):
+            redacted_key = redact_text(key, known_paths) if isinstance(key, str) else key
+            if isinstance(item, str):
+                redacted_item = redact_text(item, known_paths)
+            else:
+                redact_text_fields(item, known_paths)
+                redacted_item = item
+            if redacted_key != key:
+                value.pop(key, None)
+                value[redacted_key] = redacted_item
+            else:
+                value[key] = redacted_item
+    elif isinstance(value, list):
+        for item in value:
+            redact_text_fields(item, known_paths)
+
+
+def should_redact_path_key(key):
+    key = str(key or "").lower()
+    return key == "path" or key.endswith("_file") or key.endswith("_dir")
+
+
+def redact_text(value, known_paths):
+    text = str(value)
+    for path in known_paths:
+        text = text.replace(path, redact_path(path))
+    return text
+
+
+def redact_path(path):
+    path = str(path or "").strip()
+    if not path:
+        return path
+    normalized = path.replace("\\", "/").rstrip("/")
+    leaf = normalized.rsplit("/", 1)[-1]
+    if not leaf:
+        return "[redacted-path]"
+    return f"[redacted-path]/{leaf}"
+
+
 def format_text_snapshot(snapshot):
     data = snapshot.to_dict()
     preflight = data["preflight"]
@@ -192,6 +348,7 @@ def format_text_snapshot(snapshot):
         "NarrowCTI support diagnostics",
         f"schema_version={data['schema_version']}",
         f"generated_at={data['generated_at']}",
+        f"redaction_profile={data.get('redaction_profile', 'none')}",
         f"preflight_ok={str(preflight.get('ok', False)).lower()}",
         f"ingestion_mode={preflight.get('ingestion_mode', '')}",
         "enabled_sources=" + ",".join(preflight.get("enabled_sources") or []),
@@ -265,6 +422,12 @@ def main():
         default=0,
         help="Read only the most recent N records where supported.",
     )
+    parser.add_argument(
+        "--redaction-profile",
+        choices=REDACTION_PROFILES,
+        default="none",
+        help="Redact sensitive local details for support sharing.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -276,6 +439,7 @@ def main():
         quarantine_file=args.quarantine_file,
         release_audit_file=args.release_audit_file,
         limit=args.limit,
+        redaction_profile=args.redaction_profile,
     )
     if args.json:
         print(json.dumps(snapshot.to_dict(), sort_keys=True))
