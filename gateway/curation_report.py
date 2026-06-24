@@ -1,4 +1,5 @@
 import argparse
+import html
 import json
 import os
 from dataclasses import dataclass
@@ -224,6 +225,115 @@ def format_text_report(report):
     return "\n".join(lines)
 
 
+def format_html_report(report):
+    data = report.to_dict()
+    summary = data["executive_summary"]
+    recommendations = "\n".join(
+        "<li><strong>{}</strong>: {}</li>".format(
+            escape(item.get("code")),
+            escape(item.get("message")),
+        )
+        for item in data.get("recommendations") or []
+    )
+    if not recommendations:
+        recommendations = "<li>none</li>"
+
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>NarrowCTI curation report</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 24px; color: #202124; }}
+    h1, h2 {{ margin: 0 0 12px; }}
+    section {{ margin-top: 24px; }}
+    table {{ border-collapse: collapse; width: 100%; margin-top: 8px; }}
+    th, td {{ border: 1px solid #d8dee4; padding: 6px 8px; text-align: left; }}
+    th {{ background: #f6f8fa; }}
+    code {{ background: #f6f8fa; padding: 1px 4px; }}
+  </style>
+</head>
+<body>
+  <h1>NarrowCTI curation report</h1>
+  <section>
+    <h2>Snapshot</h2>
+    <p><strong>generated_at:</strong> <code>{generated_at}</code></p>
+  </section>
+  <section>
+    <h2>Executive Summary</h2>
+    <table>
+      <tr><th>runs</th><th>sources</th><th>decision records</th><th>reviewed</th><th>accepted</th><th>filtered</th><th>errors</th></tr>
+      <tr><td>{runs}</td><td>{sources}</td><td>{decision_records}</td><td>{reviewed}</td><td>{accepted}</td><td>{filtered}</td><td>{errors}</td></tr>
+    </table>
+    <table>
+      <tr><th>acceptance rate</th><th>filter rate</th><th>error rate</th><th>pending review</th><th>exportable review</th><th>quarantine decisions</th></tr>
+      <tr><td>{acceptance_rate_pct}</td><td>{filter_rate_pct}</td><td>{error_rate_pct}</td><td>{pending_review}</td><td>{exportable_review}</td><td>{quarantine_decisions}</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Graph Readiness</h2>
+    <table>
+      <tr><th>candidates</th><th>accepted</th><th>held</th><th>lookup matches</th><th>would-create objects</th><th>would-create relationships</th></tr>
+      <tr><td>{graph_candidates}</td><td>{graph_accepted}</td><td>{graph_held}</td><td>{lookup_matches}</td><td>{would_create_objects}</td><td>{would_create_relationships}</td></tr>
+    </table>
+    <table>
+      <tr><th>STIX bundles</th><th>STIX objects</th><th>STIX relationships</th></tr>
+      <tr><td>{stix_bundles}</td><td>{stix_objects}</td><td>{stix_relationships}</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Recommendations</h2>
+    <ul>
+      {recommendations}
+    </ul>
+  </section>
+</body>
+</html>""".format(
+        generated_at=escape(data["generated_at"]),
+        runs=escape(summary["run_count"]),
+        sources=escape(summary["source_count"]),
+        decision_records=escape(summary["decision_record_count"]),
+        reviewed=escape(summary["reviewed_count"]),
+        accepted=escape(summary["accepted_count"]),
+        filtered=escape(summary["filtered_count"]),
+        errors=escape(summary["error_count"]),
+        acceptance_rate_pct=escape(summary["acceptance_rate_pct"]),
+        filter_rate_pct=escape(summary["filter_rate_pct"]),
+        error_rate_pct=escape(summary["error_rate_pct"]),
+        pending_review=escape(summary["pending_review_count"]),
+        exportable_review=escape(summary["exportable_review_count"]),
+        quarantine_decisions=escape(summary["quarantine_decision_count"]),
+        graph_candidates=escape(summary["graph_candidate_count"]),
+        graph_accepted=escape(summary["graph_accepted_count"]),
+        graph_held=escape(summary["graph_held_count"]),
+        lookup_matches=escape(summary["graph_lookup_match_count"]),
+        would_create_objects=escape(summary["graph_would_create_object_count"]),
+        would_create_relationships=escape(
+            summary["graph_would_create_relationship_count"]
+        ),
+        stix_bundles=escape(summary["graph_stix_bundle_count"]),
+        stix_objects=escape(summary["graph_stix_object_count"]),
+        stix_relationships=escape(summary["graph_stix_relationship_count"]),
+        recommendations=recommendations,
+    )
+
+
+def write_html_report(report, html_file):
+    html_file = str(html_file or "").strip()
+    if not html_file:
+        raise ValueError("html_file is required")
+    directory = os.path.dirname(html_file)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(html_file, "w", encoding="utf-8") as handle:
+        handle.write(format_html_report(report) + "\n")
+    return html_file
+
+
+def escape(value):
+    return html.escape("" if value is None else str(value), quote=True)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build an analyst-facing NarrowCTI curation report."
@@ -255,6 +365,11 @@ def main():
         default=0,
         help="Read only the most recent N records where supported.",
     )
+    parser.add_argument(
+        "--html-file",
+        default="",
+        help="Optional HTML report output file.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -266,6 +381,8 @@ def main():
         release_audit_file=args.release_audit_file or settings.release_audit_file,
         limit=args.limit,
     )
+    if args.html_file:
+        write_html_report(report, args.html_file)
     if args.json:
         print(json.dumps(report.to_dict(), sort_keys=True))
     else:

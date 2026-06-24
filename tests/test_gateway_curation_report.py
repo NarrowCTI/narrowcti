@@ -7,7 +7,9 @@ from core.quarantine import QuarantineRecord, QuarantineRepository
 from gateway.curation_report import (
     build_curation_report,
     build_curation_report_from_files,
+    format_html_report,
     format_text_report,
+    write_html_report,
 )
 from gateway.decisions import build_decision_audit_report
 from gateway.report import build_operational_report
@@ -151,6 +153,81 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("analyst_review:", text)
         self.assertIn("graph_readiness:", text)
         self.assertIn("collect-evidence", text)
+
+    def test_html_report_is_analyst_readable(self):
+        operational = build_operational_report([])
+        decisions = build_decision_audit_report([])
+        review = ReviewSummary(
+            record_count=0,
+            status_counts={},
+            source_counts={},
+            pending_count=0,
+            exportable_count=0,
+        )
+
+        html = format_html_report(
+            build_curation_report(
+                operational,
+                decisions,
+                review,
+                generated_at="2026-06-24T10:02:00Z",
+            )
+        )
+
+        self.assertIn("<!doctype html>", html)
+        self.assertIn("NarrowCTI curation report", html)
+        self.assertIn("Executive Summary", html)
+        self.assertIn("Graph Readiness", html)
+        self.assertIn("collect-evidence", html)
+
+    def test_html_report_escapes_dynamic_content(self):
+        operational = build_operational_report([])
+        decisions = build_decision_audit_report([])
+        review = ReviewSummary(
+            record_count=0,
+            status_counts={},
+            source_counts={},
+            pending_count=0,
+            exportable_count=0,
+        )
+
+        html = format_html_report(
+            build_curation_report(
+                operational,
+                decisions,
+                review,
+                generated_at="<script>alert(1)</script>",
+            )
+        )
+
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)
+        self.assertNotIn("<script>alert(1)</script>", html)
+
+    def test_write_html_report_creates_parent_directory(self):
+        operational = build_operational_report([])
+        decisions = build_decision_audit_report([])
+        review = ReviewSummary(
+            record_count=0,
+            status_counts={},
+            source_counts={},
+            pending_count=0,
+            exportable_count=0,
+        )
+        report = build_curation_report(
+            operational,
+            decisions,
+            review,
+            generated_at="2026-06-24T10:02:00Z",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            html_file = os.path.join(tmpdir, "reports", "curation.html")
+            result = write_html_report(report, html_file)
+            with open(html_file, "r", encoding="utf-8") as handle:
+                html = handle.read()
+
+        self.assertEqual(html_file, result)
+        self.assertIn("NarrowCTI curation report", html)
 
 
 def gateway_record(recorded_at, results):

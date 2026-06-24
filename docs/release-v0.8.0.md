@@ -88,6 +88,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added `gateway.curation_report` as the first analyst-facing curation report
   model. It consolidates gateway run summaries, decision audit, analyst review
   status and graph readiness evidence into text or JSON output.
+- Added HTML output for the curation report through
+  `python -m gateway.curation_report --html-file ...`, keeping the report
+  read-only and evidence-driven.
 - Added `gateway.diagnostics` as the first read-only support diagnostic
   snapshot. It combines preflight state, configured evidence inventory,
   curation report output and deterministic support warnings.

@@ -47,7 +47,9 @@ It exposes:
 
 - `build_curation_report`
 - `build_curation_report_from_files`
+- `format_html_report`
 - `format_text_report`
+- `write_html_report`
 - CLI entrypoint: `python -m gateway.curation_report`
 
 ## CLI Usage
@@ -71,6 +73,17 @@ python -m gateway.curation_report `
   --quarantine-file state\quarantine.jsonl `
   --release-audit-file state\audit\releases.jsonl `
   --json
+```
+
+HTML report:
+
+```powershell
+python -m gateway.curation_report `
+  --summary-file state\gateway_runs.jsonl `
+  --decision-path state\audit `
+  --quarantine-file state\quarantine.jsonl `
+  --release-audit-file state\audit\releases.jsonl `
+  --html-file state\curation-report.html
 ```
 
 When arguments are omitted, the command falls back to the corresponding
@@ -107,7 +120,7 @@ not present in gateway, decision, quarantine or graph-planning evidence.
 
 ## Future Work
 
-- Add export formats for PDF/HTML once the report schema stabilizes.
+- Add PDF export once the report schema stabilizes.
 - Add richer per-actor, per-sector, per-ATT&CK and per-source narratives.
 - Add policy tuning insights from repeated release/reject patterns.
 - Add graph-quality deltas after controlled graph promotion is enabled.
