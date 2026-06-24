@@ -13,6 +13,7 @@ ENTITY_TARGETS = {
     "malware": ("malware", "uses"),
     "tool": ("tool", "uses"),
     "vulnerability": ("vulnerability", "related-to"),
+    "observable": ("observable", "based-on"),
     "attack_pattern": ("attack-pattern", "uses"),
     "attack_tactic": ("x-mitre-tactic", "uses"),
     "target_sector": ("identity", "targets"),

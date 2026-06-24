@@ -543,9 +543,13 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(1, queued[0]["indicator_count"])
         self.assertEqual("domain", queued[0]["indicators"][0]["type"])
         self.assertEqual([], queued[0]["metadata"]["otx_entities"]["attack_ids"])
-        self.assertEqual(0, queued[0]["metadata"]["graph_evidence"]["record_count"])
+        self.assertEqual(1, queued[0]["metadata"]["graph_evidence"]["record_count"])
         self.assertEqual(
-            0,
+            1,
+            queued[0]["metadata"]["graph_evidence"]["counts"]["observable"],
+        )
+        self.assertEqual(
+            1,
             queued[0]["metadata"]["graph_candidates"]["candidate_count"],
         )
         self.assertTrue(any("Quarantine queued: Old weak pulse" in log for log in logs))

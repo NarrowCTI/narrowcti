@@ -109,6 +109,9 @@ detailed graph-enrichment design is tracked in
 - Added OTX YARA audit extraction. YARA pulse indicators now produce audit-only
   `detection_rule` / `indicator` graph evidence and candidates with pattern
   type, raw rule content, indicator id and observation timing.
+- Added OTX observable audit extraction. Supported OTX indicator values now
+  produce audit-only `observable` graph evidence and candidates with SCO type,
+  original indicator type, hash algorithm and observation timing.
 - Added MISP CVE/vulnerability audit extraction from tags, event text,
   attributes and object attributes. CVE ids now produce audit-only
   `vulnerability` graph evidence and candidates, including vulnerability
@@ -137,6 +140,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 233 tests
+Ran 234 tests
 OK
 ```

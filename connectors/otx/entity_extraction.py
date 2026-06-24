@@ -5,6 +5,33 @@ from urllib.parse import urlparse
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 DETECTION_RULE_TYPES = {"yara"}
+OBSERVABLE_TYPE_MAP = {
+    "ipv4": "ipv4-addr",
+    "ipv4-addr": "ipv4-addr",
+    "ip": "ipv4-addr",
+    "ipv6": "ipv6-addr",
+    "ipv6-addr": "ipv6-addr",
+    "domain": "domain-name",
+    "hostname": "domain-name",
+    "url": "url",
+    "uri": "url",
+    "email": "email-addr",
+    "email-addr": "email-addr",
+    "filehash-md5": "file",
+    "md5": "file",
+    "filehash-sha1": "file",
+    "sha1": "file",
+    "filehash-sha256": "file",
+    "sha256": "file",
+}
+FILE_HASH_ALGORITHMS = {
+    "filehash-md5": "MD5",
+    "md5": "MD5",
+    "filehash-sha1": "SHA-1",
+    "sha1": "SHA-1",
+    "filehash-sha256": "SHA-256",
+    "sha256": "SHA-256",
+}
 
 
 ENTITY_SPECS = (
@@ -36,6 +63,7 @@ def extract_otx_entities(pulse):
         "indicator_observation_window": indicator_observation_window(
             pulse.get("indicators")
         ),
+        "observables": otx_observables(pulse),
         "detection_rules": otx_detection_rules(pulse),
         "tlp": normalize_tlp(pulse),
         "references": normalize_references(pulse.get("references")),
@@ -242,6 +270,55 @@ def otx_detection_rules(pulse):
     return deduplicate_detection_rules(rules)
 
 
+def otx_observables(pulse):
+    observables = []
+    for indicator in flatten(pulse.get("indicators")):
+        if not isinstance(indicator, dict):
+            continue
+        indicator_type = normalize_value(indicator.get("type"))
+        normalized_type = indicator_type.lower()
+        observable_type = OBSERVABLE_TYPE_MAP.get(normalized_type)
+        value = normalize_value(
+            indicator.get("indicator")
+            or indicator.get("value")
+            or indicator.get("content")
+        )
+        if not observable_type or not value:
+            continue
+        observables.append(
+            compact_mapping(
+                {
+                    "value": value,
+                    "observable_type": observable_type,
+                    "indicator_type": indicator_type,
+                    "indicator_id": indicator.get("id"),
+                    "hash_algorithm": FILE_HASH_ALGORITHMS.get(normalized_type),
+                    "created": indicator.get("created") or indicator.get("created_at"),
+                    "first_seen": indicator.get("first_seen"),
+                    "last_seen": indicator.get("last_seen"),
+                    "source_field": "indicators",
+                }
+            )
+        )
+    return deduplicate_observables(observables)
+
+
+def deduplicate_observables(observables):
+    seen = set()
+    deduplicated = []
+    for observable in observables:
+        key = (
+            str(observable.get("observable_type", "")).casefold(),
+            str(observable.get("hash_algorithm", "")).casefold(),
+            str(observable.get("value", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(observable)
+    return deduplicated
+
+
 def deduplicate_detection_rules(rules):
     seen = set()
     deduplicated = []
@@ -307,6 +384,24 @@ def extraction_records(entities):
                 "value": reference.get("url") or reference.get("source_name"),
                 "source_field": "references",
                 "confidence": 50,
+            }
+        )
+    for observable in entities.get("observables") or []:
+        records.append(
+            {
+                "entity_type": "observable",
+                "value": observable.get("value"),
+                "source_field": observable.get("source_field") or "indicators",
+                "confidence": 65,
+                "attributes": {
+                    "observable_type": observable.get("observable_type"),
+                    "indicator_type": observable.get("indicator_type"),
+                    "indicator_id": observable.get("indicator_id"),
+                    "hash_algorithm": observable.get("hash_algorithm"),
+                    "created": observable.get("created"),
+                    "first_seen": observable.get("first_seen"),
+                    "last_seen": observable.get("last_seen"),
+                },
             }
         )
     for rule in entities.get("detection_rules") or []:

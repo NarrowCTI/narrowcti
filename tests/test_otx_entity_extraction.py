@@ -75,6 +75,9 @@ class OTXEntityExtractionTests(unittest.TestCase):
             "2026-04-05T10:00:00Z",
             entities["indicator_observation_window"]["last_seen_max"],
         )
+        self.assertEqual(2, len(entities["observables"]))
+        self.assertEqual("domain-name", entities["observables"][0]["observable_type"])
+        self.assertEqual("url", entities["observables"][1]["observable_type"])
         self.assertEqual(1, len(entities["detection_rules"]))
         self.assertEqual("yara", entities["detection_rules"][0]["rule_type"])
         self.assertEqual(
@@ -97,7 +100,26 @@ class OTXEntityExtractionTests(unittest.TestCase):
         )
         self.assertEqual(3, entities["counts"]["attack_ids"])
         self.assertEqual(2, entities["counts"]["vulnerabilities"])
+        self.assertEqual(2, entities["counts"]["observables"])
         self.assertEqual(1, entities["counts"]["detection_rules"])
+        self.assertIn(
+            {
+                "entity_type": "observable",
+                "value": "one.example",
+                "source_field": "indicators",
+                "confidence": 65,
+                "attributes": {
+                    "observable_type": "domain-name",
+                    "indicator_type": "domain",
+                    "indicator_id": None,
+                    "hash_algorithm": None,
+                    "created": None,
+                    "first_seen": "2026-04-01T10:00:00Z",
+                    "last_seen": "2026-04-02T10:00:00Z",
+                },
+            },
+            entities["records"],
+        )
         self.assertIn(
             {
                 "entity_type": "detection_rule",

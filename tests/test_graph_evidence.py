@@ -242,6 +242,53 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_builds_otx_observable_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "observable",
+                            "value": "one.example",
+                            "source_field": "indicators",
+                            "confidence": 65,
+                            "attributes": {
+                                "observable_type": "domain-name",
+                                "indicator_type": "domain",
+                                "first_seen": "2026-04-01T10:00:00Z",
+                                "last_seen": "2026-04-02T10:00:00Z",
+                            },
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="OTX pulse",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["observable"])
+        self.assertIn(
+            {
+                "entity_type": "observable",
+                "value": "one.example",
+                "stix_object_type": "observable",
+                "relationship_type": "based-on",
+                "source_key": "alienvault:otx",
+                "source_name": "otx",
+                "source_field": "indicators",
+                "confidence": 65,
+                "attributes": {
+                    "observable_type": "domain-name",
+                    "indicator_type": "domain",
+                    "first_seen": "2026-04-01T10:00:00Z",
+                    "last_seen": "2026-04-02T10:00:00Z",
+                },
+            },
+            evidence["records"],
+        )
+
     def test_builds_misp_provenance_tags_and_marking_evidence(self):
         evidence = build_graph_evidence(
             {
