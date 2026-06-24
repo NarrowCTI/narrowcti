@@ -90,6 +90,33 @@ services:
     networks:
       - opencti
 
+  narrowcti-correlation-report:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.correlation
+      - --file
+      - /app/state/dedup_index.json
+      - --output-file
+      - /app/state/artifact-correlation-report.txt
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+      - narrowcti-licenses:/licenses:ro
+    networks:
+      - opencti
+
   narrowcti-operational-validation:
     build:
       context: ..

@@ -65,6 +65,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added decision audit report file output and an `ops` profile service so
   graph lookup and curation decision evidence can be archived from the gateway
   state volume.
+- Added artifact correlation report file output and an `ops` profile service
+  so cross-source deduplication evidence can be archived from the gateway state
+  volume.
 - Extended gateway preflight output with v0.8 graph controls:
   `NARROWCTI_GRAPH_EXPORT_MODE`, `NARROWCTI_GRAPH_DEDUP_STATE_FILE` and
   `NARROWCTI_OPENCTI_GRAPH_LOOKUP`.
