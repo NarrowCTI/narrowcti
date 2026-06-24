@@ -36,6 +36,18 @@ template keeps `NARROWCTI_DRY_RUN=true`, `NARROWCTI_RUN_ONCE=true`,
 `OTX_DRY_RUN=true` and `MISP_DRY_RUN=true` so first execution is observable and
 bounded.
 
+The compose template also provides an `ops` profile for read-only operational
+commands:
+
+| Service | Purpose |
+| --- | --- |
+| `narrowcti-preflight` | Runs `python -m gateway.preflight`. |
+| `narrowcti-curation-report` | Builds text output and writes `/app/state/curation-report.html`. |
+| `narrowcti-support-diagnostics` | Builds a support-redacted HTML snapshot and support bundle under `/app/state`. |
+
+These services reuse the same image, env file, state volume and OpenCTI network
+as the gateway runtime. They do not start continuous ingestion by themselves.
+
 ## Installation Procedure
 
 1. Confirm the target OpenCTI stack is running and identify its Docker network.
@@ -46,11 +58,11 @@ bounded.
 4. Fill only the source credentials and URLs needed for the intended source
    set.
 5. Keep dry-run and run-once enabled for the first validation run.
-6. Run `gateway.preflight` inside the gateway container.
+6. Run `gateway.preflight` through the `ops` profile.
 7. Start one dry-run execution.
 8. Review preflight output, gateway logs, decision audit, quarantine repository,
-   graph export plan metadata and summary report before enabling continuous
-   operation.
+   graph export plan metadata, curation report and support diagnostics before
+   enabling continuous operation.
 
 Example controlled validation:
 
@@ -59,10 +71,11 @@ cd <path-to-NarrowCTI>
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml config
 $env:NARROWCTI_GATEWAY_ENV_FILE = "./gateway.env"
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml build narrowcti-gateway
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narrowcti-gateway python -m gateway.preflight
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml up --force-recreate narrowcti-gateway
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml logs --tail 120 narrowcti-gateway
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narrowcti-gateway python -m gateway.report --file /app/state/gateway_runs.jsonl
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-curation-report
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-support-diagnostics
 ```
 
 If the OpenCTI network name is not `opencti_default`, set

@@ -18,6 +18,80 @@ services:
     networks:
       - opencti
 
+  narrowcti-preflight:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command: ["python", "-m", "gateway.preflight"]
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+      - narrowcti-licenses:/licenses:ro
+    networks:
+      - opencti
+
+  narrowcti-curation-report:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.curation_report
+      - --html-file
+      - /app/state/curation-report.html
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+      - narrowcti-licenses:/licenses:ro
+    networks:
+      - opencti
+
+  narrowcti-support-diagnostics:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.diagnostics
+      - --redaction-profile
+      - support
+      - --html-file
+      - /app/state/support-diagnostics.html
+      - --bundle-file
+      - /app/state/support-diagnostics.zip
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+      - narrowcti-licenses:/licenses:ro
+    networks:
+      - opencti
+
 networks:
   opencti:
     external: true
