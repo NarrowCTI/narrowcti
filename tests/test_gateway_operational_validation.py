@@ -7,8 +7,10 @@ from gateway.decisions import build_decision_audit_report
 from gateway.operational_validation import (
     build_operational_validation_report,
     check,
+    evidence_bool,
     format_html_report,
     format_text_report,
+    load_manual_evidence,
     normalize_output_format,
     parse_sources,
     render_report,
@@ -105,6 +107,38 @@ class GatewayOperationalValidationTests(unittest.TestCase):
 
     def test_parse_sources_normalizes_comma_separated_values(self):
         self.assertEqual(("otx", "misp"), parse_sources(" OTX, misp ,, "))
+
+    def test_loads_manual_evidence_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evidence_file = os.path.join(tmpdir, "validation-evidence.json")
+            with open(evidence_file, "w", encoding="utf-8") as handle:
+                json.dump(
+                    {
+                        "full_validation_passed": True,
+                        "opencti_ui_no_duplicate": "yes",
+                        "resource_posture_ok": "true",
+                    },
+                    handle,
+                )
+
+            evidence = load_manual_evidence(evidence_file)
+
+        self.assertTrue(evidence_bool(evidence, "full_validation_passed"))
+        self.assertTrue(evidence_bool(evidence, "opencti_ui_no_duplicate"))
+        self.assertTrue(evidence_bool(evidence, "resource_posture_ok"))
+        self.assertFalse(evidence_bool(evidence, "opencti_ui_duplicate_found"))
+
+    def test_missing_manual_evidence_file_is_empty(self):
+        self.assertEqual({}, load_manual_evidence("/missing/validation.json"))
+
+    def test_rejects_non_object_manual_evidence_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evidence_file = os.path.join(tmpdir, "validation-evidence.json")
+            with open(evidence_file, "w", encoding="utf-8") as handle:
+                json.dump(["invalid"], handle)
+
+            with self.assertRaises(ValueError):
+                load_manual_evidence(evidence_file)
 
     def test_renders_json_and_text_reports(self):
         report = validation_report()

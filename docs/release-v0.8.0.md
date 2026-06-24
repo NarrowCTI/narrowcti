@@ -90,6 +90,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added an `ops` profile service for operational validation so deployments can
   generate `/app/state/operational-validation.html` from the same image,
   environment and state volume used by the gateway.
+- Added optional JSON manual evidence loading to `gateway.operational_validation`
+  so repeatable ops runs can record repository validation, OpenCTI duplicate
+  review and resource posture checks without changing CLI flags.
 - Added `gateway.review.AnalystReviewService` as the internal analyst review
   API for quarantine list, summary, release, partial release, reject, export
   dry-run and audit-event reads. The CLI now delegates review operations to

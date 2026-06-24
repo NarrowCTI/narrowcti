@@ -447,6 +447,24 @@ def write_report(report, output_file, output_format="text"):
     return output_file
 
 
+def load_manual_evidence(evidence_file):
+    evidence_file = str(evidence_file or "").strip()
+    if not evidence_file or not os.path.exists(evidence_file):
+        return {}
+    with open(evidence_file, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    if not isinstance(data, dict):
+        raise ValueError("operational validation evidence file must contain a JSON object")
+    return data
+
+
+def evidence_bool(evidence, name):
+    value = evidence.get(name, False)
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in ("true", "1", "yes")
+
+
 def parse_sources(value):
     sources = []
     for item in str(value or "").split(","):
@@ -476,6 +494,14 @@ def main():
         "--required-sources",
         default="otx,misp",
         help="Comma-separated source keys expected in bounded dry-run evidence.",
+    )
+    parser.add_argument(
+        "--evidence-file",
+        default="",
+        help=(
+            "Optional JSON file with manual validation evidence such as "
+            "full_validation_passed, opencti_ui_no_duplicate and resource_posture_ok."
+        ),
     )
     parser.add_argument(
         "--full-validation-passed",
@@ -527,14 +553,20 @@ def main():
         limit=args.limit or None,
     )
     decisions = build_decision_audit_report(records)
+    manual_evidence = load_manual_evidence(args.evidence_file)
     report = build_operational_validation_report(
         preflight,
         decisions,
-        full_validation_passed=args.full_validation_passed,
-        opencti_ui_no_duplicate=args.opencti_ui_no_duplicate,
-        opencti_ui_duplicate_found=args.opencti_ui_duplicate_found,
-        resource_posture_ok=args.resource_posture_ok,
-        resource_posture_unhealthy=args.resource_posture_unhealthy,
+        full_validation_passed=args.full_validation_passed
+        or evidence_bool(manual_evidence, "full_validation_passed"),
+        opencti_ui_no_duplicate=args.opencti_ui_no_duplicate
+        or evidence_bool(manual_evidence, "opencti_ui_no_duplicate"),
+        opencti_ui_duplicate_found=args.opencti_ui_duplicate_found
+        or evidence_bool(manual_evidence, "opencti_ui_duplicate_found"),
+        resource_posture_ok=args.resource_posture_ok
+        or evidence_bool(manual_evidence, "resource_posture_ok"),
+        resource_posture_unhealthy=args.resource_posture_unhealthy
+        or evidence_bool(manual_evidence, "resource_posture_unhealthy"),
         required_sources=parse_sources(args.required_sources),
     )
     output_format = "json" if args.json else args.format

@@ -139,6 +139,33 @@ python -m gateway.operational_validation `
   --resource-posture-ok
 ```
 
+Manual lab checks can also be recorded in a local JSON evidence file. This is
+the recommended path for repeatable compose `ops` runs because the file can live
+in the local state volume without changing the compose command:
+
+```json
+{
+  "full_validation_passed": true,
+  "opencti_ui_no_duplicate": true,
+  "opencti_ui_duplicate_found": false,
+  "resource_posture_ok": true,
+  "resource_posture_unhealthy": false
+}
+```
+
+Then run:
+
+```powershell
+python -m gateway.operational_validation `
+  --decision-path state\audit `
+  --required-sources otx,misp `
+  --evidence-file state\operational-validation-evidence.json
+```
+
+If the evidence file is missing, the checklist remains read-only and treats
+manual checks as `needs-evidence`. If the file exists, it must contain a JSON
+object.
+
 JSON output is available for attaching evidence to release notes:
 
 ```powershell

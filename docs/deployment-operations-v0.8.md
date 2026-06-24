@@ -43,7 +43,7 @@ commands:
 | --- | --- |
 | `narrowcti-preflight` | Runs `python -m gateway.preflight`. |
 | `narrowcti-curation-report` | Builds text output and writes `/app/state/curation-report.html`. |
-| `narrowcti-operational-validation` | Builds `/app/state/operational-validation.html` from preflight and decision audit evidence. |
+| `narrowcti-operational-validation` | Builds `/app/state/operational-validation.html` from preflight, decision audit and optional manual evidence. |
 | `narrowcti-support-diagnostics` | Builds a support-redacted HTML snapshot and support bundle under `/app/state`. |
 
 These services reuse the same image, env file, state volume and OpenCTI network
@@ -87,6 +87,13 @@ The compose template defaults to `deployment/gateway.env.example` so
 `docker compose config` can validate the template before secrets exist. For real
 execution, set `NARROWCTI_GATEWAY_ENV_FILE=./gateway.env` after creating the
 local env file.
+
+The operational validation service optionally reads
+`/app/state/operational-validation-evidence.json`. Use that local state-volume
+file to record manual checks such as `full_validation_passed`,
+`opencti_ui_no_duplicate` and `resource_posture_ok` after the operator has
+actually validated them. Missing evidence keeps those checks in
+`needs-evidence` state.
 
 ## Safe Promotion To Continuous Operation
 
