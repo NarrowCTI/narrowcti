@@ -7,6 +7,10 @@ NarrowCTI gateway runtime. It is intended for controlled lab, pilot and early
 customer-style deployments where OpenCTI already exists and NarrowCTI is added
 as a curation gateway.
 
+This is the authoritative deployment and upgrade document for v0.8. README and
+older release documents should point here instead of duplicating the current
+procedure.
+
 The deployment posture remains conservative:
 
 ```text

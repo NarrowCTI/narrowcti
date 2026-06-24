@@ -403,94 +403,32 @@ The unified gateway entrypoint composes enabled source runtimes and isolates
 source failures. Keep source-specific runtimes available for debugging and
 bounded backfills while the v0.5 gateway matures.
 
-## Docker Runtime
+## Deployment
 
-This repository is expected to sit next to the OpenCTI Compose workspace:
-
-```text
-<lab-root>/
-  NarrowCTI/
-  opencti/
-```
-
-The OpenCTI Compose file owns the connector service definitions. The v0.5
-default product runtime is the gateway service, while source-specific runtimes
-remain available for troubleshooting and bounded validation:
+The authoritative v0.8 deployment and upgrade procedure is centralized in:
 
 ```text
-narrowcti-gateway         Unified NarrowCTI Gateway runtime
-connector-narrowcti       OTX reference/debug runtime
-connector-narrowcti-misp  MISP dry-run/backfill/debug runtime
+docs/deployment-operations-v0.8.md
 ```
 
-Safe gateway validation commands:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\opencti"
-docker compose --profile narrowcti-gateway build narrowcti-gateway
-docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.preflight
-docker compose --profile narrowcti-gateway up --force-recreate narrowcti-gateway
-docker compose --profile narrowcti-gateway logs --tail 120 narrowcti-gateway
-docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.report --file /app/state/gateway_runs.jsonl
-docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.correlation --file /app/state/dedup_index.json
-```
-
-The local compose profile keeps `NARROWCTI_RUN_ONCE=true` and
-`NARROWCTI_DRY_RUN=true` by default. For continuous operation, explicitly set
-`NARROWCTI_RUN_ONCE=false`, review source guardrails and change the service
-restart policy only after preflight and dry-run results are acceptable.
-
-The v0.8 repository also includes a standalone deployment template for pilot or
-customer-style validation when the gateway needs to join an existing OpenCTI
-Docker network:
+The deployment assets are:
 
 ```text
 deployment/docker-compose.narrowcti-gateway.yml
 deployment/gateway.env.example
-docs/deployment-operations-v0.8.md
 ```
 
-The template is dry-run/run-once by default and should be validated with
-`gateway.preflight` before any source execution.
+The v0.8 template is dry-run/run-once by default, joins an existing OpenCTI
+Docker network and must be validated with `gateway.preflight` before any source
+execution. Older deployment snippets in release-specific documents are
+historical context; use `docs/deployment-operations-v0.8.md` for the current
+procedure.
 
-Common OTX commands:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\opencti"
-docker compose --profile narrowcti build connector-narrowcti
-docker compose --profile narrowcti up -d --force-recreate connector-narrowcti
-docker compose --profile narrowcti logs --tail 120 connector-narrowcti
-```
-
-Safe MISP runtime validation commands:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\opencti"
-docker compose --profile narrowcti-misp build connector-narrowcti-misp
-docker compose --profile narrowcti-misp up --force-recreate connector-narrowcti-misp
-docker compose --profile narrowcti-misp logs --tail 120 connector-narrowcti-misp
-```
-
-Safe MISP backfill helper:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\NarrowCTI"
-.\scripts\misp-backfill-window.ps1 -FromDate 2016-01-01 -ToDate 2016-12-31 -Tags tlp:green -Preview
-.\scripts\misp-backfill-window.ps1 -FromDate 2016-01-01 -ToDate 2016-12-31 -Tags tlp:green
-.\scripts\misp-backfill-window.ps1 -FromDate 2026-01-02 -ToDate 2026-01-02 -Tags type:OSINT
-```
-
-The helper always runs `MISP_DRY_RUN=true`, `MISP_RUN_ONCE=true` and
-ephemeral `/tmp` state. Use `-Preview` to inspect the Compose command before
-execution. It also caps `MaxEvents` at 5 and defaults to `MaxEvents=1`.
-
-When the MISP runtime runs inside the shared Docker network, use
-`MISP_URL=http://misp-core` in `connectors/misp/.env`. Use `misp.local` only
-for host-side browser or API access through Caddy.
+Source-specific OTX and MISP runtimes remain available for debugging and
+bounded backfill investigations, but they are not the current deployment source
+of truth. Use `docs/deployment-operations-v0.8.md` for deployment and upgrade
+steps, and `scripts/misp-backfill-window.ps1 -Preview` only for controlled MISP
+backfill command inspection.
 
 ## Validation
 

@@ -284,6 +284,10 @@ metrics and quarantine review workflows.
 
 ## Docker Compose Operation
 
+This section is retained as v0.5 historical context. The current v0.8
+deployment and upgrade procedure is centralized in
+`docs/deployment-operations-v0.8.md`.
+
 The local OpenCTI compose workspace can expose the gateway through a dedicated
 profile:
 
