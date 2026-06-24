@@ -94,6 +94,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added the first support-safe diagnostic redaction profile. Operators can use
   `python -m gateway.diagnostics --redaction-profile support` to mask local
   paths and customer identifiers while preserving aggregate support evidence.
+- Added `reports.support_diagnostics` to the preflight-visible capability
+  inventory so the support snapshot is represented in the product operations
+  model.
 
 ## Promotion Boundary
 

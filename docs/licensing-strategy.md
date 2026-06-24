@@ -99,6 +99,7 @@ enrichment.otx_entities
 enrichment.mitre_attack
 quarantine.review
 reports.operational
+reports.support_diagnostics
 graph.export.audit
 graph.export.dry_run
 graph.lookup.opencti
