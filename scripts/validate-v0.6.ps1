@@ -55,6 +55,7 @@ $GatewayModules = @(
     'gateway/report.py',
     'gateway/curation_report.py',
     'gateway/diagnostics.py',
+    'gateway/operational_validation.py',
     'gateway/review.py',
     'gateway/decisions.py',
     'gateway/correlation.py',

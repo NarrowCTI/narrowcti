@@ -116,6 +116,49 @@ lookup_match_types=mitre_attack_id:<count>
 This proves that canonical OpenCTI graph lookup is visible to operators and
 future enterprise CTI reports.
 
+## Operational Validation Checklist
+
+v0.8 also provides a read-only checklist command that consolidates preflight and
+decision-audit evidence into pass/fail/needs-evidence status:
+
+```powershell
+python -m gateway.operational_validation `
+  --decision-path state\audit `
+  --required-sources otx,misp
+```
+
+After repository validation, OpenCTI UI review and local resource review are
+completed, record those manual lab checks explicitly:
+
+```powershell
+python -m gateway.operational_validation `
+  --decision-path state\audit `
+  --required-sources otx,misp `
+  --full-validation-passed `
+  --opencti-ui-no-duplicate `
+  --resource-posture-ok
+```
+
+JSON output is available for attaching evidence to release notes:
+
+```powershell
+python -m gateway.operational_validation `
+  --decision-path state\audit `
+  --required-sources otx,misp `
+  --json
+```
+
+Checklist status meanings:
+
+- `pass`: evidence is present and satisfies the v0.8 criterion.
+- `warn`: the run is not blocked, but controls are incomplete.
+- `fail`: validation found an unsafe or blocking condition.
+- `needs-evidence`: the criterion cannot be closed from local evidence yet.
+
+The checklist does not call source APIs, query OpenCTI or mutate state. It reads
+existing preflight settings and decision audit records, then leaves UI duplicate
+checks and resource posture as explicit operator-recorded evidence.
+
 ## Pass Criteria
 
 The v0.8 graph lookup gate is acceptable when:

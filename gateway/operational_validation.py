@@ -1,0 +1,440 @@
+import argparse
+import json
+from dataclasses import dataclass
+
+from gateway.decisions import build_decision_audit_report, read_decision_records
+from gateway.preflight import build_preflight_report
+from gateway.settings import load_settings
+
+
+STATUS_ORDER = {
+    "fail": 0,
+    "needs-evidence": 1,
+    "warn": 2,
+    "pass": 3,
+}
+
+
+@dataclass(frozen=True)
+class ValidationCheck:
+    code: str
+    status: str
+    message: str
+    evidence: dict
+
+    def to_dict(self):
+        return {
+            "code": self.code,
+            "status": self.status,
+            "message": self.message,
+            "evidence": dict(self.evidence),
+        }
+
+
+@dataclass(frozen=True)
+class OperationalValidationReport:
+    schema_version: str
+    release: str
+    overall_status: str
+    checks: tuple[ValidationCheck, ...]
+
+    def to_dict(self):
+        return {
+            "schema_version": self.schema_version,
+            "release": self.release,
+            "overall_status": self.overall_status,
+            "checks": [check.to_dict() for check in self.checks],
+            "counts": status_counts(self.checks),
+        }
+
+
+def build_operational_validation_report(
+    preflight_report,
+    decision_report,
+    full_validation_passed=False,
+    opencti_ui_no_duplicate=False,
+    opencti_ui_duplicate_found=False,
+    resource_posture_ok=False,
+    resource_posture_unhealthy=False,
+    required_sources=("otx", "misp"),
+):
+    preflight = preflight_report.to_dict()
+    decisions = decision_report.to_dict()
+    graph = decisions.get("graph_export") or {}
+    checks = [
+        full_validation_check(full_validation_passed),
+        preflight_graph_controls_check(preflight),
+        source_dry_run_check(preflight, decisions, required_sources),
+        canonical_attack_match_check(graph),
+        lookup_metadata_check(graph),
+        lookup_aggregation_check(graph),
+        duplicate_attack_pattern_check(
+            opencti_ui_no_duplicate,
+            opencti_ui_duplicate_found,
+        ),
+        resource_posture_check(resource_posture_ok, resource_posture_unhealthy),
+    ]
+    return OperationalValidationReport(
+        schema_version="operational-validation/v0.8",
+        release="v0.8.0",
+        overall_status=overall_status(checks),
+        checks=tuple(checks),
+    )
+
+
+def full_validation_check(full_validation_passed):
+    if full_validation_passed:
+        return check(
+            "full-validation",
+            "pass",
+            "Full repository validation was reported as passed.",
+            {"command": ".\\scripts\\validate-v0.6.ps1"},
+        )
+    return check(
+        "full-validation",
+        "needs-evidence",
+        "Run .\\scripts\\validate-v0.6.ps1 and record this check as passed after it succeeds.",
+        {"command": ".\\scripts\\validate-v0.6.ps1"},
+    )
+
+
+def preflight_graph_controls_check(preflight):
+    settings = preflight.get("settings") or {}
+    issues = preflight.get("issues") or []
+    error_codes = sorted(
+        issue.get("code")
+        for issue in issues
+        if issue.get("severity") == "error"
+    )
+    graph_export_mode = settings.get("graph_export_mode")
+    graph_state = settings.get("graph_dedup_state_file", "")
+    opencti_graph_lookup = bool(settings.get("opencti_graph_lookup", False))
+    safe_mode = graph_export_mode in ("audit", "dry-run")
+    evidence = {
+        "preflight_ok": bool(preflight.get("ok", False)),
+        "graph_export_mode": graph_export_mode,
+        "graph_dedup_state_file": graph_state,
+        "opencti_graph_lookup": opencti_graph_lookup,
+        "error_codes": error_codes,
+    }
+    if not preflight.get("ok", False):
+        return check(
+            "preflight-graph-controls",
+            "fail",
+            "Preflight has blocking errors; graph validation should not proceed.",
+            evidence,
+        )
+    if safe_mode and graph_state and opencti_graph_lookup:
+        return check(
+            "preflight-graph-controls",
+            "pass",
+            "Preflight reports safe graph controls and read-only OpenCTI graph lookup.",
+            evidence,
+        )
+    return check(
+        "preflight-graph-controls",
+        "warn",
+        "Preflight is not blocking, but graph validation controls are incomplete.",
+        evidence,
+    )
+
+
+def source_dry_run_check(preflight, decisions, required_sources):
+    source_controls = preflight.get("source_controls") or {}
+    decision_sources = decisions.get("sources") or {}
+    per_source = {}
+    missing = []
+    unsafe = []
+    for source in required_sources or ():
+        controls = source_controls.get(source) or {}
+        source_decisions = decision_sources.get(source) or {}
+        dry_run = bool(controls.get("dry_run", False))
+        records = int(source_decisions.get("records", 0) or 0)
+        per_source[source] = {
+            "dry_run": dry_run,
+            "decision_records": records,
+        }
+        if not dry_run:
+            unsafe.append(source)
+        if records <= 0:
+            missing.append(source)
+    evidence = {
+        "required_sources": list(required_sources or ()),
+        "sources": per_source,
+    }
+    if unsafe:
+        return check(
+            "bounded-source-dry-runs",
+            "fail",
+            "One or more required sources are not configured for dry-run validation.",
+            {**evidence, "unsafe_sources": unsafe},
+        )
+    if missing:
+        return check(
+            "bounded-source-dry-runs",
+            "needs-evidence",
+            "Bounded dry-run decision evidence is still missing for one or more required sources.",
+            {**evidence, "missing_sources": missing},
+        )
+    return check(
+        "bounded-source-dry-runs",
+        "pass",
+        "Required sources have dry-run controls and decision audit evidence.",
+        evidence,
+    )
+
+
+def canonical_attack_match_check(graph):
+    object_counts = graph.get("lookup_match_object_counts") or {}
+    match_types = graph.get("lookup_match_type_counts") or {}
+    attack_matches = int(object_counts.get("attack-pattern", 0) or 0)
+    mitre_matches = int(match_types.get("mitre_attack_id", 0) or 0)
+    evidence = {
+        "lookup_match_count": graph.get("lookup_match_count", 0),
+        "attack_pattern_matches": attack_matches,
+        "mitre_attack_id_matches": mitre_matches,
+    }
+    if attack_matches > 0 and mitre_matches > 0:
+        return check(
+            "canonical-attack-match",
+            "pass",
+            "Decision evidence includes a canonical ATT&CK attack-pattern lookup match.",
+            evidence,
+        )
+    return check(
+        "canonical-attack-match",
+        "needs-evidence",
+        "Capture an OTX or MISP dry-run with an ATT&CK candidate matched to a canonical OpenCTI attack-pattern.",
+        evidence,
+    )
+
+
+def lookup_metadata_check(graph):
+    lookup_matches = int(graph.get("lookup_match_count", 0) or 0)
+    evidence = {
+        "graph_record_count": graph.get("record_count", 0),
+        "lookup_match_count": lookup_matches,
+    }
+    if lookup_matches > 0:
+        return check(
+            "lookup-metadata",
+            "pass",
+            "Decision metadata contains bounded OpenCTI graph lookup match evidence.",
+            evidence,
+        )
+    return check(
+        "lookup-metadata",
+        "needs-evidence",
+        "Decision metadata does not yet show OpenCTI graph lookup matches.",
+        evidence,
+    )
+
+
+def lookup_aggregation_check(graph):
+    object_counts = graph.get("lookup_match_object_counts") or {}
+    match_types = graph.get("lookup_match_type_counts") or {}
+    evidence = {
+        "lookup_match_object_counts": object_counts,
+        "lookup_match_type_counts": match_types,
+    }
+    if object_counts and match_types:
+        return check(
+            "lookup-aggregation",
+            "pass",
+            "Decision report aggregates lookup evidence by object type and match type.",
+            evidence,
+        )
+    return check(
+        "lookup-aggregation",
+        "needs-evidence",
+        "Decision report lookup counters are empty; capture lookup evidence before closing v0.8 validation.",
+        evidence,
+    )
+
+
+def duplicate_attack_pattern_check(no_duplicate, duplicate_found):
+    evidence = {
+        "opencti_ui_no_duplicate": bool(no_duplicate),
+        "opencti_ui_duplicate_found": bool(duplicate_found),
+    }
+    if duplicate_found:
+        return check(
+            "opencti-no-duplicate-attack-pattern",
+            "fail",
+            "OpenCTI UI validation indicates a duplicate ATT&CK attack-pattern was created.",
+            evidence,
+        )
+    if no_duplicate:
+        return check(
+            "opencti-no-duplicate-attack-pattern",
+            "pass",
+            "OpenCTI UI validation confirms no duplicate ATT&CK attack-pattern was created.",
+            evidence,
+        )
+    return check(
+        "opencti-no-duplicate-attack-pattern",
+        "needs-evidence",
+        "OpenCTI UI duplicate check has not been recorded yet.",
+        evidence,
+    )
+
+
+def resource_posture_check(resource_ok, resource_unhealthy):
+    evidence = {
+        "resource_posture_ok": bool(resource_ok),
+        "resource_posture_unhealthy": bool(resource_unhealthy),
+    }
+    if resource_unhealthy:
+        return check(
+            "resource-posture",
+            "fail",
+            "Local lab resource posture was marked unhealthy after bounded validation.",
+            evidence,
+        )
+    if resource_ok:
+        return check(
+            "resource-posture",
+            "pass",
+            "Local lab resource posture was marked healthy after bounded validation.",
+            evidence,
+        )
+    return check(
+        "resource-posture",
+        "needs-evidence",
+        "Record local lab resource posture after bounded OTX and MISP validation.",
+        evidence,
+    )
+
+
+def check(code, status, message, evidence=None):
+    return ValidationCheck(
+        code=code,
+        status=status,
+        message=message,
+        evidence=evidence or {},
+    )
+
+
+def status_counts(checks):
+    counts = {status: 0 for status in STATUS_ORDER}
+    for item in checks:
+        counts[item.status] = counts.get(item.status, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def overall_status(checks):
+    statuses = [item.status for item in checks]
+    if "fail" in statuses:
+        return "fail"
+    if "needs-evidence" in statuses:
+        return "needs-evidence"
+    if "warn" in statuses:
+        return "warn"
+    return "pass"
+
+
+def format_text_report(report):
+    data = report.to_dict()
+    lines = [
+        "NarrowCTI v0.8 operational validation",
+        f"schema_version={data['schema_version']}",
+        f"release={data['release']}",
+        f"overall_status={data['overall_status']}",
+        "counts="
+        + ",".join(
+            f"{status}:{count}" for status, count in data["counts"].items()
+        ),
+        "checks:",
+    ]
+    for item in data["checks"]:
+        lines.append(
+            "- "
+            f"{item['code']} status={item['status']}: "
+            f"{item['message']}"
+        )
+    return "\n".join(lines)
+
+
+def parse_sources(value):
+    sources = []
+    for item in str(value or "").split(","):
+        source = item.strip().lower()
+        if source:
+            sources.append(source)
+    return tuple(sources)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Build a v0.8 operational validation checklist from local evidence."
+    )
+    parser.add_argument(
+        "--decision-path",
+        action="append",
+        default=[],
+        help="Decision audit JSONL file or directory. Defaults to NARROWCTI_DECISION_AUDIT_DIR.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Read only the most recent N decision records.",
+    )
+    parser.add_argument(
+        "--required-sources",
+        default="otx,misp",
+        help="Comma-separated source keys expected in bounded dry-run evidence.",
+    )
+    parser.add_argument(
+        "--full-validation-passed",
+        action="store_true",
+        help="Mark repository validation as passed after .\\scripts\\validate-v0.6.ps1 succeeds.",
+    )
+    parser.add_argument(
+        "--opencti-ui-no-duplicate",
+        action="store_true",
+        help="Mark the OpenCTI UI duplicate ATT&CK object check as passed.",
+    )
+    parser.add_argument(
+        "--opencti-ui-duplicate-found",
+        action="store_true",
+        help="Mark the OpenCTI UI duplicate ATT&CK object check as failed.",
+    )
+    parser.add_argument(
+        "--resource-posture-ok",
+        action="store_true",
+        help="Mark local lab resource posture as healthy after bounded validation.",
+    )
+    parser.add_argument(
+        "--resource-posture-unhealthy",
+        action="store_true",
+        help="Mark local lab resource posture as unhealthy after bounded validation.",
+    )
+    parser.add_argument("--json", action="store_true", help="Print JSON output.")
+    args = parser.parse_args()
+
+    settings = load_settings()
+    preflight = build_preflight_report(settings)
+    records = read_decision_records(
+        args.decision_path or [settings.decision_audit_dir],
+        limit=args.limit or None,
+    )
+    decisions = build_decision_audit_report(records)
+    report = build_operational_validation_report(
+        preflight,
+        decisions,
+        full_validation_passed=args.full_validation_passed,
+        opencti_ui_no_duplicate=args.opencti_ui_no_duplicate,
+        opencti_ui_duplicate_found=args.opencti_ui_duplicate_found,
+        resource_posture_ok=args.resource_posture_ok,
+        resource_posture_unhealthy=args.resource_posture_unhealthy,
+        required_sources=parse_sources(args.required_sources),
+    )
+    if args.json:
+        print(json.dumps(report.to_dict(), sort_keys=True))
+    else:
+        print(format_text_report(report))
+
+
+if __name__ == "__main__":
+    main()

@@ -219,6 +219,8 @@ Purpose:
   and env example for existing OpenCTI Docker networks.
 - Add controlled graph promotion with OpenCTI entity/relationship lookup,
   including canonical ATT&CK lookup by external id or STIX id.
+- Add an operational validation checklist for v0.8 graph lookup evidence,
+  OpenCTI duplicate review and local resource posture.
 - Harden configuration defaults.
 - Document customer installation procedures.
 - Add technical license enforcement and feature gates by feed, environment or

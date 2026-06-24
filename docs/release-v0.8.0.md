@@ -128,6 +128,11 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added rendered policy insights to support diagnostics text, HTML and bundle
   output so support can identify source-level tuning signals from aggregate
   release/reject evidence.
+- Added `gateway.operational_validation` as a read-only v0.8 validation
+  checklist. It consolidates preflight and decision-audit evidence into
+  `pass`, `warn`, `fail` and `needs-evidence` checks for graph lookup, bounded
+  source dry-runs, canonical ATT&CK matching, OpenCTI duplicate review and
+  local resource posture.
 
 ## Promotion Boundary
 
