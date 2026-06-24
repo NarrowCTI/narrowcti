@@ -300,6 +300,13 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("audit-only", graph_plan["status"])
         self.assertEqual(2, graph_plan["accepted_count"])
         self.assertEqual(1, graph_plan["held_count"])
+        graph_preview = metadata["graph_stix_preview"]
+        self.assertEqual("preview", graph_preview["status"])
+        self.assertFalse(graph_preview["export_enabled"])
+        self.assertEqual("bundle", graph_preview["bundle_type"])
+        self.assertEqual(2, graph_preview["accepted_candidate_count"])
+        self.assertGreaterEqual(graph_preview["graph_object_count"], 1)
+        self.assertGreaterEqual(graph_preview["bundle_object_count"], 2)
 
     def test_decision_metadata_extracts_misp_galaxies(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})

@@ -17,6 +17,7 @@ from core.scoring import age_days, calculate_score_details
 from core.state_repository import PulseStateRepository
 from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
+from exporters.stix_builder import build_graph_report_bundle
 
 try:
     from .entity_extraction import extract_otx_entities
@@ -73,11 +74,37 @@ def decision_metadata(
         graph_deduplication_index=graph_deduplication_index,
     )
     metadata["graph_export_plan"] = graph_plan
+    metadata["graph_stix_preview"] = graph_stix_preview(
+        candidate,
+        graph_policy,
+        identity_name=getattr(candidate, "identity_name", "NarrowCTI Gateway"),
+    )
     if known_keys["entity_keys"] or known_keys["relationship_keys"]:
         metadata["graph_export_plan_known_keys"] = known_keys
     if lookup_error:
         metadata["graph_export_plan_lookup_error"] = lookup_error
     return metadata
+
+
+def graph_stix_preview(candidate, graph_policy, identity_name="NarrowCTI Gateway"):
+    pulse = getattr(candidate, "pulse", {}) or {}
+    bundle, summary = build_graph_report_bundle(
+        getattr(candidate, "name", "") or pulse.get("name", "NarrowCTI graph preview"),
+        pulse.get("description", ""),
+        candidate_score(candidate),
+        graph_candidate_policy=graph_policy,
+        identity_name=identity_name,
+    )
+    preview = dict(summary)
+    preview["status"] = "preview"
+    preview["export_enabled"] = False
+    preview["bundle_type"] = bundle.type
+    return preview
+
+
+def candidate_score(candidate):
+    score_details = getattr(candidate, "score_details", {}) or {}
+    return score_details.get("final_score", getattr(candidate, "score", 50))
 
 
 def enrich_mitre_attack_metadata(metadata, mitre_resolver=None):

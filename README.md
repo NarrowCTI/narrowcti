@@ -242,12 +242,14 @@ The v0.7 graph layer currently records `graph_candidate_policy` and
 `graph_export_plan` metadata. `NARROWCTI_GRAPH_EXPORT_MODE=audit` keeps the
 plan audit-only, while `dry-run` records what graph objects and relationships
 would be attempted later. The first graph-aware STIX builder foundation can
-convert accepted candidates into STIX objects for validation, but real graph
-export remains blocked until runtime wiring, deduplication promotion and
-OpenCTI validation are complete. The local graph deduplication state can be
-read with `NARROWCTI_GRAPH_DEDUP_STATE_FILE` so OTX and MISP export plans can
-mark known local graph keys as deduplicated. This is read-only planning
-evidence; dry-run plans are not marked as exported knowledge.
+convert accepted candidates into STIX objects for validation, and OTX/MISP
+decision metadata now records a safe `graph_stix_preview` summary with bundle,
+object, relationship and skipped-candidate counts. Real graph export remains
+blocked until controlled export wiring, deduplication promotion and OpenCTI
+validation are complete. The local graph deduplication state can be read with
+`NARROWCTI_GRAPH_DEDUP_STATE_FILE` so OTX and MISP export plans can mark known
+local graph keys as deduplicated. This is read-only planning evidence; dry-run
+plans are not marked as exported knowledge.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in

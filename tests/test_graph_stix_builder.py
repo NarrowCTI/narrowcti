@@ -34,6 +34,7 @@ class GraphStixBuilderTests(unittest.TestCase):
             objects_by_type.setdefault(item["type"], []).append(item)
 
         self.assertEqual(6, summary["accepted_candidate_count"])
+        self.assertEqual(12, summary["bundle_object_count"])
         self.assertEqual(5, summary["graph_object_count"])
         self.assertEqual(5, summary["graph_relationship_count"])
         self.assertEqual(0, summary["skipped_candidate_count"])

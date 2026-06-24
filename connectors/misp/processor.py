@@ -19,6 +19,7 @@ from core.scoring import age_days, calculate_score_details
 from core.state_repository import MISPEventStateRepository
 from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
+from exporters.stix_builder import build_graph_report_bundle
 
 from connectors.misp.feed_adapter import MISPFeedAdapter, event_to_feed_candidate
 from connectors.misp.models import MISPEventCandidate
@@ -101,11 +102,36 @@ def decision_metadata(
         graph_deduplication_index=graph_deduplication_index,
     )
     metadata["graph_export_plan"] = graph_plan
+    metadata["graph_stix_preview"] = graph_stix_preview(
+        candidate_ref,
+        candidate,
+        graph_policy,
+    )
     if known_keys["entity_keys"] or known_keys["relationship_keys"]:
         metadata["graph_export_plan_known_keys"] = known_keys
     if lookup_error:
         metadata["graph_export_plan_lookup_error"] = lookup_error
     return metadata
+
+
+def graph_stix_preview(candidate_ref, candidate, graph_policy):
+    event = compact_mapping(candidate.event if candidate else {})
+    bundle, summary = build_graph_report_bundle(
+        getattr(candidate, "name", "") or candidate_ref.title or "NarrowCTI graph preview",
+        event.get("info", ""),
+        candidate_score(candidate),
+        graph_candidate_policy=graph_policy,
+    )
+    preview = dict(summary)
+    preview["status"] = "preview"
+    preview["export_enabled"] = False
+    preview["bundle_type"] = bundle.type
+    return preview
+
+
+def candidate_score(candidate):
+    score_details = getattr(candidate, "score_details", {}) or {}
+    return score_details.get("final_score", getattr(candidate, "score", 50))
 
 
 def extract_misp_galaxies(event):

@@ -509,8 +509,11 @@ v0.7 should not be considered complete until:
 5. Build a graph-aware STIX exporter. An initial STIX builder foundation now
    converts accepted graph candidates into OpenCTI-compatible STIX objects,
    report references and audit-preserving `related-to` relationships for the
-   first supported graph types. Runtime export wiring, OpenCTI import
-   validation and post-export graph deduplication remain pending.
+   first supported graph types. OTX and MISP decisions now include a safe
+   in-memory `graph_stix_preview` summary so operators can see bundle object
+   counts, graph object counts, relationship counts and skipped candidates
+   before export is enabled. OpenCTI import validation, controlled export mode
+   and post-export graph deduplication remain pending.
 6. Add relationship confidence and provenance. Initial audit-only support is
    implemented in `core/graph_candidates.py`.
 7. Add enterprise graph filters. Initial audit-only candidate policy is

@@ -89,6 +89,10 @@ detailed graph-enrichment design is tracked in
   report references, audit-preserving relationships and skipped-candidate
   summary evidence. The runtime still does not promote graph export
   automatically.
+- Wired OTX and MISP decision metadata to build a safe `graph_stix_preview`
+  summary from accepted candidates. This validates bundle construction,
+  object/relationship counts and skipped candidates in memory without importing
+  graph objects into OpenCTI.
 - Extended the decision audit report to aggregate `graph_export_plan` evidence
   by mode, status, action, held reason, source and query, including
   would-create object and relationship counts for graph export dry-runs.

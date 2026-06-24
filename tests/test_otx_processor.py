@@ -451,6 +451,16 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("audit-only", graph_plan["status"])
         self.assertEqual(graph_policy["accepted_count"], graph_plan["accepted_count"])
         self.assertEqual(0, graph_plan["would_create_object_count"])
+        graph_preview = records[0].metadata["graph_stix_preview"]
+        self.assertEqual("preview", graph_preview["status"])
+        self.assertFalse(graph_preview["export_enabled"])
+        self.assertEqual("bundle", graph_preview["bundle_type"])
+        self.assertEqual(
+            graph_policy["accepted_count"],
+            graph_preview["accepted_candidate_count"],
+        )
+        self.assertGreater(graph_preview["graph_object_count"], 0)
+        self.assertGreater(graph_preview["graph_relationship_count"], 0)
 
     def test_decision_metadata_uses_graph_dedup_known_keys(self):
         candidate = SimpleNamespace(

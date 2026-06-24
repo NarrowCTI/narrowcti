@@ -177,6 +177,7 @@ def build_graph_report_bundle(
     )
     summary = {
         "accepted_candidate_count": len(accepted_candidates),
+        "bundle_object_count": len(bundle.objects),
         "graph_object_count": len(graph_objects),
         "graph_relationship_count": len(graph_relationships),
         "skipped_candidate_count": len(skipped_candidates),
