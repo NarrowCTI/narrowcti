@@ -86,6 +86,21 @@ python -m gateway.curation_report `
   --html-file state\curation-report.html
 ```
 
+Support-safe report:
+
+```powershell
+python -m gateway.curation_report `
+  --redaction-profile support `
+  --html-file state\curation-report-support.html `
+  --json
+```
+
+`--redaction-profile none` is the default and keeps the complete local report.
+`--redaction-profile support` keeps aggregate counts, source posture, graph
+readiness and recommendations, but removes detailed failure, query and
+quarantined-candidate lists from the rendered output. Use it before sharing a
+curation report outside the local environment.
+
 When arguments are omitted, the command falls back to the corresponding
 `NARROWCTI_*` settings. Missing evidence is treated as empty input so an
 operator can still generate a partial report during early validation.
@@ -139,4 +154,4 @@ Source posture is intentionally simple in v0.8:
 - Add richer per-actor, per-sector and per-ATT&CK narratives.
 - Add deeper policy tuning insights from repeated release/reject patterns.
 - Add graph-quality deltas after controlled graph promotion is enabled.
-- Add customer-safe redaction profiles for external report delivery.
+- Add additional customer-safe redaction profiles for external report delivery.

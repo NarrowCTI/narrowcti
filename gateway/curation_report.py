@@ -1,4 +1,5 @@
 import argparse
+import copy
 import html
 import json
 import os
@@ -13,6 +14,9 @@ from gateway.report import (
 )
 from gateway.review import AnalystReviewService, ReviewSummary, read_audit_events
 from gateway.settings import load_settings
+
+
+REDACTION_PROFILES = ("none", "support")
 
 
 @dataclass(frozen=True)
@@ -386,8 +390,40 @@ def percent(value, total):
     return round((float(value) / float(total)) * 100, 2)
 
 
-def format_text_report(report):
+def report_to_dict(report, redaction_profile="none"):
     data = report.to_dict()
+    profile = normalize_redaction_profile(redaction_profile)
+    if profile == "none":
+        return data
+    return redact_report_dict(data)
+
+
+def normalize_redaction_profile(value):
+    profile = str(value or "none").strip().lower()
+    if profile not in REDACTION_PROFILES:
+        raise ValueError(
+            "redaction_profile must be one of: " + ",".join(REDACTION_PROFILES)
+        )
+    return profile
+
+
+def redact_report_dict(report):
+    redacted = copy.deepcopy(report)
+    operational = redacted.get("operational") or {}
+    operational["failures"] = []
+    operational["queries"] = []
+    for source in (operational.get("sources") or {}).values():
+        if isinstance(source, dict):
+            source["failures"] = []
+
+    decisions = redacted.get("decisions") or {}
+    decisions["quarantined"] = []
+    decisions["queries"] = []
+    return redacted
+
+
+def format_text_report(report, redaction_profile="none"):
+    data = report_to_dict(report, redaction_profile=redaction_profile)
     summary = data["executive_summary"]
     review_actions = data.get("analyst_review_actions") or {}
     lines = [
@@ -457,8 +493,8 @@ def format_text_report(report):
     return "\n".join(lines)
 
 
-def format_html_report(report):
-    data = report.to_dict()
+def format_html_report(report, redaction_profile="none"):
+    data = report_to_dict(report, redaction_profile=redaction_profile)
     summary = data["executive_summary"]
     review_actions = data.get("analyst_review_actions") or {}
     recommendations = "\n".join(
@@ -598,7 +634,7 @@ def format_html_report(report):
     )
 
 
-def write_html_report(report, html_file):
+def write_html_report(report, html_file, redaction_profile="none"):
     html_file = str(html_file or "").strip()
     if not html_file:
         raise ValueError("html_file is required")
@@ -606,7 +642,9 @@ def write_html_report(report, html_file):
     if directory:
         os.makedirs(directory, exist_ok=True)
     with open(html_file, "w", encoding="utf-8") as handle:
-        handle.write(format_html_report(report) + "\n")
+        handle.write(
+            format_html_report(report, redaction_profile=redaction_profile) + "\n"
+        )
     return html_file
 
 
@@ -656,6 +694,12 @@ def main():
         default="",
         help="Optional HTML report output file.",
     )
+    parser.add_argument(
+        "--redaction-profile",
+        choices=REDACTION_PROFILES,
+        default="none",
+        help="Redact detailed local evidence for support sharing.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -668,11 +712,20 @@ def main():
         limit=args.limit,
     )
     if args.html_file:
-        write_html_report(report, args.html_file)
+        write_html_report(
+            report,
+            args.html_file,
+            redaction_profile=args.redaction_profile,
+        )
     if args.json:
-        print(json.dumps(report.to_dict(), sort_keys=True))
+        print(
+            json.dumps(
+                report_to_dict(report, args.redaction_profile),
+                sort_keys=True,
+            )
+        )
     else:
-        print(format_text_report(report))
+        print(format_text_report(report, redaction_profile=args.redaction_profile))
 
 
 if __name__ == "__main__":

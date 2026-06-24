@@ -9,6 +9,8 @@ from gateway.curation_report import (
     build_curation_report_from_files,
     format_html_report,
     format_text_report,
+    normalize_redaction_profile,
+    report_to_dict,
     write_html_report,
 )
 from gateway.decisions import build_decision_audit_report
@@ -135,6 +137,57 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual(1, report.executive_summary["decision_record_count"])
         self.assertEqual(1, report.executive_summary["pending_review_count"])
         self.assertEqual(1, report.source_summaries[0]["pending_review"])
+
+    def test_support_redaction_removes_detailed_lists(self):
+        operational = build_operational_report(
+            [
+                gateway_record(
+                    "2026-06-24T10:00:00Z",
+                    [
+                        source_result(
+                            "otx",
+                            False,
+                            errors=1,
+                        )
+                    ],
+                )
+            ]
+        )
+        decisions = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-24T10:01:00Z",
+                    "otx",
+                    "quarantine",
+                    "sensitive local finding",
+                )
+            ]
+        )
+        review = ReviewSummary(
+            record_count=0,
+            status_counts={},
+            source_counts={},
+            pending_count=0,
+            exportable_count=0,
+        )
+        report = build_curation_report(operational, decisions, review)
+
+        redacted = report_to_dict(report, redaction_profile="support")
+        text = format_text_report(report, redaction_profile="support")
+        html = format_html_report(report, redaction_profile="support")
+
+        self.assertEqual([], redacted["operational"]["failures"])
+        self.assertEqual([], redacted["operational"]["queries"])
+        self.assertEqual([], redacted["operational"]["sources"]["otx"]["failures"])
+        self.assertEqual([], redacted["decisions"]["quarantined"])
+        self.assertEqual([], redacted["decisions"]["queries"])
+        self.assertEqual(1, redacted["executive_summary"]["decision_record_count"])
+        self.assertIn("NarrowCTI curation report", text)
+        self.assertIn("NarrowCTI curation report", html)
+
+    def test_rejects_unknown_redaction_profile(self):
+        with self.assertRaises(ValueError):
+            normalize_redaction_profile("external")
 
     def test_builds_review_action_summary_from_release_audit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
