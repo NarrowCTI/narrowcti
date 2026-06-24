@@ -98,6 +98,8 @@ The current report contains:
 - `operational`: gateway run and source outcome rollups.
 - `decisions`: decision audit, score, graph export and graph STIX summaries.
 - `analyst_review`: quarantine queue status/source counts.
+- `analyst_review_actions`: aggregate release, reject and export audit
+  feedback for policy tuning.
 - `recommendations`: deterministic next actions based on evidence gaps and
   risk signals.
 
@@ -106,6 +108,9 @@ Current recommendation examples:
 - Collect evidence when no run or decision records exist.
 - Review source errors before continuous operation.
 - Review pending quarantine records.
+- Continue queue triage when review actions exist but pending records remain.
+- Review policy thresholds and source scope when rejected releases exceed
+  accepted releases.
 - Validate graph dry-run objects before export mode.
 - Preserve OpenCTI graph lookup when canonical matches are found.
 
@@ -122,6 +127,6 @@ not present in gateway, decision, quarantine or graph-planning evidence.
 
 - Add PDF export once the report schema stabilizes.
 - Add richer per-actor, per-sector, per-ATT&CK and per-source narratives.
-- Add policy tuning insights from repeated release/reject patterns.
+- Add deeper policy tuning insights from repeated release/reject patterns.
 - Add graph-quality deltas after controlled graph promotion is enabled.
 - Add customer-safe redaction profiles for external report delivery.

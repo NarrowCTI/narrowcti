@@ -11,7 +11,7 @@ from gateway.report import (
     read_gateway_summary_file,
     read_quarantine_records,
 )
-from gateway.review import AnalystReviewService, ReviewSummary
+from gateway.review import AnalystReviewService, ReviewSummary, read_audit_events
 from gateway.settings import load_settings
 
 
@@ -22,6 +22,7 @@ class CurationReport:
     operational: dict
     decisions: dict
     analyst_review: dict
+    analyst_review_actions: dict
     recommendations: list
 
     def to_dict(self):
@@ -31,6 +32,7 @@ class CurationReport:
             "operational": self.operational,
             "decisions": self.decisions,
             "analyst_review": self.analyst_review,
+            "analyst_review_actions": self.analyst_review_actions,
             "recommendations": list(self.recommendations),
         }
 
@@ -39,28 +41,43 @@ def build_curation_report(
     operational_report,
     decision_report,
     analyst_review_summary,
+    analyst_review_actions=None,
     generated_at="",
 ):
     operational = operational_report.to_dict()
     decisions = decision_report.to_dict()
     analyst_review = analyst_review_summary.to_dict()
-    executive = build_executive_summary(operational, decisions, analyst_review)
+    review_actions = analyst_review_actions or empty_review_action_summary()
+    executive = build_executive_summary(
+        operational,
+        decisions,
+        analyst_review,
+        review_actions,
+    )
     return CurationReport(
         generated_at=generated_at or utc_now(),
         executive_summary=executive,
         operational=operational,
         decisions=decisions,
         analyst_review=analyst_review,
-        recommendations=build_recommendations(executive),
+        analyst_review_actions=review_actions,
+        recommendations=build_recommendations(executive, review_actions),
     )
 
 
-def build_executive_summary(operational, decisions, analyst_review):
+def build_executive_summary(
+    operational,
+    decisions,
+    analyst_review,
+    review_actions=None,
+):
     totals = operational.get("totals") or {}
     metrics = operational.get("metrics") or {}
     graph_export = decisions.get("graph_export") or {}
     graph_preview = decisions.get("graph_stix_preview") or {}
     actions = decisions.get("actions") or {}
+    review_actions = review_actions or empty_review_action_summary()
+    review_action_counts = review_actions.get("action_counts") or {}
     return {
         "run_count": operational.get("run_count", 0),
         "source_count": len(operational.get("sources") or {}),
@@ -72,6 +89,13 @@ def build_executive_summary(operational, decisions, analyst_review):
         "quarantine_decision_count": int(actions.get("quarantine", 0) or 0),
         "pending_review_count": analyst_review.get("pending_count", 0),
         "exportable_review_count": analyst_review.get("exportable_count", 0),
+        "review_action_count": review_actions.get("event_count", 0),
+        "review_release_count": review_action_counts.get("release", 0)
+        + review_action_counts.get("release-indicators", 0),
+        "review_reject_count": review_action_counts.get("reject", 0),
+        "review_export_count": review_action_counts.get("export", 0),
+        "review_release_rate_pct": review_actions.get("release_rate_pct", 0.0),
+        "review_reject_rate_pct": review_actions.get("reject_rate_pct", 0.0),
         "acceptance_rate_pct": metrics.get("acceptance_rate_pct", 0.0),
         "filter_rate_pct": metrics.get("filter_rate_pct", 0.0),
         "error_rate_pct": metrics.get("error_rate_pct", 0.0),
@@ -93,8 +117,9 @@ def build_executive_summary(operational, decisions, analyst_review):
     }
 
 
-def build_recommendations(summary):
+def build_recommendations(summary, review_actions=None):
     recommendations = []
+    review_actions = review_actions or empty_review_action_summary()
     if summary.get("decision_record_count", 0) == 0 and summary.get("run_count", 0) == 0:
         recommendations.append(
             recommendation(
@@ -130,6 +155,30 @@ def build_recommendations(summary):
                 "Keep OpenCTI graph lookup enabled for canonical object matching.",
             )
         )
+    review_decisions = (
+        summary.get("review_release_count", 0)
+        + summary.get("review_reject_count", 0)
+    )
+    if review_decisions >= 3 and summary.get("review_reject_count", 0) > summary.get(
+        "review_release_count",
+        0,
+    ):
+        recommendations.append(
+            recommendation(
+                "tune-curation-policy",
+                "Rejected quarantine releases exceed accepted releases; review thresholds, source scope and allowed context filters.",
+            )
+        )
+    if (
+        review_actions.get("event_count", 0) > 0
+        and summary.get("pending_review_count", 0) > 0
+    ):
+        recommendations.append(
+            recommendation(
+                "continue-review-cycle",
+                "Review actions exist but pending records remain; continue queue triage before broadening ingestion.",
+            )
+        )
     return recommendations
 
 
@@ -156,7 +205,15 @@ def build_curation_report_from_files(
     decision_records = read_decision_records(decision_paths or (), limit=limit or None)
     decisions = build_decision_audit_report(decision_records)
     review_summary = build_review_summary(quarantine_file, release_audit_file)
-    return build_curation_report(operational, decisions, review_summary)
+    review_actions = build_review_action_summary(
+        safe_read_audit_events(release_audit_file, limit=limit),
+    )
+    return build_curation_report(
+        operational,
+        decisions,
+        review_summary,
+        analyst_review_actions=review_actions,
+    )
 
 
 def safe_read_gateway_summary_file(summary_file, limit=0):
@@ -180,9 +237,75 @@ def build_review_summary(quarantine_file="", release_audit_file=""):
     ).summary()
 
 
+def safe_read_audit_events(release_audit_file="", limit=0):
+    if not release_audit_file or not os.path.exists(release_audit_file):
+        return []
+    events = read_audit_events(release_audit_file)
+    if limit and limit > 0:
+        return events[-limit:]
+    return events
+
+
+def build_review_action_summary(events):
+    action_counts = {}
+    source_counts = {}
+    source_action_counts = {}
+    released_indicator_count = 0
+    exported_indicator_count = 0
+    dedup_duplicate_count = 0
+    for event in events or []:
+        action = normalize_count_key(event.get("action"), "unknown")
+        source_key = normalize_count_key(event.get("source_key"), "(unknown)")
+        action_counts[action] = action_counts.get(action, 0) + 1
+        source_counts[source_key] = source_counts.get(source_key, 0) + 1
+        source_actions = source_action_counts.setdefault(source_key, {})
+        source_actions[action] = source_actions.get(action, 0) + 1
+        released_indicator_count += int(event.get("released_indicator_count", 0) or 0)
+        exported_indicator_count += int(event.get("exported_indicator_count", 0) or 0)
+        dedup_duplicate_count += int(event.get("dedup_duplicate_count", 0) or 0)
+
+    release_count = action_counts.get("release", 0) + action_counts.get(
+        "release-indicators",
+        0,
+    )
+    reject_count = action_counts.get("reject", 0)
+    review_decision_count = release_count + reject_count
+    return {
+        "event_count": len(events or []),
+        "action_counts": dict(sorted(action_counts.items())),
+        "source_counts": dict(sorted(source_counts.items())),
+        "source_action_counts": {
+            source: dict(sorted(actions.items()))
+            for source, actions in sorted(source_action_counts.items())
+        },
+        "released_indicator_count": released_indicator_count,
+        "exported_indicator_count": exported_indicator_count,
+        "dedup_duplicate_count": dedup_duplicate_count,
+        "review_decision_count": review_decision_count,
+        "release_rate_pct": percent(release_count, review_decision_count),
+        "reject_rate_pct": percent(reject_count, review_decision_count),
+    }
+
+
+def empty_review_action_summary():
+    return build_review_action_summary([])
+
+
+def normalize_count_key(value, default):
+    text = str(value or "").strip()
+    return text if text else default
+
+
+def percent(value, total):
+    if not total:
+        return 0.0
+    return round((float(value) / float(total)) * 100, 2)
+
+
 def format_text_report(report):
     data = report.to_dict()
     summary = data["executive_summary"]
+    review_actions = data.get("analyst_review_actions") or {}
     lines = [
         "NarrowCTI curation report",
         f"generated_at={data['generated_at']}",
@@ -204,6 +327,17 @@ def format_text_report(report):
         f"pending={summary['pending_review_count']} "
         f"exportable={summary['exportable_review_count']} "
         f"quarantine_decisions={summary['quarantine_decision_count']}",
+        "- "
+        f"review_actions={summary['review_action_count']} "
+        f"released={summary['review_release_count']} "
+        f"rejected={summary['review_reject_count']} "
+        f"exported={summary['review_export_count']} "
+        f"release_rate_pct={summary['review_release_rate_pct']} "
+        f"reject_rate_pct={summary['review_reject_rate_pct']}",
+        "- "
+        f"released_indicators={review_actions.get('released_indicator_count', 0)} "
+        f"exported_indicators={review_actions.get('exported_indicator_count', 0)} "
+        f"dedup_duplicates={review_actions.get('dedup_duplicate_count', 0)}",
         "graph_readiness:",
         "- "
         f"candidates={summary['graph_candidate_count']} "
@@ -228,6 +362,7 @@ def format_text_report(report):
 def format_html_report(report):
     data = report.to_dict()
     summary = data["executive_summary"]
+    review_actions = data.get("analyst_review_actions") or {}
     recommendations = "\n".join(
         "<li><strong>{}</strong>: {}</li>".format(
             escape(item.get("code")),
@@ -271,6 +406,17 @@ def format_html_report(report):
     </table>
   </section>
   <section>
+    <h2>Analyst Review Actions</h2>
+    <table>
+      <tr><th>events</th><th>released</th><th>rejected</th><th>exported</th><th>release rate</th><th>reject rate</th></tr>
+      <tr><td>{review_actions}</td><td>{review_released}</td><td>{review_rejected}</td><td>{review_exported}</td><td>{review_release_rate_pct}</td><td>{review_reject_rate_pct}</td></tr>
+    </table>
+    <table>
+      <tr><th>released indicators</th><th>exported indicators</th><th>dedup duplicates</th></tr>
+      <tr><td>{released_indicators}</td><td>{exported_indicators}</td><td>{dedup_duplicates}</td></tr>
+    </table>
+  </section>
+  <section>
     <h2>Graph Readiness</h2>
     <table>
       <tr><th>candidates</th><th>accepted</th><th>held</th><th>lookup matches</th><th>would-create objects</th><th>would-create relationships</th></tr>
@@ -303,6 +449,15 @@ def format_html_report(report):
         pending_review=escape(summary["pending_review_count"]),
         exportable_review=escape(summary["exportable_review_count"]),
         quarantine_decisions=escape(summary["quarantine_decision_count"]),
+        review_actions=escape(summary["review_action_count"]),
+        review_released=escape(summary["review_release_count"]),
+        review_rejected=escape(summary["review_reject_count"]),
+        review_exported=escape(summary["review_export_count"]),
+        review_release_rate_pct=escape(summary["review_release_rate_pct"]),
+        review_reject_rate_pct=escape(summary["review_reject_rate_pct"]),
+        released_indicators=escape(review_actions.get("released_indicator_count", 0)),
+        exported_indicators=escape(review_actions.get("exported_indicator_count", 0)),
+        dedup_duplicates=escape(review_actions.get("dedup_duplicate_count", 0)),
         graph_candidates=escape(summary["graph_candidate_count"]),
         graph_accepted=escape(summary["graph_accepted_count"]),
         graph_held=escape(summary["graph_held_count"]),

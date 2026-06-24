@@ -128,6 +128,42 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual(1, report.executive_summary["decision_record_count"])
         self.assertEqual(1, report.executive_summary["pending_review_count"])
 
+    def test_builds_review_action_summary_from_release_audit(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            release_audit_file = os.path.join(tmpdir, "releases.jsonl")
+            with open(release_audit_file, "w", encoding="utf-8") as file_obj:
+                for event in [
+                    release_event("otx", "release", released=3),
+                    release_event("otx", "reject"),
+                    release_event("misp", "reject"),
+                    release_event("misp", "export", exported=2, duplicates=1),
+                ]:
+                    file_obj.write(json.dumps(event) + "\n")
+
+            report = build_curation_report_from_files(
+                release_audit_file=release_audit_file,
+            )
+
+        summary = report.executive_summary
+        actions = report.analyst_review_actions
+        recommendation_codes = [item["code"] for item in report.recommendations]
+
+        self.assertEqual(4, summary["review_action_count"])
+        self.assertEqual(1, summary["review_release_count"])
+        self.assertEqual(2, summary["review_reject_count"])
+        self.assertEqual(1, summary["review_export_count"])
+        self.assertEqual(33.33, summary["review_release_rate_pct"])
+        self.assertEqual(66.67, summary["review_reject_rate_pct"])
+        self.assertEqual(3, actions["released_indicator_count"])
+        self.assertEqual(2, actions["exported_indicator_count"])
+        self.assertEqual(1, actions["dedup_duplicate_count"])
+        self.assertEqual({"misp": 2, "otx": 2}, actions["source_counts"])
+        self.assertEqual(
+            {"reject": 1, "export": 1},
+            actions["source_action_counts"]["misp"],
+        )
+        self.assertIn("tune-curation-policy", recommendation_codes)
+
     def test_text_report_is_analyst_readable(self):
         operational = build_operational_report([])
         decisions = build_decision_audit_report([])
@@ -151,6 +187,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("NarrowCTI curation report", text)
         self.assertIn("executive_summary:", text)
         self.assertIn("analyst_review:", text)
+        self.assertIn("review_actions=", text)
         self.assertIn("graph_readiness:", text)
         self.assertIn("collect-evidence", text)
 
@@ -177,6 +214,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("<!doctype html>", html)
         self.assertIn("NarrowCTI curation report", html)
         self.assertIn("Executive Summary", html)
+        self.assertIn("Analyst Review Actions", html)
         self.assertIn("Graph Readiness", html)
         self.assertIn("collect-evidence", html)
 
@@ -299,6 +337,22 @@ def decision_record(recorded_at, source_key, action, reason, metadata=None):
         "indicator_count": 1,
         "score": 70,
         "metadata": metadata or {},
+    }
+
+
+def release_event(source_key, action, released=0, exported=0, duplicates=0):
+    return {
+        "recorded_at": "2026-06-24T10:03:00Z",
+        "quarantine_id": "q-1",
+        "status": "released",
+        "action": action,
+        "reviewer": "analyst",
+        "reason": "reviewed",
+        "source_key": source_key,
+        "external_id": "external-1",
+        "released_indicator_count": released,
+        "exported_indicator_count": exported,
+        "dedup_duplicate_count": duplicates,
     }
 
 

@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import unittest
@@ -77,6 +78,16 @@ class AnalystReviewServiceTests(unittest.TestCase):
             self.assertEqual("reject", events[0]["action"])
             self.assertEqual(second["quarantine_id"], events[0]["quarantine_id"])
             self.assertEqual(events, read_audit_events(audit_path)[-1:])
+
+    def test_read_audit_events_accepts_utf8_bom(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audit_path = os.path.join(tmpdir, "releases.jsonl")
+            with open(audit_path, "w", encoding="utf-8-sig") as file_obj:
+                file_obj.write(json.dumps({"action": "release"}) + "\n")
+
+            events = read_audit_events(audit_path)
+
+        self.assertEqual("release", events[0]["action"])
 
     def test_export_released_runs_dry_run_without_marking_exported(self):
         with tempfile.TemporaryDirectory() as tmpdir:
