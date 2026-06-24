@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 
 from core.decision_audit import utc_now
 from gateway.curation_report import build_curation_report_from_files
+from gateway.decisions import build_decision_audit_report, read_decision_records
+from gateway.operational_validation import build_operational_validation_report
 from gateway.preflight import build_preflight_report
 from gateway.settings import load_settings
 
@@ -25,6 +27,7 @@ class SupportDiagnosticSnapshot:
     preflight: dict
     evidence_inventory: list
     curation_report: dict
+    operational_validation: dict
     support_warnings: list
 
     def to_dict(self):
@@ -35,6 +38,7 @@ class SupportDiagnosticSnapshot:
             "preflight": self.preflight,
             "evidence_inventory": list(self.evidence_inventory),
             "curation_report": self.curation_report,
+            "operational_validation": self.operational_validation,
             "support_warnings": list(self.support_warnings),
         }
 
@@ -52,12 +56,23 @@ def build_support_diagnostics(
 ):
     preflight = build_preflight_report(settings, env=env)
     evidence = collect_evidence_inventory(preflight)
+    resolved_decision_paths = decision_paths or [settings.decision_audit_dir]
     curation = build_curation_report_from_files(
         summary_file=summary_file or settings.run_summary_file,
-        decision_paths=decision_paths or [settings.decision_audit_dir],
+        decision_paths=resolved_decision_paths,
         quarantine_file=quarantine_file or settings.quarantine_repository_file,
         release_audit_file=release_audit_file or settings.release_audit_file,
         limit=limit,
+    )
+    decision_records = read_decision_records(
+        resolved_decision_paths,
+        limit=limit or None,
+    )
+    decisions = build_decision_audit_report(decision_records)
+    operational_validation = build_operational_validation_report(
+        preflight,
+        decisions,
+        required_sources=preflight.enabled_sources,
     )
     snapshot = SupportDiagnosticSnapshot(
         schema_version=SCHEMA_VERSION,
@@ -66,6 +81,7 @@ def build_support_diagnostics(
         preflight=preflight.to_dict(),
         evidence_inventory=evidence,
         curation_report=curation.to_dict(),
+        operational_validation=operational_validation.to_dict(),
         support_warnings=build_support_warnings(preflight, evidence, curation),
     )
     if snapshot.redaction_profile == "none":
@@ -90,6 +106,7 @@ def snapshot_from_dict(data):
         preflight=data.get("preflight") or {},
         evidence_inventory=data.get("evidence_inventory") or [],
         curation_report=data.get("curation_report") or {},
+        operational_validation=data.get("operational_validation") or {},
         support_warnings=data.get("support_warnings") or [],
     )
 
@@ -280,6 +297,7 @@ def redact_snapshot_dict(snapshot):
     redact_preflight(redacted.get("preflight") or {}, known_paths)
     redact_evidence_inventory(redacted.get("evidence_inventory") or [], known_paths)
     redact_curation_report(redacted.get("curation_report") or {}, known_paths)
+    redact_text_fields(redacted.get("operational_validation") or {}, known_paths)
     redact_warning_messages(redacted.get("support_warnings") or [], known_paths)
     return redacted
 
@@ -404,6 +422,7 @@ def format_text_snapshot(snapshot):
     data = snapshot.to_dict()
     preflight = data["preflight"]
     curation = data["curation_report"]
+    validation = data.get("operational_validation") or {}
     summary = curation["executive_summary"]
     lines = [
         "NarrowCTI support diagnostics",
@@ -458,6 +477,23 @@ def format_text_snapshot(snapshot):
                 f"release_rate_pct={insight.get('release_rate_pct', 0)} "
                 f"reject_rate_pct={insight.get('reject_rate_pct', 0)}"
             )
+    if validation:
+        lines.append("operational_validation:")
+        lines.append(
+            "- "
+            f"overall_status={validation.get('overall_status', '')} "
+            + "counts="
+            + ",".join(
+                f"{status}:{count}"
+                for status, count in (validation.get("counts") or {}).items()
+            )
+        )
+        for item in validation.get("checks") or []:
+            lines.append(
+                "- "
+                f"{item.get('code')} status={item.get('status')}: "
+                f"{item.get('message')}"
+            )
     for item in data["evidence_inventory"]:
         lines.append(
             "- "
@@ -478,6 +514,7 @@ def format_html_snapshot(snapshot):
     preflight = data.get("preflight") or {}
     settings = preflight.get("settings") or {}
     curation = data.get("curation_report") or {}
+    validation = data.get("operational_validation") or {}
     summary = curation.get("executive_summary") or {}
     source_rows = "\n".join(
         html_table_row(
@@ -505,6 +542,16 @@ def format_html_snapshot(snapshot):
     )
     if not policy_rows:
         policy_rows = html_table_row("none", "", "", 0, 0, 0)
+    validation_rows = "\n".join(
+        html_table_row(
+            item.get("code"),
+            item.get("status"),
+            item.get("message"),
+        )
+        for item in validation.get("checks") or []
+    )
+    if not validation_rows:
+        validation_rows = html_table_row("none", "", "")
     evidence_rows = "\n".join(
         html_table_row(
             item.get("name"),
@@ -581,6 +628,14 @@ def format_html_snapshot(snapshot):
     </table>
   </section>
   <section>
+    <h2>Operational Validation</h2>
+    <p><strong>overall_status:</strong> <code>{validation_status}</code></p>
+    <table>
+      <tr><th>check</th><th>status</th><th>message</th></tr>
+      {validation_rows}
+    </table>
+  </section>
+  <section>
     <h2>Evidence Inventory</h2>
     <table>
       <tr><th>name</th><th>exists</th><th>kind</th><th>size bytes</th><th>path</th></tr>
@@ -619,6 +674,8 @@ def format_html_snapshot(snapshot):
         ),
         source_rows=source_rows,
         policy_rows=policy_rows,
+        validation_status=escape(validation.get("overall_status", "")),
+        validation_rows=validation_rows,
         evidence_rows=evidence_rows,
         warning_items=warning_items,
     )

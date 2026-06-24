@@ -119,6 +119,8 @@ The current snapshot contains:
   from the embedded curation report.
 - `policy_insights`: rendered text/HTML summary of source-level policy tuning
   signals from repeated release/reject patterns.
+- `operational_validation`: rendered text/HTML summary of the v0.8 operational
+  validation checklist, including pass/fail/warn/needs-evidence state.
 - `support_warnings`: deterministic support hints for blocking preflight
   errors, preflight warnings, missing evidence and empty curation evidence.
 - `redaction_profile`: selected redaction mode, currently `none` or `support`.
@@ -137,6 +139,7 @@ customer or support engineer answer:
 - Which source appears stable or needs attention from aggregate evidence?
 - Are release/reject patterns suggesting noisy source scope or strict
   quarantine thresholds?
+- Which v0.8 validation criteria have passed and which still need lab evidence?
 - Is graph promotion still held behind audit and validation controls?
 - Can this snapshot be shared safely with support using the `support` redaction
   profile?

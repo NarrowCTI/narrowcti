@@ -89,10 +89,16 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             "otx",
             data["curation_report"]["source_summaries"][0]["source_key"],
         )
+        self.assertEqual(
+            "needs-evidence",
+            data["operational_validation"]["overall_status"],
+        )
         self.assertIn("source_posture:", format_text_snapshot(snapshot))
         self.assertIn("policy_insights:", format_text_snapshot(snapshot))
+        self.assertIn("operational_validation:", format_text_snapshot(snapshot))
         self.assertIn("Source Posture", format_html_snapshot(snapshot))
         self.assertIn("Policy Insights", format_html_snapshot(snapshot))
+        self.assertIn("Operational Validation", format_html_snapshot(snapshot))
         json.dumps(data)
 
     def test_reports_missing_evidence_as_support_warning(self):
@@ -154,6 +160,9 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                 quarantine_repository_file=os.path.join(tmpdir, "quarantine.jsonl"),
                 release_audit_file=os.path.join(audit_dir, "releases.jsonl"),
                 license_customer_id="customer-a",
+                graph_export_mode="dry-run",
+                graph_dedup_state_file=os.path.join(tmpdir, "graph_dedup.json"),
+                opencti_graph_lookup=True,
             )
 
             snapshot = build_support_diagnostics(
@@ -173,6 +182,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertEqual([], data["curation_report"]["decisions"]["quarantined"])
         self.assertEqual([], data["curation_report"]["decisions"]["queries"])
         self.assertEqual(1, data["curation_report"]["executive_summary"]["run_count"])
+        self.assertIn("operational_validation", data)
         self.assertIn("redaction_profile=support", format_text_snapshot(snapshot))
         self.assertIn("NarrowCTI support diagnostics", format_html_snapshot(snapshot))
 
@@ -222,6 +232,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertIn("redaction_profile=support", snapshot_text)
         self.assertIn("Source Posture", snapshot_html)
         self.assertIn("Policy Insights", snapshot_html)
+        self.assertIn("Operational Validation", snapshot_html)
         self.assertIn("<!doctype html>", snapshot_html)
         self.assertIn("redaction_profile", snapshot_html)
 
