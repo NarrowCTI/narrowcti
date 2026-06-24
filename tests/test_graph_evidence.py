@@ -393,6 +393,51 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_builds_misp_sighting_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_sightings": [
+                    {
+                        "value": "evil.example",
+                        "sighting_id": "42",
+                        "date_sighting": "1782004900",
+                        "source": "SOC",
+                        "organization": "Example Org",
+                        "attribute_type": "domain",
+                        "attribute_uuid": "attribute-1",
+                        "source_field": "Attribute[0].Sighting[0]",
+                    }
+                ]
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["sighting"])
+        self.assertIn(
+            {
+                "entity_type": "sighting",
+                "value": "evil.example",
+                "stix_object_type": "sighting",
+                "relationship_type": "sighting-of",
+                "source_key": "misp:misp",
+                "source_name": "misp",
+                "source_field": "Attribute[0].Sighting[0]",
+                "confidence": 65,
+                "attributes": {
+                    "sighting_id": "42",
+                    "date_sighting": "1782004900",
+                    "source": "SOC",
+                    "organization": "Example Org",
+                    "attribute_type": "domain",
+                    "attribute_uuid": "attribute-1",
+                },
+            },
+            evidence["records"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

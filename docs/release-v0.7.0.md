@@ -113,6 +113,9 @@ detailed graph-enrichment design is tracked in
 - Added MISP EventReport audit extraction. Non-deleted EventReport entries now
   produce audit-only `event_report` / `note` graph evidence and candidates so
   analyst context can be preserved for future graph-aware STIX export.
+- Added MISP attribute sighting audit extraction. Attribute and object-attribute
+  sightings now produce audit-only `sighting` graph evidence and candidates
+  with observed value, date, source, organization and attribute context.
 
 ## Validation Target
 
@@ -125,6 +128,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 226 tests
+Ran 228 tests
 OK
 ```

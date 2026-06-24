@@ -67,6 +67,9 @@ def decision_metadata(
     misp_event_reports = extract_misp_event_reports(source)
     if misp_event_reports:
         metadata["misp_event_reports"] = misp_event_reports
+    misp_sightings = extract_misp_sightings(source)
+    if misp_sightings:
+        metadata["misp_sightings"] = misp_sightings
     if controls:
         metadata["guardrails"] = controls
     score_details = getattr(candidate, "score_details", None)
@@ -413,6 +416,119 @@ def deduplicate_misp_event_reports(reports):
             continue
         seen.add(key)
         deduplicated.append(report)
+    return deduplicated
+
+
+def extract_misp_sightings(event):
+    event = compact_mapping(event)
+    sightings = []
+    for source in misp_sighting_sources(event):
+        for index, sighting in enumerate(list_values(source.get("sightings"))):
+            normalized = normalize_misp_sighting(
+                sighting,
+                source,
+                f"{source.get('source_field')}.Sighting[{index}]",
+            )
+            if normalized:
+                sightings.append(normalized)
+    return deduplicate_misp_sightings(sightings)
+
+
+def misp_sighting_sources(event):
+    event = compact_mapping(event)
+    sources = []
+    for index, attribute in enumerate(list_values(event.get("Attribute"))):
+        attribute = compact_mapping(attribute)
+        if not attribute:
+            continue
+        sources.append(
+            {
+                "source_field": f"Attribute[{index}]",
+                "sightings": attribute.get("Sighting"),
+                "attribute_type": attribute.get("type"),
+                "attribute_category": attribute.get("category"),
+                "attribute_value": attribute.get("value"),
+                "attribute_uuid": attribute.get("uuid"),
+            }
+        )
+    for object_index, misp_object in enumerate(list_values(event.get("Object"))):
+        misp_object = compact_mapping(misp_object)
+        if not misp_object:
+            continue
+        for attribute_index, attribute in enumerate(
+            list_values(misp_object.get("Attribute"))
+        ):
+            attribute = compact_mapping(attribute)
+            if not attribute:
+                continue
+            sources.append(
+                {
+                    "source_field": (
+                        f"Object[{object_index}].Attribute[{attribute_index}]"
+                    ),
+                    "sightings": attribute.get("Sighting"),
+                    "attribute_type": attribute.get("type"),
+                    "attribute_category": attribute.get("category"),
+                    "attribute_value": attribute.get("value"),
+                    "attribute_uuid": attribute.get("uuid"),
+                    "object_name": misp_object.get("name"),
+                    "object_uuid": misp_object.get("uuid"),
+                }
+            )
+    return sources
+
+
+def normalize_misp_sighting(sighting, source, source_field):
+    sighting = compact_mapping(sighting)
+    source = compact_mapping(source)
+    if not sighting or is_truthy(sighting.get("deleted")):
+        return {}
+    observed_value = clean_text(
+        source.get("attribute_value")
+        or sighting.get("value")
+        or sighting.get("uuid")
+        or sighting.get("id")
+    )
+    if not observed_value:
+        return {}
+    organization = compact_mapping(
+        sighting.get("Organisation") or sighting.get("Organization")
+    )
+    return compact_mapping(
+        {
+            "value": observed_value,
+            "sighting_id": sighting.get("id"),
+            "sighting_uuid": sighting.get("uuid"),
+            "sighting_type": sighting.get("type"),
+            "date_sighting": sighting.get("date_sighting"),
+            "source": sighting.get("source"),
+            "organization": organization.get("name") or organization.get("uuid"),
+            "organization_uuid": organization.get("uuid"),
+            "attribute_type": source.get("attribute_type"),
+            "attribute_category": source.get("attribute_category"),
+            "attribute_uuid": source.get("attribute_uuid"),
+            "object_name": source.get("object_name"),
+            "object_uuid": source.get("object_uuid"),
+            "source_field": source_field,
+        }
+    )
+
+
+def deduplicate_misp_sightings(sightings):
+    seen = set()
+    deduplicated = []
+    for sighting in sightings:
+        key = (
+            str(sighting.get("sighting_uuid", "")).casefold(),
+            str(sighting.get("sighting_id", "")).casefold(),
+            str(sighting.get("value", "")).casefold(),
+            str(sighting.get("date_sighting", "")).casefold(),
+            str(sighting.get("source", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(sighting)
     return deduplicated
 
 

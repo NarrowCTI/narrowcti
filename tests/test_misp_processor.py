@@ -487,6 +487,62 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_misp_sightings(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-1",
+                "type": "domain",
+                "category": "Network activity",
+                "value": "evil.example",
+                "Sighting": [
+                    {
+                        "id": "42",
+                        "type": "0",
+                        "date_sighting": "1782004900",
+                        "source": "SOC",
+                        "Organisation": {
+                            "uuid": "org-1",
+                            "name": "Example Org",
+                        },
+                    },
+                    {
+                        "id": "43",
+                        "value": "ignored.example",
+                        "deleted": "1",
+                    },
+                ],
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(1, len(metadata["misp_sightings"]))
+        self.assertEqual("evil.example", metadata["misp_sightings"][0]["value"])
+        self.assertEqual("Example Org", metadata["misp_sightings"][0]["organization"])
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["sighting"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "sighting"
+                and record["stix_object_type"] == "sighting"
+                and record["attributes"]["organization"] == "Example Org"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["sighting"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "sighting"
+                and candidate["value"] == "evil.example"
+                and candidate["relationship_type"] == "sighting-of"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_builds_dry_run_graph_export_plan(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         prepared = SimpleNamespace(event=enriched_event(), score_details={})

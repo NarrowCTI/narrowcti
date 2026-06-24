@@ -27,6 +27,7 @@ ENTITY_TARGETS = {
     "attack_data_source": ("x-mitre-data-source", "detects"),
     "detection_guidance": ("note", "documents"),
     "event_report": ("note", "documents"),
+    "sighting": ("sighting", "sighting-of"),
 }
 
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
@@ -46,6 +47,7 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     records.extend(
         misp_event_report_evidence(metadata.get("misp_event_reports"), source_key)
     )
+    records.extend(misp_sighting_evidence(metadata.get("misp_sightings"), source_key))
 
     return {
         "version": GRAPH_EVIDENCE_VERSION,
@@ -436,6 +438,42 @@ def misp_event_report_evidence(event_reports, source_key=""):
             source_field=event_report.get("source_field") or "EventReport",
             confidence=70,
             display_name=title,
+            attributes=attributes,
+        )
+        if record:
+            records.append(record)
+    return records
+
+
+def misp_sighting_evidence(sightings, source_key=""):
+    records = []
+    for sighting in sightings or []:
+        sighting = compact_mapping(sighting)
+        if not sighting:
+            continue
+        attributes = compact_mapping(
+            {
+                "sighting_id": sighting.get("sighting_id"),
+                "sighting_uuid": sighting.get("sighting_uuid"),
+                "sighting_type": sighting.get("sighting_type"),
+                "date_sighting": sighting.get("date_sighting"),
+                "source": sighting.get("source"),
+                "organization": sighting.get("organization"),
+                "organization_uuid": sighting.get("organization_uuid"),
+                "attribute_type": sighting.get("attribute_type"),
+                "attribute_category": sighting.get("attribute_category"),
+                "attribute_uuid": sighting.get("attribute_uuid"),
+                "object_name": sighting.get("object_name"),
+                "object_uuid": sighting.get("object_uuid"),
+            }
+        )
+        record = evidence_record(
+            entity_type="sighting",
+            value=sighting.get("value"),
+            source_key=source_key,
+            source_name="misp",
+            source_field=sighting.get("source_field") or "Sighting",
+            confidence=65,
             attributes=attributes,
         )
         if record:
