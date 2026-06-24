@@ -6,6 +6,7 @@ import zipfile
 
 from gateway.diagnostics import (
     build_support_diagnostics,
+    format_html_snapshot,
     format_text_snapshot,
     normalize_redaction_profile,
     write_support_bundle,
@@ -155,6 +156,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertEqual([], data["curation_report"]["decisions"]["queries"])
         self.assertEqual(1, data["curation_report"]["executive_summary"]["run_count"])
         self.assertIn("redaction_profile=support", format_text_snapshot(snapshot))
+        self.assertIn("NarrowCTI support diagnostics", format_html_snapshot(snapshot))
 
     def test_rejects_unknown_redaction_profile(self):
         with self.assertRaises(ValueError):
@@ -183,10 +185,12 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                 manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
                 snapshot_data = archive.read("support-diagnostics.json").decode("utf-8")
                 snapshot_text = archive.read("support-diagnostics.txt").decode("utf-8")
+                snapshot_html = archive.read("support-diagnostics.html").decode("utf-8")
 
         self.assertEqual(
             [
                 "manifest.json",
+                "support-diagnostics.html",
                 "support-diagnostics.json",
                 "support-diagnostics.txt",
             ],
@@ -198,6 +202,8 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertNotIn(tmpdir, snapshot_data)
         self.assertIn("[redacted-path]", snapshot_data)
         self.assertIn("redaction_profile=support", snapshot_text)
+        self.assertIn("<!doctype html>", snapshot_html)
+        self.assertIn("redaction_profile", snapshot_html)
 
     def test_support_bundle_rejects_unredacted_snapshot(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -209,6 +215,23 @@ class GatewayDiagnosticsTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 write_support_bundle(snapshot, os.path.join(tmpdir, "support.zip"))
+
+    def test_html_snapshot_escapes_dynamic_content(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            snapshot = build_support_diagnostics(
+                make_settings(
+                    state_dir=tmpdir,
+                    enabled_sources=["otx", "<script>alert(1)</script>"],
+                ),
+                env={"OTX_DRY_RUN": "true"},
+                generated_at="2026-06-24T10:02:00Z",
+                redaction_profile="support",
+            )
+
+        html = format_html_snapshot(snapshot)
+
+        self.assertIn("&lt;script&gt;", html)
+        self.assertNotIn("<script>alert(1)</script>", html)
 
 
 if __name__ == "__main__":

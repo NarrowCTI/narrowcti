@@ -85,6 +85,7 @@ The bundle is a zip file containing only:
 
 - `support-diagnostics.json`
 - `support-diagnostics.txt`
+- `support-diagnostics.html`
 - `manifest.json`
 
 The command refuses to write a bundle unless the snapshot uses
@@ -126,5 +127,5 @@ curation, governance and explanation layer before OpenCTI graph promotion.
 
 ## Future Work
 
-- Add HTML/PDF diagnostic summaries after the report schema matures.
+- Add PDF diagnostic summaries after the report schema matures.
 - Add UI/API access once analyst review surfaces are introduced.

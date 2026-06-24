@@ -1,5 +1,6 @@
 import argparse
 import copy
+import html
 import json
 import os
 import zipfile
@@ -106,6 +107,7 @@ def write_support_bundle(snapshot, bundle_file):
 
     snapshot_json = json.dumps(snapshot.to_dict(), sort_keys=True, indent=2)
     snapshot_text = format_text_snapshot(snapshot)
+    snapshot_html = format_html_snapshot(snapshot)
     manifest = {
         "schema_version": "support-bundle/v0.8",
         "generated_at": snapshot.generated_at,
@@ -114,6 +116,7 @@ def write_support_bundle(snapshot, bundle_file):
         "files": [
             "support-diagnostics.json",
             "support-diagnostics.txt",
+            "support-diagnostics.html",
             "manifest.json",
         ],
         "raw_evidence_included": False,
@@ -125,6 +128,7 @@ def write_support_bundle(snapshot, bundle_file):
     with zipfile.ZipFile(bundle_file, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("support-diagnostics.json", snapshot_json + "\n")
         archive.writestr("support-diagnostics.txt", snapshot_text + "\n")
+        archive.writestr("support-diagnostics.html", snapshot_html + "\n")
         archive.writestr(
             "manifest.json",
             json.dumps(manifest, sort_keys=True, indent=2) + "\n",
@@ -433,6 +437,124 @@ def format_text_snapshot(snapshot):
         for item in data["support_warnings"]:
             lines.append(f"- {item['code']}: {item['message']}")
     return "\n".join(lines)
+
+
+def format_html_snapshot(snapshot):
+    data = snapshot.to_dict()
+    preflight = data.get("preflight") or {}
+    settings = preflight.get("settings") or {}
+    summary = (data.get("curation_report") or {}).get("executive_summary") or {}
+    evidence_rows = "\n".join(
+        html_table_row(
+            item.get("name"),
+            str(item.get("exists", False)).lower(),
+            item.get("kind") or item.get("expected_kind"),
+            item.get("size_bytes", 0),
+            item.get("path"),
+        )
+        for item in data.get("evidence_inventory") or []
+    )
+    warning_items = "\n".join(
+        "<li><strong>{}</strong>: {}</li>".format(
+            escape(item.get("code")),
+            escape(item.get("message")),
+        )
+        for item in data.get("support_warnings") or []
+    )
+    if not warning_items:
+        warning_items = "<li>none</li>"
+
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>NarrowCTI support diagnostics</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 24px; color: #202124; }}
+    h1, h2 {{ margin: 0 0 12px; }}
+    section {{ margin-top: 24px; }}
+    table {{ border-collapse: collapse; width: 100%; }}
+    th, td {{ border: 1px solid #d8dee4; padding: 6px 8px; text-align: left; }}
+    th {{ background: #f6f8fa; }}
+    code {{ background: #f6f8fa; padding: 1px 4px; }}
+  </style>
+</head>
+<body>
+  <h1>NarrowCTI support diagnostics</h1>
+  <section>
+    <h2>Snapshot</h2>
+    <p><strong>schema:</strong> <code>{schema}</code></p>
+    <p><strong>generated_at:</strong> <code>{generated_at}</code></p>
+    <p><strong>redaction_profile:</strong> <code>{redaction_profile}</code></p>
+    <p><strong>preflight_ok:</strong> <code>{preflight_ok}</code></p>
+    <p><strong>ingestion_mode:</strong> <code>{ingestion_mode}</code></p>
+    <p><strong>enabled_sources:</strong> <code>{enabled_sources}</code></p>
+    <p><strong>license_edition:</strong> <code>{license_edition}</code></p>
+  </section>
+  <section>
+    <h2>Curation Summary</h2>
+    <table>
+      <tr><th>runs</th><th>decision records</th><th>reviewed</th><th>accepted</th><th>filtered</th><th>errors</th><th>pending review</th></tr>
+      <tr><td>{runs}</td><td>{decision_records}</td><td>{reviewed}</td><td>{accepted}</td><td>{filtered}</td><td>{errors}</td><td>{pending_review}</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Graph Readiness</h2>
+    <table>
+      <tr><th>candidates</th><th>accepted</th><th>held</th><th>lookup matches</th><th>would-create objects</th><th>would-create relationships</th></tr>
+      <tr><td>{graph_candidates}</td><td>{graph_accepted}</td><td>{graph_held}</td><td>{lookup_matches}</td><td>{would_create_objects}</td><td>{would_create_relationships}</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Evidence Inventory</h2>
+    <table>
+      <tr><th>name</th><th>exists</th><th>kind</th><th>size bytes</th><th>path</th></tr>
+      {evidence_rows}
+    </table>
+  </section>
+  <section>
+    <h2>Support Warnings</h2>
+    <ul>
+      {warning_items}
+    </ul>
+  </section>
+</body>
+</html>""".format(
+        schema=escape(data.get("schema_version")),
+        generated_at=escape(data.get("generated_at")),
+        redaction_profile=escape(data.get("redaction_profile")),
+        preflight_ok=escape(str(preflight.get("ok", False)).lower()),
+        ingestion_mode=escape(preflight.get("ingestion_mode")),
+        enabled_sources=escape(",".join(preflight.get("enabled_sources") or [])),
+        license_edition=escape(settings.get("license_edition", "evaluation")),
+        runs=escape(summary.get("run_count", 0)),
+        decision_records=escape(summary.get("decision_record_count", 0)),
+        reviewed=escape(summary.get("reviewed_count", 0)),
+        accepted=escape(summary.get("accepted_count", 0)),
+        filtered=escape(summary.get("filtered_count", 0)),
+        errors=escape(summary.get("error_count", 0)),
+        pending_review=escape(summary.get("pending_review_count", 0)),
+        graph_candidates=escape(summary.get("graph_candidate_count", 0)),
+        graph_accepted=escape(summary.get("graph_accepted_count", 0)),
+        graph_held=escape(summary.get("graph_held_count", 0)),
+        lookup_matches=escape(summary.get("graph_lookup_match_count", 0)),
+        would_create_objects=escape(summary.get("graph_would_create_object_count", 0)),
+        would_create_relationships=escape(
+            summary.get("graph_would_create_relationship_count", 0)
+        ),
+        evidence_rows=evidence_rows,
+        warning_items=warning_items,
+    )
+
+
+def html_table_row(*values):
+    return "<tr>{}</tr>".format(
+        "".join(f"<td>{escape(value)}</td>" for value in values)
+    )
+
+
+def escape(value):
+    return html.escape("" if value is None else str(value), quote=True)
 
 
 def main():

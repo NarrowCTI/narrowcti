@@ -99,8 +99,8 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   model.
 - Added support-safe diagnostic bundle generation through
   `python -m gateway.diagnostics --redaction-profile support --bundle-file ...`.
-  The zip contains only redacted JSON/text snapshots and a manifest; raw
-  evidence files are deliberately excluded.
+  The zip contains only redacted JSON, text and HTML snapshots plus a manifest;
+  raw evidence files are deliberately excluded.
 
 ## Promotion Boundary
 
