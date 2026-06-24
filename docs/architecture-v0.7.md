@@ -330,6 +330,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Read-only graph known-key lookup | Implemented for OTX and MISP `graph_export_plan` metadata through optional `NARROWCTI_GRAPH_DEDUP_STATE_FILE`; this marks known local entity/relationship keys in the plan without marking anything exported. |
 | Decision audit metadata | Implemented for OTX and MISP processors. |
 | Decision audit graph export reporting | Implemented in `gateway.decisions` with graph export modes, statuses, actions, would-create counts, deduplicated counts, held reasons, source rollups and query rollups. |
+| Initial graph-aware STIX builder | Implemented in `exporters.stix_builder` for accepted graph candidates covering attack patterns, actors, intrusion sets, malware, tools, vulnerabilities, identities, locations, detection indicators and supported observables. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
 | Stable STIX export | Implemented as current `Report + Indicator` bundle. |
 
@@ -337,7 +338,7 @@ NarrowCTI applies it automatically and records the decision trail.
 
 | Area | Target |
 | --- | --- |
-| Graph-aware STIX builder | Create OpenCTI-compatible STIX objects and relationships from accepted graph candidates. |
+| Graph export runtime wiring | Connect the initial graph-aware STIX builder to controlled export mode after OpenCTI lab validation. |
 | Graph deduplication runtime promotion | Mark successfully exported graph objects in the local graph index and add OpenCTI entity/relationship lookup before promotion. |
 | Graph export dry-run reporting | Extend implemented decision-audit graph export rollups into OpenCTI lab comparison evidence and future enterprise CTI reports. |
 | MISP rich mapping | Expand official-compatible observable/indicator export, STIX relationship export semantics, STIX sighting export semantics, NVD vulnerability enrichment and richer taxonomy tags beyond the initial EventReport, sighting, object-reference, detection-rule, CVE and Galaxy/Cluster audit mapping. |

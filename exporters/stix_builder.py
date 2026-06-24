@@ -1,6 +1,26 @@
+from collections import Counter
 from datetime import datetime, timezone
 
-from stix2 import Bundle, Identity, Indicator, Report
+from stix2 import (
+    AttackPattern,
+    Bundle,
+    DomainName,
+    EmailAddress,
+    File,
+    IPv4Address,
+    IPv6Address,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Malware,
+    Relationship,
+    Report,
+    ThreatActor,
+    Tool,
+    URL,
+    Vulnerability,
+)
 
 
 def escape_pattern_value(value):
@@ -80,3 +100,288 @@ def build_report_bundle(
 
     bundle = Bundle(objects=[identity, *indicator_objects, report], allow_custom=True)
     return bundle, len(indicator_objects)
+
+
+def build_graph_report_bundle(
+    name,
+    description,
+    score,
+    graph_candidate_policy=None,
+    identity_name="NarrowCTI Gateway",
+):
+    now = datetime.now(timezone.utc)
+    identity = Identity(name=identity_name, identity_class="organization")
+    accepted_candidates = graph_accepted_candidates(graph_candidate_policy)
+
+    graph_objects = []
+    graph_object_ids = {}
+    skipped_candidates = []
+    object_counts = Counter()
+
+    for candidate in accepted_candidates:
+        object_key = graph_object_key(candidate)
+        if object_key in graph_object_ids:
+            continue
+        try:
+            stix_object = graph_candidate_to_stix_object(candidate, identity.id, now)
+        except Exception:
+            stix_object = None
+        if not stix_object:
+            skipped_candidates.append(candidate_summary(candidate))
+            continue
+        graph_object_ids[object_key] = stix_object.id
+        graph_objects.append(stix_object)
+        object_counts[stix_object.type] += 1
+
+    report_refs = [stix_object.id for stix_object in graph_objects] or [identity.id]
+    report = Report(
+        name=name,
+        description=description or "",
+        report_types=["threat-report"],
+        confidence=score,
+        created=now,
+        modified=now,
+        published=now,
+        created_by_ref=identity.id,
+        object_refs=report_refs,
+    )
+
+    graph_relationships = []
+    relationship_keys = set()
+    relationship_counts = Counter()
+    for candidate in accepted_candidates:
+        target_ref = graph_object_ids.get(graph_object_key(candidate))
+        if not target_ref:
+            continue
+        relationship_key = (report.id, target_ref)
+        if relationship_key in relationship_keys:
+            continue
+        relationship_keys.add(relationship_key)
+        relationship = Relationship(
+            source_ref=report.id,
+            relationship_type="related-to",
+            target_ref=target_ref,
+            confidence=clamp_stix_confidence(
+                candidate.get("relationship_confidence", candidate.get("confidence"))
+            ),
+            created_by_ref=identity.id,
+            custom_properties=graph_custom_properties(candidate),
+            allow_custom=True,
+        )
+        graph_relationships.append(relationship)
+        relationship_counts[candidate.get("relationship_type") or "related-to"] += 1
+
+    bundle = Bundle(
+        objects=[identity, *graph_objects, *graph_relationships, report],
+        allow_custom=True,
+    )
+    summary = {
+        "accepted_candidate_count": len(accepted_candidates),
+        "graph_object_count": len(graph_objects),
+        "graph_relationship_count": len(graph_relationships),
+        "skipped_candidate_count": len(skipped_candidates),
+        "object_counts": dict(sorted(object_counts.items())),
+        "relationship_counts": dict(sorted(relationship_counts.items())),
+        "skipped_candidates": skipped_candidates,
+    }
+    return bundle, summary
+
+
+def graph_accepted_candidates(graph_candidate_policy):
+    policy = graph_candidate_policy if isinstance(graph_candidate_policy, dict) else {}
+    return [
+        candidate
+        for candidate in policy.get("accepted") or []
+        if isinstance(candidate, dict)
+    ]
+
+
+def graph_candidate_to_stix_object(candidate, identity_id, now):
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    name = clean_string(candidate.get("name") or candidate.get("value"))
+    value = clean_string(candidate.get("value"))
+    attributes = (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
+    confidence = clamp_stix_confidence(candidate.get("confidence"))
+    custom_properties = graph_custom_properties(candidate)
+
+    if not name or not stix_object_type:
+        return None
+
+    common = {
+        "created_by_ref": identity_id,
+        "confidence": confidence,
+        "custom_properties": custom_properties,
+        "allow_custom": True,
+    }
+    if stix_object_type == "attack-pattern":
+        return AttackPattern(
+            name=name,
+            external_references=attack_pattern_references(value, attributes),
+            **common,
+        )
+    if stix_object_type == "threat-actor":
+        return ThreatActor(name=name, **common)
+    if stix_object_type == "intrusion-set":
+        return IntrusionSet(name=name, **common)
+    if stix_object_type == "malware":
+        return Malware(
+            name=name,
+            is_family=bool(attributes.get("is_family", True)),
+            **common,
+        )
+    if stix_object_type == "tool":
+        return Tool(name=name, **common)
+    if stix_object_type == "vulnerability":
+        return Vulnerability(
+            name=name,
+            external_references=vulnerability_references(value),
+            **common,
+        )
+    if stix_object_type == "identity":
+        return Identity(
+            name=name,
+            identity_class=clean_string(attributes.get("identity_class")) or "class",
+            **common,
+        )
+    if stix_object_type == "location":
+        return Location(name=name, country=value or name, **common)
+    if stix_object_type == "indicator":
+        pattern = clean_string(attributes.get("pattern")) or value
+        pattern_type = clean_string(attributes.get("pattern_type")) or "stix"
+        if not pattern:
+            return None
+        return Indicator(
+            name=name,
+            pattern=pattern,
+            pattern_type=pattern_type,
+            valid_from=now,
+            **common,
+        )
+    if stix_object_type == "observable":
+        return observable_candidate_to_stix(candidate, custom_properties)
+    return None
+
+
+def observable_candidate_to_stix(candidate, custom_properties):
+    attributes = (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
+    observable_type = clean_string(attributes.get("observable_type")).lower()
+    value = clean_string(candidate.get("value"))
+    hash_algorithm = clean_string(attributes.get("hash_algorithm")).upper()
+    if not value:
+        return None
+    if observable_type == "domain-name":
+        return DomainName(
+            value=value,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+    if observable_type == "url":
+        return URL(value=value, custom_properties=custom_properties, allow_custom=True)
+    if observable_type == "ipv4-addr":
+        return IPv4Address(
+            value=value,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+    if observable_type == "ipv6-addr":
+        return IPv6Address(
+            value=value,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+    if observable_type == "email-addr":
+        return EmailAddress(
+            value=value,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+    if observable_type == "file" and hash_algorithm:
+        return File(
+            hashes={normalize_hash_algorithm(hash_algorithm): value},
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+    return None
+
+
+def attack_pattern_references(value, attributes):
+    stix_id = clean_string(attributes.get("stix_id"))
+    references = []
+    if value.upper().startswith("T"):
+        references.append({"source_name": "mitre-attack", "external_id": value.upper()})
+    if stix_id:
+        references.append({"source_name": "mitre-attack", "url": stix_id})
+    return references or None
+
+
+def vulnerability_references(value):
+    normalized = value.upper()
+    if not normalized.startswith("CVE-"):
+        return None
+    return [{"source_name": "cve", "external_id": normalized}]
+
+
+def graph_custom_properties(candidate):
+    custom = {
+        "x_narrowcti_candidate_fingerprint": clean_string(candidate.get("fingerprint")),
+        "x_narrowcti_entity_type": clean_string(candidate.get("entity_type")),
+        "x_narrowcti_source_key": clean_string(candidate.get("source_key")),
+        "x_narrowcti_source_name": clean_string(candidate.get("source_name")),
+        "x_narrowcti_source_field": clean_string(candidate.get("source_field")),
+        "x_narrowcti_external_id": clean_string(candidate.get("external_id")),
+        "x_narrowcti_proposed_relationship_type": clean_string(
+            candidate.get("relationship_type")
+        ),
+    }
+    return {key: value for key, value in custom.items() if value}
+
+
+def graph_object_key(candidate):
+    return (
+        clean_string(candidate.get("stix_object_type")).lower(),
+        clean_string(candidate.get("value") or candidate.get("name")).lower(),
+    )
+
+
+def candidate_summary(candidate):
+    return {
+        key: value
+        for key, value in {
+            "entity_type": candidate.get("entity_type"),
+            "value": candidate.get("value"),
+            "stix_object_type": candidate.get("stix_object_type"),
+            "relationship_type": candidate.get("relationship_type"),
+        }.items()
+        if value
+    }
+
+
+def normalize_hash_algorithm(value):
+    aliases = {
+        "SHA1": "SHA-1",
+        "SHA-1": "SHA-1",
+        "SHA256": "SHA-256",
+        "SHA-256": "SHA-256",
+        "MD5": "MD5",
+    }
+    return aliases.get(value, value)
+
+
+def clamp_stix_confidence(value):
+    try:
+        confidence = int(value)
+    except (TypeError, ValueError):
+        confidence = 50
+    return max(0, min(100, confidence))
+
+
+def clean_string(value):
+    return " ".join(str(value or "").strip().split())

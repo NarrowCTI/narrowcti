@@ -81,7 +81,14 @@ detailed graph-enrichment design is tracked in
 - Added `core/graph_export_plan.py` so OTX and MISP decision/quarantine
   metadata can record graph export intent in `audit` or `dry-run` mode without
   creating OpenCTI graph objects yet. `export` mode is blocked until the
-  graph-aware STIX builder and OpenCTI validation are implemented.
+  graph export runtime wiring and OpenCTI validation are implemented.
+- Added the first graph-aware STIX builder foundation. Accepted graph
+  candidates can now be converted into OpenCTI-compatible STIX objects for
+  attack patterns, actors, intrusion sets, malware, tools, vulnerabilities,
+  identities, locations, detection indicators and supported observables, with
+  report references, audit-preserving relationships and skipped-candidate
+  summary evidence. The runtime still does not promote graph export
+  automatically.
 - Extended the decision audit report to aggregate `graph_export_plan` evidence
   by mode, status, action, held reason, source and query, including
   would-create object and relationship counts for graph export dry-runs.
@@ -140,6 +147,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 234 tests
+Ran 236 tests
 OK
 ```

@@ -506,7 +506,11 @@ v0.7 should not be considered complete until:
    references. Technique-level external references, kill chain phase
    attributes, platforms, data sources and detection guidance are now emitted
    as audit-only graph evidence/candidates.
-5. Build a graph-aware STIX exporter.
+5. Build a graph-aware STIX exporter. An initial STIX builder foundation now
+   converts accepted graph candidates into OpenCTI-compatible STIX objects,
+   report references and audit-preserving `related-to` relationships for the
+   first supported graph types. Runtime export wiring, OpenCTI import
+   validation and post-export graph deduplication remain pending.
 6. Add relationship confidence and provenance. Initial audit-only support is
    implemented in `core/graph_candidates.py`.
 7. Add enterprise graph filters. Initial audit-only candidate policy is
