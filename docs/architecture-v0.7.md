@@ -317,7 +317,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Area | Current state |
 | --- | --- |
 | OTX entity extraction | Implemented for actor, malware family, ATT&CK, CVE vulnerability, sector, country, author/source identity, TLP, references and tags. Pulse lifecycle, vote summary and indicator observation windows are captured as audit metadata. |
-| MISP metadata evidence | Implemented for collector, original source, tags, TLP markings, EventReport note evidence, attribute sighting evidence, CVE vulnerability evidence and common Galaxy/Cluster graph evidence. |
+| MISP metadata evidence | Implemented for collector, original source, tags, TLP markings, EventReport note evidence, attribute sighting evidence, object-reference relationship evidence, CVE vulnerability evidence and common Galaxy/Cluster graph evidence. |
 | MISP Galaxy audit mapping | Implemented for event, object and attribute galaxy clusters covering ATT&CK attack patterns, threat actors, intrusion sets, malware, tools, sectors, countries and regions as audit-only graph candidates. |
 | MITRE ATT&CK enrichment | Implemented for technique identity, external references, kill chain phases, platforms, data sources, detection guidance, domains and lifecycle fields. |
 | Graph evidence model | Implemented in `core/graph_evidence.py`. |
@@ -340,7 +340,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Graph-aware STIX builder | Create OpenCTI-compatible STIX objects and relationships from accepted graph candidates. |
 | Graph deduplication runtime promotion | Mark successfully exported graph objects in the local graph index and add OpenCTI entity/relationship lookup before promotion. |
 | Graph export dry-run reporting | Extend implemented decision-audit graph export rollups into OpenCTI lab comparison evidence and future enterprise CTI reports. |
-| MISP rich mapping | Expand object relations, STIX sighting export semantics, NVD vulnerability enrichment and richer taxonomy tags beyond the initial EventReport, sighting, CVE and Galaxy/Cluster audit mapping. |
+| MISP rich mapping | Expand STIX relationship export semantics, STIX sighting export semantics, NVD vulnerability enrichment and richer taxonomy tags beyond the initial EventReport, sighting, object-reference, CVE and Galaxy/Cluster audit mapping. |
 | OTX rich mapping | Expand YARA/observable coverage, NVD vulnerability enrichment, country normalization and relationship semantics beyond the current audit-only CVE, author, lifecycle, vote and indicator timing metadata. |
 | Contextual scoring | Use graph candidates as scoring signals without hiding base score decisions. |
 | Quarantine release for graph candidates | Allow reviewed graph candidates to be promoted later with release audit. |

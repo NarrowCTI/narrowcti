@@ -70,6 +70,9 @@ def decision_metadata(
     misp_sightings = extract_misp_sightings(source)
     if misp_sightings:
         metadata["misp_sightings"] = misp_sightings
+    misp_object_references = extract_misp_object_references(source)
+    if misp_object_references:
+        metadata["misp_object_references"] = misp_object_references
     if controls:
         metadata["guardrails"] = controls
     score_details = getattr(candidate, "score_details", None)
@@ -529,6 +532,84 @@ def deduplicate_misp_sightings(sightings):
             continue
         seen.add(key)
         deduplicated.append(sighting)
+    return deduplicated
+
+
+def extract_misp_object_references(event):
+    event = compact_mapping(event)
+    references = []
+    for object_index, misp_object in enumerate(list_values(event.get("Object"))):
+        misp_object = compact_mapping(misp_object)
+        if not misp_object:
+            continue
+        for reference_index, reference in enumerate(
+            list_values(misp_object.get("ObjectReference"))
+        ):
+            normalized = normalize_misp_object_reference(
+                reference,
+                misp_object,
+                f"Object[{object_index}].ObjectReference[{reference_index}]",
+            )
+            if normalized:
+                references.append(normalized)
+    return deduplicate_misp_object_references(references)
+
+
+def normalize_misp_object_reference(reference, misp_object, source_field):
+    reference = compact_mapping(reference)
+    misp_object = compact_mapping(misp_object)
+    if not reference or is_truthy(reference.get("deleted")):
+        return {}
+    source_uuid = clean_text(
+        reference.get("object_uuid") or misp_object.get("uuid")
+    )
+    target_uuid = clean_text(
+        reference.get("referenced_uuid")
+        or reference.get("referenced_object_uuid")
+        or reference.get("referenced_attribute_uuid")
+    )
+    relationship_type = normalize_misp_relationship_type(
+        reference.get("relationship_type")
+    )
+    if not source_uuid or not target_uuid:
+        return {}
+    value = f"{source_uuid} {relationship_type} {target_uuid}"
+    return compact_mapping(
+        {
+            "value": value,
+            "relationship_type": relationship_type,
+            "reference_id": reference.get("id"),
+            "reference_uuid": reference.get("uuid"),
+            "source_uuid": source_uuid,
+            "source_name": misp_object.get("name"),
+            "source_meta_category": misp_object.get("meta-category"),
+            "target_uuid": target_uuid,
+            "target_type": reference.get("referenced_type"),
+            "comment": reference.get("comment"),
+            "source_field": source_field,
+        }
+    )
+
+
+def normalize_misp_relationship_type(value):
+    normalized = clean_text(value).casefold().replace(" ", "-")
+    return normalized or "related-to"
+
+
+def deduplicate_misp_object_references(references):
+    seen = set()
+    deduplicated = []
+    for reference in references:
+        key = (
+            str(reference.get("reference_uuid", "")).casefold(),
+            str(reference.get("source_uuid", "")).casefold(),
+            str(reference.get("relationship_type", "")).casefold(),
+            str(reference.get("target_uuid", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(reference)
     return deduplicated
 
 

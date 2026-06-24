@@ -28,6 +28,7 @@ ENTITY_TARGETS = {
     "detection_guidance": ("note", "documents"),
     "event_report": ("note", "documents"),
     "sighting": ("sighting", "sighting-of"),
+    "object_reference": ("relationship", "related-to"),
 }
 
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
@@ -48,6 +49,12 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
         misp_event_report_evidence(metadata.get("misp_event_reports"), source_key)
     )
     records.extend(misp_sighting_evidence(metadata.get("misp_sightings"), source_key))
+    records.extend(
+        misp_object_reference_evidence(
+            metadata.get("misp_object_references"),
+            source_key,
+        )
+    )
 
     return {
         "version": GRAPH_EVIDENCE_VERSION,
@@ -481,6 +488,39 @@ def misp_sighting_evidence(sightings, source_key=""):
     return records
 
 
+def misp_object_reference_evidence(object_references, source_key=""):
+    records = []
+    for object_reference in object_references or []:
+        object_reference = compact_mapping(object_reference)
+        if not object_reference:
+            continue
+        attributes = compact_mapping(
+            {
+                "reference_id": object_reference.get("reference_id"),
+                "reference_uuid": object_reference.get("reference_uuid"),
+                "source_uuid": object_reference.get("source_uuid"),
+                "source_name": object_reference.get("source_name"),
+                "source_meta_category": object_reference.get("source_meta_category"),
+                "target_uuid": object_reference.get("target_uuid"),
+                "target_type": object_reference.get("target_type"),
+                "comment": object_reference.get("comment"),
+            }
+        )
+        record = evidence_record(
+            entity_type="object_reference",
+            value=object_reference.get("value"),
+            source_key=source_key,
+            source_name="misp",
+            source_field=object_reference.get("source_field") or "ObjectReference",
+            confidence=60,
+            attributes=attributes,
+            relationship_type=object_reference.get("relationship_type"),
+        )
+        if record:
+            records.append(record)
+    return records
+
+
 def evidence_record(
     entity_type,
     value,
@@ -490,16 +530,20 @@ def evidence_record(
     confidence=50,
     display_name="",
     attributes=None,
+    stix_object_type="",
+    relationship_type="",
 ):
     entity_type = clean_string(entity_type)
     value = clean_string(value)
     if not entity_type or not value:
         return {}
 
-    stix_object_type, relationship_type = ENTITY_TARGETS.get(
+    default_stix_object_type, default_relationship_type = ENTITY_TARGETS.get(
         entity_type,
         ("x-narrowcti-evidence", "related-to"),
     )
+    stix_object_type = clean_string(stix_object_type) or default_stix_object_type
+    relationship_type = clean_string(relationship_type) or default_relationship_type
     record = {
         "entity_type": entity_type,
         "value": value,

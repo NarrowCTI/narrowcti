@@ -543,6 +543,62 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_misp_object_references(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Object"] = [
+            {
+                "uuid": "object-1",
+                "name": "malware",
+                "meta-category": "misc",
+                "ObjectReference": [
+                    {
+                        "uuid": "reference-1",
+                        "relationship_type": "uses",
+                        "referenced_uuid": "object-2",
+                        "referenced_type": "object",
+                        "comment": "Malware uses this infrastructure.",
+                    },
+                    {
+                        "uuid": "reference-deleted",
+                        "relationship_type": "uses",
+                        "referenced_uuid": "object-3",
+                        "deleted": "1",
+                    },
+                ],
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(1, len(metadata["misp_object_references"]))
+        self.assertEqual(
+            "object-1 uses object-2",
+            metadata["misp_object_references"][0]["value"],
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["object_reference"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "object_reference"
+                and record["stix_object_type"] == "relationship"
+                and record["relationship_type"] == "uses"
+                and record["attributes"]["target_uuid"] == "object-2"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["object_reference"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "object_reference"
+                and candidate["relationship_type"] == "uses"
+                and candidate["stix_object_type"] == "relationship"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_builds_dry_run_graph_export_plan(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         prepared = SimpleNamespace(event=enriched_event(), score_details={})

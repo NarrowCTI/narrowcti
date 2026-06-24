@@ -116,6 +116,9 @@ detailed graph-enrichment design is tracked in
 - Added MISP attribute sighting audit extraction. Attribute and object-attribute
   sightings now produce audit-only `sighting` graph evidence and candidates
   with observed value, date, source, organization and attribute context.
+- Added MISP object-reference audit extraction. Object references now produce
+  audit-only `object_reference` / `relationship` graph evidence and candidates
+  with source object, target UUID, MISP relationship type and comment context.
 
 ## Validation Target
 
@@ -128,6 +131,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 228 tests
+Ran 230 tests
 OK
 ```

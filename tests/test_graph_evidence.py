@@ -438,6 +438,52 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_builds_misp_object_reference_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_object_references": [
+                    {
+                        "value": "object-1 uses object-2",
+                        "relationship_type": "uses",
+                        "reference_uuid": "reference-1",
+                        "source_uuid": "object-1",
+                        "source_name": "malware",
+                        "target_uuid": "object-2",
+                        "target_type": "object",
+                        "comment": "Malware uses this infrastructure.",
+                        "source_field": "Object[0].ObjectReference[0]",
+                    }
+                ]
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["object_reference"])
+        self.assertIn(
+            {
+                "entity_type": "object_reference",
+                "value": "object-1 uses object-2",
+                "stix_object_type": "relationship",
+                "relationship_type": "uses",
+                "source_key": "misp:misp",
+                "source_name": "misp",
+                "source_field": "Object[0].ObjectReference[0]",
+                "confidence": 60,
+                "attributes": {
+                    "reference_uuid": "reference-1",
+                    "source_uuid": "object-1",
+                    "source_name": "malware",
+                    "target_uuid": "object-2",
+                    "target_type": "object",
+                    "comment": "Malware uses this infrastructure.",
+                },
+            },
+            evidence["records"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
