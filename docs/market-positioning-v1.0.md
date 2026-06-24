@@ -133,6 +133,24 @@ release history, artifact correlation and graph-quality metrics into an
 analyst-facing CTI curation report suitable for leadership, CTI operations and
 platform governance.
 
+## Post-v1.0 ML-Assisted Direction
+
+Machine learning is a valid future differentiator, but it should not be part
+of the v1.0 release claim unless implemented, validated and governed.
+
+The correct post-v1.0 position is:
+
+```text
+ML-assisted curation, not ML-driven ingestion.
+```
+
+ML should help NarrowCTI suggest aliases, related entities, likely
+relationships, semantic duplicates, report clusters and priority rankings. It
+must not silently promote graph knowledge into OpenCTI without policy,
+provenance, confidence, audit and optional analyst review.
+
+The post-v1.0 ML roadmap is tracked in `docs/post-v1-ml-roadmap.md`.
+
 ## Relationship To OpenCTI And MISP
 
 OpenCTI remains the graph, knowledge, investigation and visualization platform.

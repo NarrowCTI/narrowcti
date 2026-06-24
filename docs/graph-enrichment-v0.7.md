@@ -2,8 +2,9 @@
 
 ## Purpose
 
-v0.7 must move NarrowCTI from curated `Report + Indicator` export into rich,
-validated STIX/OpenCTI graph enrichment.
+v0.7 moves NarrowCTI from curated `Report + Indicator` export toward rich,
+validated STIX/OpenCTI graph enrichment through audit-first evidence, policy and
+preview foundations.
 
 The goal is not only to send more objects to OpenCTI. The goal is to make
 OpenCTI more useful as an intelligence graph: analysts should pivot from a
@@ -68,6 +69,27 @@ For every supported source, NarrowCTI should document and test:
 - Which confidence value should be applied by default.
 - Which validation rule prevents bad graph enrichment.
 
+OTX and MITRE ATT&CK metadata coverage is tracked in
+`docs/metadata-validation-v0.7.md`. MISP official connector compatibility is
+tracked in `docs/misp-official-connector-mapping-v0.7.md`, and OTX official
+connector compatibility is tracked in
+`docs/otx-official-connector-mapping-v0.7.md`. Contextual scoring references
+from the OpenCTI scoring-calculator connector are tracked in
+`docs/contextual-scoring-reference-v0.7.md`.
+
+The source ingestion architecture for direct, MISP collector and hybrid modes
+is tracked in `docs/source-ingestion-modes-v0.7.md`.
+
+The consolidated v0.7 architecture, including runtime boundaries, current
+contracts, policy surface and graph-export promotion path, is tracked in
+`docs/architecture-v0.7.md`.
+
+The MITRE ATT&CK curation architecture is tracked in
+`docs/mitre-curation-architecture-v0.7.md`.
+
+Operational dry-run validation evidence from the local OpenCTI/MISP lab is
+tracked in `docs/operational-validation-v0.7.md`.
+
 ## Initial Source Focus
 
 ### OTX
@@ -76,20 +98,51 @@ OTX v0.6 already extracts useful entity hints. v0.7 should validate and map:
 
 | OTX evidence | STIX/OpenCTI target | Notes |
 | --- | --- | --- |
-| `indicators` | `indicator`, SCOs, future `observed-data`/`sighting` | Keep current indicator hygiene and deduplication. |
+| `indicators` | `indicator`, SCOs, future `observed-data`/`sighting` | Supported OTX indicator values become audit-only observable candidates before future SCO export. |
 | `adversary` | `threat-actor` or `intrusion-set` | Requires confidence and alias handling. |
 | `malware_families` | `malware` or `tool` | Should not be treated as high-confidence attribution by itself. |
 | `attack_ids` | `attack-pattern` | Resolve through local MITRE cache and include tactics. |
+| `cve`, `cves`, `vulnerabilities`, CVE indicators/tags | `vulnerability` | CVEs become audit-only graph candidates before future NVD enrichment and relationship export. |
+| YARA indicators | `indicator` | YARA indicator content becomes audit-only detection-rule evidence before future pattern-aware STIX indicator export. |
 | `industries` | sector `identity` or OpenCTI sector entity | Treat as victimology evidence. |
 | `targeted_countries` | `location` | Treat as victimology/geography evidence. |
+| `target_countries` | `location` | Alias accepted from normalized OTX schemas. |
+| `author_name`, `author`, `creator`, `owner`, `submitter` | source `identity` | Preserved as author/source evidence, not automatic attribution. |
+| `created`, `modified`, `revision`, `public`, votes | report metadata | Captured in audit metadata for future report-compatible STIX output. |
+| indicator `first_seen` / `last_seen` | observation timing metadata | Captured as an observation window for future indicator/observable enrichment. |
 | `references` | `external_references` | Preserve evidence trail. |
 | TLP fields/tags | `marking-definition` / OpenCTI marking | Must preserve sharing constraints. |
 | `tags` | labels plus extraction candidates | Tags are weak unless mapped to a known taxonomy. |
 
+The code-level baseline from `opencti/connector-alienvault:6.9.4` shows that
+direct OTX import can create reports, observables, indicators, Intrusion Sets,
+Malware, Attack Patterns, sector identities, country locations, vulnerabilities
+and relationships such as `uses`, `targets`, `based-on` and `indicates`.
+NarrowCTI should keep its custom OTX runtime and curation controls, but the
+official connector is the source-specific compatibility baseline for how OTX
+evidence should eventually land in the OpenCTI graph.
+
+OTX YARA audit extraction is implemented for pulse indicators with type
+`YARA`. NarrowCTI normalizes rule type, pattern type, raw rule content,
+indicator id and observation timing into `detection_rules`, then emits
+audit-only `detection_rule` / `indicator` graph evidence and candidates. This
+preserves detection engineering content for future pattern-aware STIX indicator
+export without changing the current stable report/indicator exporter.
+
+OTX observable audit extraction is implemented for supported indicator types
+such as domain, hostname, URL, email, IPv4, IPv6 and common file hashes.
+NarrowCTI normalizes the target SCO type, original indicator type, hash
+algorithm and observation timing into `observables`, then emits audit-only
+`observable` graph evidence and candidates. This gives the future graph-aware
+STIX builder a clean observable plan without changing current export behavior.
+
 ### MISP
 
 MISP must receive a broader validation pass than v0.6. The NarrowCTI MISP
-adapter should inspect representative raw MISP events and map:
+adapter should inspect representative raw MISP events and map them against the
+official OpenCTI MISP connector behavior. The official connector is the
+compatibility baseline for how curated MISP evidence should land in the OpenCTI
+graph, while NarrowCTI remains responsible for curation before graph promotion.
 
 | MISP evidence | STIX/OpenCTI target | Notes |
 | --- | --- | --- |
@@ -101,18 +154,94 @@ adapter should inspect representative raw MISP events and map:
 | Threat actor galaxies | `intrusion-set` or `threat-actor` | Requires aliases and confidence. |
 | Malware/tool galaxies | `malware` or `tool` | Useful for Arsenal enrichment. |
 | Sector/geography tags | sector `identity`, `location` | Victimology context. |
-| CVE attributes/tags | `vulnerability` | Can connect reports, malware and exploited technology. |
+| CVE attributes/tags | `vulnerability` | CVEs from tags, event text, attributes and object attributes become audit-only vulnerability candidates before future NVD enrichment and relationship export. |
+| EventReport / analyst notes | `note` | EventReport content becomes note evidence, candidates and safe in-memory STIX preview objects before controlled OpenCTI export. |
+| Attribute sightings | `sighting` | Attribute sightings become audit-only sighting evidence and candidates before future STIX sighting relationship export. |
+| Object references | `relationship` | MISP object references become audit-only relationship evidence and candidates before future STIX relationship export. |
+| Detection rule attributes | `indicator` | YARA, Sigma, Snort, Suricata and PCRE attributes become audit-only detection-rule candidates before future pattern-aware STIX indicator export. |
 | Organization/sharing/TLP | markings and provenance | Do not lose handling constraints. |
+
+The code-level baseline from `opencti/connector-misp:6.9.4` shows that direct
+MISP import can create reports, indicators, observables, notes, labels,
+markings, Intrusion Sets, Malware, Tools, Attack Patterns, sectors, countries,
+regions and relationships such as `based-on`, `indicates`, `related-to` and
+`uses`. NarrowCTI should reproduce those graph semantics only when evidence
+passes its scoring, policy, deduplication, guardrail and confidence checks.
+
+The first MISP Galaxy audit layer is now implemented. NarrowCTI extracts
+event-level, object-level and attribute-level `Galaxy` / `GalaxyCluster`
+metadata into `misp_galaxies`, then converts known clusters into audit-only
+graph evidence and candidates for ATT&CK attack patterns, threat actors,
+intrusion sets, malware, tools, sectors, countries and regions. This does not
+yet create OpenCTI graph entities; it gives the future graph-aware STIX builder
+clean, policy-filterable evidence with provenance.
+
+MISP Galaxy victimology metadata is also extracted when present on known
+clusters. `meta.targeted-sector`, `meta.targeted-country` and
+`meta.targeted-region` aliases become audit-only target sector, country or
+region candidates with parent cluster provenance. This is important for threat
+actor galaxies such as Packrat, where the actor is the cluster and target
+sectors are carried as cluster metadata rather than standalone sector
+clusters.
+
+MISP CVE audit extraction is also implemented. NarrowCTI extracts CVE ids from
+MISP tags, event titles/descriptions, attributes and object attributes into
+`misp_vulnerabilities`, then emits audit-only `vulnerability` graph evidence
+and candidates. Galaxy clusters that represent vulnerabilities are also mapped
+to `vulnerability` when a CVE id is present.
+
+MISP EventReport audit extraction is implemented as the first note-oriented
+mapping layer. NarrowCTI ignores deleted reports, normalizes report title,
+content, UUID and timestamps into `misp_event_reports`, then emits audit-only
+`event_report` / `note` graph evidence and candidates. The graph-aware STIX
+preview now converts accepted note candidates into STIX `note` objects with
+content, abstract and provenance-preserving custom properties. This preserves
+analyst context without bypassing curation, deduplication or OpenCTI
+validation.
+
+MISP attribute sighting audit extraction is implemented for event attributes
+and object attributes. NarrowCTI normalizes observed value, sighting id/type,
+date, source, organization and attribute/object context into `misp_sightings`,
+then emits audit-only `sighting` graph evidence and candidates. This preserves
+corroboration evidence for future OpenCTI sighting relationships without
+creating graph edges before relationship policy and validation are complete.
+
+MISP object-reference audit extraction is implemented for object-level
+`ObjectReference` entries. NarrowCTI normalizes source object UUID, target UUID,
+MISP relationship type, reference UUID, comment and object context into
+`misp_object_references`, then emits audit-only `object_reference` /
+`relationship` graph evidence and candidates. This records relationship intent
+for future graph-aware STIX export without creating OpenCTI edges before
+relationship validation is complete.
+
+MISP detection-rule audit extraction is implemented for `yara`, `sigma`,
+`snort`, `suricata` and `pcre` attributes. NarrowCTI normalizes rule type,
+pattern type, raw pattern content, attribute UUID, tags and object context into
+`misp_detection_rules`, then emits audit-only `detection_rule` / `indicator`
+graph evidence and candidates. This preserves detection engineering content
+for future pattern-aware STIX indicator export without mixing it with normal
+IoC indicators too early.
 
 ### MITRE ATT&CK
 
-MITRE remains reference data, not an IoC feed. v0.7 should use the local cache
-to create or enrich:
+MITRE ATT&CK is reference context for curation, not a competing direct import
+path for NarrowCTI. The official MITRE connector should populate OpenCTI with
+the canonical ATT&CK baseline, while NarrowCTI uses MITRE ids found in OTX, MISP
+or future feeds to enrich, score, filter, deduplicate, audit and preview curated
+graph output.
+
+The current v0.7 implementation closes the enrichment and preview side of this
+model. Canonical OpenCTI lookup and real graph promotion remain the next
+controlled promotion gate.
+
+v0.7 uses the local cache to create or enrich:
 
 | ATT&CK evidence | STIX/OpenCTI target |
 | --- | --- |
 | Technique/sub-technique | `attack-pattern` |
 | Tactic | `kill_chain_phases` and tactic filters |
+| Platforms and domains | filtering and detection context |
+| Data sources and detection text | hunting and detection guidance |
 | Group | `intrusion-set` |
 | Software | `malware` or `tool` |
 | Campaign | `campaign` |
@@ -141,6 +270,29 @@ v0.7 should introduce a richer STIX builder that can create and link:
 - `note` for weak or analyst-review context
 - `relationship`
 - future `sighting`
+
+## Ingestion Modes
+
+NarrowCTI must support environments with and without MISP. The target product
+architecture supports three modes:
+
+```text
+Direct source mode:
+  External source -> NarrowCTI -> OpenCTI
+
+MISP collector mode:
+  External sources -> MISP -> NarrowCTI -> OpenCTI
+
+Hybrid mode:
+  Some sources -> MISP -> NarrowCTI
+  Other sources -> NarrowCTI directly
+  NarrowCTI -> OpenCTI
+```
+
+Official OpenCTI connectors should be used as mapping references for graph
+compatibility, not as replacements for NarrowCTI's curation path. Future
+direct sources should enter through source adapters and produce graph evidence
+and graph candidates before STIX export.
 
 ## Relationship Model
 
@@ -173,6 +325,36 @@ campaign
 When evidence is weak, use lower confidence, `related-to`, labels or notes
 instead of strong attribution.
 
+The current v0.7 STIX preview follows the same rule. It keeps the Report as
+the evidence container through `object_refs`, creates report-context
+`related-to` relationships when no safe source entity is known and creates
+semantic relationships only when the source is anchored by trusted metadata.
+For example, a MISP threat-actor Galaxy cluster with
+`meta.targeted-sector=["Activists"]` can produce:
+
+```text
+Packrat -> targets -> Activists
+```
+
+An OTX pulse with exactly one adversary can also preview actor-anchored
+relationships from curated fields:
+
+```text
+APT Example -> uses -> LummaC2
+APT Example -> uses -> T1059
+APT Example -> targets -> Finance
+APT Example -> targets -> BR
+```
+
+If an OTX pulse names multiple adversaries, NarrowCTI keeps those candidates in
+report context until a stronger source anchor exists.
+
+This is the difference between simply importing source metadata and preparing
+OpenCTI to show operational intelligence: actor, arsenal, ATT&CK techniques,
+kill chain context, victimology, infrastructure and vulnerabilities must be
+linked with provenance so the analyst can pivot, validate and hunt from the
+graph.
+
 ## Confidence And Provenance
 
 Every graph candidate should carry:
@@ -189,6 +371,12 @@ Every graph candidate should carry:
 - References.
 - Created/modified/published timestamps when available.
 
+The current audit-only `core/graph_candidates.py` model now carries explicit
+`relationship_confidence` and normalized `provenance` derived from source
+evidence. This gives the future graph-aware STIX builder enough context to
+explain why an object or relationship would be created before the gateway
+promotes it into OpenCTI.
+
 Confidence should be policy-driven. Example:
 
 | Evidence type | Default confidence |
@@ -199,6 +387,32 @@ Confidence should be policy-driven. Example:
 | OTX free-text `adversary` field | Medium/low until corroborated |
 | Generic tag containing actor/malware-like text | Low |
 | Analyst-released quarantine item | Configurable boost with audit evidence |
+
+## Contextual Scoring
+
+v0.7 should treat graph evidence as a future scoring input, not only as export
+metadata. The OpenCTI `scoring-calculator` internal enrichment connector
+validates a useful pattern: indicator scores can be increased by high-value
+context across Threat, Toolbox, Location, Sector, TTP and Author categories.
+
+NarrowCTI should adapt that pattern before ingestion. The current base score in
+`core/scoring.py` should remain responsible for source confidence, query
+relevance, indicator volume and recency. A contextual scoring layer should then
+apply a bounded relative impact based on graph evidence:
+
+```text
+contextual_score = base_score + ((100 - base_score) * impact_ratio)
+```
+
+The first implementation now runs in dry-run/audit metadata as
+`contextual_scoring`. It records base score, suggested contextual score, score
+delta, category counts, impact ratio, cap status and every adjustment with
+category, priority, matched value, source field and impact. It does not change
+the current ingest/quarantine decision and must not bypass TLP, quarantine,
+confidence or provenance policy.
+
+The detailed design and backlog are tracked in
+`docs/contextual-scoring-reference-v0.7.md`.
 
 ## Enterprise Filters
 
@@ -217,12 +431,63 @@ NARROWCTI_ALLOWED_VULNERABILITIES=
 NARROWCTI_MIN_ENTITY_CONFIDENCE=50
 NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE=60
 NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE=true
+NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=attack_pattern,malware,threat_actor
+NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=attack-pattern,malware,threat-actor
 NARROWCTI_GRAPH_EXPORT_MODE=dry-run
 ```
 
 These filters must not hide decisions. If intelligence is blocked because it is
 outside actor, arsenal, tactic, sector or geography policy, the decision audit
 must explain that clearly.
+
+The first implemented v0.7 filter layer is audit-only. OTX and MISP metadata
+now include `graph_candidate_policy` with accepted and held candidates, held
+reason counts, entity confidence checks, relationship confidence checks,
+optional provenance requirements and allowed graph entity/STIX object filters.
+This does not block source ingestion or export yet; it makes the future graph
+promotion decision visible and testable first.
+
+OTX and MISP metadata also include `graph_export_plan`. This turns the
+candidate policy result into an operator-visible plan. In `audit` mode the plan
+records candidates as audit-only. In `dry-run` mode it records accepted
+candidates as `would_create` actions and counts the graph objects and
+relationships that would be attempted later. `export` mode is explicitly
+blocked until the graph-aware STIX builder, graph deduplication and OpenCTI
+validation are complete.
+
+`graph_export_plan` now also performs intra-plan graph hygiene. It creates
+deterministic entity and relationship deduplication keys, marks duplicate
+entities and duplicate relationships, and reduces dry-run would-create object
+or relationship counts when duplicate graph intent appears inside the same
+decision record. This is not yet OpenCTI-side deduplication; it is the first
+safe dedup layer before OpenCTI graph lookup and real export.
+
+The local graph deduplication state model is now available in
+`core/graph_deduplication.py`. It can persist graph entity keys, graph
+relationship keys, candidate summaries, sources and sightings. OTX and MISP
+can now read this index through `NARROWCTI_GRAPH_DEDUP_STATE_FILE` when building
+`graph_export_plan`; matching local known keys are reported as deduplicated in
+the decision metadata. This lookup is read-only in v0.7. It should not mark
+dry-run plans as exported knowledge, and it does not replace future
+OpenCTI-side entity/relationship lookup.
+
+The decision audit report now aggregates `graph_export_plan` evidence across
+decision audit records. Operators can see graph export modes, statuses,
+actions, accepted and held candidate counts, would-create object/relationship
+counts, deduplicated entity/relationship counts, held reasons and source/query
+rollups without reading raw JSONL.
+
+The decision audit report also aggregates `contextual_scoring` evidence across
+decision records. Operators can inspect score delta totals, average contextual
+delta, max contextual score, capped records, category counts and source/query
+rollups while the contextual score remains dry-run evidence only.
+
+The decision audit report also aggregates `graph_stix_preview` evidence. This
+lets operators compare bundle object counts, graph object counts, graph
+relationship counts, semantic relationship counts, report-context relationship
+counts, skipped candidates, STIX object types, actual relationship types and
+proposed relationship types across sources and queries before graph export is
+enabled.
 
 ## Graph Hygiene
 
@@ -289,17 +554,71 @@ v0.7 should not be considered complete until:
 
 ## Implementation Backlog
 
-1. Create a shared graph candidate model.
-2. Expand OTX metadata mapping into graph candidates.
-3. Add MISP metadata and galaxy extraction fixtures.
+1. Create a shared graph candidate model. Initial audit-only foundation added
+   in `core/graph_evidence.py`; normalized graph candidates are now represented
+   in `core/graph_candidates.py` and attached to OTX/MISP audit metadata.
+2. Expand OTX metadata mapping into graph candidates. Initial OTX and MITRE
+   evidence mapping is now present as `graph_evidence` and `graph_candidates`
+   in decision/quarantine metadata, including observable candidates, CVE
+   vulnerability candidates, YARA detection-rule candidates and OTX author
+   identity evidence. Pulse lifecycle, vote summary and indicator observation
+   windows are captured as audit metadata for future report/indicator/STIX SCO
+   output. The official AlienVault connector mapping has been validated as the
+   source-specific graph baseline.
+3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
+   original-source, TLP, tag, EventReport note, attribute sighting,
+   object-reference relationship, detection-rule, CVE vulnerability and common
+   Galaxy/Cluster evidence mapping is present as `graph_evidence` and
+   `graph_candidates`; MISP official connector compatibility has been validated
+   as the graph baseline; deeper official-compatible observable/indicator
+   export, STIX relationship export semantics, STIX sighting export semantics
+   and NVD vulnerability enrichment remain pending.
 4. Extend MITRE cache usage beyond technique names into reusable graph
-   references.
-5. Build a graph-aware STIX exporter.
-6. Add relationship confidence and provenance.
-7. Add enterprise graph filters.
-8. Add graph deduplication and optional OpenCTI graph lookup.
-9. Add graph export dry-run reporting.
+   references. Technique-level external references, kill chain phase
+   attributes, platforms, data sources and detection guidance are now emitted
+   as audit-only graph evidence/candidates.
+5. Build a graph-aware STIX exporter. An initial STIX builder foundation now
+   converts accepted graph candidates into OpenCTI-compatible STIX objects,
+   report references, STIX `note` preview objects, report-context
+   `related-to` relationships and trusted semantic relationship previews when
+   a candidate carries a safe source anchor. OTX and MISP decisions now include
+   a safe in-memory
+   `graph_stix_preview` summary so operators can see bundle object counts,
+   graph object counts, actual relationship counts, proposed relationship
+   counts, semantic relationship counts and skipped candidates before export
+   is enabled. OpenCTI import validation, controlled export mode and
+   post-export graph deduplication remain pending.
+6. Add relationship confidence and provenance. Initial audit-only support is
+   implemented in `core/graph_candidates.py`.
+7. Add enterprise graph filters. Initial audit-only candidate policy is
+   implemented for entity confidence, relationship confidence, provenance and
+   allowed graph entity/STIX object types.
+8. Add graph deduplication and optional OpenCTI graph lookup. Initial
+   intra-plan entity and relationship deduplication is implemented in
+   `graph_export_plan`; local persisted graph deduplication state is available
+   in `core/graph_deduplication.py`; OTX and MISP can read local known graph
+   keys during export planning; export-time marking and OpenCTI lookup remain
+   pending.
+9. Add graph export dry-run reporting. Initial per-decision
+   `graph_export_plan` metadata, `graph_stix_preview` metadata and
+   decision-audit aggregate rollups are implemented for audit/dry-run
+   visibility; OpenCTI comparison evidence remains pending.
 10. Validate in OpenCTI with OTX and MISP samples.
+11. Compare a direct official MISP connector import with a NarrowCTI-curated
+    import for the same event and document object/relationship differences.
+12. Add contextual scoring dry-run evidence using graph categories inspired by
+    the OpenCTI scoring-calculator reference. Initial OTX/MISP
+    `contextual_scoring` metadata and decision-audit rollups are implemented;
+    category impact configuration and decision-path application remain pending.
+13. Document and preflight the active ingestion mode: direct, MISP collector or
+    hybrid.
+
+Current local dry-run validation evidence is documented in
+`docs/operational-validation-v0.7.md`. It confirms graph metadata visibility
+for one live OTX sample, one large MISP guardrail sample and one MISP Galaxy
+threat-actor/victimology sample, while keeping OpenCTI graph promotion blocked
+until richer arsenal, ATT&CK, geography and OpenCTI-side deduplication
+validation is complete.
 
 ## Decision
 

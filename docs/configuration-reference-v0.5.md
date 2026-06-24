@@ -269,6 +269,10 @@ first.
 The report also aggregates source query summaries so operators can see which
 queries produced reviewed, handled, accepted, filtered or error outcomes.
 
+Gateway preflight also emits `ingestion_mode` so operators can confirm whether
+the current source posture is `direct`, `misp-collector` or `hybrid` before a
+run.
+
 The decision audit report reads source decision audit JSONL files, including
 files derived from `NARROWCTI_DECISION_AUDIT_DIR`, and summarizes actions,
 reasons and source counts. It helps operators understand the practical effect
@@ -281,6 +285,23 @@ ingest, filter, quarantine and skip behavior instead of raw feed volume. The
 same report lists recent quarantine candidates for review, and
 `--quarantine-limit <count>` controls how many held candidates are displayed;
 `0` includes all quarantined records in the selected audit input.
+In v0.7, when source decision metadata includes `graph_export_plan`, the
+decision audit report also aggregates graph export planning evidence by mode,
+status, action, held reason, source and query. This shows how many graph
+objects and relationships would be attempted in dry-run mode before graph-aware
+STIX export is enabled.
+
+When source decision metadata includes `contextual_scoring`, the decision audit
+report also aggregates contextual score delta, category counts, capped records
+and source/query rollups. In v0.7 this remains dry-run evidence and is not
+applied to ingest/quarantine decisions.
+
+When source decision metadata includes `graph_stix_preview`, the report
+aggregates bundle object counts, graph object counts, graph relationship
+counts, semantic relationship counts, report-context relationship counts,
+skipped candidates, STIX object/relationship type rollups and proposed
+relationship type rollups. This helps validate graph-aware STIX readiness
+before OpenCTI import is enabled.
 
 The local artifact deduplication index can also be summarized:
 

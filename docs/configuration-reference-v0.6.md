@@ -49,6 +49,35 @@ MITRE ATT&CK is treated as reference data in v0.6, not as an ingest feed. The
 cache enriches source evidence so later releases can build graph objects and
 enterprise filters with provenance.
 
+## v0.7 Graph Candidate Controls
+
+These controls expose the graph curation surface used by the v0.7 audit-first
+graph enrichment layer.
+
+| Variable | Purpose |
+| --- | --- |
+| `NARROWCTI_MIN_ENTITY_CONFIDENCE` | Minimum entity confidence required for a graph candidate to be accepted by graph candidate policy. Lower-confidence candidates are held in audit metadata. |
+| `NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE` | Minimum relationship confidence required for a graph candidate relationship to be accepted by graph candidate policy. |
+| `NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE` | Requires graph candidates to carry source provenance before they are accepted by graph candidate policy. |
+| `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES` | Optional allow-list for NarrowCTI graph entity types such as `attack_pattern`, `malware`, `threat_actor`, `source_identity` or `marking`. Empty allows all current candidate types. |
+| `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Optional allow-list for STIX/OpenCTI object types such as `attack-pattern`, `malware`, `threat-actor`, `identity` or `marking-definition`. Empty allows all current candidate object types. |
+| `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export planning mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` is currently blocked until graph-aware STIX export is implemented. |
+| `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a read-only known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. v0.7 does not mark plans as exported from this setting. |
+
+Current graph controls do not create new OpenCTI graph objects. They make the
+future graph promotion decision visible in decision audit and quarantine
+metadata through `graph_candidate_policy` and `graph_export_plan`. The
+decision audit report also aggregates graph export plan evidence so operators
+can review modes, statuses, actions, would-create counts, held reasons and
+source/query rollups without reading raw JSONL records. v0.7 graph export
+plans also include local intra-plan entity and relationship deduplication
+evidence. This reduces duplicate dry-run intent inside one decision record, but
+does not replace future OpenCTI graph lookup. When
+`NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured, OTX and MISP can read known
+local graph keys and mark matching candidates as deduplicated in the plan. This
+is a read-only planning aid in v0.7; real graph export and post-export marking
+remain pending.
+
 ## Source Examples
 
 Gateway-level review repository shared by enabled sources:
@@ -69,6 +98,18 @@ NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION=true
 NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION=true
 NARROWCTI_MITRE_CACHE_FILE=/app/state/mitre_attack_cache.json
 NARROWCTI_MITRE_STIX_URL=https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json
+```
+
+Graph candidate audit posture:
+
+```env
+NARROWCTI_MIN_ENTITY_CONFIDENCE=50
+NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE=60
+NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE=true
+NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=attack_pattern,malware,threat_actor,source_identity,marking
+NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=attack-pattern,malware,threat-actor,identity,marking-definition
+NARROWCTI_GRAPH_EXPORT_MODE=dry-run
+NARROWCTI_GRAPH_DEDUP_STATE_FILE=/app/state/graph_dedup.json
 ```
 
 MISP-specific review posture:

@@ -30,6 +30,13 @@ class MISPSettingsTests(unittest.TestCase):
             "ENABLE_QUARANTINE": "false",
             "NARROWCTI_ALLOWED_TLP": "white, green",
             "NARROWCTI_ALLOWED_INDICATOR_TYPES": "domain, ipv4",
+            "NARROWCTI_MIN_ENTITY_CONFIDENCE": "55",
+            "NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE": "65",
+            "NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE": "true",
+            "NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES": "source_identity, marking",
+            "NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES": "identity, marking-definition",
+            "NARROWCTI_GRAPH_EXPORT_MODE": "dry-run",
+            "NARROWCTI_GRAPH_DEDUP_STATE_FILE": "/app/state/graph_dedup.json",
             "MISP_STATE_FILE": "/app/state/misp.json",
             "MISP_DECISION_AUDIT_FILE": "/app/state/misp-decisions.jsonl",
         }
@@ -60,6 +67,22 @@ class MISPSettingsTests(unittest.TestCase):
         self.assertFalse(settings.enable_quarantine)
         self.assertEqual(["white", "green"], settings.allowed_tlp)
         self.assertEqual(["domain", "ipv4"], settings.allowed_indicator_types)
+        self.assertEqual(55, settings.graph_min_entity_confidence)
+        self.assertEqual(65, settings.graph_min_relationship_confidence)
+        self.assertTrue(settings.graph_require_relationship_provenance)
+        self.assertEqual(
+            ["source_identity", "marking"],
+            settings.graph_allowed_entity_types,
+        )
+        self.assertEqual(
+            ["identity", "marking-definition"],
+            settings.graph_allowed_stix_object_types,
+        )
+        self.assertEqual("dry-run", settings.graph_export_mode)
+        self.assertEqual(
+            "/app/state/graph_dedup.json",
+            settings.graph_dedup_state_file,
+        )
         self.assertEqual("/app/state/misp.json", settings.state_file)
         self.assertEqual("/app/state/misp-decisions.jsonl", settings.decision_audit_file)
 

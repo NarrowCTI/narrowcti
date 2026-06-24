@@ -141,9 +141,20 @@ Expected outcomes:
 
 ## v0.7.0 - Graph Enrichment And Enterprise Filters
 
+Status: closed as the graph enrichment and enterprise-filter foundation.
+
 Detailed design:
 
+- `docs/architecture-v0.7.md`
 - `docs/graph-enrichment-v0.7.md`
+- `docs/mitre-curation-architecture-v0.7.md`
+- `docs/contextual-scoring-reference-v0.7.md`
+- `docs/source-ingestion-modes-v0.7.md`
+- `docs/operational-validation-v0.7.md`
+
+Development notes:
+
+- `docs/release-v0.7.0.md`
 
 Purpose:
 
@@ -154,6 +165,10 @@ Purpose:
   geography, artifact criticality and graph state.
 - Add confidence and provenance controls for relationships inferred from source
   fields.
+- Add contextual scoring design based on graph evidence for threat, arsenal,
+  sector, geography, TTP and author relevance.
+- Document direct source, MISP collector and hybrid ingestion modes so
+  NarrowCTI can be deployed with or without MISP.
 - Expand graph hygiene from indicator deduplication into relationship and entity
   quality controls.
 
@@ -164,9 +179,16 @@ Expected outcomes:
 - Analysts can filter intake by monitored actors, sectors, tactics, malware
   families and infrastructure classes.
 - Relationship evidence is auditable before it becomes graph knowledge.
+- Score decisions can account for high-value graph context without hiding the
+  base score or bypassing policy.
+- The product architecture clearly supports organizations that use MISP and
+  organizations that need NarrowCTI to ingest direct sources into OpenCTI.
 - Source metadata validation is broad enough for OTX, MISP and MITRE evidence
   to enrich OpenCTI graph views with high-signal CTI context instead of only
   reports and indicators.
+- The MITRE architecture is explicit: the official MITRE connector should own
+  canonical ATT&CK loading in OpenCTI, while NarrowCTI uses MITRE as curation
+  context for OTX, MISP and future feeds.
 
 ## v0.8.0 - Analyst Review And Product Operations
 
@@ -176,6 +198,8 @@ Purpose:
 - Prepare the reporting model for analyst-facing CTI curation reports.
 - Provide a cleaner installation and upgrade path.
 - Add deployment templates.
+- Add controlled graph promotion with OpenCTI entity/relationship lookup,
+  including canonical ATT&CK lookup by external id or STIX id.
 - Harden configuration defaults.
 - Document customer installation procedures.
 - Add technical license enforcement and feature gates by feed, environment or
@@ -196,7 +220,7 @@ Purpose:
 - Ship a stable, documented and installable product.
 - Finalize commercial license and support terms.
 - Ship the enterprise curation engine with quarantine release, graph enrichment,
-  explainable policy and measurable graph-quality outcomes.
+  contextual scoring, explainable policy and measurable graph-quality outcomes.
 - Provide enterprise CTI reporting that explains what was ingested, what was
   filtered, how policy was applied, which sources contributed, and how graph
   quality improved.
@@ -213,3 +237,30 @@ Expected outcomes:
   evidence, decision audit, quarantine/release history and graph hygiene
   metrics.
 - Release messaging is aligned with `docs/market-positioning-v1.0.md`.
+
+## Post-v1.0 - ML-Assisted Curation
+
+Detailed design:
+
+- `docs/post-v1-ml-roadmap.md`
+
+Purpose:
+
+- Add an optional ML-assisted curation layer after the deterministic v1.0
+  engine is stable.
+- Use ML to suggest aliases, related entities, relationship candidates,
+  priority ranking, semantic deduplication and weak-signal enrichment.
+- Learn from decision audit, quarantine release, rejection and graph-quality
+  outcomes without bypassing policy controls.
+- Keep ML suggestions explainable, versioned, source-scoped, auditable and
+  reversible.
+
+Expected outcomes:
+
+- Analysts get better prioritization and entity/relationship suggestions.
+- OpenCTI receives richer graph context only after NarrowCTI policy and
+  governance checks.
+- ML improves scale and discovery while deterministic curation remains the
+  source of truth for safe promotion.
+- NarrowCTI evolves from an explainable curation gateway into an adaptive CTI
+  curation gateway without becoming a black-box ingestion engine.
