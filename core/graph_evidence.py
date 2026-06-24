@@ -23,6 +23,7 @@ ENTITY_TARGETS = {
     "tag": ("label", "labels"),
     "marking": ("marking-definition", "marked-with"),
     "external_reference": ("external-reference", "references"),
+    "detection_rule": ("indicator", "detects"),
     "attack_platform": ("x-narrowcti-attack-platform", "applies-to"),
     "attack_data_source": ("x-mitre-data-source", "detects"),
     "detection_guidance": ("note", "documents"),
@@ -54,6 +55,9 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
             metadata.get("misp_object_references"),
             source_key,
         )
+    )
+    records.extend(
+        misp_detection_rule_evidence(metadata.get("misp_detection_rules"), source_key)
     )
 
     return {
@@ -515,6 +519,38 @@ def misp_object_reference_evidence(object_references, source_key=""):
             confidence=60,
             attributes=attributes,
             relationship_type=object_reference.get("relationship_type"),
+        )
+        if record:
+            records.append(record)
+    return records
+
+
+def misp_detection_rule_evidence(detection_rules, source_key=""):
+    records = []
+    for detection_rule in detection_rules or []:
+        detection_rule = compact_mapping(detection_rule)
+        if not detection_rule:
+            continue
+        attributes = compact_mapping(
+            {
+                "rule_type": detection_rule.get("rule_type"),
+                "pattern_type": detection_rule.get("pattern_type"),
+                "pattern": detection_rule.get("pattern"),
+                "attribute_category": detection_rule.get("attribute_category"),
+                "attribute_uuid": detection_rule.get("attribute_uuid"),
+                "object_name": detection_rule.get("object_name"),
+                "object_uuid": detection_rule.get("object_uuid"),
+                "tags": detection_rule.get("tags"),
+            }
+        )
+        record = evidence_record(
+            entity_type="detection_rule",
+            value=detection_rule.get("value"),
+            source_key=source_key,
+            source_name="misp",
+            source_field=detection_rule.get("source_field") or "Attribute",
+            confidence=70,
+            attributes=attributes,
         )
         if record:
             records.append(record)

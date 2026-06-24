@@ -599,6 +599,56 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_misp_detection_rules(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-rule-1",
+                "type": "sigma",
+                "category": "Payload delivery",
+                "value": "title: Suspicious PowerShell",
+                "comment": "Suspicious PowerShell",
+                "Tag": [{"name": "tlp:green"}],
+            },
+            {
+                "uuid": "attribute-rule-deleted",
+                "type": "yara",
+                "value": "rule DeletedRule { condition: true }",
+                "deleted": "1",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(1, len(metadata["misp_detection_rules"]))
+        self.assertEqual("sigma", metadata["misp_detection_rules"][0]["rule_type"])
+        self.assertEqual(
+            "title: Suspicious PowerShell",
+            metadata["misp_detection_rules"][0]["pattern"],
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["detection_rule"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "detection_rule"
+                and record["stix_object_type"] == "indicator"
+                and record["attributes"]["pattern_type"] == "sigma"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["detection_rule"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["relationship_type"] == "detects"
+                and candidate["attributes"]["pattern"] == "title: Suspicious PowerShell"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_builds_dry_run_graph_export_plan(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         prepared = SimpleNamespace(event=enriched_event(), score_details={})

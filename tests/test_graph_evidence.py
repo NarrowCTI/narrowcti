@@ -484,6 +484,51 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_builds_misp_detection_rule_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_detection_rules": [
+                    {
+                        "value": "Suspicious PowerShell",
+                        "rule_type": "sigma",
+                        "pattern_type": "sigma",
+                        "pattern": "title: Suspicious PowerShell",
+                        "attribute_category": "Payload delivery",
+                        "attribute_uuid": "attribute-rule-1",
+                        "tags": ["tlp:green"],
+                        "source_field": "Attribute[0]",
+                    }
+                ]
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["detection_rule"])
+        self.assertIn(
+            {
+                "entity_type": "detection_rule",
+                "value": "Suspicious PowerShell",
+                "stix_object_type": "indicator",
+                "relationship_type": "detects",
+                "source_key": "misp:misp",
+                "source_name": "misp",
+                "source_field": "Attribute[0]",
+                "confidence": 70,
+                "attributes": {
+                    "rule_type": "sigma",
+                    "pattern_type": "sigma",
+                    "pattern": "title: Suspicious PowerShell",
+                    "attribute_category": "Payload delivery",
+                    "attribute_uuid": "attribute-rule-1",
+                    "tags": ["tlp:green"],
+                },
+            },
+            evidence["records"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

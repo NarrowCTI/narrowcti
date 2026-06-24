@@ -25,6 +25,7 @@ from connectors.misp.models import MISPEventCandidate
 
 
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
+DETECTION_RULE_TYPES = {"yara", "sigma", "snort", "suricata", "pcre"}
 
 
 def age_label(age):
@@ -73,6 +74,9 @@ def decision_metadata(
     misp_object_references = extract_misp_object_references(source)
     if misp_object_references:
         metadata["misp_object_references"] = misp_object_references
+    misp_detection_rules = extract_misp_detection_rules(source)
+    if misp_detection_rules:
+        metadata["misp_detection_rules"] = misp_detection_rules
     if controls:
         metadata["guardrails"] = controls
     score_details = getattr(candidate, "score_details", None)
@@ -610,6 +614,99 @@ def deduplicate_misp_object_references(references):
             continue
         seen.add(key)
         deduplicated.append(reference)
+    return deduplicated
+
+
+def extract_misp_detection_rules(event):
+    event = compact_mapping(event)
+    rules = []
+    for source in misp_detection_rule_sources(event):
+        normalized = normalize_misp_detection_rule(source)
+        if normalized:
+            rules.append(normalized)
+    return deduplicate_misp_detection_rules(rules)
+
+
+def misp_detection_rule_sources(event):
+    event = compact_mapping(event)
+    sources = []
+    for index, attribute in enumerate(list_values(event.get("Attribute"))):
+        attribute = compact_mapping(attribute)
+        if not attribute:
+            continue
+        sources.append(
+            {
+                "source_field": f"Attribute[{index}]",
+                "attribute": attribute,
+                "object": {},
+            }
+        )
+    for object_index, misp_object in enumerate(list_values(event.get("Object"))):
+        misp_object = compact_mapping(misp_object)
+        if not misp_object:
+            continue
+        for attribute_index, attribute in enumerate(
+            list_values(misp_object.get("Attribute"))
+        ):
+            attribute = compact_mapping(attribute)
+            if not attribute:
+                continue
+            sources.append(
+                {
+                    "source_field": (
+                        f"Object[{object_index}].Attribute[{attribute_index}]"
+                    ),
+                    "attribute": attribute,
+                    "object": misp_object,
+                }
+            )
+    return sources
+
+
+def normalize_misp_detection_rule(source):
+    source = compact_mapping(source)
+    attribute = compact_mapping(source.get("attribute"))
+    misp_object = compact_mapping(source.get("object"))
+    rule_type = clean_text(attribute.get("type")).casefold()
+    rule_content = clean_text(attribute.get("value"))
+    if rule_type not in DETECTION_RULE_TYPES:
+        return {}
+    if not rule_content or is_truthy(attribute.get("deleted")):
+        return {}
+    title = clean_text(
+        attribute.get("comment")
+        or attribute.get("uuid")
+        or f"{rule_type} detection rule"
+    )
+    return compact_mapping(
+        {
+            "value": title,
+            "rule_type": rule_type,
+            "pattern_type": rule_type,
+            "pattern": rule_content,
+            "attribute_category": attribute.get("category"),
+            "attribute_uuid": attribute.get("uuid"),
+            "object_name": misp_object.get("name"),
+            "object_uuid": misp_object.get("uuid"),
+            "tags": [tag_name for tag_name in attribute_tags(attribute) if tag_name],
+            "source_field": source.get("source_field"),
+        }
+    )
+
+
+def deduplicate_misp_detection_rules(rules):
+    seen = set()
+    deduplicated = []
+    for rule in rules:
+        key = (
+            str(rule.get("attribute_uuid", "")).casefold(),
+            str(rule.get("rule_type", "")).casefold(),
+            str(rule.get("pattern", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(rule)
     return deduplicated
 
 

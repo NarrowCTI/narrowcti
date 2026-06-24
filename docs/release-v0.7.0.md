@@ -119,6 +119,9 @@ detailed graph-enrichment design is tracked in
 - Added MISP object-reference audit extraction. Object references now produce
   audit-only `object_reference` / `relationship` graph evidence and candidates
   with source object, target UUID, MISP relationship type and comment context.
+- Added MISP detection-rule audit extraction. YARA, Sigma, Snort, Suricata and
+  PCRE attributes now produce audit-only `detection_rule` / `indicator`
+  candidates with pattern type, raw pattern, tags and attribute context.
 
 ## Validation Target
 
@@ -131,6 +134,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 230 tests
+Ran 232 tests
 OK
 ```

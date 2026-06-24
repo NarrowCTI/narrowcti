@@ -136,6 +136,7 @@ graph, while NarrowCTI remains responsible for curation before graph promotion.
 | EventReport / analyst notes | `note` | EventReport content becomes audit-only note evidence and candidates before future STIX note export. |
 | Attribute sightings | `sighting` | Attribute sightings become audit-only sighting evidence and candidates before future STIX sighting relationship export. |
 | Object references | `relationship` | MISP object references become audit-only relationship evidence and candidates before future STIX relationship export. |
+| Detection rule attributes | `indicator` | YARA, Sigma, Snort, Suricata and PCRE attributes become audit-only detection-rule candidates before future pattern-aware STIX indicator export. |
 | Organization/sharing/TLP | markings and provenance | Do not lose handling constraints. |
 
 The code-level baseline from `opencti/connector-misp:6.9.4` shows that direct
@@ -180,6 +181,14 @@ MISP relationship type, reference UUID, comment and object context into
 `relationship` graph evidence and candidates. This records relationship intent
 for future graph-aware STIX export without creating OpenCTI edges before
 relationship validation is complete.
+
+MISP detection-rule audit extraction is implemented for `yara`, `sigma`,
+`snort`, `suricata` and `pcre` attributes. NarrowCTI normalizes rule type,
+pattern type, raw pattern content, attribute UUID, tags and object context into
+`misp_detection_rules`, then emits audit-only `detection_rule` / `indicator`
+graph evidence and candidates. This preserves detection engineering content
+for future pattern-aware STIX indicator export without mixing it with normal
+IoC indicators too early.
 
 ### MITRE ATT&CK
 
@@ -471,11 +480,12 @@ v0.7 should not be considered complete until:
    been validated as the source-specific graph baseline.
 3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
    original-source, TLP, tag, EventReport note, attribute sighting,
-   object-reference relationship, CVE vulnerability and common Galaxy/Cluster
-   evidence mapping is present as `graph_evidence` and `graph_candidates`;
-   MISP official connector compatibility has been validated as the graph
-   baseline; deeper STIX relationship export semantics, STIX sighting export
-   semantics and NVD vulnerability enrichment remain pending.
+   object-reference relationship, detection-rule, CVE vulnerability and common
+   Galaxy/Cluster evidence mapping is present as `graph_evidence` and
+   `graph_candidates`; MISP official connector compatibility has been validated
+   as the graph baseline; deeper official-compatible observable/indicator
+   export, STIX relationship export semantics, STIX sighting export semantics
+   and NVD vulnerability enrichment remain pending.
 4. Extend MITRE cache usage beyond technique names into reusable graph
    references. Technique-level external references, kill chain phase
    attributes, platforms, data sources and detection guidance are now emitted
