@@ -122,7 +122,9 @@ The current report contains:
   release/reject audit patterns, with top analyst reasons attached to explain
   what drove the signal and decision score distributions attached to show
   whether the source is repeatedly producing low-score or higher-confidence
-  reviewed candidates.
+  reviewed candidates. Graph evidence density is also attached so analysts can
+  see whether a source is producing graph context, OpenCTI canonical matches and
+  relationship-ready evidence.
 - `recommendations`: deterministic next actions based on evidence gaps and
   risk signals.
 
@@ -179,11 +181,16 @@ the low-score volume from the lower bands. This makes tuning evidence more
 explicit without changing the scoring algorithm or automatically rewriting
 policy.
 
+The graph evidence summary includes source-level candidate count, accepted and
+held graph candidates, OpenCTI lookup matches, would-create object/relationship
+counts and density ratios. It is evidence for review and promotion readiness,
+not an automatic export trigger.
+
 ## Future Work
 
 - Add PDF export once the report schema stabilizes.
 - Add richer per-actor, per-sector and per-ATT&CK narratives.
-- Add deeper policy tuning insights using source context quality, repeated
-  quarantine reasons and graph evidence density.
+- Add deeper policy tuning insights using source context quality and repeated
+  quarantine reasons.
 - Add graph-quality deltas after controlled graph promotion is enabled.
 - Add additional customer-safe redaction profiles for external report delivery.

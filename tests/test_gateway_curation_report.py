@@ -272,6 +272,7 @@ class GatewayCurationReportTests(unittest.TestCase):
                                 "misp",
                                 "quarantine",
                                 "low score",
+                                metadata=graph_metadata(),
                                 score=score,
                             )
                         )
@@ -297,6 +298,10 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual(100.0, insight["reject_rate_pct"])
         self.assertEqual(50.0, insight["score_summary"]["average_score"])
         self.assertEqual(2, insight["low_score_count"])
+        self.assertEqual(6, insight["graph_evidence"]["candidate_count"])
+        self.assertEqual(2.0, insight["graph_evidence"]["candidate_density"])
+        self.assertEqual(3, insight["graph_evidence"]["lookup_match_count"])
+        self.assertEqual(100.0, insight["graph_evidence"]["lookup_match_rate_pct"])
         self.assertEqual(
             [
                 {
@@ -313,6 +318,7 @@ class GatewayCurationReportTests(unittest.TestCase):
             insight["top_reasons"],
         )
         self.assertIn("scores=records=3 min=30 max=80 average=50.0 low=2", text)
+        self.assertIn("graph=candidates=6 density=2.0", text)
         self.assertIn("top_reasons=reject:Out of scope=2", text)
         self.assertIn("Out of scope", html)
         self.assertIn("review-source-policy-insights", recommendation_codes)

@@ -349,6 +349,55 @@ def empty_score_summary():
     }
 
 
+def empty_graph_evidence_summary():
+    return {
+        "decision_records": 0,
+        "candidate_count": 0,
+        "accepted_count": 0,
+        "held_count": 0,
+        "lookup_match_count": 0,
+        "would_create_object_count": 0,
+        "would_create_relationship_count": 0,
+        "stix_object_count": 0,
+        "stix_relationship_count": 0,
+        "candidate_density": 0.0,
+        "relationship_density": 0.0,
+        "lookup_match_rate_pct": 0.0,
+    }
+
+
+def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
+    graph_export = graph_export or {}
+    graph_preview = graph_preview or {}
+    decision_records = int(decision_records or 0)
+    candidate_count = int(graph_export.get("candidate_count", 0) or 0)
+    accepted_count = int(graph_export.get("accepted_count", 0) or 0)
+    lookup_match_count = int(graph_export.get("lookup_match_count", 0) or 0)
+    would_create_relationship_count = int(
+        graph_export.get("would_create_relationship_count", 0) or 0
+    )
+    stix_relationship_count = int(graph_preview.get("graph_relationship_count", 0) or 0)
+    return {
+        "decision_records": decision_records,
+        "candidate_count": candidate_count,
+        "accepted_count": accepted_count,
+        "held_count": int(graph_export.get("held_count", 0) or 0),
+        "lookup_match_count": lookup_match_count,
+        "would_create_object_count": int(
+            graph_export.get("would_create_object_count", 0) or 0
+        ),
+        "would_create_relationship_count": would_create_relationship_count,
+        "stix_object_count": int(graph_preview.get("graph_object_count", 0) or 0),
+        "stix_relationship_count": stix_relationship_count,
+        "candidate_density": ratio(candidate_count, decision_records),
+        "relationship_density": ratio(
+            would_create_relationship_count + stix_relationship_count,
+            candidate_count,
+        ),
+        "lookup_match_rate_pct": percent(lookup_match_count, accepted_count),
+    }
+
+
 def build_source_summaries(operational, decisions, analyst_review, review_actions):
     source_keys = set()
     source_keys.update((operational.get("sources") or {}).keys())
@@ -376,6 +425,17 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
             (review_actions.get("source_top_reasons") or {}).get(source_key) or {}
         )
         score_summary = decision_source.get("score_summary") or empty_score_summary()
+        graph_evidence = build_graph_evidence_summary(
+            ((decisions.get("graph_export") or {}).get("by_source") or {}).get(
+                source_key,
+            )
+            or {},
+            ((decisions.get("graph_stix_preview") or {}).get("by_source") or {}).get(
+                source_key,
+            )
+            or {},
+            decision_source.get("records", 0),
+        )
         totals = operational_source.get("totals") or {}
         metrics = operational_source.get("metrics") or {}
         statuses = quarantine_source.get("statuses") or {}
@@ -401,6 +461,7 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
             "average_score": score_summary.get("average_score"),
             "low_score_count": int((score_summary.get("bands") or {}).get("0-29", 0))
             + int((score_summary.get("bands") or {}).get("30-49", 0)),
+            "graph_evidence": graph_evidence,
             "quarantine_records": quarantine_source.get("records", 0)
             or (analyst_review.get("source_counts") or {}).get(source_key, 0),
             "pending_review": statuses.get("pending", 0),
@@ -453,6 +514,10 @@ def build_policy_insights(source_summaries):
             "score_summary": source.get("score_summary", empty_score_summary()),
             "average_score": source.get("average_score"),
             "low_score_count": source.get("low_score_count", 0),
+            "graph_evidence": source.get(
+                "graph_evidence",
+                empty_graph_evidence_summary(),
+            ),
             "severity": "info",
             "signal": "observe-review-pattern",
             "message": "Review decisions exist; continue collecting evidence before changing policy.",
@@ -524,6 +589,12 @@ def percent(value, total):
     if not total:
         return 0.0
     return round((float(value) / float(total)) * 100, 2)
+
+
+def ratio(value, total):
+    if not total:
+        return 0.0
+    return round(float(value) / float(total), 2)
 
 
 def report_to_dict(report, redaction_profile="none"):
@@ -633,6 +704,7 @@ def format_text_report(report, redaction_profile="none"):
                 f"release_rate_pct={insight['release_rate_pct']} "
                 f"reject_rate_pct={insight['reject_rate_pct']} "
                 f"scores={format_policy_score_summary(insight.get('score_summary'))} "
+                f"graph={format_graph_evidence_summary(insight.get('graph_evidence'))} "
                 f"top_reasons={format_reason_entries(insight.get('top_reasons'))}: "
                 f"{insight['message']}"
             )
@@ -686,13 +758,14 @@ def format_html_report(report, redaction_profile="none"):
             insight.get("release_rate_pct"),
             insight.get("reject_rate_pct"),
             format_policy_score_summary(insight.get("score_summary")),
+            format_graph_evidence_summary(insight.get("graph_evidence")),
             format_reason_entries(insight.get("top_reasons")),
             insight.get("message"),
         )
         for insight in data.get("policy_insights") or []
     )
     if not policy_rows:
-        policy_rows = html_table_row("none", "", "", 0, 0, 0, 0, 0, "", "", "")
+        policy_rows = html_table_row("none", "", "", 0, 0, 0, 0, 0, "", "", "", "")
 
     return """<!doctype html>
 <html lang="en">
@@ -758,7 +831,7 @@ def format_html_report(report, redaction_profile="none"):
   <section>
     <h2>Policy Insights</h2>
     <table>
-      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>scores</th><th>top reasons</th><th>message</th></tr>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>top reasons</th><th>message</th></tr>
       {policy_rows}
     </table>
   </section>
@@ -860,6 +933,24 @@ def format_policy_score_summary(summary):
         f"max={format_optional(summary.get('max_score'))} "
         f"average={format_optional(summary.get('average_score'))} "
         f"low={low_score_count}"
+    )
+
+
+def format_graph_evidence_summary(summary):
+    summary = summary or empty_graph_evidence_summary()
+    return (
+        f"candidates={summary.get('candidate_count', 0)} "
+        f"density={summary.get('candidate_density', 0.0)} "
+        f"accepted={summary.get('accepted_count', 0)} "
+        f"held={summary.get('held_count', 0)} "
+        f"lookup_matches={summary.get('lookup_match_count', 0)} "
+        f"lookup_rate={summary.get('lookup_match_rate_pct', 0.0)} "
+        f"would_create_objects={summary.get('would_create_object_count', 0)} "
+        f"would_create_relationships="
+        f"{summary.get('would_create_relationship_count', 0)} "
+        f"relationship_density={summary.get('relationship_density', 0.0)} "
+        f"stix_objects={summary.get('stix_object_count', 0)} "
+        f"stix_relationships={summary.get('stix_relationship_count', 0)}"
     )
 
 
