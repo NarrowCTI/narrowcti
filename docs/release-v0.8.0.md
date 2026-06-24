@@ -100,6 +100,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added per-source curation summaries to the report so analysts can compare
   operational health, decisions, pending review and release/reject feedback per
   source.
+- Added source-level policy insights to the curation report. The report now
+  highlights repeated release/reject patterns that may indicate noisy source
+  scope, permissive policy or overly strict quarantine thresholds.
 - Added a `support` redaction profile to `gateway.curation_report` so
   standalone curation reports can be shared with aggregate evidence while
   removing detailed failures, queries and quarantined-candidate lists.

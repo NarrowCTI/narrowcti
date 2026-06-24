@@ -117,6 +117,8 @@ The current report contains:
   feedback for policy tuning.
 - `source_summaries`: per-source posture with operational, decision, review and
   review-action counters.
+- `policy_insights`: source-level policy tuning hints derived from repeated
+  release/reject audit patterns.
 - `recommendations`: deterministic next actions based on evidence gaps and
   risk signals.
 
@@ -148,10 +150,24 @@ Source posture is intentionally simple in v0.8:
 - `no-evidence`: no operational, decision, quarantine or review-action evidence
   exists for the source.
 
+Policy insights are also intentionally bounded in v0.8. They do not decide that
+a source is good or bad. They show review patterns an operator should inspect:
+
+- `policy-too-permissive-or-source-too-noisy`: three or more source review
+  decisions exist and rejects exceed releases.
+- `policy-may-be-too-strict`: three or more source review decisions exist and
+  releases exceed rejects.
+- `observe-review-pattern`: review evidence exists but is not yet strong enough
+  to recommend a tuning direction.
+
+These insights help analysts decide whether thresholds, TLP/date filters, source
+scope or contextual requirements need tuning before broader promotion.
+
 ## Future Work
 
 - Add PDF export once the report schema stabilizes.
 - Add richer per-actor, per-sector and per-ATT&CK narratives.
-- Add deeper policy tuning insights from repeated release/reject patterns.
+- Add deeper policy tuning insights using score distributions, source context
+  quality and repeated quarantine reasons.
 - Add graph-quality deltas after controlled graph promotion is enabled.
 - Add additional customer-safe redaction profiles for external report delivery.

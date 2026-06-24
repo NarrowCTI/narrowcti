@@ -28,6 +28,7 @@ class CurationReport:
     analyst_review: dict
     analyst_review_actions: dict
     source_summaries: list
+    policy_insights: list
     recommendations: list
 
     def to_dict(self):
@@ -39,6 +40,7 @@ class CurationReport:
             "analyst_review": self.analyst_review,
             "analyst_review_actions": self.analyst_review_actions,
             "source_summaries": list(self.source_summaries),
+            "policy_insights": list(self.policy_insights),
             "recommendations": list(self.recommendations),
         }
 
@@ -60,6 +62,13 @@ def build_curation_report(
         analyst_review,
         review_actions,
     )
+    source_summaries = build_source_summaries(
+        operational,
+        decisions,
+        analyst_review,
+        review_actions,
+    )
+    policy_insights = build_policy_insights(source_summaries)
     return CurationReport(
         generated_at=generated_at or utc_now(),
         executive_summary=executive,
@@ -67,13 +76,13 @@ def build_curation_report(
         decisions=decisions,
         analyst_review=analyst_review,
         analyst_review_actions=review_actions,
-        source_summaries=build_source_summaries(
-            operational,
-            decisions,
-            analyst_review,
+        source_summaries=source_summaries,
+        policy_insights=policy_insights,
+        recommendations=build_recommendations(
+            executive,
             review_actions,
+            policy_insights=policy_insights,
         ),
-        recommendations=build_recommendations(executive, review_actions),
     )
 
 
@@ -129,9 +138,10 @@ def build_executive_summary(
     }
 
 
-def build_recommendations(summary, review_actions=None):
+def build_recommendations(summary, review_actions=None, policy_insights=None):
     recommendations = []
     review_actions = review_actions or empty_review_action_summary()
+    policy_insights = policy_insights or []
     if summary.get("decision_record_count", 0) == 0 and summary.get("run_count", 0) == 0:
         recommendations.append(
             recommendation(
@@ -189,6 +199,13 @@ def build_recommendations(summary, review_actions=None):
             recommendation(
                 "continue-review-cycle",
                 "Review actions exist but pending records remain; continue queue triage before broadening ingestion.",
+            )
+        )
+    if any(insight.get("severity") == "high" for insight in policy_insights):
+        recommendations.append(
+            recommendation(
+                "review-source-policy-insights",
+                "Source-level review patterns indicate policy tuning may be needed before broader promotion.",
             )
         )
     return recommendations
@@ -379,6 +396,45 @@ def source_posture(summary):
     return "stable"
 
 
+def build_policy_insights(source_summaries):
+    insights = []
+    for source in source_summaries or []:
+        release_count = int(source.get("release_count", 0) or 0)
+        reject_count = int(source.get("reject_count", 0) or 0)
+        review_decision_count = release_count + reject_count
+        if review_decision_count == 0:
+            continue
+        insight = {
+            "source_key": source.get("source_key", "(unknown)"),
+            "review_decision_count": review_decision_count,
+            "release_count": release_count,
+            "reject_count": reject_count,
+            "release_rate_pct": percent(release_count, review_decision_count),
+            "reject_rate_pct": percent(reject_count, review_decision_count),
+            "severity": "info",
+            "signal": "observe-review-pattern",
+            "message": "Review decisions exist; continue collecting evidence before changing policy.",
+        }
+        if review_decision_count >= 3 and reject_count > release_count:
+            insight.update(
+                {
+                    "severity": "high",
+                    "signal": "policy-too-permissive-or-source-too-noisy",
+                    "message": "Rejected releases exceed accepted releases for this source; review score thresholds, TLP/date filters, source scope and context requirements.",
+                }
+            )
+        elif review_decision_count >= 3 and release_count > reject_count:
+            insight.update(
+                {
+                    "severity": "medium",
+                    "signal": "policy-may-be-too-strict",
+                    "message": "Accepted releases exceed rejected releases for this source; review whether quarantine thresholds or allow-list context are holding useful intelligence too often.",
+                }
+            )
+        insights.append(insight)
+    return insights
+
+
 def normalize_count_key(value, default):
     text = str(value or "").strip()
     return text if text else default
@@ -486,6 +542,18 @@ def format_text_report(report, redaction_profile="none"):
                 f"release_count={source['release_count']} "
                 f"reject_count={source['reject_count']}"
             )
+    if data.get("policy_insights"):
+        lines.append("policy_insights:")
+        for insight in data["policy_insights"]:
+            lines.append(
+                "- "
+                f"{insight['source_key']} severity={insight['severity']} "
+                f"signal={insight['signal']} "
+                f"review_decisions={insight['review_decision_count']} "
+                f"release_rate_pct={insight['release_rate_pct']} "
+                f"reject_rate_pct={insight['reject_rate_pct']}: "
+                f"{insight['message']}"
+            )
     if data["recommendations"]:
         lines.append("recommendations:")
         for item in data["recommendations"]:
@@ -525,6 +593,22 @@ def format_html_report(report, redaction_profile="none"):
     )
     if not source_rows:
         source_rows = html_table_row("none", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    policy_rows = "\n".join(
+        html_table_row(
+            insight.get("source_key"),
+            insight.get("severity"),
+            insight.get("signal"),
+            insight.get("review_decision_count"),
+            insight.get("release_count"),
+            insight.get("reject_count"),
+            insight.get("release_rate_pct"),
+            insight.get("reject_rate_pct"),
+            insight.get("message"),
+        )
+        for insight in data.get("policy_insights") or []
+    )
+    if not policy_rows:
+        policy_rows = html_table_row("none", "", "", 0, 0, 0, 0, 0, "")
 
     return """<!doctype html>
 <html lang="en">
@@ -588,6 +672,13 @@ def format_html_report(report, redaction_profile="none"):
     </table>
   </section>
   <section>
+    <h2>Policy Insights</h2>
+    <table>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>message</th></tr>
+      {policy_rows}
+    </table>
+  </section>
+  <section>
     <h2>Recommendations</h2>
     <ul>
       {recommendations}
@@ -630,6 +721,7 @@ def format_html_report(report, redaction_profile="none"):
         stix_objects=escape(summary["graph_stix_object_count"]),
         stix_relationships=escape(summary["graph_stix_relationship_count"]),
         source_rows=source_rows,
+        policy_rows=policy_rows,
         recommendations=recommendations,
     )
 

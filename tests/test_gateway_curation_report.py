@@ -207,6 +207,9 @@ class GatewayCurationReportTests(unittest.TestCase):
 
         summary = report.executive_summary
         actions = report.analyst_review_actions
+        policy_insights = {
+            insight["source_key"]: insight for insight in report.policy_insights
+        }
         recommendation_codes = [item["code"] for item in report.recommendations]
 
         self.assertEqual(4, summary["review_action_count"])
@@ -223,6 +226,10 @@ class GatewayCurationReportTests(unittest.TestCase):
             {"reject": 1, "export": 1},
             actions["source_action_counts"]["misp"],
         )
+        self.assertEqual("info", policy_insights["misp"]["severity"])
+        self.assertEqual("observe-review-pattern", policy_insights["misp"]["signal"])
+        self.assertEqual(100.0, policy_insights["misp"]["reject_rate_pct"])
+        self.assertEqual("info", policy_insights["otx"]["severity"])
         source_postures = {
             source["source_key"]: source["posture"]
             for source in report.source_summaries
@@ -230,6 +237,59 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual("needs-attention", source_postures["misp"])
         self.assertEqual("stable", source_postures["otx"])
         self.assertIn("tune-curation-policy", recommendation_codes)
+
+    def test_policy_insights_identify_repeated_rejects(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            release_audit_file = os.path.join(tmpdir, "releases.jsonl")
+            with open(release_audit_file, "w", encoding="utf-8") as file_obj:
+                for event in [
+                    release_event("misp", "reject"),
+                    release_event("misp", "reject"),
+                    release_event("misp", "reject"),
+                ]:
+                    file_obj.write(json.dumps(event) + "\n")
+
+            report = build_curation_report_from_files(
+                release_audit_file=release_audit_file,
+            )
+
+        insight = report.policy_insights[0]
+        recommendation_codes = [item["code"] for item in report.recommendations]
+
+        self.assertEqual("misp", insight["source_key"])
+        self.assertEqual("high", insight["severity"])
+        self.assertEqual(
+            "policy-too-permissive-or-source-too-noisy",
+            insight["signal"],
+        )
+        self.assertEqual(100.0, insight["reject_rate_pct"])
+        self.assertIn("review-source-policy-insights", recommendation_codes)
+
+    def test_policy_insights_identify_frequent_analyst_releases(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            release_audit_file = os.path.join(tmpdir, "releases.jsonl")
+            with open(release_audit_file, "w", encoding="utf-8") as file_obj:
+                for event in [
+                    release_event("otx", "release", released=1),
+                    release_event("otx", "release", released=2),
+                    release_event("otx", "release-indicators", released=1),
+                ]:
+                    file_obj.write(json.dumps(event) + "\n")
+
+            report = build_curation_report_from_files(
+                release_audit_file=release_audit_file,
+            )
+
+        insight = report.policy_insights[0]
+        text = format_text_report(report)
+        html = format_html_report(report)
+
+        self.assertEqual("otx", insight["source_key"])
+        self.assertEqual("medium", insight["severity"])
+        self.assertEqual("policy-may-be-too-strict", insight["signal"])
+        self.assertEqual(100.0, insight["release_rate_pct"])
+        self.assertIn("policy_insights:", text)
+        self.assertIn("Policy Insights", html)
 
     def test_text_report_is_analyst_readable(self):
         operational = build_operational_report([])
@@ -257,6 +317,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("review_actions=", text)
         self.assertIn("graph_readiness:", text)
         self.assertNotIn("source_summaries:", text)
+        self.assertNotIn("policy_insights:", text)
         self.assertIn("collect-evidence", text)
 
     def test_html_report_is_analyst_readable(self):
@@ -285,6 +346,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("Analyst Review Actions", html)
         self.assertIn("Graph Readiness", html)
         self.assertIn("Source Summaries", html)
+        self.assertIn("Policy Insights", html)
         self.assertIn("collect-evidence", html)
 
     def test_html_report_escapes_dynamic_content(self):
