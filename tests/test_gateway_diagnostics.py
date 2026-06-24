@@ -74,6 +74,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
 
         data = snapshot.to_dict()
         inventory = {item["name"]: item for item in data["evidence_inventory"]}
+        warning_codes = [item["code"] for item in data["support_warnings"]]
 
         self.assertEqual("support-diagnostics/v0.8", data["schema_version"])
         self.assertEqual("none", data["redaction_profile"])
@@ -93,6 +94,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             "needs-evidence",
             data["operational_validation"]["overall_status"],
         )
+        self.assertIn("operational-validation-needs-evidence", warning_codes)
         self.assertIn("source_posture:", format_text_snapshot(snapshot))
         self.assertIn("policy_insights:", format_text_snapshot(snapshot))
         self.assertIn("operational_validation:", format_text_snapshot(snapshot))

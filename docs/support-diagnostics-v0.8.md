@@ -122,7 +122,8 @@ The current snapshot contains:
 - `operational_validation`: rendered text/HTML summary of the v0.8 operational
   validation checklist, including pass/fail/warn/needs-evidence state.
 - `support_warnings`: deterministic support hints for blocking preflight
-  errors, preflight warnings, missing evidence and empty curation evidence.
+  errors, preflight warnings, missing evidence, empty curation evidence and
+  operational validation failures or missing evidence.
 - `redaction_profile`: selected redaction mode, currently `none` or `support`.
 - `support_bundle`: optional CLI-only output metadata when `--bundle-file` is
   used with JSON output.

@@ -82,7 +82,12 @@ def build_support_diagnostics(
         evidence_inventory=evidence,
         curation_report=curation.to_dict(),
         operational_validation=operational_validation.to_dict(),
-        support_warnings=build_support_warnings(preflight, evidence, curation),
+        support_warnings=build_support_warnings(
+            preflight,
+            evidence,
+            curation,
+            operational_validation,
+        ),
     )
     if snapshot.redaction_profile == "none":
         return snapshot
@@ -240,7 +245,12 @@ def evidence_item(name, path, expected_kind="file"):
     return item
 
 
-def build_support_warnings(preflight_report, evidence_inventory, curation_report):
+def build_support_warnings(
+    preflight_report,
+    evidence_inventory,
+    curation_report,
+    operational_validation_report=None,
+):
     warnings = []
     if not preflight_report.ok:
         warnings.append(
@@ -281,6 +291,26 @@ def build_support_warnings(preflight_report, evidence_inventory, curation_report
                 "No run or decision evidence was found for the curation report.",
             )
         )
+    if operational_validation_report:
+        validation = operational_validation_report.to_dict()
+        status = validation.get("overall_status", "")
+        counts = validation.get("counts") or {}
+        if status == "fail":
+            warnings.append(
+                support_warning(
+                    "operational-validation-failed",
+                    "v0.8 operational validation has failing checks; graph promotion must remain blocked.",
+                )
+            )
+        elif status == "needs-evidence":
+            warnings.append(
+                support_warning(
+                    "operational-validation-needs-evidence",
+                    "v0.8 operational validation still needs evidence: "
+                    f"needs-evidence={counts.get('needs-evidence', 0)} "
+                    f"warn={counts.get('warn', 0)}.",
+                )
+            )
     return warnings
 
 
