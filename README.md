@@ -274,7 +274,8 @@ planning query OpenCTI for canonical graph objects, starting with ATT&CK
 attack-patterns, before later promotion work is allowed to create new graph
 knowledge. Canonical matches are exposed as bounded
 `graph_export_plan_lookup_matches` metadata for audit and future enterprise
-reporting.
+reporting, and the decision audit report summarizes lookup match counts by
+object type and match type.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in

@@ -75,7 +75,9 @@ When matches exist, decision metadata can include
 `graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
 type, candidate value and canonical OpenCTI match fields such as `opencti_id`,
 `standard_id`, `entity_type`, `name`, `x_mitre_id`, `match_type` and
-`match_value`.
+`match_value`. The decision audit report also aggregates these matches in the
+`graph_export` summary with counters by candidate object type, canonical match
+type and canonical entity type.
 
 ## Canonical MITRE Linking
 

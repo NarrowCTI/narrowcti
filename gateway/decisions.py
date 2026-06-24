@@ -263,10 +263,12 @@ def build_graph_export_summary(records):
             continue
         source_key = normalize_value(record.get("source_key"), "unknown")
         query = normalize_value(record.get("query"), "(none)")
-        merge_graph_export_plan(summary, plan)
+        lookup_matches = graph_lookup_matches(record)
+        merge_graph_export_plan(summary, plan, lookup_matches)
         merge_graph_export_plan(
             by_source.setdefault(source_key, empty_graph_export_summary(False)),
             plan,
+            lookup_matches,
         )
         merge_graph_export_plan(
             by_query.setdefault(
@@ -278,6 +280,7 @@ def build_graph_export_summary(records):
                 },
             ),
             plan,
+            lookup_matches,
         )
 
     summary["modes"] = dict(sorted(summary["modes"].items()))
@@ -289,6 +292,15 @@ def build_graph_export_summary(records):
     )
     summary["accepted_relationship_counts"] = dict(
         sorted(summary["accepted_relationship_counts"].items())
+    )
+    summary["lookup_match_object_counts"] = dict(
+        sorted(summary["lookup_match_object_counts"].items())
+    )
+    summary["lookup_match_type_counts"] = dict(
+        sorted(summary["lookup_match_type_counts"].items())
+    )
+    summary["lookup_canonical_entity_counts"] = dict(
+        sorted(summary["lookup_canonical_entity_counts"].items())
     )
     summary["by_source"] = {
         source: normalize_graph_export_summary(source_summary)
@@ -325,6 +337,10 @@ def empty_graph_export_summary(include_breakdowns=True):
         "held_reasons": {},
         "accepted_object_counts": {},
         "accepted_relationship_counts": {},
+        "lookup_match_count": 0,
+        "lookup_match_object_counts": {},
+        "lookup_match_type_counts": {},
+        "lookup_canonical_entity_counts": {},
     }
     if include_breakdowns:
         summary["by_source"] = {}
@@ -340,6 +356,9 @@ def normalize_graph_export_summary(summary):
         "held_reasons",
         "accepted_object_counts",
         "accepted_relationship_counts",
+        "lookup_match_object_counts",
+        "lookup_match_type_counts",
+        "lookup_canonical_entity_counts",
     ):
         summary[field] = dict(sorted(summary.get(field, {}).items()))
     return summary
@@ -353,7 +372,15 @@ def graph_export_plan(record):
     return dict(plan) if isinstance(plan, Mapping) else {}
 
 
-def merge_graph_export_plan(summary, plan):
+def graph_lookup_matches(record):
+    metadata = record.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return []
+    matches = metadata.get("graph_export_plan_lookup_matches")
+    return [dict(match) for match in matches or [] if isinstance(match, Mapping)]
+
+
+def merge_graph_export_plan(summary, plan, lookup_matches=None):
     summary["record_count"] += 1
     summary["candidate_count"] += int(plan.get("candidate_count", 0) or 0)
     summary["accepted_count"] += int(plan.get("accepted_count", 0) or 0)
@@ -381,6 +408,23 @@ def merge_graph_export_plan(summary, plan):
         summary["accepted_relationship_counts"],
         plan.get("accepted_relationship_counts"),
     )
+    lookup_matches = lookup_matches or []
+    summary["lookup_match_count"] += len(lookup_matches)
+    for match in lookup_matches:
+        increment_count(
+            summary["lookup_match_object_counts"],
+            normalize_value(match.get("stix_object_type"), "unknown"),
+        )
+        canonical = match.get("match")
+        if isinstance(canonical, Mapping):
+            increment_count(
+                summary["lookup_match_type_counts"],
+                normalize_value(canonical.get("match_type"), "unknown"),
+            )
+            increment_count(
+                summary["lookup_canonical_entity_counts"],
+                normalize_value(canonical.get("entity_type"), "unknown"),
+            )
     for action in plan.get("actions") or []:
         if isinstance(action, Mapping):
             increment_count(
@@ -812,10 +856,15 @@ def format_graph_export_summary(summary):
         f"would_create_objects={summary.get('would_create_object_count', 0)} "
         f"would_create_relationships="
         f"{summary.get('would_create_relationship_count', 0)} "
+        f"lookup_matches={summary.get('lookup_match_count', 0)} "
         f"modes={format_compact_counts(summary.get('modes', {}))} "
         f"statuses={format_compact_counts(summary.get('statuses', {}))} "
         f"actions={format_compact_counts(summary.get('actions', {}))} "
-        f"held_reasons={format_compact_counts(summary.get('held_reasons', {}))}"
+        f"held_reasons={format_compact_counts(summary.get('held_reasons', {}))} "
+        f"lookup_objects="
+        f"{format_compact_counts(summary.get('lookup_match_object_counts', {}))} "
+        f"lookup_match_types="
+        f"{format_compact_counts(summary.get('lookup_match_type_counts', {}))}"
     )
 
 

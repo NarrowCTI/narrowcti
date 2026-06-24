@@ -130,7 +130,8 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                         held_reasons={"entity_confidence_below_min": 1},
                         accepted_object_counts={"attack-pattern": 1, "malware": 1},
                         accepted_relationship_counts={"uses": 2},
-                    )
+                    ),
+                    "graph_export_plan_lookup_matches": graph_lookup_matches(),
                 },
                 query="lummac2",
             ),
@@ -167,6 +168,13 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(1, graph["deduplicated_relationship_count"])
         self.assertEqual(2, graph["would_create_object_count"])
         self.assertEqual(2, graph["would_create_relationship_count"])
+        self.assertEqual(1, graph["lookup_match_count"])
+        self.assertEqual({"attack-pattern": 1}, graph["lookup_match_object_counts"])
+        self.assertEqual({"mitre_attack_id": 1}, graph["lookup_match_type_counts"])
+        self.assertEqual(
+            {"Attack-Pattern": 1},
+            graph["lookup_canonical_entity_counts"],
+        )
         self.assertEqual({"audit": 1, "dry-run": 1}, graph["modes"])
         self.assertEqual({"audit-only": 1, "dry-run": 1}, graph["statuses"])
         self.assertEqual(
@@ -181,6 +189,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             for item in graph["by_query"]
         }
         self.assertEqual(3, by_query[("otx", "lummac2")]["candidate_count"])
+        self.assertEqual(1, by_query[("otx", "lummac2")]["lookup_match_count"])
         self.assertEqual(1, by_query[("misp", "tlp:green")]["candidate_count"])
 
     def test_graph_export_summary_ignores_records_without_plan(self):
@@ -542,7 +551,8 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                             actions=["would_create", "would_create"],
                             accepted_object_counts={"attack-pattern": 2},
                             accepted_relationship_counts={"uses": 1},
-                        )
+                        ),
+                        "graph_export_plan_lookup_matches": graph_lookup_matches(),
                     },
                 )
             ]
@@ -553,6 +563,8 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("graph_export:", text)
         self.assertIn("deduplicated=1", text)
         self.assertIn("would_create_objects=2", text)
+        self.assertIn("lookup_matches=1", text)
+        self.assertIn("lookup_match_types=mitre_attack_id:1", text)
         self.assertIn("actions=would_create:2", text)
         self.assertIn("graph_export_by_source:", text)
 
@@ -675,6 +687,25 @@ def graph_export_plan(
         "would_create_relationship_count": would_create_relationship_count,
         "actions": [{"action": action} for action in actions or []],
     }
+
+
+def graph_lookup_matches():
+    return [
+        {
+            "entity_key": "entity:attack-pattern:t1059",
+            "stix_object_type": "attack-pattern",
+            "value": "T1059",
+            "match": {
+                "opencti_id": "internal--1",
+                "standard_id": "attack-pattern--1111",
+                "entity_type": "Attack-Pattern",
+                "name": "Command and Scripting Interpreter",
+                "x_mitre_id": "T1059",
+                "match_type": "mitre_attack_id",
+                "match_value": "T1059",
+            },
+        }
+    ]
 
 
 def contextual_scoring(
