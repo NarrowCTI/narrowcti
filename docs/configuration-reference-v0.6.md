@@ -70,7 +70,9 @@ graph enrichment layer.
 These controls expose the first technical inventory for commercial packaging.
 They are intentionally preflight-visible before they become runtime blockers.
 This lets operators and support teams identify edition, customer and capability
-state without requiring internet activation.
+state without requiring internet activation. Preflight reports both enabled and
+disabled known capabilities so support can see whether a capability is available
+for the declared edition or explicit override.
 
 | Variable | Purpose |
 | --- | --- |

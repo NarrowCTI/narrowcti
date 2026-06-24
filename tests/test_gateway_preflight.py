@@ -310,6 +310,7 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("license_file_configured=false", text)
         self.assertIn("feature_gates_enforced=false", text)
         self.assertIn("enabled_capabilities=source.otx", text)
+        self.assertIn("disabled_capabilities=graph.lookup.opencti", text)
         self.assertIn("otx.state_file=/app/state/otx_state.json", text)
         self.assertIn(
             "otx.decision_audit_file=/app/state/audit/otx_decisions.jsonl",
@@ -370,11 +371,16 @@ class GatewayPreflightTests(unittest.TestCase):
             ["source.otx", "graph.lookup.opencti"],
             report.settings["feature_gates"]["enabled_capabilities"],
         )
+        self.assertIn(
+            "source.misp",
+            report.settings["feature_gates"]["disabled_capabilities"],
+        )
         self.assertIn("license_edition=enterprise", text)
         self.assertIn("license_customer_id=customer-a", text)
         self.assertIn("license_file_configured=true", text)
         self.assertIn("feature_gates_enforced=true", text)
         self.assertIn("enabled_capabilities=source.otx,graph.lookup.opencti", text)
+        self.assertIn("disabled_capabilities=source.misp", text)
 
     def test_preflight_blocks_enforced_feature_gates_without_license_file(self):
         settings = make_settings(feature_gates_enforced=True)

@@ -15,6 +15,8 @@ class FeatureGateTests(unittest.TestCase):
         self.assertIn("graph.export.audit", state.enabled_capabilities)
         self.assertIn("reports.operational_validation", state.enabled_capabilities)
         self.assertIn("reports.support_diagnostics", state.enabled_capabilities)
+        self.assertIn("graph.lookup.opencti", state.disabled_capabilities)
+        self.assertIn("graph.export.controlled", state.disabled_capabilities)
 
     def test_requested_capabilities_override_edition_defaults(self):
         state = build_feature_gate_state(
@@ -42,6 +44,8 @@ class FeatureGateTests(unittest.TestCase):
             ),
             state.enabled_capabilities,
         )
+        self.assertIn("source.misp", state.disabled_capabilities)
+        self.assertIn("graph.export.controlled", state.disabled_capabilities)
 
     def test_unknown_capabilities_are_reported_without_being_enabled(self):
         state = build_feature_gate_state(
@@ -50,6 +54,7 @@ class FeatureGateTests(unittest.TestCase):
         )
 
         self.assertEqual(("source.misp",), state.enabled_capabilities)
+        self.assertIn("source.otx", state.disabled_capabilities)
         self.assertEqual(("unknown.capability",), state.unknown_capabilities)
 
     def test_unknown_edition_is_visible_and_has_no_default_capabilities(self):
@@ -58,6 +63,7 @@ class FeatureGateTests(unittest.TestCase):
         self.assertEqual("partner", state.edition)
         self.assertFalse(state.known_edition)
         self.assertEqual((), state.enabled_capabilities)
+        self.assertEqual(state.available_capabilities, state.disabled_capabilities)
 
 
 if __name__ == "__main__":

@@ -458,6 +458,8 @@ def format_text_report(report):
         f"{str(report.settings.get('feature_gates_enforced', False)).lower()}",
         "enabled_capabilities="
         f"{','.join(report.settings.get('feature_gates', {}).get('enabled_capabilities', [])) or '(none)'}",
+        "disabled_capabilities="
+        f"{','.join(report.settings.get('feature_gates', {}).get('disabled_capabilities', [])) or '(none)'}",
         f"state_dir={report.evidence_paths.get('state_dir') or '(disabled)'}",
         "decision_audit_dir="
         f"{report.evidence_paths.get('decision_audit_dir') or '(disabled)'}",

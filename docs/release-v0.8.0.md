@@ -77,6 +77,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   edition/capability defaults, `NARROWCTI_LICENSE_*` settings and preflight
   reporting. This is observable product-operations plumbing only; runtime
   entitlement blocking remains pending.
+- Added disabled-capability visibility to feature gate state and preflight
+  output so support can see which known product capabilities are outside the
+  declared edition or explicit override.
 - Added the first v0.8 deployment operations package:
   `deployment/docker-compose.narrowcti-gateway.yml`,
   `deployment/gateway.env.example` and

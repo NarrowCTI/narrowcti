@@ -72,6 +72,8 @@ full runtime entitlement blocking. The gateway can now report:
 - Whether a signed license file path is configured.
 - Whether strict feature gate validation is enabled.
 - Which capabilities are active for the declared edition or explicit override.
+- Which known capabilities are not active, so support can diagnose edition or
+  entitlement expectations without enabling runtime blocking.
 
 Runtime enforcement remains a later hardening step after legal review, license
 format selection and customer deployment validation. Until then, the foundation
@@ -149,6 +151,7 @@ For v0.8.0, licensing work is limited to:
 - Edition and capability inventory in code.
 - Offline license file path configuration.
 - Preflight reporting for license and feature gate state.
+- Preflight visibility for both enabled and disabled known capabilities.
 - Strict preflight error when feature gates are marked enforced but no license
   file path is configured.
 - Documentation of known capability identifiers.

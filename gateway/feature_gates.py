@@ -72,6 +72,7 @@ class FeatureGateState:
     enforcement_enabled: bool
     available_capabilities: tuple[str, ...]
     enabled_capabilities: tuple[str, ...]
+    disabled_capabilities: tuple[str, ...]
     requested_capabilities: tuple[str, ...]
     unknown_capabilities: tuple[str, ...]
 
@@ -83,6 +84,7 @@ class FeatureGateState:
             "enforcement_enabled": self.enforcement_enabled,
             "available_capabilities": list(self.available_capabilities),
             "enabled_capabilities": list(self.enabled_capabilities),
+            "disabled_capabilities": list(self.disabled_capabilities),
             "requested_capabilities": list(self.requested_capabilities),
             "unknown_capabilities": list(self.unknown_capabilities),
         }
@@ -105,6 +107,11 @@ def build_feature_gate_state(
     )
     default_capabilities = EDITION_CAPABILITIES.get(normalized_edition, ())
     enabled = valid_requested or default_capabilities
+    disabled = tuple(
+        capability
+        for capability in AVAILABLE_CAPABILITIES
+        if capability not in enabled
+    )
 
     return FeatureGateState(
         edition=normalized_edition,
@@ -113,6 +120,7 @@ def build_feature_gate_state(
         enforcement_enabled=bool(enforcement_enabled),
         available_capabilities=AVAILABLE_CAPABILITIES,
         enabled_capabilities=tuple(enabled),
+        disabled_capabilities=disabled,
         requested_capabilities=requested,
         unknown_capabilities=unknown,
     )
