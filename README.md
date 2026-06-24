@@ -245,7 +245,9 @@ the official MITRE connector, before any real graph promotion is enabled.
 The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`, and
 the detailed development notes are tracked in `docs/release-v0.8.0.md`.
 Bounded lab validation for this track is described in
-`docs/operational-validation-v0.8.md`.
+`docs/operational-validation-v0.8.md`. Deployment, analyst review, curation
+reporting and support diagnostics are tracked in the dedicated v0.8 documents
+under `docs/`.
 
 ## Curation Configuration
 
@@ -420,7 +422,9 @@ deployment/gateway.env.example
 
 The v0.8 template is dry-run/run-once by default, joins an existing OpenCTI
 Docker network and must be validated with `gateway.preflight` before any source
-execution. Older deployment snippets in release-specific documents are
+execution. Its `ops` profile can run preflight, curation reporting,
+operational validation and support diagnostics without starting continuous
+ingestion. Older deployment snippets in release-specific documents are
 historical context; use `docs/deployment-operations-v0.8.md` for the current
 procedure.
 
@@ -490,6 +494,7 @@ docs/release-v0.6.0.md
 docs/release-v0.7.0.md
 docs/release-v0.8.0.md
 docs/graph-promotion-v0.8.md
+docs/operational-validation-v0.8.md
 docs/deployment-operations-v0.8.md
 docs/analyst-review-v0.8.md
 docs/curation-reporting-v0.8.md
