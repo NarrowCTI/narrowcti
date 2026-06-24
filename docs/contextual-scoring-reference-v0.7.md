@@ -218,14 +218,18 @@ Required guardrails:
 ## Backlog
 
 1. Add a pure contextual scoring module that implements the relative margin
-   formula and records structured adjustments.
+   formula and records structured adjustments. Implemented in
+   `core/contextual_scoring.py`.
 2. Add unit tests for score coercion, clamping, impact capping, priority
-   resolution and no-hidden-decrease behavior.
+   resolution and no-hidden-decrease behavior. Initial unit coverage is
+   implemented in `tests/test_contextual_scoring.py`.
 3. Extend `graph_evidence` records with scoring category hints where relevant:
    Threat, Toolbox, Location, Sector, TTP, Author, Vulnerability and Graph
    State.
 4. Add dry-run contextual score evidence into decision audit and quarantine
-   metadata.
+   metadata. Initial OTX/MISP decision metadata now includes
+   `contextual_scoring`; broader audit-report rollups and quarantine release
+   views remain pending.
 5. Add gateway-level configuration for contextual scoring categories and
    priority impacts.
 6. Integrate contextual scoring into the candidate decision path after base

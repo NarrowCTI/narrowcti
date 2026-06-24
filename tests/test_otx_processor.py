@@ -451,6 +451,15 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("audit-only", graph_plan["status"])
         self.assertEqual(graph_policy["accepted_count"], graph_plan["accepted_count"])
         self.assertEqual(0, graph_plan["would_create_object_count"])
+        contextual_scoring = records[0].metadata["contextual_scoring"]
+        self.assertEqual("dry-run", contextual_scoring["mode"])
+        self.assertFalse(contextual_scoring["applied_to_decision"])
+        self.assertEqual(
+            graph_policy["accepted_count"],
+            contextual_scoring["accepted_candidate_count"],
+        )
+        self.assertGreater(contextual_scoring["contextual_score"], 0)
+        self.assertIn("ttp", contextual_scoring["category_counts"])
         graph_preview = records[0].metadata["graph_stix_preview"]
         self.assertEqual("preview", graph_preview["status"])
         self.assertFalse(graph_preview["export_enabled"])

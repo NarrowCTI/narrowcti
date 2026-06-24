@@ -93,6 +93,12 @@ detailed graph-enrichment design is tracked in
   summary from accepted candidates. This validates bundle construction,
   object/relationship counts and skipped candidates in memory without importing
   graph objects into OpenCTI.
+- Added contextual scoring dry-run evidence from accepted graph candidates.
+  OTX and MISP decision metadata now include `contextual_scoring` with base
+  score, suggested contextual score, category counts, impact ratio and every
+  matched Threat, Toolbox, TTP, Sector, Location, Vulnerability, Author or
+  Graph State adjustment. This is audit evidence only and is not applied to the
+  current ingest/quarantine decision.
 - Extended the decision audit report to aggregate `graph_export_plan` evidence
   by mode, status, action, held reason, source and query, including
   would-create object and relationship counts for graph export dry-runs.
@@ -151,6 +157,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 236 tests
+Ran 240 tests
 OK
 ```

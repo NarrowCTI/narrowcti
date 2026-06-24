@@ -348,9 +348,12 @@ apply a bounded relative impact based on graph evidence:
 contextual_score = base_score + ((100 - base_score) * impact_ratio)
 ```
 
-The first implementation must run in dry-run/audit mode and record every
-contextual adjustment with category, priority, matched value, source field and
-impact. It must not bypass TLP, quarantine, confidence or provenance policy.
+The first implementation now runs in dry-run/audit metadata as
+`contextual_scoring`. It records base score, suggested contextual score, score
+delta, category counts, impact ratio, cap status and every adjustment with
+category, priority, matched value, source field and impact. It does not change
+the current ingest/quarantine decision and must not bypass TLP, quarantine,
+confidence or provenance policy.
 
 The detailed design and backlog are tracked in
 `docs/contextual-scoring-reference-v0.7.md`.
@@ -533,7 +536,9 @@ v0.7 should not be considered complete until:
 11. Compare a direct official MISP connector import with a NarrowCTI-curated
     import for the same event and document object/relationship differences.
 12. Add contextual scoring dry-run evidence using graph categories inspired by
-    the OpenCTI scoring-calculator reference.
+    the OpenCTI scoring-calculator reference. Initial OTX/MISP
+    `contextual_scoring` metadata is implemented; category impact configuration
+    and decision-path application remain pending.
 13. Document and preflight the active ingestion mode: direct, MISP collector or
     hybrid.
 

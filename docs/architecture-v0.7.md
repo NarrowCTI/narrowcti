@@ -332,6 +332,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Decision audit graph export reporting | Implemented in `gateway.decisions` with graph export modes, statuses, actions, would-create counts, deduplicated counts, held reasons, source rollups and query rollups. |
 | Initial graph-aware STIX builder | Implemented in `exporters.stix_builder` for accepted graph candidates covering attack patterns, actors, intrusion sets, malware, tools, vulnerabilities, identities, locations, detection indicators and supported observables. |
 | Graph STIX preview metadata | Implemented for OTX and MISP decisions as in-memory bundle validation summary without OpenCTI import. |
+| Contextual scoring evidence | Implemented as dry-run `contextual_scoring` metadata derived from accepted graph candidates; it is not applied to ingest decisions yet. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
 | Stable STIX export | Implemented as current `Report + Indicator` bundle. |
 
@@ -344,7 +345,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Graph export dry-run reporting | Extend implemented decision-audit graph export rollups into OpenCTI lab comparison evidence and future enterprise CTI reports. |
 | MISP rich mapping | Expand official-compatible observable/indicator export, STIX relationship export semantics, STIX sighting export semantics, NVD vulnerability enrichment and richer taxonomy tags beyond the initial EventReport, sighting, object-reference, detection-rule, CVE and Galaxy/Cluster audit mapping. |
 | OTX rich mapping | Expand observable STIX export, NVD vulnerability enrichment, country normalization and relationship semantics beyond the current audit-only observable, CVE, YARA, author, lifecycle, vote and indicator timing metadata. |
-| Contextual scoring | Use graph candidates as scoring signals without hiding base score decisions. |
+| Contextual scoring policy controls | Add operator-visible category impact configuration and a controlled path for applying contextual score to decisions after validation. |
 | Quarantine release for graph candidates | Allow reviewed graph candidates to be promoted later with release audit. |
 | OpenCTI lab validation | Compare NarrowCTI output with official connector behavior and inspect resulting graph quality. |
 | Enterprise reporting | Summarize what was ingested, held, enriched and why. |

@@ -300,6 +300,12 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("audit-only", graph_plan["status"])
         self.assertEqual(2, graph_plan["accepted_count"])
         self.assertEqual(1, graph_plan["held_count"])
+        contextual_scoring = metadata["contextual_scoring"]
+        self.assertEqual("dry-run", contextual_scoring["mode"])
+        self.assertFalse(contextual_scoring["applied_to_decision"])
+        self.assertEqual(2, contextual_scoring["accepted_candidate_count"])
+        self.assertGreaterEqual(contextual_scoring["contextual_score"], 100)
+        self.assertIn("author", contextual_scoring["category_counts"])
         graph_preview = metadata["graph_stix_preview"]
         self.assertEqual("preview", graph_preview["status"])
         self.assertFalse(graph_preview["export_enabled"])

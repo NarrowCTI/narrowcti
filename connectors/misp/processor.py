@@ -3,6 +3,7 @@ import time
 from collections.abc import Mapping
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
+from core.contextual_scoring import build_contextual_score_evidence
 from core.feed_contract import FeedRunSummary
 from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
 from core.graph_deduplication import GraphDeduplicationIndex
@@ -96,6 +97,10 @@ def decision_metadata(
         **(graph_candidate_policy or {}),
     ).to_dict()
     metadata["graph_candidate_policy"] = graph_policy
+    metadata["contextual_scoring"] = build_contextual_score_evidence(
+        candidate_score(candidate),
+        graph_policy,
+    )
     graph_plan, known_keys, lookup_error = build_graph_export_plan_with_known_keys(
         graph_policy,
         mode=graph_export_mode,
