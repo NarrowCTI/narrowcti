@@ -89,6 +89,7 @@ enrichment.otx_entities
 enrichment.mitre_attack
 quarantine.review
 reports.operational
+reports.operational_validation
 reports.support_diagnostics
 graph.export.audit
 graph.export.dry_run
@@ -157,7 +158,7 @@ Feature gate inventory posture:
 NARROWCTI_LICENSE_EDITION=enterprise
 NARROWCTI_LICENSE_CUSTOMER_ID=customer-lab
 NARROWCTI_LICENSE_FILE=/licenses/customer-lab.lic
-NARROWCTI_LICENSED_CAPABILITIES=source.otx,source.misp,graph.lookup.opencti,reports.operational,reports.support_diagnostics
+NARROWCTI_LICENSED_CAPABILITIES=source.otx,source.misp,graph.lookup.opencti,reports.operational,reports.operational_validation,reports.support_diagnostics
 NARROWCTI_FEATURE_GATES_ENFORCED=false
 ```
 

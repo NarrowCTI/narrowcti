@@ -13,6 +13,7 @@ class FeatureGateTests(unittest.TestCase):
         self.assertFalse(state.enforcement_enabled)
         self.assertIn("source.otx", state.enabled_capabilities)
         self.assertIn("graph.export.audit", state.enabled_capabilities)
+        self.assertIn("reports.operational_validation", state.enabled_capabilities)
         self.assertIn("reports.support_diagnostics", state.enabled_capabilities)
 
     def test_requested_capabilities_override_edition_defaults(self):
@@ -22,6 +23,7 @@ class FeatureGateTests(unittest.TestCase):
             enforcement_enabled=True,
             requested_capabilities=[
                 "source.otx",
+                "REPORTS.OPERATIONAL-VALIDATION",
                 "source.otx",
                 "REPORTS.SUPPORT-DIAGNOSTICS",
                 "GRAPH.LOOKUP.OPENCTI",
@@ -34,6 +36,7 @@ class FeatureGateTests(unittest.TestCase):
         self.assertEqual(
             (
                 "source.otx",
+                "reports.operational_validation",
                 "reports.support_diagnostics",
                 "graph.lookup.opencti",
             ),

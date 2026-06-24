@@ -136,6 +136,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added text/JSON file output for the operational validation checklist so v0.8
   evidence can be archived under `state\reports` and attached to release
   validation notes.
+- Added `reports.operational_validation` to the preflight-visible capability
+  inventory so the v0.8 validation checklist is represented in product
+  operations and future licensing controls.
 
 ## Promotion Boundary
 
