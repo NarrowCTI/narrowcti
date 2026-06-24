@@ -15,7 +15,7 @@ from gateway.diagnostics import (
 from tests.test_gateway_curation_report import (
     decision_record,
     gateway_record,
-    graph_metadata,
+    graph_context_metadata,
     release_event,
     source_result,
 )
@@ -52,7 +52,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                             "otx",
                             "dry-run",
                             "would ingest",
-                            metadata=graph_metadata(),
+                            metadata=graph_context_metadata(),
                         )
                     )
                     + "\n"
@@ -130,6 +130,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         )
         self.assertIn(
             "graph=candidates=2 density=2.0",
+            format_text_snapshot(snapshot),
+        )
+        self.assertIn(
+            "context=records=1 accepted_context=3 density=3.0",
             format_text_snapshot(snapshot),
         )
         self.assertIn(

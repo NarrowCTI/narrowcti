@@ -126,6 +126,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added graph evidence density to curation policy insights so analysts can see
   graph candidate volume, lookup matches and relationship-ready evidence per
   source before any graph promotion.
+- Added context-quality metrics to curation policy insights so analyst reports
+  show contextual scoring volume, score delta and top CTI categories per source
+  without applying contextual score to final ingest decisions.
 - Added a `support` redaction profile to `gateway.curation_report` so
   standalone curation reports can be shared with aggregate evidence while
   removing detailed failures, queries and quarantined-candidate lists.

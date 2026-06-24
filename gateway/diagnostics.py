@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from core.decision_audit import utc_now
 from gateway.curation_report import (
     build_curation_report_from_files,
+    format_context_quality_summary,
     format_graph_evidence_summary,
     format_policy_score_summary,
     format_reason_entries,
@@ -543,6 +544,7 @@ def format_text_snapshot(snapshot):
                 f"reject_rate_pct={insight.get('reject_rate_pct', 0)} "
                 f"scores={format_policy_score_summary(insight.get('score_summary'))} "
                 f"graph={format_graph_evidence_summary(insight.get('graph_evidence'))} "
+                f"context={format_context_quality_summary(insight.get('context_quality'))} "
                 f"top_reasons={format_reason_entries(insight.get('top_reasons'))}"
             )
     if validation:
@@ -607,12 +609,13 @@ def format_html_snapshot(snapshot):
             insight.get("reject_rate_pct"),
             format_policy_score_summary(insight.get("score_summary")),
             format_graph_evidence_summary(insight.get("graph_evidence")),
+            format_context_quality_summary(insight.get("context_quality")),
             format_reason_entries(insight.get("top_reasons")),
         )
         for insight in curation.get("policy_insights") or []
     )
     if not policy_rows:
-        policy_rows = html_table_row("none", "", "", 0, 0, 0, "", "", "")
+        policy_rows = html_table_row("none", "", "", 0, 0, 0, "", "", "", "")
     validation_rows = "\n".join(
         html_table_row(
             item.get("code"),
@@ -694,7 +697,7 @@ def format_html_snapshot(snapshot):
   <section>
     <h2>Policy Insights</h2>
     <table>
-      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>top reasons</th></tr>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>context quality</th><th>top reasons</th></tr>
       {policy_rows}
     </table>
   </section>

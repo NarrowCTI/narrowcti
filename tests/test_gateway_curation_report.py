@@ -272,7 +272,7 @@ class GatewayCurationReportTests(unittest.TestCase):
                                 "misp",
                                 "quarantine",
                                 "low score",
-                                metadata=graph_metadata(),
+                                metadata=graph_context_metadata(),
                                 score=score,
                             )
                         )
@@ -302,6 +302,12 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual(2.0, insight["graph_evidence"]["candidate_density"])
         self.assertEqual(3, insight["graph_evidence"]["lookup_match_count"])
         self.assertEqual(100.0, insight["graph_evidence"]["lookup_match_rate_pct"])
+        self.assertEqual(9, insight["context_quality"]["accepted_candidate_count"])
+        self.assertEqual(3.0, insight["context_quality"]["candidate_density"])
+        self.assertEqual(
+            [{"category": "ttp", "count": 6}, {"category": "threat", "count": 3}],
+            insight["context_quality"]["top_categories"],
+        )
         self.assertEqual(
             [
                 {
@@ -319,6 +325,8 @@ class GatewayCurationReportTests(unittest.TestCase):
         )
         self.assertIn("scores=records=3 min=30 max=80 average=50.0 low=2", text)
         self.assertIn("graph=candidates=6 density=2.0", text)
+        self.assertIn("context=records=3 accepted_context=9 density=3.0", text)
+        self.assertIn("categories=ttp:6,threat:3", text)
         self.assertIn("top_reasons=reject:Out of scope=2", text)
         self.assertIn("Out of scope", html)
         self.assertIn("review-source-policy-insights", recommendation_codes)
@@ -574,6 +582,23 @@ def graph_metadata():
             }
         ],
     }
+
+
+def graph_context_metadata():
+    metadata = graph_metadata()
+    metadata["contextual_scoring"] = {
+        "mode": "dry-run",
+        "status": "dry-run",
+        "base_score": 55,
+        "contextual_score": 80,
+        "score_delta": 25,
+        "accepted_candidate_count": 3,
+        "adjustment_count": 2,
+        "category_counts": {"threat": 1, "ttp": 2},
+        "capped": False,
+        "applied_to_decision": False,
+    }
+    return metadata
 
 
 if __name__ == "__main__":

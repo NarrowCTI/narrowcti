@@ -124,7 +124,9 @@ The current report contains:
   whether the source is repeatedly producing low-score or higher-confidence
   reviewed candidates. Graph evidence density is also attached so analysts can
   see whether a source is producing graph context, OpenCTI canonical matches and
-  relationship-ready evidence.
+  relationship-ready evidence. Context-quality metrics are attached from
+  contextual scoring evidence so analysts can see whether reviewed candidates
+  carry actor, TTP, sector, arsenal or other high-value CTI context.
 - `recommendations`: deterministic next actions based on evidence gaps and
   risk signals.
 
@@ -186,11 +188,15 @@ held graph candidates, OpenCTI lookup matches, would-create object/relationship
 counts and density ratios. It is evidence for review and promotion readiness,
 not an automatic export trigger.
 
+The context-quality summary includes source-level contextual scoring records,
+accepted context candidates, adjustment volume, average score delta, maximum
+contextual score and top context categories. In v0.8 this remains report
+evidence only; it does not apply contextual scoring to final ingest decisions.
+
 ## Future Work
 
 - Add PDF export once the report schema stabilizes.
 - Add richer per-actor, per-sector and per-ATT&CK narratives.
-- Add deeper policy tuning insights using source context quality and repeated
-  quarantine reasons.
+- Add deeper policy tuning insights using repeated quarantine reasons.
 - Add graph-quality deltas after controlled graph promotion is enabled.
 - Add additional customer-safe redaction profiles for external report delivery.

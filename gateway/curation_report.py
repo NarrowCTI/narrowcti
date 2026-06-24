@@ -366,6 +366,23 @@ def empty_graph_evidence_summary():
     }
 
 
+def empty_context_quality_summary():
+    return {
+        "record_count": 0,
+        "accepted_candidate_count": 0,
+        "adjustment_count": 0,
+        "score_delta_total": 0,
+        "average_score_delta": None,
+        "max_contextual_score": None,
+        "capped_count": 0,
+        "applied_to_decision_count": 0,
+        "candidate_density": 0.0,
+        "category_diversity": 0,
+        "category_counts": {},
+        "top_categories": [],
+    }
+
+
 def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
     graph_export = graph_export or {}
     graph_preview = graph_preview or {}
@@ -395,6 +412,31 @@ def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
             candidate_count,
         ),
         "lookup_match_rate_pct": percent(lookup_match_count, accepted_count),
+    }
+
+
+def build_context_quality_summary(contextual_scoring, decision_records):
+    contextual_scoring = contextual_scoring or {}
+    decision_records = int(decision_records or 0)
+    category_counts = dict(contextual_scoring.get("category_counts") or {})
+    accepted_candidate_count = int(
+        contextual_scoring.get("accepted_candidate_count", 0) or 0
+    )
+    return {
+        "record_count": int(contextual_scoring.get("record_count", 0) or 0),
+        "accepted_candidate_count": accepted_candidate_count,
+        "adjustment_count": int(contextual_scoring.get("adjustment_count", 0) or 0),
+        "score_delta_total": int(contextual_scoring.get("score_delta_total", 0) or 0),
+        "average_score_delta": contextual_scoring.get("average_score_delta"),
+        "max_contextual_score": contextual_scoring.get("max_contextual_score"),
+        "capped_count": int(contextual_scoring.get("capped_count", 0) or 0),
+        "applied_to_decision_count": int(
+            contextual_scoring.get("applied_to_decision_count", 0) or 0
+        ),
+        "candidate_density": ratio(accepted_candidate_count, decision_records),
+        "category_diversity": len(category_counts),
+        "category_counts": category_counts,
+        "top_categories": top_category_entries(category_counts),
     }
 
 
@@ -436,6 +478,13 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
             or {},
             decision_source.get("records", 0),
         )
+        context_quality = build_context_quality_summary(
+            ((decisions.get("contextual_scoring") or {}).get("by_source") or {}).get(
+                source_key,
+            )
+            or {},
+            decision_source.get("records", 0),
+        )
         totals = operational_source.get("totals") or {}
         metrics = operational_source.get("metrics") or {}
         statuses = quarantine_source.get("statuses") or {}
@@ -462,6 +511,7 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
             "low_score_count": int((score_summary.get("bands") or {}).get("0-29", 0))
             + int((score_summary.get("bands") or {}).get("30-49", 0)),
             "graph_evidence": graph_evidence,
+            "context_quality": context_quality,
             "quarantine_records": quarantine_source.get("records", 0)
             or (analyst_review.get("source_counts") or {}).get(source_key, 0),
             "pending_review": statuses.get("pending", 0),
@@ -518,6 +568,10 @@ def build_policy_insights(source_summaries):
                 "graph_evidence",
                 empty_graph_evidence_summary(),
             ),
+            "context_quality": source.get(
+                "context_quality",
+                empty_context_quality_summary(),
+            ),
             "severity": "info",
             "signal": "observe-review-pattern",
             "message": "Review decisions exist; continue collecting evidence before changing policy.",
@@ -559,6 +613,20 @@ def top_reason_entries(counter, limit=3):
             "count": count,
         }
         for reason, count in items[:limit]
+    ]
+
+
+def top_category_entries(category_counts, limit=3):
+    items = sorted(
+        (category_counts or {}).items(),
+        key=lambda item: (-int(item[1] or 0), item[0]),
+    )
+    return [
+        {
+            "category": category,
+            "count": int(count or 0),
+        }
+        for category, count in items[:limit]
     ]
 
 
@@ -705,6 +773,7 @@ def format_text_report(report, redaction_profile="none"):
                 f"reject_rate_pct={insight['reject_rate_pct']} "
                 f"scores={format_policy_score_summary(insight.get('score_summary'))} "
                 f"graph={format_graph_evidence_summary(insight.get('graph_evidence'))} "
+                f"context={format_context_quality_summary(insight.get('context_quality'))} "
                 f"top_reasons={format_reason_entries(insight.get('top_reasons'))}: "
                 f"{insight['message']}"
             )
@@ -759,13 +828,28 @@ def format_html_report(report, redaction_profile="none"):
             insight.get("reject_rate_pct"),
             format_policy_score_summary(insight.get("score_summary")),
             format_graph_evidence_summary(insight.get("graph_evidence")),
+            format_context_quality_summary(insight.get("context_quality")),
             format_reason_entries(insight.get("top_reasons")),
             insight.get("message"),
         )
         for insight in data.get("policy_insights") or []
     )
     if not policy_rows:
-        policy_rows = html_table_row("none", "", "", 0, 0, 0, 0, 0, "", "", "", "")
+        policy_rows = html_table_row(
+            "none",
+            "",
+            "",
+            0,
+            0,
+            0,
+            0,
+            0,
+            "",
+            "",
+            "",
+            "",
+            "",
+        )
 
     return """<!doctype html>
 <html lang="en">
@@ -831,7 +915,7 @@ def format_html_report(report, redaction_profile="none"):
   <section>
     <h2>Policy Insights</h2>
     <table>
-      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>top reasons</th><th>message</th></tr>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>context quality</th><th>top reasons</th><th>message</th></tr>
       {policy_rows}
     </table>
   </section>
@@ -951,6 +1035,33 @@ def format_graph_evidence_summary(summary):
         f"relationship_density={summary.get('relationship_density', 0.0)} "
         f"stix_objects={summary.get('stix_object_count', 0)} "
         f"stix_relationships={summary.get('stix_relationship_count', 0)}"
+    )
+
+
+def format_context_quality_summary(summary):
+    summary = summary or empty_context_quality_summary()
+    return (
+        f"records={summary.get('record_count', 0)} "
+        f"accepted_context={summary.get('accepted_candidate_count', 0)} "
+        f"density={summary.get('candidate_density', 0.0)} "
+        f"adjustments={summary.get('adjustment_count', 0)} "
+        f"avg_delta={format_optional(summary.get('average_score_delta'))} "
+        f"max_contextual_score="
+        f"{format_optional(summary.get('max_contextual_score'))} "
+        f"categories={format_category_entries(summary.get('top_categories'))}"
+    )
+
+
+def format_category_entries(entries):
+    entries = list(entries or [])
+    if not entries:
+        return "none"
+    return ",".join(
+        "{}:{}".format(
+            entry.get("category", "unknown"),
+            entry.get("count", 0),
+        )
+        for entry in entries
     )
 
 
