@@ -240,7 +240,7 @@ vulnerability and observation pivots from a curated OTX pulse.
 | Author/provider identity | AlienVault plus pulse author. | OTX author/source identity is captured as audit-only graph evidence. | Preserve provider and source author as graph/provenance evidence. |
 | OTX entity extraction | Promotes adversary, malware, ATT&CK, sectors, countries and CVEs. | Extracts these into audit-only `graph_evidence` and graph candidates when source evidence exists. | Promote only after confidence and policy validation. |
 | Observables | Emits supported SCO/custom observables. | Not emitted by current exporter. | Add observable output in graph-aware STIX builder. |
-| Indicators | Emits supported STIX/YARA indicators with score metadata. | Emits selected STIX indicators. | Preserve official-compatible indicator semantics plus NarrowCTI scoring evidence. |
+| Indicators | Emits supported STIX/YARA indicators with score metadata. | Emits selected STIX indicators; YARA indicators are parsed into audit-only `detection_rule` candidates. | Preserve official-compatible indicator semantics plus NarrowCTI scoring evidence. |
 | Vulnerabilities | Creates CVE vulnerabilities from indicators and optional tag guessing. | CVE values from OTX fields, indicators, tags and references become audit-only vulnerability candidates. | Add NVD references, enrichment and relationship policy controls before export. |
 | Relationships | Emits `uses`, `targets`, `based-on` and `indicates`. | Relationships are audit evidence only. | Add relationship policy with confidence/provenance. |
 | Country handling | Country locations use placeholder `ZZ`. | Extracts target countries as evidence. | Normalize countries properly before export. |
@@ -277,6 +277,7 @@ complete:
 
 1. Add OTX fixture coverage with adversary, malware family, ATT&CK ids,
    industries, countries, references, TLP, CVE, YARA and standard indicators.
+   Initial YARA audit extraction is implemented.
 2. Extend the graph candidate model to represent OTX Intrusion Set, Malware,
    Attack Pattern, Sector, Location, Vulnerability, Observable and Indicator
    candidates.

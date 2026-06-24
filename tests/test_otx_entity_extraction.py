@@ -46,6 +46,12 @@ class OTXEntityExtractionTests(unittest.TestCase):
                         "first_seen": "2026-04-02T10:00:00Z",
                         "last_seen": "2026-04-05T10:00:00Z",
                     },
+                    {
+                        "id": "indicator-yara-1",
+                        "type": "YARA",
+                        "indicator": "rule SuspiciousRule { condition: true }",
+                        "description": "Suspicious YARA rule",
+                    },
                 ],
                 "tags": ["credential theft", "T1059"],
             }
@@ -69,6 +75,12 @@ class OTXEntityExtractionTests(unittest.TestCase):
             "2026-04-05T10:00:00Z",
             entities["indicator_observation_window"]["last_seen_max"],
         )
+        self.assertEqual(1, len(entities["detection_rules"]))
+        self.assertEqual("yara", entities["detection_rules"][0]["rule_type"])
+        self.assertEqual(
+            "rule SuspiciousRule { condition: true }",
+            entities["detection_rules"][0]["pattern"],
+        )
         self.assertEqual(["amber"], entities["tlp"])
         self.assertEqual(
             {"url": "https://vendor.example/ioc", "source_name": "Vendor"},
@@ -85,6 +97,26 @@ class OTXEntityExtractionTests(unittest.TestCase):
         )
         self.assertEqual(3, entities["counts"]["attack_ids"])
         self.assertEqual(2, entities["counts"]["vulnerabilities"])
+        self.assertEqual(1, entities["counts"]["detection_rules"])
+        self.assertIn(
+            {
+                "entity_type": "detection_rule",
+                "value": "Suspicious YARA rule",
+                "source_field": "indicators",
+                "confidence": 70,
+                "attributes": {
+                    "rule_type": "yara",
+                    "pattern_type": "yara",
+                    "pattern": "rule SuspiciousRule { condition: true }",
+                    "indicator_type": "YARA",
+                    "indicator_id": "indicator-yara-1",
+                    "created": None,
+                    "first_seen": None,
+                    "last_seen": None,
+                },
+            },
+            entities["records"],
+        )
 
     def test_normalizes_attack_ids_from_mixed_strings(self):
         self.assertEqual(

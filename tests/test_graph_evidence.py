@@ -193,6 +193,55 @@ class GraphEvidenceTests(unittest.TestCase):
             )
         )
 
+    def test_builds_otx_detection_rule_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "detection_rule",
+                            "value": "Suspicious YARA rule",
+                            "source_field": "indicators",
+                            "confidence": 70,
+                            "attributes": {
+                                "rule_type": "yara",
+                                "pattern_type": "yara",
+                                "pattern": "rule SuspiciousRule { condition: true }",
+                                "indicator_type": "YARA",
+                                "indicator_id": "indicator-yara-1",
+                            },
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="OTX pulse",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["detection_rule"])
+        self.assertIn(
+            {
+                "entity_type": "detection_rule",
+                "value": "Suspicious YARA rule",
+                "stix_object_type": "indicator",
+                "relationship_type": "detects",
+                "source_key": "alienvault:otx",
+                "source_name": "otx",
+                "source_field": "indicators",
+                "confidence": 70,
+                "attributes": {
+                    "rule_type": "yara",
+                    "pattern_type": "yara",
+                    "pattern": "rule SuspiciousRule { condition: true }",
+                    "indicator_type": "YARA",
+                    "indicator_id": "indicator-yara-1",
+                },
+            },
+            evidence["records"],
+        )
+
     def test_builds_misp_provenance_tags_and_marking_evidence(self):
         evidence = build_graph_evidence(
             {

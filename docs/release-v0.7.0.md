@@ -106,6 +106,9 @@ detailed graph-enrichment design is tracked in
   author/source identity evidence. Pulse lifecycle, vote summary and indicator
   first/last-seen windows are now preserved in audit metadata for future
   report/indicator STIX enrichment.
+- Added OTX YARA audit extraction. YARA pulse indicators now produce audit-only
+  `detection_rule` / `indicator` graph evidence and candidates with pattern
+  type, raw rule content, indicator id and observation timing.
 - Added MISP CVE/vulnerability audit extraction from tags, event text,
   attributes and object attributes. CVE ids now produce audit-only
   `vulnerability` graph evidence and candidates, including vulnerability
@@ -134,6 +137,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 232 tests
+Ran 233 tests
 OK
 ```

@@ -311,7 +311,14 @@ class ProcessorTests(unittest.TestCase):
                 "targeted_countries": ["BR"],
                 "TLP": "tlp:green",
                 "references": ["https://example.com/report"],
-                "indicators": [],
+                "indicators": [
+                    {
+                        "id": "indicator-yara-1",
+                        "type": "YARA",
+                        "indicator": "rule SuspiciousRule { condition: true }",
+                        "description": "Suspicious YARA rule",
+                    }
+                ],
             }
         )
         state = SimpleNamespace(
@@ -370,6 +377,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("alienvault:otx", graph_evidence["source_key"])
         self.assertEqual(2, graph_evidence["counts"]["attack_pattern"])
         self.assertEqual(1, graph_evidence["counts"]["vulnerability"])
+        self.assertEqual(1, graph_evidence["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 record["entity_type"] == "threat_actor"
@@ -393,6 +401,14 @@ class ProcessorTests(unittest.TestCase):
                 for record in graph_evidence["records"]
             )
         )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "detection_rule"
+                and record["value"] == "Suspicious YARA rule"
+                and record["attributes"]["pattern_type"] == "yara"
+                for record in graph_evidence["records"]
+            )
+        )
         graph_candidates = records[0].metadata["graph_candidates"]
         self.assertEqual("v0.7.0-dev", graph_candidates["version"])
         self.assertEqual("pulse-1", graph_candidates["external_id"])
@@ -402,11 +418,21 @@ class ProcessorTests(unittest.TestCase):
         )
         self.assertEqual(2, graph_candidates["counts"]["attack_pattern"])
         self.assertEqual(1, graph_candidates["counts"]["vulnerability"])
+        self.assertEqual(1, graph_candidates["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 candidate["entity_type"] == "threat_actor"
                 and candidate["value"] == "APT Example"
                 and candidate["relationship_type"] == "attributed-to"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["relationship_type"] == "detects"
+                and candidate["attributes"]["pattern"]
+                == "rule SuspiciousRule { condition: true }"
                 for candidate in graph_candidates["candidates"]
             )
         )

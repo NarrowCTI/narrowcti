@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
+DETECTION_RULE_TYPES = {"yara"}
 
 
 ENTITY_SPECS = (
@@ -35,6 +36,7 @@ def extract_otx_entities(pulse):
         "indicator_observation_window": indicator_observation_window(
             pulse.get("indicators")
         ),
+        "detection_rules": otx_detection_rules(pulse),
         "tlp": normalize_tlp(pulse),
         "references": normalize_references(pulse.get("references")),
         "tags": normalize_values(pulse.get("tags")),
@@ -200,6 +202,62 @@ def indicator_observation_window(indicators):
     )
 
 
+def otx_detection_rules(pulse):
+    rules = []
+    for indicator in flatten(pulse.get("indicators")):
+        if not isinstance(indicator, dict):
+            continue
+        rule_type = normalize_value(indicator.get("type")).lower()
+        if rule_type not in DETECTION_RULE_TYPES:
+            continue
+        pattern = normalize_rule_pattern(
+            indicator.get("indicator")
+            or indicator.get("value")
+            or indicator.get("content")
+        )
+        if not pattern:
+            continue
+        title = normalize_value(
+            indicator.get("title")
+            or indicator.get("description")
+            or indicator.get("id")
+            or f"{rule_type} detection rule"
+        )
+        rules.append(
+            compact_mapping(
+                {
+                    "value": title,
+                    "rule_type": rule_type,
+                    "pattern_type": rule_type,
+                    "pattern": pattern,
+                    "indicator_type": indicator.get("type"),
+                    "indicator_id": indicator.get("id"),
+                    "created": indicator.get("created") or indicator.get("created_at"),
+                    "first_seen": indicator.get("first_seen"),
+                    "last_seen": indicator.get("last_seen"),
+                    "source_field": "indicators",
+                }
+            )
+        )
+    return deduplicate_detection_rules(rules)
+
+
+def deduplicate_detection_rules(rules):
+    seen = set()
+    deduplicated = []
+    for rule in rules:
+        key = (
+            str(rule.get("indicator_id", "")).casefold(),
+            str(rule.get("rule_type", "")).casefold(),
+            str(rule.get("pattern", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(rule)
+    return deduplicated
+
+
 def normalize_reference(value):
     if isinstance(value, dict):
         url = normalize_value(value.get("url") or value.get("link") or value.get("href"))
@@ -251,6 +309,25 @@ def extraction_records(entities):
                 "confidence": 50,
             }
         )
+    for rule in entities.get("detection_rules") or []:
+        records.append(
+            {
+                "entity_type": "detection_rule",
+                "value": rule.get("value"),
+                "source_field": rule.get("source_field") or "indicators",
+                "confidence": 70,
+                "attributes": {
+                    "rule_type": rule.get("rule_type"),
+                    "pattern_type": rule.get("pattern_type"),
+                    "pattern": rule.get("pattern"),
+                    "indicator_type": rule.get("indicator_type"),
+                    "indicator_id": rule.get("indicator_id"),
+                    "created": rule.get("created"),
+                    "first_seen": rule.get("first_seen"),
+                    "last_seen": rule.get("last_seen"),
+                },
+            }
+        )
     return records
 
 
@@ -297,6 +374,10 @@ def normalize_value(value):
         )
     normalized = str(value or "").strip()
     return " ".join(normalized.split())
+
+
+def normalize_rule_pattern(value):
+    return str(value or "").strip()
 
 
 def first_present(mapping, *keys):

@@ -96,6 +96,7 @@ OTX v0.6 already extracts useful entity hints. v0.7 should validate and map:
 | `malware_families` | `malware` or `tool` | Should not be treated as high-confidence attribution by itself. |
 | `attack_ids` | `attack-pattern` | Resolve through local MITRE cache and include tactics. |
 | `cve`, `cves`, `vulnerabilities`, CVE indicators/tags | `vulnerability` | CVEs become audit-only graph candidates before future NVD enrichment and relationship export. |
+| YARA indicators | `indicator` | YARA indicator content becomes audit-only detection-rule evidence before future pattern-aware STIX indicator export. |
 | `industries` | sector `identity` or OpenCTI sector entity | Treat as victimology evidence. |
 | `targeted_countries` | `location` | Treat as victimology/geography evidence. |
 | `target_countries` | `location` | Alias accepted from normalized OTX schemas. |
@@ -113,6 +114,13 @@ and relationships such as `uses`, `targets`, `based-on` and `indicates`.
 NarrowCTI should keep its custom OTX runtime and curation controls, but the
 official connector is the source-specific compatibility baseline for how OTX
 evidence should eventually land in the OpenCTI graph.
+
+OTX YARA audit extraction is implemented for pulse indicators with type
+`YARA`. NarrowCTI normalizes rule type, pattern type, raw rule content,
+indicator id and observation timing into `detection_rules`, then emits
+audit-only `detection_rule` / `indicator` graph evidence and candidates. This
+preserves detection engineering content for future pattern-aware STIX indicator
+export without changing the current stable report/indicator exporter.
 
 ### MISP
 
@@ -473,11 +481,12 @@ v0.7 should not be considered complete until:
    in `core/graph_candidates.py` and attached to OTX/MISP audit metadata.
 2. Expand OTX metadata mapping into graph candidates. Initial OTX and MITRE
    evidence mapping is now present as `graph_evidence` and `graph_candidates`
-   in decision/quarantine metadata, including CVE vulnerability candidates and
-   OTX author identity evidence. Pulse lifecycle, vote summary and indicator
-   observation windows are captured as audit metadata for future
-   report/indicator STIX output. The official AlienVault connector mapping has
-   been validated as the source-specific graph baseline.
+   in decision/quarantine metadata, including CVE vulnerability candidates,
+   YARA detection-rule candidates and OTX author identity evidence. Pulse
+   lifecycle, vote summary and indicator observation windows are captured as
+   audit metadata for future report/indicator STIX output. The official
+   AlienVault connector mapping has been validated as the source-specific graph
+   baseline.
 3. Add MISP metadata and galaxy extraction fixtures. Initial provenance,
    original-source, TLP, tag, EventReport note, attribute sighting,
    object-reference relationship, detection-rule, CVE vulnerability and common
