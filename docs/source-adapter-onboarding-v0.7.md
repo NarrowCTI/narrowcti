@@ -52,6 +52,35 @@ Each mapping must state whether the field becomes:
 - Quarantine-only evidence.
 - Raw snapshot context only.
 
+## Metadata Extractor Conventions
+
+Each adapter should keep source-specific extraction small, explicit and
+testable.
+
+Recommended conventions:
+
+- Keep source-specific extraction inside the adapter package.
+- Name extraction functions after the source and output, such as
+  `extract_source_galaxies`, `extract_source_detection_rules` or
+  `extract_source_observables`.
+- Return normalized plain dictionaries and lists, not STIX objects.
+- Preserve the original source field name in `source_field`.
+- Preserve source ids, UUIDs, tags and references when available.
+- Add `confidence` only when the source field has a clear default confidence.
+- Avoid creating actor, malware or campaign claims from generic text unless
+  there is taxonomy, allowlist, galaxy, ATT&CK or provider evidence.
+- Deduplicate inside the extractor by stable semantic keys before graph
+  evidence is built.
+- Keep weak hints as audit metadata until policy, scoring or analyst review can
+  promote them.
+- Add focused fixtures for nested, missing, duplicated and malformed source
+  payloads.
+
+Extractor output should be consumed by `core.graph_evidence`, which turns
+source-normalized dictionaries into shared graph evidence records. This keeps
+the gateway architecture source-aware at the edge and source-neutral in the
+curation core.
+
 ## Adapter Contract
 
 New adapters should produce normalized feed candidates compatible with the

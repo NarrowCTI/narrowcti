@@ -258,7 +258,8 @@ The safe v0.7 scope is:
    `docs/source-adapter-onboarding-v0.7.md`.
 3. Create the shared graph candidate model. Initial model and OTX/MISP
    audit metadata attachment are implemented.
-4. Add adapter-level metadata extractor conventions.
+4. Add adapter-level metadata extractor conventions. Implemented in
+   `docs/source-adapter-onboarding-v0.7.md`.
 5. Add preflight output showing enabled ingestion mode:
    `direct`, `misp-collector` or `hybrid`. Implemented in
    `gateway.preflight` as `ingestion_mode` in text and JSON output.
