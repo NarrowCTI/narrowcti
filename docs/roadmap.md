@@ -200,13 +200,16 @@ Detailed design and validation:
 - `docs/operational-validation-v0.8.md`
 - `docs/deployment-operations-v0.8.md`
 - `docs/analyst-review-v0.8.md`
+- `docs/curation-reporting-v0.8.md`
 
 Purpose:
 
 - Add analyst review API/UI for quarantine, release and policy tuning. v0.8
   starts with an internal analyst review service used by the CLI; HTTP/UI
   surfaces remain future work.
-- Prepare the reporting model for analyst-facing CTI curation reports.
+- Prepare the reporting model for analyst-facing CTI curation reports. v0.8
+  starts with a read-only curation report model over gateway, decision,
+  quarantine and graph-readiness evidence.
 - Provide a cleaner installation and upgrade path.
 - Add deployment templates. v0.8 starts with a safe gateway compose template
   and env example for existing OpenCTI Docker networks.

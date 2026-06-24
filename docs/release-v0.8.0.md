@@ -21,6 +21,7 @@ The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`.
 Operational validation is tracked in `docs/operational-validation-v0.8.md`.
 Deployment operations are tracked in `docs/deployment-operations-v0.8.md`.
 Analyst review design is tracked in `docs/analyst-review-v0.8.md`.
+Curation reporting is tracked in `docs/curation-reporting-v0.8.md`.
 
 ## Initial Scope
 
@@ -81,6 +82,9 @@ Analyst review design is tracked in `docs/analyst-review-v0.8.md`.
   API for quarantine list, summary, release, partial release, reject, export
   dry-run and audit-event reads. The CLI now delegates review operations to
   this service.
+- Added `gateway.curation_report` as the first analyst-facing curation report
+  model. It consolidates gateway run summaries, decision audit, analyst review
+  status and graph readiness evidence into text or JSON output.
 
 ## Promotion Boundary
 
@@ -117,6 +121,10 @@ template, not a managed installer.
 The analyst review foundation is similarly conservative. It introduces a stable
 Python service boundary for future API/UI work, but no HTTP server or browser UI
 is enabled in v0.8.
+
+The curation report foundation is read-only and evidence-driven. It prepares the
+enterprise reporting model without generating PDFs, mutating review state or
+calling external APIs.
 
 ## Validation
 

@@ -1,0 +1,253 @@
+import json
+import os
+import tempfile
+import unittest
+
+from core.quarantine import QuarantineRecord, QuarantineRepository
+from gateway.curation_report import (
+    build_curation_report,
+    build_curation_report_from_files,
+    format_text_report,
+)
+from gateway.decisions import build_decision_audit_report
+from gateway.report import build_operational_report
+from gateway.review import ReviewSummary
+
+
+class GatewayCurationReportTests(unittest.TestCase):
+    def test_builds_executive_summary_from_existing_reports(self):
+        operational = build_operational_report(
+            [
+                gateway_record(
+                    "2026-06-24T10:00:00Z",
+                    [
+                        source_result(
+                            "otx",
+                            True,
+                            reviewed=4,
+                            ingested=1,
+                            dropped=1,
+                            quarantined=1,
+                            dry_run=1,
+                        )
+                    ],
+                )
+            ]
+        )
+        decisions = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-24T10:01:00Z",
+                    "otx",
+                    "quarantine",
+                    "below threshold",
+                    metadata=graph_metadata(),
+                )
+            ]
+        )
+        review = ReviewSummary(
+            record_count=1,
+            status_counts={"pending": 1},
+            source_counts={"otx": 1},
+            pending_count=1,
+            exportable_count=0,
+        )
+
+        report = build_curation_report(
+            operational,
+            decisions,
+            review,
+            generated_at="2026-06-24T10:02:00Z",
+        )
+        summary = report.executive_summary
+
+        self.assertEqual(1, summary["run_count"])
+        self.assertEqual(4, summary["reviewed_count"])
+        self.assertEqual(2, summary["accepted_count"])
+        self.assertEqual(2, summary["filtered_count"])
+        self.assertEqual(1, summary["quarantine_decision_count"])
+        self.assertEqual(1, summary["pending_review_count"])
+        self.assertEqual(2, summary["graph_candidate_count"])
+        self.assertEqual(1, summary["graph_lookup_match_count"])
+        self.assertEqual(1, summary["graph_would_create_object_count"])
+        self.assertIn(
+            "review-quarantine",
+            [item["code"] for item in report.recommendations],
+        )
+        self.assertIn(
+            "validate-graph-promotion",
+            [item["code"] for item in report.recommendations],
+        )
+        json.dumps(report.to_dict())
+
+    def test_builds_report_from_files_with_partial_evidence(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            summary_file = os.path.join(tmpdir, "gateway_runs.jsonl")
+            decision_file = os.path.join(tmpdir, "otx_decisions.jsonl")
+            quarantine_file = os.path.join(tmpdir, "quarantine.jsonl")
+            with open(summary_file, "w", encoding="utf-8") as file_obj:
+                file_obj.write(
+                    json.dumps(
+                        gateway_record(
+                            "2026-06-24T10:00:00Z",
+                            [source_result("otx", True, reviewed=1, dry_run=1)],
+                        )
+                    )
+                    + "\n"
+                )
+            with open(decision_file, "w", encoding="utf-8") as file_obj:
+                file_obj.write(
+                    json.dumps(
+                        decision_record(
+                            "2026-06-24T10:01:00Z",
+                            "otx",
+                            "dry-run",
+                            "would ingest",
+                        )
+                    )
+                    + "\n"
+                )
+            QuarantineRepository(quarantine_file).add(
+                QuarantineRecord(
+                    source_key="otx",
+                    external_id="pulse-1",
+                    title="Sample pulse",
+                    reason="low score",
+                )
+            )
+
+            report = build_curation_report_from_files(
+                summary_file=summary_file,
+                decision_paths=[decision_file],
+                quarantine_file=quarantine_file,
+            )
+
+        self.assertEqual(1, report.executive_summary["run_count"])
+        self.assertEqual(1, report.executive_summary["decision_record_count"])
+        self.assertEqual(1, report.executive_summary["pending_review_count"])
+
+    def test_text_report_is_analyst_readable(self):
+        operational = build_operational_report([])
+        decisions = build_decision_audit_report([])
+        review = ReviewSummary(
+            record_count=0,
+            status_counts={},
+            source_counts={},
+            pending_count=0,
+            exportable_count=0,
+        )
+
+        text = format_text_report(
+            build_curation_report(
+                operational,
+                decisions,
+                review,
+                generated_at="2026-06-24T10:02:00Z",
+            )
+        )
+
+        self.assertIn("NarrowCTI curation report", text)
+        self.assertIn("executive_summary:", text)
+        self.assertIn("analyst_review:", text)
+        self.assertIn("graph_readiness:", text)
+        self.assertIn("collect-evidence", text)
+
+
+def gateway_record(recorded_at, results):
+    return {
+        "recorded_at": recorded_at,
+        "sources": len(results),
+        "succeeded": sum(1 for result in results if result["success"]),
+        "failed": sum(1 for result in results if not result["success"]),
+        "totals": merge_result_totals(results),
+        "results": results,
+    }
+
+
+def source_result(
+    source_key,
+    success,
+    reviewed=0,
+    ingested=0,
+    dropped=0,
+    quarantined=0,
+    skipped=0,
+    errors=0,
+    dry_run=0,
+):
+    return {
+        "source_key": source_key,
+        "source_name": source_key.upper(),
+        "success": success,
+        "error": "" if success else "source offline",
+        "summary_count": 1 if success else 0,
+        "totals": {
+            "reviewed": reviewed,
+            "ingested": ingested,
+            "dropped": dropped,
+            "quarantined": quarantined,
+            "skipped": skipped,
+            "errors": errors,
+            "dry_run": dry_run,
+        },
+        "summaries": [],
+    }
+
+
+def merge_result_totals(results):
+    totals = {
+        "reviewed": 0,
+        "ingested": 0,
+        "dropped": 0,
+        "quarantined": 0,
+        "skipped": 0,
+        "errors": 0,
+        "dry_run": 0,
+    }
+    for result in results:
+        for field_name, value in result["totals"].items():
+            totals[field_name] += value
+    return totals
+
+
+def decision_record(recorded_at, source_key, action, reason, metadata=None):
+    return {
+        "recorded_at": recorded_at,
+        "source_key": source_key,
+        "query": "sample",
+        "action": action,
+        "reason": reason,
+        "title": "Sample intelligence",
+        "external_id": "external-1",
+        "indicator_count": 1,
+        "score": 70,
+        "metadata": metadata or {},
+    }
+
+
+def graph_metadata():
+    return {
+        "graph_export_plan": {
+            "mode": "dry-run",
+            "status": "dry-run",
+            "candidate_count": 2,
+            "accepted_count": 1,
+            "held_count": 1,
+            "would_create_object_count": 1,
+            "would_create_relationship_count": 2,
+            "actions": [{"action": "would_create"}, {"action": "held"}],
+        },
+        "graph_export_plan_lookup_matches": [
+            {
+                "stix_object_type": "attack-pattern",
+                "match": {
+                    "match_type": "external_id",
+                    "entity_type": "Attack-Pattern",
+                },
+            }
+        ],
+    }
+
+
+if __name__ == "__main__":
+    unittest.main()
