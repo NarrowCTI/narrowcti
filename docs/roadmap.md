@@ -198,13 +198,15 @@ Detailed design and validation:
 
 - `docs/graph-promotion-v0.8.md`
 - `docs/operational-validation-v0.8.md`
+- `docs/deployment-operations-v0.8.md`
 
 Purpose:
 
 - Add analyst review API/UI for quarantine, release and policy tuning.
 - Prepare the reporting model for analyst-facing CTI curation reports.
 - Provide a cleaner installation and upgrade path.
-- Add deployment templates.
+- Add deployment templates. v0.8 starts with a safe gateway compose template
+  and env example for existing OpenCTI Docker networks.
 - Add controlled graph promotion with OpenCTI entity/relationship lookup,
   including canonical ATT&CK lookup by external id or STIX id.
 - Harden configuration defaults.

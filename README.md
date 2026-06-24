@@ -441,6 +441,19 @@ The local compose profile keeps `NARROWCTI_RUN_ONCE=true` and
 `NARROWCTI_RUN_ONCE=false`, review source guardrails and change the service
 restart policy only after preflight and dry-run results are acceptable.
 
+The v0.8 repository also includes a standalone deployment template for pilot or
+customer-style validation when the gateway needs to join an existing OpenCTI
+Docker network:
+
+```text
+deployment/docker-compose.narrowcti-gateway.yml
+deployment/gateway.env.example
+docs/deployment-operations-v0.8.md
+```
+
+The template is dry-run/run-once by default and should be validated with
+`gateway.preflight` before any source execution.
+
 Common OTX commands:
 
 ```powershell
@@ -539,6 +552,7 @@ docs/release-v0.6.0.md
 docs/release-v0.7.0.md
 docs/release-v0.8.0.md
 docs/graph-promotion-v0.8.md
+docs/deployment-operations-v0.8.md
 docs/quarantine-enrichment-v0.6.md
 docs/architecture-v0.7.md
 docs/graph-enrichment-v0.7.md

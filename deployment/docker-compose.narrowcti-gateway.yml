@@ -1,0 +1,28 @@
+services:
+  narrowcti-gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    container_name: ${NARROWCTI_GATEWAY_CONTAINER:-narrowcti-gateway}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command: ["python", "-m", "gateway.connector"]
+    restart: ${NARROWCTI_GATEWAY_RESTART:-no}
+    volumes:
+      - narrowcti-state:/app/state
+      - narrowcti-licenses:/licenses:ro
+    networks:
+      - opencti
+
+networks:
+  opencti:
+    external: true
+    name: ${NARROWCTI_DOCKER_NETWORK:-opencti_default}
+
+volumes:
+  narrowcti-state:
+  narrowcti-licenses:
