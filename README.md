@@ -268,7 +268,11 @@ blocked until controlled export wiring, deduplication promotion and OpenCTI
 validation are complete. The local graph deduplication state can be read with
 `NARROWCTI_GRAPH_DEDUP_STATE_FILE` so OTX and MISP export plans can mark known
 local graph keys as deduplicated. This is read-only planning evidence; dry-run
-plans are not marked as exported knowledge.
+plans are not marked as exported knowledge. In v0.8,
+`NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` can also be enabled so OTX and MISP
+planning query OpenCTI for canonical graph objects, starting with ATT&CK
+attack-patterns, before later promotion work is allowed to create new graph
+knowledge.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in

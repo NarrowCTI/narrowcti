@@ -114,6 +114,38 @@ class OpenCTIGraphLookup:
         }
 
 
+class CompositeGraphLookup:
+    def __init__(self, *lookups):
+        self.lookups = [lookup for lookup in lookups if lookup]
+
+    def known_keys_for_plan(self, plan):
+        entity_keys = set()
+        relationship_keys = set()
+        matches = []
+
+        for lookup in self.lookups:
+            known = mapping_from(lookup.known_keys_for_plan(plan))
+            for key in known.get("entity_keys") or []:
+                key = clean_string(key)
+                if key:
+                    entity_keys.add(key)
+            for key in known.get("relationship_keys") or []:
+                key = clean_string(key)
+                if key:
+                    relationship_keys.add(key)
+            for match in known.get("matches") or []:
+                if isinstance(match, Mapping):
+                    matches.append(dict(match))
+
+        result = {
+            "entity_keys": sorted(entity_keys),
+            "relationship_keys": sorted(relationship_keys),
+        }
+        if matches:
+            result["matches"] = matches
+        return result
+
+
 def filter_eq(key, value):
     return {
         "mode": "and",

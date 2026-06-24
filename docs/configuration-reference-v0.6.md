@@ -63,6 +63,7 @@ graph enrichment layer.
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Optional allow-list for STIX/OpenCTI object types such as `attack-pattern`, `malware`, `threat-actor`, `identity` or `marking-definition`. Empty allows all current candidate object types. |
 | `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export planning mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` is currently blocked until graph-aware STIX export is implemented. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a read-only known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. v0.7 does not mark plans as exported from this setting. |
+| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in read-only OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, starting with ATT&CK attack-patterns, before future graph promotion creates anything. |
 
 Current graph controls do not create new OpenCTI graph objects. They make the
 future graph promotion decision visible in decision audit and quarantine
@@ -76,7 +77,9 @@ does not replace future OpenCTI graph lookup. When
 `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured, OTX and MISP can read known
 local graph keys and mark matching candidates as deduplicated in the plan. This
 is a read-only planning aid in v0.7; real graph export and post-export marking
-remain pending.
+remain pending. In v0.8, `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` extends this
+planning aid to canonical OpenCTI graph lookup without creating entities,
+relationships or state marks.
 
 ## Source Examples
 
@@ -110,6 +113,7 @@ NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=attack_pattern,malware,threat_actor,source_
 NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=attack-pattern,malware,threat-actor,identity,marking-definition
 NARROWCTI_GRAPH_EXPORT_MODE=dry-run
 NARROWCTI_GRAPH_DEDUP_STATE_FILE=/app/state/graph_dedup.json
+NARROWCTI_OPENCTI_GRAPH_LOOKUP=false
 ```
 
 MISP-specific review posture:

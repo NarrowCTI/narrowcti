@@ -335,6 +335,7 @@ class SettingsTests(unittest.TestCase):
             "NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES": "attack-pattern, malware",
             "NARROWCTI_GRAPH_EXPORT_MODE": "dry_run",
             "NARROWCTI_GRAPH_DEDUP_STATE_FILE": "/app/state/graph_dedup.json",
+            "NARROWCTI_OPENCTI_GRAPH_LOOKUP": "true",
             "NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION": "false",
             "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION": "false",
             "NARROWCTI_MITRE_CACHE_FILE": "/app/state/mitre_attack_cache.json",
@@ -371,6 +372,7 @@ class SettingsTests(unittest.TestCase):
             "/app/state/graph_dedup.json",
             settings.graph_dedup_state_file,
         )
+        self.assertTrue(settings.opencti_graph_lookup)
         self.assertFalse(settings.enable_otx_entity_extraction)
         self.assertFalse(settings.enable_mitre_attack_resolution)
         self.assertEqual(

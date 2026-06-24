@@ -48,9 +48,25 @@ The first v0.8 implementation is intentionally read-only:
   by local graph deduplication.
 - Lookup errors fail open and are logged, preserving the current audit/dry-run
   behavior.
+- `NARROWCTI_OPENCTI_GRAPH_LOOKUP=false` keeps the runtime read-only lookup
+  disabled by default. When set to `true`, OTX and MISP planning combine local
+  graph deduplication state with OpenCTI canonical graph lookup.
 
 This lets NarrowCTI mark a candidate such as `T1059` as already known by
 OpenCTI before future graph promotion tries to create anything.
+
+## Runtime Configuration
+
+`NARROWCTI_OPENCTI_GRAPH_LOOKUP` controls the v0.8 OpenCTI graph lookup gate.
+
+- `false`: default. NarrowCTI only uses local graph deduplication state when
+  `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured.
+- `true`: NarrowCTI queries OpenCTI during graph export planning and treats
+  canonical matches, such as existing ATT&CK attack-patterns, as known graph
+  entities before promotion logic is allowed to create anything.
+
+The lookup is still read-only. It does not create entities, relationships or
+state marks in OpenCTI.
 
 ## Canonical MITRE Linking
 

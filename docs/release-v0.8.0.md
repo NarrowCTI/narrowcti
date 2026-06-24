@@ -46,10 +46,14 @@ The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`.
 - Made the lookup compatible with the existing `graph_export_plan` known-key
   interface so OpenCTI-known entities can be treated as deduplicated planning
   evidence before export.
+- Wired OTX and MISP runtimes to optionally combine local graph deduplication
+  with read-only OpenCTI graph lookup through
+  `NARROWCTI_OPENCTI_GRAPH_LOOKUP`.
 - Added fail-open behavior for OpenCTI graph lookup errors. Lookup failures are
   logged and do not block the existing audit/dry-run plan.
 - Added unit coverage for MITRE attack-pattern lookup, fail-open behavior,
-  STIX-id fallback and unsupported candidate handling.
+  STIX-id fallback, unsupported candidate handling and composite lookup
+  merging.
 
 ## Promotion Boundary
 

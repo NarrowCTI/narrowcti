@@ -7,6 +7,7 @@ from core.graph_deduplication import GraphDeduplicationIndex
 from core.graph_evidence import build_graph_evidence
 from core.graph_export_plan import build_graph_export_plan_with_known_keys
 from core.indicator_policy import filter_indicators_by_type
+from core.opencti_graph_lookup import CompositeGraphLookup, OpenCTIGraphLookup
 from core.mitre_attack import MITREAttackResolver
 from core.policy import PolicyConfig, should_ingest
 from core.quarantine import (
@@ -183,10 +184,17 @@ class OTXProcessor:
         return QuarantineRepository(repository_file)
 
     def build_graph_deduplication_index(self, settings):
+        lookups = []
         state_file = getattr(settings, "graph_dedup_state_file", "")
-        if not state_file:
+        if state_file:
+            lookups.append(GraphDeduplicationIndex(state_file))
+        if getattr(settings, "opencti_graph_lookup", False) and self.api_client:
+            lookups.append(OpenCTIGraphLookup(self.api_client, logger=self.log))
+        if not lookups:
             return None
-        return GraphDeduplicationIndex(state_file)
+        if len(lookups) == 1:
+            return lookups[0]
+        return CompositeGraphLookup(*lookups)
 
     def build_mitre_resolver(self, settings):
         if not getattr(settings, "enable_mitre_attack_resolution", True):

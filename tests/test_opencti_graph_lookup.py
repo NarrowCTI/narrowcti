@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
 from core.graph_export_plan import build_graph_export_plan_with_known_keys
 from core.opencti_graph_lookup import (
+    CompositeGraphLookup,
     OpenCTIGraphLookup,
     attack_pattern_external_id,
     attack_pattern_standard_id,
@@ -132,6 +133,27 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
             )
         )
         self.assertEqual([], calls)
+
+    def test_composite_graph_lookup_merges_known_keys(self):
+        first = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": ["entity:a"],
+                "relationship_keys": [],
+                "matches": [{"value": "T1059"}],
+            }
+        )
+        second = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": ["entity:a", "entity:b"],
+                "relationship_keys": ["relationship:1"],
+            }
+        )
+
+        known = CompositeGraphLookup(first, second).known_keys_for_plan({"actions": []})
+
+        self.assertEqual(["entity:a", "entity:b"], known["entity_keys"])
+        self.assertEqual(["relationship:1"], known["relationship_keys"])
+        self.assertEqual([{"value": "T1059"}], known["matches"])
 
 
 def accepted_attack_pattern_policy():
