@@ -62,6 +62,7 @@ class GatewayCurationReportTests(unittest.TestCase):
             generated_at="2026-06-24T10:02:00Z",
         )
         summary = report.executive_summary
+        source_summary = report.source_summaries[0]
 
         self.assertEqual(1, summary["run_count"])
         self.assertEqual(4, summary["reviewed_count"])
@@ -72,6 +73,12 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual(2, summary["graph_candidate_count"])
         self.assertEqual(1, summary["graph_lookup_match_count"])
         self.assertEqual(1, summary["graph_would_create_object_count"])
+        self.assertEqual("otx", source_summary["source_key"])
+        self.assertEqual("stable", source_summary["posture"])
+        self.assertEqual(4, source_summary["reviewed"])
+        self.assertEqual(2, source_summary["accepted"])
+        self.assertEqual(1, source_summary["decision_records"])
+        self.assertEqual(1, source_summary["quarantine_records"])
         self.assertIn(
             "review-quarantine",
             [item["code"] for item in report.recommendations],
@@ -127,6 +134,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual(1, report.executive_summary["run_count"])
         self.assertEqual(1, report.executive_summary["decision_record_count"])
         self.assertEqual(1, report.executive_summary["pending_review_count"])
+        self.assertEqual(1, report.source_summaries[0]["pending_review"])
 
     def test_builds_review_action_summary_from_release_audit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -162,6 +170,12 @@ class GatewayCurationReportTests(unittest.TestCase):
             {"reject": 1, "export": 1},
             actions["source_action_counts"]["misp"],
         )
+        source_postures = {
+            source["source_key"]: source["posture"]
+            for source in report.source_summaries
+        }
+        self.assertEqual("needs-attention", source_postures["misp"])
+        self.assertEqual("stable", source_postures["otx"])
         self.assertIn("tune-curation-policy", recommendation_codes)
 
     def test_text_report_is_analyst_readable(self):
@@ -189,6 +203,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("analyst_review:", text)
         self.assertIn("review_actions=", text)
         self.assertIn("graph_readiness:", text)
+        self.assertNotIn("source_summaries:", text)
         self.assertIn("collect-evidence", text)
 
     def test_html_report_is_analyst_readable(self):
@@ -216,6 +231,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("Executive Summary", html)
         self.assertIn("Analyst Review Actions", html)
         self.assertIn("Graph Readiness", html)
+        self.assertIn("Source Summaries", html)
         self.assertIn("collect-evidence", html)
 
     def test_html_report_escapes_dynamic_content(self):

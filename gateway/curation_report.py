@@ -23,6 +23,7 @@ class CurationReport:
     decisions: dict
     analyst_review: dict
     analyst_review_actions: dict
+    source_summaries: list
     recommendations: list
 
     def to_dict(self):
@@ -33,6 +34,7 @@ class CurationReport:
             "decisions": self.decisions,
             "analyst_review": self.analyst_review,
             "analyst_review_actions": self.analyst_review_actions,
+            "source_summaries": list(self.source_summaries),
             "recommendations": list(self.recommendations),
         }
 
@@ -61,6 +63,12 @@ def build_curation_report(
         decisions=decisions,
         analyst_review=analyst_review,
         analyst_review_actions=review_actions,
+        source_summaries=build_source_summaries(
+            operational,
+            decisions,
+            analyst_review,
+            review_actions,
+        ),
         recommendations=build_recommendations(executive, review_actions),
     )
 
@@ -291,6 +299,82 @@ def empty_review_action_summary():
     return build_review_action_summary([])
 
 
+def build_source_summaries(operational, decisions, analyst_review, review_actions):
+    source_keys = set()
+    source_keys.update((operational.get("sources") or {}).keys())
+    source_keys.update((decisions.get("sources") or {}).keys())
+    source_keys.update((analyst_review.get("source_counts") or {}).keys())
+    source_keys.update((review_actions.get("source_counts") or {}).keys())
+    source_keys.update(
+        ((operational.get("quarantine_review") or {}).get("by_source") or {}).keys()
+    )
+
+    summaries = []
+    for source_key in sorted(source_keys):
+        operational_source = (operational.get("sources") or {}).get(source_key) or {}
+        decision_source = (decisions.get("sources") or {}).get(source_key) or {}
+        quarantine_source = (
+            ((operational.get("quarantine_review") or {}).get("by_source") or {}).get(
+                source_key,
+            )
+            or {}
+        )
+        review_action_counts = (
+            (review_actions.get("source_action_counts") or {}).get(source_key) or {}
+        )
+        totals = operational_source.get("totals") or {}
+        metrics = operational_source.get("metrics") or {}
+        statuses = quarantine_source.get("statuses") or {}
+        release_count = review_action_counts.get("release", 0) + review_action_counts.get(
+            "release-indicators",
+            0,
+        )
+        reject_count = review_action_counts.get("reject", 0)
+        summary = {
+            "source_key": source_key,
+            "source_name": operational_source.get("source_name", source_key),
+            "runs": operational_source.get("runs", 0),
+            "succeeded": operational_source.get("succeeded", 0),
+            "failed": operational_source.get("failed", 0),
+            "reviewed": int(totals.get("reviewed", 0) or 0),
+            "accepted": metrics.get("accepted", 0),
+            "filtered": metrics.get("filtered", 0),
+            "errors": metrics.get("errors", 0),
+            "acceptance_rate_pct": metrics.get("acceptance_rate_pct", 0.0),
+            "decision_records": decision_source.get("records", 0),
+            "decision_actions": decision_source.get("actions") or {},
+            "quarantine_records": quarantine_source.get("records", 0)
+            or (analyst_review.get("source_counts") or {}).get(source_key, 0),
+            "pending_review": statuses.get("pending", 0),
+            "exportable_review": statuses.get("released", 0)
+            + statuses.get("partially-released", 0),
+            "review_actions": dict(sorted(review_action_counts.items())),
+            "release_count": release_count,
+            "reject_count": reject_count,
+        }
+        summary["posture"] = source_posture(summary)
+        summaries.append(summary)
+    return summaries
+
+
+def source_posture(summary):
+    if (
+        summary.get("runs", 0) == 0
+        and summary.get("decision_records", 0) == 0
+        and summary.get("quarantine_records", 0) == 0
+        and not summary.get("review_actions")
+    ):
+        return "no-evidence"
+    if (
+        summary.get("failed", 0) > 0
+        or summary.get("errors", 0) > 0
+        or summary.get("pending_review", 0) > 0
+        or summary.get("reject_count", 0) > summary.get("release_count", 0)
+    ):
+        return "needs-attention"
+    return "stable"
+
+
 def normalize_count_key(value, default):
     text = str(value or "").strip()
     return text if text else default
@@ -352,6 +436,20 @@ def format_text_report(report):
         f"stix_objects={summary['graph_stix_object_count']} "
         f"stix_relationships={summary['graph_stix_relationship_count']}",
     ]
+    if data.get("source_summaries"):
+        lines.append("source_summaries:")
+        for source in data["source_summaries"]:
+            lines.append(
+                "- "
+                f"{source['source_key']} posture={source['posture']} "
+                f"runs={source['runs']} failed={source['failed']} "
+                f"reviewed={source['reviewed']} accepted={source['accepted']} "
+                f"filtered={source['filtered']} errors={source['errors']} "
+                f"decision_records={source['decision_records']} "
+                f"pending_review={source['pending_review']} "
+                f"release_count={source['release_count']} "
+                f"reject_count={source['reject_count']}"
+            )
     if data["recommendations"]:
         lines.append("recommendations:")
         for item in data["recommendations"]:
@@ -372,6 +470,25 @@ def format_html_report(report):
     )
     if not recommendations:
         recommendations = "<li>none</li>"
+    source_rows = "\n".join(
+        html_table_row(
+            source.get("source_key"),
+            source.get("posture"),
+            source.get("runs"),
+            source.get("failed"),
+            source.get("reviewed"),
+            source.get("accepted"),
+            source.get("filtered"),
+            source.get("errors"),
+            source.get("decision_records"),
+            source.get("pending_review"),
+            source.get("release_count"),
+            source.get("reject_count"),
+        )
+        for source in data.get("source_summaries") or []
+    )
+    if not source_rows:
+        source_rows = html_table_row("none", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
     return """<!doctype html>
 <html lang="en">
@@ -428,6 +545,13 @@ def format_html_report(report):
     </table>
   </section>
   <section>
+    <h2>Source Summaries</h2>
+    <table>
+      <tr><th>source</th><th>posture</th><th>runs</th><th>failed</th><th>reviewed</th><th>accepted</th><th>filtered</th><th>errors</th><th>decision records</th><th>pending review</th><th>released</th><th>rejected</th></tr>
+      {source_rows}
+    </table>
+  </section>
+  <section>
     <h2>Recommendations</h2>
     <ul>
       {recommendations}
@@ -469,6 +593,7 @@ def format_html_report(report):
         stix_bundles=escape(summary["graph_stix_bundle_count"]),
         stix_objects=escape(summary["graph_stix_object_count"]),
         stix_relationships=escape(summary["graph_stix_relationship_count"]),
+        source_rows=source_rows,
         recommendations=recommendations,
     )
 
@@ -487,6 +612,12 @@ def write_html_report(report, html_file):
 
 def escape(value):
     return html.escape("" if value is None else str(value), quote=True)
+
+
+def html_table_row(*values):
+    return "<tr>{}</tr>".format(
+        "".join(f"<td>{escape(value)}</td>" for value in values)
+    )
 
 
 def main():

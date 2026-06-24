@@ -100,6 +100,8 @@ The current report contains:
 - `analyst_review`: quarantine queue status/source counts.
 - `analyst_review_actions`: aggregate release, reject and export audit
   feedback for policy tuning.
+- `source_summaries`: per-source posture with operational, decision, review and
+  review-action counters.
 - `recommendations`: deterministic next actions based on evidence gaps and
   risk signals.
 
@@ -123,10 +125,18 @@ deduplicated, promoted and why.
 It remains deterministic and evidence-driven. It should not infer facts that are
 not present in gateway, decision, quarantine or graph-planning evidence.
 
+Source posture is intentionally simple in v0.8:
+
+- `stable`: evidence exists and no obvious source warning is present.
+- `needs-attention`: the source has failures, errors, pending review or more
+  rejected review actions than released actions.
+- `no-evidence`: no operational, decision, quarantine or review-action evidence
+  exists for the source.
+
 ## Future Work
 
 - Add PDF export once the report schema stabilizes.
-- Add richer per-actor, per-sector, per-ATT&CK and per-source narratives.
+- Add richer per-actor, per-sector and per-ATT&CK narratives.
 - Add deeper policy tuning insights from repeated release/reject patterns.
 - Add graph-quality deltas after controlled graph promotion is enabled.
 - Add customer-safe redaction profiles for external report delivery.

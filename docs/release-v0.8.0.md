@@ -97,6 +97,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added aggregated analyst review action feedback to the curation report. It
   summarizes release, reject and export audit events without exposing detailed
   queue records, preparing the later policy tuning workflow.
+- Added per-source curation summaries to the report so analysts can compare
+  operational health, decisions, pending review and release/reject feedback per
+  source.
 - Added `gateway.diagnostics` as the first read-only support diagnostic
   snapshot. It combines preflight state, configured evidence inventory,
   curation report output and deterministic support warnings.
