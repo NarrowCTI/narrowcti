@@ -133,6 +133,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   `pass`, `warn`, `fail` and `needs-evidence` checks for graph lookup, bounded
   source dry-runs, canonical ATT&CK matching, OpenCTI duplicate review and
   local resource posture.
+- Added text/JSON file output for the operational validation checklist so v0.8
+  evidence can be archived under `state\reports` and attached to release
+  validation notes.
 
 ## Promotion Boundary
 

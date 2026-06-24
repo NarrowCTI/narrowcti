@@ -1,11 +1,16 @@
 import json
+import os
+import tempfile
 import unittest
 
 from gateway.decisions import build_decision_audit_report
 from gateway.operational_validation import (
     build_operational_validation_report,
     format_text_report,
+    normalize_output_format,
     parse_sources,
+    render_report,
+    write_report,
 )
 from gateway.preflight import build_preflight_report
 from tests.test_gateway_decisions import (
@@ -99,6 +104,31 @@ class GatewayOperationalValidationTests(unittest.TestCase):
     def test_parse_sources_normalizes_comma_separated_values(self):
         self.assertEqual(("otx", "misp"), parse_sources(" OTX, misp ,, "))
 
+    def test_renders_json_and_text_reports(self):
+        report = validation_report()
+
+        text = render_report(report, output_format="text")
+        data = json.loads(render_report(report, output_format="json"))
+
+        self.assertIn("NarrowCTI v0.8 operational validation", text)
+        self.assertEqual("operational-validation/v0.8", data["schema_version"])
+
+    def test_rejects_unknown_output_format(self):
+        with self.assertRaises(ValueError):
+            normalize_output_format("pdf")
+
+    def test_write_report_creates_parent_directory(self):
+        report = validation_report()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_file = os.path.join(tmpdir, "evidence", "validation.json")
+            result = write_report(report, output_file, output_format="json")
+            with open(output_file, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+
+        self.assertEqual(output_file, result)
+        self.assertEqual("operational-validation/v0.8", data["schema_version"])
+
 
 def validation_settings(**overrides):
     values = {
@@ -109,6 +139,26 @@ def validation_settings(**overrides):
     }
     values.update(overrides)
     return make_settings(**values)
+
+
+def validation_report():
+    preflight = build_preflight_report(
+        validation_settings(),
+        env={"OTX_DRY_RUN": "true", "MISP_DRY_RUN": "true"},
+    )
+    decisions = build_decision_audit_report(
+        [
+            validation_decision("otx"),
+            validation_decision("misp"),
+        ]
+    )
+    return build_operational_validation_report(
+        preflight,
+        decisions,
+        full_validation_passed=True,
+        opencti_ui_no_duplicate=True,
+        resource_posture_ok=True,
+    )
 
 
 def validation_decision(source_key):

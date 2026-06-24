@@ -145,7 +145,17 @@ JSON output is available for attaching evidence to release notes:
 python -m gateway.operational_validation `
   --decision-path state\audit `
   --required-sources otx,misp `
-  --json
+  --format json `
+  --output-file state\reports\v0.8-operational-validation.json
+```
+
+Text output can also be written as a local evidence artifact:
+
+```powershell
+python -m gateway.operational_validation `
+  --decision-path state\audit `
+  --required-sources otx,misp `
+  --output-file state\reports\v0.8-operational-validation.txt
 ```
 
 Checklist status meanings:
