@@ -199,10 +199,13 @@ Detailed design and validation:
 - `docs/graph-promotion-v0.8.md`
 - `docs/operational-validation-v0.8.md`
 - `docs/deployment-operations-v0.8.md`
+- `docs/analyst-review-v0.8.md`
 
 Purpose:
 
-- Add analyst review API/UI for quarantine, release and policy tuning.
+- Add analyst review API/UI for quarantine, release and policy tuning. v0.8
+  starts with an internal analyst review service used by the CLI; HTTP/UI
+  surfaces remain future work.
 - Prepare the reporting model for analyst-facing CTI curation reports.
 - Provide a cleaner installation and upgrade path.
 - Add deployment templates. v0.8 starts with a safe gateway compose template

@@ -491,6 +491,7 @@ docs/release-v0.7.0.md
 docs/release-v0.8.0.md
 docs/graph-promotion-v0.8.md
 docs/deployment-operations-v0.8.md
+docs/analyst-review-v0.8.md
 docs/quarantine-enrichment-v0.6.md
 docs/architecture-v0.7.md
 docs/graph-enrichment-v0.7.md

@@ -20,6 +20,7 @@ satisfied.
 The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`.
 Operational validation is tracked in `docs/operational-validation-v0.8.md`.
 Deployment operations are tracked in `docs/deployment-operations-v0.8.md`.
+Analyst review design is tracked in `docs/analyst-review-v0.8.md`.
 
 ## Initial Scope
 
@@ -76,6 +77,10 @@ Deployment operations are tracked in `docs/deployment-operations-v0.8.md`.
   `deployment/docker-compose.narrowcti-gateway.yml`,
   `deployment/gateway.env.example` and
   `docs/deployment-operations-v0.8.md`.
+- Added `gateway.review.AnalystReviewService` as the internal analyst review
+  API for quarantine list, summary, release, partial release, reject, export
+  dry-run and audit-event reads. The CLI now delegates review operations to
+  this service.
 
 ## Promotion Boundary
 
@@ -108,6 +113,10 @@ The deployment template is also conservative by design. It uses dry-run,
 run-once and audit graph mode defaults, joins an existing OpenCTI Docker network
 and persists gateway evidence in a dedicated volume. It is a repeatable pilot
 template, not a managed installer.
+
+The analyst review foundation is similarly conservative. It introduces a stable
+Python service boundary for future API/UI work, but no HTTP server or browser UI
+is enabled in v0.8.
 
 ## Validation
 

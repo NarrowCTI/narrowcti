@@ -8,7 +8,7 @@ from core.opencti_deduplication import (
     OpenCTIArtifactLookup,
 )
 from core.quarantine import QuarantineRepository
-from gateway.quarantine_export import QuarantineExporter
+from gateway.review import AnalystReviewService, read_audit_events
 
 
 DEFAULT_REPOSITORY = "/app/state/quarantine.jsonl"
@@ -24,13 +24,23 @@ def repository_from_args(args):
     )
 
 
+def review_service_from_args(args):
+    repository = repository_from_args(args)
+    return AnalystReviewService(
+        repository,
+        release_audit_file=repository.release_audit_file,
+        reviewer=reviewer(args),
+        require_reason=reason_required(),
+    )
+
+
 def reason_required():
     value = os.getenv("NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON", "true")
     return value.lower() in ("true", "1", "yes")
 
 
 def reviewer(args):
-    return args.reviewer or os.getenv("NARROWCTI_REVIEWER", "operator")
+    return getattr(args, "reviewer", "") or os.getenv("NARROWCTI_REVIEWER", "operator")
 
 
 def format_record_summary(record):
@@ -97,7 +107,7 @@ def print_output(data, as_json, formatter):
 
 def command_list(args):
     status = None if args.status == "all" else args.status
-    records = repository_from_args(args).records(status=status)
+    records = review_service_from_args(args).list_records(status=status)
     if args.json:
         print(json.dumps(records, sort_keys=True))
         return 0
@@ -111,40 +121,46 @@ def command_list(args):
 
 
 def command_show(args):
-    record = repository_from_args(args).get(args.id)
+    record = review_service_from_args(args).get_record(args.id)
     print_output(record, args.json, format_record_detail)
     return 0
 
 
+def command_summary(args):
+    summary = review_service_from_args(args).summary().to_dict()
+    if args.json:
+        print(json.dumps(summary, sort_keys=True))
+    else:
+        print(format_review_summary(summary))
+    return 0
+
+
 def command_reject(args):
-    record = repository_from_args(args).reject(
+    record = review_service_from_args(args).reject(
         args.id,
         args.reason,
         reviewer=reviewer(args),
-        require_reason=reason_required(),
     )
     print_output(record, args.json, format_record_detail)
     return 0
 
 
 def command_release(args):
-    record = repository_from_args(args).release(
+    record = review_service_from_args(args).release(
         args.id,
         args.reason,
         reviewer=reviewer(args),
-        require_reason=reason_required(),
     )
     print_output(record, args.json, format_record_detail)
     return 0
 
 
 def command_release_indicators(args):
-    record = repository_from_args(args).release_indicators(
+    record = review_service_from_args(args).release_indicators(
         args.id,
         args.type,
         args.reason,
         reviewer=reviewer(args),
-        require_reason=reason_required(),
     )
     print_output(record, args.json, format_record_detail)
     return 0
@@ -157,15 +173,16 @@ def command_export_released(args):
         api_client = build_opencti_client()
 
     dedup = build_artifact_dedup(args, api_client)
-    service = QuarantineExporter(
-        repository_from_args(args),
+    service = review_service_from_args(args)
+    results = service.export_released(
+        args.id,
+        limit=args.limit,
         api_client=api_client,
         artifact_dedup=dedup,
         identity_name=args.identity_name,
         logger=lambda message: None,
         dry_run=dry_run,
     )
-    results = service.export_pending(args.id, limit=args.limit)
     data = [result.to_dict() for result in results]
     if args.json:
         print(json.dumps(data, sort_keys=True))
@@ -175,24 +192,11 @@ def command_export_released(args):
 
 
 def command_audit(args):
-    events = read_release_audit_events(
-        args.release_audit_file
-        or os.getenv("NARROWCTI_RELEASE_AUDIT_FILE", DEFAULT_RELEASE_AUDIT)
+    events = review_service_from_args(args).audit_events(
+        quarantine_id=args.id,
+        action=args.action,
+        limit=args.limit,
     )
-    if args.id:
-        events = [
-            event
-            for event in events
-            if event.get("quarantine_id", "") == args.id
-        ]
-    if args.action:
-        events = [
-            event
-            for event in events
-            if event.get("action", "") == args.action
-        ]
-    if args.limit and args.limit > 0:
-        events = events[-args.limit :]
     if args.json:
         print(json.dumps(events, sort_keys=True))
     else:
@@ -201,15 +205,7 @@ def command_audit(args):
 
 
 def read_release_audit_events(path):
-    if not path or not os.path.exists(path):
-        return []
-    events = []
-    with open(path, "r", encoding="utf-8") as file_obj:
-        for line in file_obj:
-            stripped = line.strip()
-            if stripped:
-                events.append(json.loads(stripped))
-    return events
+    return read_audit_events(path)
 
 
 def format_release_audit_events(events):
@@ -231,6 +227,26 @@ def format_release_audit_events(events):
         )
         if event.get("reason"):
             lines.append(f"  reason={event['reason']}")
+    return "\n".join(lines)
+
+
+def format_review_summary(summary):
+    lines = [
+        "NarrowCTI quarantine review summary",
+        f"records={summary.get('record_count', 0)}",
+        f"pending={summary.get('pending_count', 0)}",
+        f"exportable={summary.get('exportable_count', 0)}",
+    ]
+    status_counts = summary.get("status_counts") or {}
+    if status_counts:
+        lines.append("status_counts:")
+        for status, count in sorted(status_counts.items()):
+            lines.append(f"- {status}={count}")
+    source_counts = summary.get("source_counts") or {}
+    if source_counts:
+        lines.append("source_counts:")
+        for source, count in sorted(source_counts.items()):
+            lines.append(f"- {source}={count}")
     return "\n".join(lines)
 
 
@@ -305,6 +321,12 @@ def build_parser():
     show_parser = subparsers.add_parser("show", help="Show one quarantine record.")
     show_parser.add_argument("--id", required=True, help="Quarantine id.")
     show_parser.set_defaults(func=command_show)
+
+    summary_parser = subparsers.add_parser(
+        "summary",
+        help="Summarize quarantine review queue state.",
+    )
+    summary_parser.set_defaults(func=command_summary)
 
     reject_parser = subparsers.add_parser("reject", help="Reject a pending record.")
     reject_parser.add_argument("--id", required=True, help="Quarantine id.")

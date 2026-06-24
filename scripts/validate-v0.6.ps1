@@ -53,6 +53,7 @@ $GatewayModules = @(
     'gateway/settings.py',
     'gateway/preflight.py',
     'gateway/report.py',
+    'gateway/review.py',
     'gateway/decisions.py',
     'gateway/correlation.py',
     'gateway/mitre.py',
