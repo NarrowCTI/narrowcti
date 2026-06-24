@@ -205,6 +205,7 @@ Before promoting v0.6, run:
 .\scripts\validate-v0.6.ps1
 python -m gateway.preflight
 python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state\quarantine.jsonl
+python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state\quarantine.jsonl --output-file state\gateway-operational-report.txt
 python -m gateway.quarantine --release-audit-file state\audit\releases.jsonl audit --limit 20
 ```
 

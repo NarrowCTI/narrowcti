@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from collections import Counter
 from dataclasses import dataclass
 
@@ -347,6 +348,32 @@ def format_text_report(report):
     return "\n".join(lines)
 
 
+def render_report(report, output_format="text"):
+    output_format = normalize_output_format(output_format)
+    if output_format == "json":
+        return json.dumps(report.to_dict(), sort_keys=True)
+    return format_text_report(report)
+
+
+def normalize_output_format(value):
+    normalized = str(value or "text").strip().lower()
+    if normalized not in {"text", "json"}:
+        raise ValueError(f"unsupported report format: {value}")
+    return normalized
+
+
+def write_report(report, output_file, output_format="text"):
+    if not output_file:
+        return
+    directory = os.path.dirname(output_file)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    rendered = render_report(report, output_format)
+    with open(output_file, "w", encoding="utf-8") as file_obj:
+        file_obj.write(rendered)
+        file_obj.write("\n")
+
+
 def format_totals(totals):
     return " ".join(
         f"{field_name}={totals.get(field_name, 0)}" for field_name in SUMMARY_FIELDS
@@ -391,6 +418,11 @@ def main():
     )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     parser.add_argument(
+        "--output-file",
+        default="",
+        help="Optional path where the rendered report should be written.",
+    )
+    parser.add_argument(
         "--quarantine-file",
         default="",
         help="Optional quarantine repository JSONL file for review metrics.",
@@ -406,10 +438,9 @@ def main():
     quarantine_file = args.quarantine_file or settings.quarantine_repository_file
     quarantine_records = read_quarantine_records(quarantine_file)
     report = build_operational_report(records, quarantine_records=quarantine_records)
-    if args.json:
-        print(json.dumps(report.to_dict(), sort_keys=True))
-    else:
-        print(format_text_report(report))
+    output_format = "json" if args.json else "text"
+    write_report(report, args.output_file, output_format)
+    print(render_report(report, output_format))
 
 
 if __name__ == "__main__":

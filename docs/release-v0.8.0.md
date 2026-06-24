@@ -165,6 +165,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added support warnings for failed or incomplete v0.8 operational validation
   so support bundles can immediately show whether graph promotion must remain
   blocked.
+- Added gateway operational report file output and an `ops` profile service so
+  run, source, quarantine and value-metric evidence can be archived from the
+  gateway state volume.
 
 ## Promotion Boundary
 

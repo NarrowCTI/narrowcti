@@ -42,6 +42,7 @@ commands:
 | Service | Purpose |
 | --- | --- |
 | `narrowcti-preflight` | Runs `python -m gateway.preflight`. |
+| `narrowcti-gateway-report` | Builds `/app/state/gateway-operational-report.txt` from gateway run and quarantine evidence. |
 | `narrowcti-curation-report` | Builds text output and writes `/app/state/curation-report.html`. |
 | `narrowcti-decision-report` | Builds `/app/state/decision-audit-report.txt` from `/app/state/audit`. |
 | `narrowcti-correlation-report` | Builds `/app/state/artifact-correlation-report.txt` from the local artifact deduplication index. |
@@ -77,6 +78,7 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml build narrowct
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml up --force-recreate narrowcti-gateway
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml logs --tail 120 narrowcti-gateway
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-gateway-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-decision-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-correlation-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-curation-report
