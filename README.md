@@ -11,13 +11,14 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.7.0
+v0.8.0-dev
 ```
 
-`v0.7.0` is the graph enrichment and enterprise-filter foundation release. It
-keeps the stable curated `Report + Indicator` OpenCTI export path while adding
-audit-first graph evidence, graph candidates, STIX preview summaries,
-contextual scoring evidence and a clear MITRE ATT&CK curation architecture.
+`v0.8.0-dev` is the active graph promotion, analyst review and product
+operations development track. `v0.7.0` remains the latest stable foundation
+release with audit-first graph evidence, graph candidates, STIX preview
+summaries, contextual scoring evidence and a clear MITRE ATT&CK curation
+architecture.
 
 ## Product Identity
 
@@ -233,6 +234,16 @@ official AlienVault connector mapping is tracked in
 tracked in `docs/contextual-scoring-reference-v0.7.md`.
 The direct source, MISP collector and hybrid ingestion architecture is tracked
 in `docs/source-ingestion-modes-v0.7.md`.
+
+## v0.8 Development Track
+
+The v0.8 track starts the controlled promotion gate after v0.7. Its first
+technical priority is read-only OpenCTI graph lookup so NarrowCTI can detect
+canonical ATT&CK objects, such as existing `attack-pattern` entries loaded by
+the official MITRE connector, before any real graph promotion is enabled.
+
+The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`, and
+the detailed development notes are tracked in `docs/release-v0.8.0.md`.
 
 ## Curation Configuration
 
@@ -493,10 +504,10 @@ Official versions should be marked with Git tags.
 feature/refactor branch -> dev -> main -> version tag
 ```
 
-Current release:
+Current development track:
 
 ```text
-v0.7.0
+v0.8.0-dev
 ```
 
 ## Documentation
@@ -517,6 +528,8 @@ docs/release-v0.4.0.md
 docs/release-v0.5.0.md
 docs/release-v0.6.0.md
 docs/release-v0.7.0.md
+docs/release-v0.8.0.md
+docs/graph-promotion-v0.8.md
 docs/quarantine-enrichment-v0.6.md
 docs/architecture-v0.7.md
 docs/graph-enrichment-v0.7.md

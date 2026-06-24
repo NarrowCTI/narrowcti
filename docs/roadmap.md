@@ -192,6 +192,8 @@ Expected outcomes:
 
 ## v0.8.0 - Analyst Review And Product Operations
 
+Status: in development.
+
 Purpose:
 
 - Add analyst review API/UI for quarantine, release and policy tuning.
