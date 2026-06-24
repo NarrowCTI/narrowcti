@@ -99,6 +99,10 @@ detailed graph-enrichment design is tracked in
   matched Threat, Toolbox, TTP, Sector, Location, Vulnerability, Author or
   Graph State adjustment. This is audit evidence only and is not applied to the
   current ingest/quarantine decision.
+- Extended the decision audit report to aggregate `contextual_scoring`
+  evidence by source and query, including score delta totals, average deltas,
+  max contextual score, category counts, capped records and decision-application
+  counts.
 - Extended the decision audit report to aggregate `graph_export_plan` evidence
   by mode, status, action, held reason, source and query, including
   would-create object and relationship counts for graph export dry-runs.
@@ -157,6 +161,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 240 tests
+Ran 243 tests
 OK
 ```

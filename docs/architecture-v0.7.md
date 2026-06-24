@@ -330,6 +330,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Read-only graph known-key lookup | Implemented for OTX and MISP `graph_export_plan` metadata through optional `NARROWCTI_GRAPH_DEDUP_STATE_FILE`; this marks known local entity/relationship keys in the plan without marking anything exported. |
 | Decision audit metadata | Implemented for OTX and MISP processors. |
 | Decision audit graph export reporting | Implemented in `gateway.decisions` with graph export modes, statuses, actions, would-create counts, deduplicated counts, held reasons, source rollups and query rollups. |
+| Decision audit contextual scoring reporting | Implemented in `gateway.decisions` with contextual score deltas, category counts, capped records, source rollups and query rollups. |
 | Initial graph-aware STIX builder | Implemented in `exporters.stix_builder` for accepted graph candidates covering attack patterns, actors, intrusion sets, malware, tools, vulnerabilities, identities, locations, detection indicators and supported observables. |
 | Graph STIX preview metadata | Implemented for OTX and MISP decisions as in-memory bundle validation summary without OpenCTI import. |
 | Contextual scoring evidence | Implemented as dry-run `contextual_scoring` metadata derived from accepted graph candidates; it is not applied to ingest decisions yet. |

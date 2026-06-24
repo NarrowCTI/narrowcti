@@ -287,6 +287,11 @@ status, action, held reason, source and query. This shows how many graph
 objects and relationships would be attempted in dry-run mode before graph-aware
 STIX export is enabled.
 
+When source decision metadata includes `contextual_scoring`, the decision audit
+report also aggregates contextual score delta, category counts, capped records
+and source/query rollups. In v0.7 this remains dry-run evidence and is not
+applied to ingest/quarantine decisions.
+
 The local artifact deduplication index can also be summarized:
 
 ```text

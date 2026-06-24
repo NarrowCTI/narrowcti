@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from gateway.decisions import (
+    build_contextual_scoring_summary,
     build_decision_audit_report,
     build_graph_export_summary,
     build_score_summary,
@@ -66,6 +67,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(1, report.sources["misp"]["actions"]["skip"])
         self.assertEqual([], report.quarantined)
         self.assertEqual(0, report.graph_export["record_count"])
+        self.assertEqual(0, report.contextual_scoring["record_count"])
         self.assertEqual(2, len(report.queries))
         self.assertEqual("otx", report.queries[0]["source_key"])
         self.assertEqual("sample", report.queries[0]["query"])
@@ -162,6 +164,78 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual({}, summary["by_source"])
         self.assertEqual([], summary["by_query"])
 
+    def test_report_aggregates_contextual_scoring_metadata(self):
+        records = [
+            decision_record(
+                "2026-06-22T10:00:00Z",
+                "otx",
+                "dry-run",
+                "ok",
+                metadata={
+                    "contextual_scoring": contextual_scoring(
+                        accepted_candidate_count=4,
+                        adjustment_count=3,
+                        score_delta=30,
+                        contextual_score=90,
+                        category_counts={"threat": 1, "ttp": 2},
+                    )
+                },
+                query="lummac2",
+            ),
+            decision_record(
+                "2026-06-22T10:01:00Z",
+                "misp",
+                "ingest",
+                "ok",
+                metadata={
+                    "contextual_scoring": contextual_scoring(
+                        accepted_candidate_count=2,
+                        adjustment_count=1,
+                        score_delta=10,
+                        contextual_score=80,
+                        category_counts={"author": 1},
+                        capped=True,
+                    )
+                },
+                query="tlp:green",
+            ),
+        ]
+
+        report = build_decision_audit_report(records)
+        contextual = report.contextual_scoring
+
+        self.assertEqual(2, contextual["record_count"])
+        self.assertEqual(6, contextual["accepted_candidate_count"])
+        self.assertEqual(4, contextual["adjustment_count"])
+        self.assertEqual(40, contextual["score_delta_total"])
+        self.assertEqual(20.0, contextual["average_score_delta"])
+        self.assertEqual(90, contextual["max_contextual_score"])
+        self.assertEqual(1, contextual["capped_count"])
+        self.assertEqual(0, contextual["applied_to_decision_count"])
+        self.assertEqual({"dry-run": 2}, contextual["modes"])
+        self.assertEqual({"dry-run": 2}, contextual["statuses"])
+        self.assertEqual(
+            {"author": 1, "threat": 1, "ttp": 2},
+            contextual["category_counts"],
+        )
+        self.assertEqual(4, contextual["by_source"]["otx"]["accepted_candidate_count"])
+        self.assertEqual(2, contextual["by_source"]["misp"]["accepted_candidate_count"])
+        by_query = {
+            (item["source_key"], item["query"]): item
+            for item in contextual["by_query"]
+        }
+        self.assertEqual(3, by_query[("otx", "lummac2")]["adjustment_count"])
+        self.assertEqual(1, by_query[("misp", "tlp:green")]["adjustment_count"])
+
+    def test_contextual_scoring_summary_ignores_records_without_metadata(self):
+        summary = build_contextual_scoring_summary(
+            [decision_record("2026-06-22T10:00:00Z", "otx", "drop", "old")]
+        )
+
+        self.assertEqual(0, summary["record_count"])
+        self.assertEqual({}, summary["by_source"])
+        self.assertEqual([], summary["by_query"])
+
     def test_score_summary_ignores_records_without_score(self):
         summary = build_score_summary(
             [
@@ -189,6 +263,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual([], report.queries)
         self.assertEqual(0, report.score_summary["overall"]["records_with_score"])
         self.assertEqual(0, report.graph_export["record_count"])
+        self.assertEqual(0, report.contextual_scoring["record_count"])
         json.dumps(report.to_dict())
 
     def test_report_lists_recent_quarantined_candidates(self):
@@ -365,6 +440,35 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("actions=would_create:2", text)
         self.assertIn("graph_export_by_source:", text)
 
+    def test_text_report_includes_contextual_scoring_summary(self):
+        report = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-22T10:00:00Z",
+                    "otx",
+                    "dry-run",
+                    "ok",
+                    metadata={
+                        "contextual_scoring": contextual_scoring(
+                            accepted_candidate_count=3,
+                            adjustment_count=2,
+                            score_delta=25,
+                            contextual_score=85,
+                            category_counts={"threat": 1, "ttp": 1},
+                        )
+                    },
+                )
+            ]
+        )
+
+        text = format_text_report(report)
+
+        self.assertIn("contextual_scoring:", text)
+        self.assertIn("score_delta_total=25", text)
+        self.assertIn("max_contextual_score=85", text)
+        self.assertIn("categories=threat:1,ttp:1", text)
+        self.assertIn("contextual_scoring_by_source:", text)
+
 
 def decision_record(
     recorded_at,
@@ -423,6 +527,34 @@ def graph_export_plan(
         "would_create_object_count": would_create_object_count,
         "would_create_relationship_count": would_create_relationship_count,
         "actions": [{"action": action} for action in actions or []],
+    }
+
+
+def contextual_scoring(
+    accepted_candidate_count=0,
+    adjustment_count=0,
+    score_delta=0,
+    contextual_score=50,
+    category_counts=None,
+    capped=False,
+):
+    return {
+        "version": "v0.7.0-dev",
+        "mode": "dry-run",
+        "status": "dry-run",
+        "applied_to_decision": False,
+        "base_score": max(0, contextual_score - score_delta),
+        "contextual_score": contextual_score,
+        "score_delta": score_delta,
+        "accepted_candidate_count": accepted_candidate_count,
+        "adjustment_count": adjustment_count,
+        "category_counts": category_counts or {},
+        "raw_impact_total": 0,
+        "capped_impact_total": 0,
+        "max_impact": 100,
+        "impact_ratio": 0,
+        "capped": capped,
+        "adjustments": [],
     }
 
 

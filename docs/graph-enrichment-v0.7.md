@@ -421,6 +421,11 @@ actions, accepted and held candidate counts, would-create object/relationship
 counts, deduplicated entity/relationship counts, held reasons and source/query
 rollups without reading raw JSONL.
 
+The decision audit report also aggregates `contextual_scoring` evidence across
+decision records. Operators can inspect score delta totals, average contextual
+delta, max contextual score, capped records, category counts and source/query
+rollups while the contextual score remains dry-run evidence only.
+
 ## Graph Hygiene
 
 v0.7 graph enrichment must avoid polluting OpenCTI.
@@ -537,8 +542,8 @@ v0.7 should not be considered complete until:
     import for the same event and document object/relationship differences.
 12. Add contextual scoring dry-run evidence using graph categories inspired by
     the OpenCTI scoring-calculator reference. Initial OTX/MISP
-    `contextual_scoring` metadata is implemented; category impact configuration
-    and decision-path application remain pending.
+    `contextual_scoring` metadata and decision-audit rollups are implemented;
+    category impact configuration and decision-path application remain pending.
 13. Document and preflight the active ingestion mode: direct, MISP collector or
     hybrid.
 

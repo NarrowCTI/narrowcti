@@ -30,6 +30,7 @@ class DecisionAuditReport:
     queries: list
     score_summary: dict
     graph_export: dict
+    contextual_scoring: dict
     sources: dict
 
     def to_dict(self):
@@ -43,6 +44,7 @@ class DecisionAuditReport:
             "queries": self.queries,
             "score_summary": self.score_summary,
             "graph_export": self.graph_export,
+            "contextual_scoring": self.contextual_scoring,
             "sources": self.sources,
         }
 
@@ -88,6 +90,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
                 "by_action": {},
             },
             graph_export=build_graph_export_summary([]),
+            contextual_scoring=build_contextual_scoring_summary([]),
             sources={},
         )
 
@@ -157,6 +160,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
             },
         },
         graph_export=build_graph_export_summary(records),
+        contextual_scoring=build_contextual_scoring_summary(records),
         sources=sources,
     )
 
@@ -373,6 +377,117 @@ def merge_graph_export_plan(summary, plan):
             )
 
 
+def build_contextual_scoring_summary(records):
+    summary = empty_contextual_scoring_summary()
+    by_source = {}
+    by_query = {}
+
+    for record in records or ():
+        scoring = contextual_scoring(record)
+        if not scoring:
+            continue
+        source_key = normalize_value(record.get("source_key"), "unknown")
+        query = normalize_value(record.get("query"), "(none)")
+        merge_contextual_scoring(summary, scoring)
+        merge_contextual_scoring(
+            by_source.setdefault(source_key, empty_contextual_scoring_summary(False)),
+            scoring,
+        )
+        merge_contextual_scoring(
+            by_query.setdefault(
+                (source_key, query),
+                {
+                    "source_key": source_key,
+                    "query": query,
+                    **empty_contextual_scoring_summary(False),
+                },
+            ),
+            scoring,
+        )
+
+    normalize_contextual_scoring_summary(summary)
+    summary["by_source"] = {
+        source: normalize_contextual_scoring_summary(source_summary)
+        for source, source_summary in sorted(by_source.items())
+    }
+    summary["by_query"] = [
+        normalize_contextual_scoring_summary(query_summary)
+        for _, query_summary in sorted(
+            by_query.items(),
+            key=lambda item: (
+                -int(item[1].get("record_count", 0) or 0),
+                item[1].get("source_key", ""),
+                item[1].get("query", ""),
+            ),
+        )
+    ]
+    return summary
+
+
+def empty_contextual_scoring_summary(include_breakdowns=True):
+    summary = {
+        "record_count": 0,
+        "accepted_candidate_count": 0,
+        "adjustment_count": 0,
+        "score_delta_total": 0,
+        "average_score_delta": None,
+        "max_contextual_score": None,
+        "capped_count": 0,
+        "applied_to_decision_count": 0,
+        "modes": {},
+        "statuses": {},
+        "category_counts": {},
+    }
+    if include_breakdowns:
+        summary["by_source"] = {}
+        summary["by_query"] = []
+    return summary
+
+
+def normalize_contextual_scoring_summary(summary):
+    if summary.get("record_count"):
+        summary["average_score_delta"] = round(
+            summary.get("score_delta_total", 0) / summary["record_count"],
+            2,
+        )
+    for field in ("modes", "statuses", "category_counts"):
+        summary[field] = dict(sorted(summary.get(field, {}).items()))
+    return summary
+
+
+def contextual_scoring(record):
+    metadata = record.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return {}
+    scoring = metadata.get("contextual_scoring")
+    return dict(scoring) if isinstance(scoring, Mapping) else {}
+
+
+def merge_contextual_scoring(summary, scoring):
+    summary["record_count"] += 1
+    summary["accepted_candidate_count"] += int(
+        scoring.get("accepted_candidate_count", 0) or 0
+    )
+    summary["adjustment_count"] += int(scoring.get("adjustment_count", 0) or 0)
+    summary["score_delta_total"] += int(scoring.get("score_delta", 0) or 0)
+    contextual_score = coerce_score(scoring.get("contextual_score"))
+    if contextual_score is not None:
+        current = summary.get("max_contextual_score")
+        summary["max_contextual_score"] = (
+            contextual_score if current is None else max(current, contextual_score)
+        )
+    if scoring.get("capped"):
+        summary["capped_count"] += 1
+    if scoring.get("applied_to_decision"):
+        summary["applied_to_decision_count"] += 1
+    increment_count(summary["modes"], normalize_value(scoring.get("mode"), "unknown"))
+    increment_count(
+        summary["statuses"],
+        normalize_value(scoring.get("status"), "unknown"),
+    )
+    merge_counts(summary["category_counts"], scoring.get("category_counts"))
+
+
 def merge_counts(target, counts):
     if not isinstance(counts, Mapping):
         return
@@ -462,6 +577,24 @@ def format_text_report(report):
                     f"- {query['source_key']} query={query['query']} "
                     f"{format_graph_export_summary(query)}"
                 )
+    if report.contextual_scoring.get("record_count", 0):
+        contextual = report.contextual_scoring
+        lines.append("contextual_scoring:")
+        lines.append("- " + format_contextual_scoring_summary(contextual))
+        if contextual.get("by_source"):
+            lines.append("contextual_scoring_by_source:")
+            for source_key, source in contextual["by_source"].items():
+                lines.append(
+                    f"- source={source_key} "
+                    f"{format_contextual_scoring_summary(source)}"
+                )
+        if contextual.get("by_query"):
+            lines.append("contextual_scoring_by_query:")
+            for query in contextual["by_query"]:
+                lines.append(
+                    f"- {query['source_key']} query={query['query']} "
+                    f"{format_contextual_scoring_summary(query)}"
+                )
     if report.quarantined:
         lines.append("quarantine_candidates:")
         for item in report.quarantined:
@@ -529,6 +662,24 @@ def format_graph_export_summary(summary):
         f"statuses={format_compact_counts(summary.get('statuses', {}))} "
         f"actions={format_compact_counts(summary.get('actions', {}))} "
         f"held_reasons={format_compact_counts(summary.get('held_reasons', {}))}"
+    )
+
+
+def format_contextual_scoring_summary(summary):
+    return (
+        f"records={summary.get('record_count', 0)} "
+        f"accepted_candidates={summary.get('accepted_candidate_count', 0)} "
+        f"adjustments={summary.get('adjustment_count', 0)} "
+        f"score_delta_total={summary.get('score_delta_total', 0)} "
+        f"average_score_delta="
+        f"{format_optional(summary.get('average_score_delta'))} "
+        f"max_contextual_score="
+        f"{format_optional(summary.get('max_contextual_score'))} "
+        f"capped={summary.get('capped_count', 0)} "
+        f"applied_to_decision={summary.get('applied_to_decision_count', 0)} "
+        f"modes={format_compact_counts(summary.get('modes', {}))} "
+        f"statuses={format_compact_counts(summary.get('statuses', {}))} "
+        f"categories={format_compact_counts(summary.get('category_counts', {}))}"
     )
 
 

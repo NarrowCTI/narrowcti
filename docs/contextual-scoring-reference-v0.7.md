@@ -228,8 +228,8 @@ Required guardrails:
    State.
 4. Add dry-run contextual score evidence into decision audit and quarantine
    metadata. Initial OTX/MISP decision metadata now includes
-   `contextual_scoring`; broader audit-report rollups and quarantine release
-   views remain pending.
+   `contextual_scoring`; decision audit report rollups are implemented for
+   source and query summaries. Quarantine release views remain pending.
 5. Add gateway-level configuration for contextual scoring categories and
    priority impacts.
 6. Integrate contextual scoring into the candidate decision path after base
