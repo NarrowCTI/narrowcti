@@ -120,7 +120,8 @@ The current snapshot contains:
 - `source_posture`: rendered text/HTML summary of per-source curation posture
   from the embedded curation report.
 - `policy_insights`: rendered text/HTML summary of source-level policy tuning
-  signals from repeated release/reject patterns.
+  signals from repeated release/reject patterns, including top analyst review
+  reasons carried from the curation report.
 - `operational_validation`: rendered text/HTML summary of the v0.8 operational
   validation checklist, including pass/fail/warn/needs-evidence state. When
   configured, it uses the same manual evidence JSON file as

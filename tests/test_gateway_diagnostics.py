@@ -57,9 +57,9 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                 )
             with open(release_audit_file, "w", encoding="utf-8") as handle:
                 for event in [
-                    release_event("otx", "reject"),
-                    release_event("otx", "reject"),
-                    release_event("otx", "reject"),
+                    release_event("otx", "reject", reason="Out of scope"),
+                    release_event("otx", "reject", reason="Out of scope"),
+                    release_event("otx", "reject", reason="No matching sector"),
                 ]:
                     handle.write(json.dumps(event) + "\n")
             with open(validation_evidence_file, "w", encoding="utf-8") as handle:
@@ -122,9 +122,14 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertIn("operational-validation-needs-evidence", warning_codes)
         self.assertIn("source_posture:", format_text_snapshot(snapshot))
         self.assertIn("policy_insights:", format_text_snapshot(snapshot))
+        self.assertIn(
+            "top_reasons=reject:Out of scope=2",
+            format_text_snapshot(snapshot),
+        )
         self.assertIn("operational_validation:", format_text_snapshot(snapshot))
         self.assertIn("Source Posture", format_html_snapshot(snapshot))
         self.assertIn("Policy Insights", format_html_snapshot(snapshot))
+        self.assertIn("Out of scope", format_html_snapshot(snapshot))
         self.assertIn("Operational Validation", format_html_snapshot(snapshot))
         json.dumps(data)
 

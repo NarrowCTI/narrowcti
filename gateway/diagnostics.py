@@ -8,7 +8,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from core.decision_audit import utc_now
-from gateway.curation_report import build_curation_report_from_files
+from gateway.curation_report import (
+    build_curation_report_from_files,
+    format_reason_entries,
+)
 from gateway.decisions import build_decision_audit_report, read_decision_records
 from gateway.operational_validation import (
     build_operational_validation_report,
@@ -535,7 +538,8 @@ def format_text_snapshot(snapshot):
                 f"signal={insight.get('signal')} "
                 f"review_decisions={insight.get('review_decision_count', 0)} "
                 f"release_rate_pct={insight.get('release_rate_pct', 0)} "
-                f"reject_rate_pct={insight.get('reject_rate_pct', 0)}"
+                f"reject_rate_pct={insight.get('reject_rate_pct', 0)} "
+                f"top_reasons={format_reason_entries(insight.get('top_reasons'))}"
             )
     if validation:
         lines.append("operational_validation:")
@@ -597,11 +601,12 @@ def format_html_snapshot(snapshot):
             insight.get("review_decision_count"),
             insight.get("release_rate_pct"),
             insight.get("reject_rate_pct"),
+            format_reason_entries(insight.get("top_reasons")),
         )
         for insight in curation.get("policy_insights") or []
     )
     if not policy_rows:
-        policy_rows = html_table_row("none", "", "", 0, 0, 0)
+        policy_rows = html_table_row("none", "", "", 0, 0, 0, "")
     validation_rows = "\n".join(
         html_table_row(
             item.get("code"),
@@ -683,7 +688,7 @@ def format_html_snapshot(snapshot):
   <section>
     <h2>Policy Insights</h2>
     <table>
-      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>release rate</th><th>reject rate</th></tr>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>release rate</th><th>reject rate</th><th>top reasons</th></tr>
       {policy_rows}
     </table>
   </section>

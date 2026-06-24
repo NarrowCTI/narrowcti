@@ -194,9 +194,9 @@ class GatewayCurationReportTests(unittest.TestCase):
             release_audit_file = os.path.join(tmpdir, "releases.jsonl")
             with open(release_audit_file, "w", encoding="utf-8") as file_obj:
                 for event in [
-                    release_event("otx", "release", released=3),
-                    release_event("otx", "reject"),
-                    release_event("misp", "reject"),
+                    release_event("otx", "release", released=3, reason="In scope"),
+                    release_event("otx", "reject", reason="Noisy source"),
+                    release_event("misp", "reject", reason="Out of scope"),
                     release_event("misp", "export", exported=2, duplicates=1),
                 ]:
                     file_obj.write(json.dumps(event) + "\n")
@@ -226,6 +226,20 @@ class GatewayCurationReportTests(unittest.TestCase):
             {"reject": 1, "export": 1},
             actions["source_action_counts"]["misp"],
         )
+        self.assertEqual(
+            [{"reason": "Out of scope", "count": 1}],
+            actions["source_top_reasons"]["misp"]["reject"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "action": "reject",
+                    "reason": "Out of scope",
+                    "count": 1,
+                }
+            ],
+            policy_insights["misp"]["top_reasons"],
+        )
         self.assertEqual("info", policy_insights["misp"]["severity"])
         self.assertEqual("observe-review-pattern", policy_insights["misp"]["signal"])
         self.assertEqual(100.0, policy_insights["misp"]["reject_rate_pct"])
@@ -243,9 +257,9 @@ class GatewayCurationReportTests(unittest.TestCase):
             release_audit_file = os.path.join(tmpdir, "releases.jsonl")
             with open(release_audit_file, "w", encoding="utf-8") as file_obj:
                 for event in [
-                    release_event("misp", "reject"),
-                    release_event("misp", "reject"),
-                    release_event("misp", "reject"),
+                    release_event("misp", "reject", reason="Out of scope"),
+                    release_event("misp", "reject", reason="Out of scope"),
+                    release_event("misp", "reject", reason="No matching sector"),
                 ]:
                     file_obj.write(json.dumps(event) + "\n")
 
@@ -254,6 +268,8 @@ class GatewayCurationReportTests(unittest.TestCase):
             )
 
         insight = report.policy_insights[0]
+        text = format_text_report(report)
+        html = format_html_report(report)
         recommendation_codes = [item["code"] for item in report.recommendations]
 
         self.assertEqual("misp", insight["source_key"])
@@ -263,6 +279,23 @@ class GatewayCurationReportTests(unittest.TestCase):
             insight["signal"],
         )
         self.assertEqual(100.0, insight["reject_rate_pct"])
+        self.assertEqual(
+            [
+                {
+                    "action": "reject",
+                    "reason": "Out of scope",
+                    "count": 2,
+                },
+                {
+                    "action": "reject",
+                    "reason": "No matching sector",
+                    "count": 1,
+                },
+            ],
+            insight["top_reasons"],
+        )
+        self.assertIn("top_reasons=reject:Out of scope=2", text)
+        self.assertIn("Out of scope", html)
         self.assertIn("review-source-policy-insights", recommendation_codes)
 
     def test_policy_insights_identify_frequent_analyst_releases(self):
@@ -471,14 +504,21 @@ def decision_record(recorded_at, source_key, action, reason, metadata=None):
     }
 
 
-def release_event(source_key, action, released=0, exported=0, duplicates=0):
+def release_event(
+    source_key,
+    action,
+    released=0,
+    exported=0,
+    duplicates=0,
+    reason="reviewed",
+):
     return {
         "recorded_at": "2026-06-24T10:03:00Z",
         "quarantine_id": "q-1",
         "status": "released",
         "action": action,
         "reviewer": "analyst",
-        "reason": "reviewed",
+        "reason": reason,
         "source_key": source_key,
         "external_id": "external-1",
         "released_indicator_count": released,

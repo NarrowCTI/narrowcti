@@ -3,6 +3,7 @@ import copy
 import html
 import json
 import os
+from collections import Counter
 from dataclasses import dataclass
 
 from core.decision_audit import utc_now
@@ -279,16 +280,23 @@ def build_review_action_summary(events):
     action_counts = {}
     source_counts = {}
     source_action_counts = {}
+    reason_counts = {}
+    source_reason_counts = {}
     released_indicator_count = 0
     exported_indicator_count = 0
     dedup_duplicate_count = 0
     for event in events or []:
         action = normalize_count_key(event.get("action"), "unknown")
         source_key = normalize_count_key(event.get("source_key"), "(unknown)")
+        reason = normalize_reason(event.get("reason"))
         action_counts[action] = action_counts.get(action, 0) + 1
         source_counts[source_key] = source_counts.get(source_key, 0) + 1
         source_actions = source_action_counts.setdefault(source_key, {})
         source_actions[action] = source_actions.get(action, 0) + 1
+        reason_counts.setdefault(action, Counter())[reason] += 1
+        source_reason_counts.setdefault(source_key, {}).setdefault(action, Counter())[
+            reason
+        ] += 1
         released_indicator_count += int(event.get("released_indicator_count", 0) or 0)
         exported_indicator_count += int(event.get("exported_indicator_count", 0) or 0)
         dedup_duplicate_count += int(event.get("dedup_duplicate_count", 0) or 0)
@@ -306,6 +314,17 @@ def build_review_action_summary(events):
         "source_action_counts": {
             source: dict(sorted(actions.items()))
             for source, actions in sorted(source_action_counts.items())
+        },
+        "top_reasons": {
+            action: top_reason_entries(counter)
+            for action, counter in sorted(reason_counts.items())
+        },
+        "source_top_reasons": {
+            source: {
+                action: top_reason_entries(counter)
+                for action, counter in sorted(action_reasons.items())
+            }
+            for source, action_reasons in sorted(source_reason_counts.items())
         },
         "released_indicator_count": released_indicator_count,
         "exported_indicator_count": exported_indicator_count,
@@ -343,6 +362,9 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
         review_action_counts = (
             (review_actions.get("source_action_counts") or {}).get(source_key) or {}
         )
+        top_review_reasons = flatten_source_reasons(
+            (review_actions.get("source_top_reasons") or {}).get(source_key) or {}
+        )
         totals = operational_source.get("totals") or {}
         metrics = operational_source.get("metrics") or {}
         statuses = quarantine_source.get("statuses") or {}
@@ -370,6 +392,7 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
             "exportable_review": statuses.get("released", 0)
             + statuses.get("partially-released", 0),
             "review_actions": dict(sorted(review_action_counts.items())),
+            "top_review_reasons": top_review_reasons,
             "release_count": release_count,
             "reject_count": reject_count,
         }
@@ -411,6 +434,7 @@ def build_policy_insights(source_summaries):
             "reject_count": reject_count,
             "release_rate_pct": percent(release_count, review_decision_count),
             "reject_rate_pct": percent(reject_count, review_decision_count),
+            "top_reasons": source.get("top_review_reasons", []),
             "severity": "info",
             "signal": "observe-review-pattern",
             "message": "Review decisions exist; continue collecting evidence before changing policy.",
@@ -438,6 +462,44 @@ def build_policy_insights(source_summaries):
 def normalize_count_key(value, default):
     text = str(value or "").strip()
     return text if text else default
+
+
+def normalize_reason(value):
+    return normalize_count_key(value, "(no reason)")
+
+
+def top_reason_entries(counter, limit=3):
+    items = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
+    return [
+        {
+            "reason": reason,
+            "count": count,
+        }
+        for reason, count in items[:limit]
+    ]
+
+
+def flatten_source_reasons(source_top_reasons):
+    reasons = []
+    for action, entries in sorted((source_top_reasons or {}).items()):
+        if action not in {"release", "release-indicators", "reject"}:
+            continue
+        for entry in entries:
+            reasons.append(
+                {
+                    "action": action,
+                    "reason": entry.get("reason", "(no reason)"),
+                    "count": int(entry.get("count", 0) or 0),
+                }
+            )
+    return sorted(
+        reasons,
+        key=lambda item: (
+            item["action"],
+            -item["count"],
+            item["reason"],
+        ),
+    )[:3]
 
 
 def percent(value, total):
@@ -551,7 +613,8 @@ def format_text_report(report, redaction_profile="none"):
                 f"signal={insight['signal']} "
                 f"review_decisions={insight['review_decision_count']} "
                 f"release_rate_pct={insight['release_rate_pct']} "
-                f"reject_rate_pct={insight['reject_rate_pct']}: "
+                f"reject_rate_pct={insight['reject_rate_pct']} "
+                f"top_reasons={format_reason_entries(insight.get('top_reasons'))}: "
                 f"{insight['message']}"
             )
     if data["recommendations"]:
@@ -603,12 +666,13 @@ def format_html_report(report, redaction_profile="none"):
             insight.get("reject_count"),
             insight.get("release_rate_pct"),
             insight.get("reject_rate_pct"),
+            format_reason_entries(insight.get("top_reasons")),
             insight.get("message"),
         )
         for insight in data.get("policy_insights") or []
     )
     if not policy_rows:
-        policy_rows = html_table_row("none", "", "", 0, 0, 0, 0, 0, "")
+        policy_rows = html_table_row("none", "", "", 0, 0, 0, 0, 0, "", "")
 
     return """<!doctype html>
 <html lang="en">
@@ -674,7 +738,7 @@ def format_html_report(report, redaction_profile="none"):
   <section>
     <h2>Policy Insights</h2>
     <table>
-      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>message</th></tr>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>top reasons</th><th>message</th></tr>
       {policy_rows}
     </table>
   </section>
@@ -747,6 +811,20 @@ def escape(value):
 def html_table_row(*values):
     return "<tr>{}</tr>".format(
         "".join(f"<td>{escape(value)}</td>" for value in values)
+    )
+
+
+def format_reason_entries(entries):
+    entries = list(entries or [])
+    if not entries:
+        return "none"
+    return "; ".join(
+        "{}:{}={}".format(
+            entry.get("action", "review"),
+            entry.get("reason", "(no reason)"),
+            entry.get("count", 0),
+        )
+        for entry in entries
     )
 
 

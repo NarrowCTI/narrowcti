@@ -114,11 +114,13 @@ The current report contains:
 - `decisions`: decision audit, score, graph export and graph STIX summaries.
 - `analyst_review`: quarantine queue status/source counts.
 - `analyst_review_actions`: aggregate release, reject and export audit
-  feedback for policy tuning.
+  feedback for policy tuning, including top review reasons by action and
+  source.
 - `source_summaries`: per-source posture with operational, decision, review and
   review-action counters.
 - `policy_insights`: source-level policy tuning hints derived from repeated
-  release/reject audit patterns.
+  release/reject audit patterns, with top analyst reasons attached to explain
+  what drove the signal.
 - `recommendations`: deterministic next actions based on evidence gaps and
   risk signals.
 
@@ -162,6 +164,12 @@ a source is good or bad. They show review patterns an operator should inspect:
 
 These insights help analysts decide whether thresholds, TLP/date filters, source
 scope or contextual requirements need tuning before broader promotion.
+
+The report also carries the most frequent analyst review reasons observed in
+release/reject audit events. These reasons are evidence, not automatic policy
+changes. They help operators understand whether a tuning signal came from
+examples such as repeated "out of scope" rejects, repeated high-value releases
+or recurring partial releases for specific observable types.
 
 ## Future Work
 
