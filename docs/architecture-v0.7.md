@@ -318,7 +318,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | --- | --- |
 | OTX entity extraction | Implemented for actor, malware family, ATT&CK, CVE vulnerability, sector, country, author/source identity, observable evidence, YARA detection-rule evidence, TLP, references and tags. Pulse lifecycle, vote summary and indicator observation windows are captured as audit metadata. |
 | MISP metadata evidence | Implemented for collector, original source, tags, TLP markings, EventReport note evidence, attribute sighting evidence, object-reference relationship evidence, detection-rule evidence, CVE vulnerability evidence and common Galaxy/Cluster graph evidence. |
-| MISP Galaxy audit mapping | Implemented for event, object and attribute galaxy clusters covering ATT&CK attack patterns, threat actors, intrusion sets, malware, tools, sectors, countries and regions as audit-only graph candidates. |
+| MISP Galaxy audit mapping | Implemented for event, object and attribute galaxy clusters covering ATT&CK attack patterns, threat actors, intrusion sets, malware, tools, sectors, countries and regions as audit-only graph candidates. Galaxy `meta.targeted-sector`, `meta.targeted-country` and `meta.targeted-region` aliases also emit victimology candidates with parent cluster provenance. |
 | MITRE ATT&CK enrichment | Implemented for technique identity, external references, kill chain phases, platforms, data sources, detection guidance, domains and lifecycle fields. |
 | Graph evidence model | Implemented in `core/graph_evidence.py`. |
 | Graph candidate model | Implemented in `core/graph_candidates.py`. |
@@ -398,8 +398,8 @@ including v0.7 graph evidence and graph candidate tests.
 Operational dry-run evidence from the local OpenCTI/MISP lab is tracked in
 `docs/operational-validation-v0.7.md`. That evidence currently confirms
 observable graph metadata, graph export planning, STIX preview summaries,
-contextual scoring evidence and MISP guardrails without enabling real graph
-promotion.
+contextual scoring evidence, MISP guardrails and real MISP Galaxy
+threat-actor/victimology extraction without enabling real graph promotion.
 
 ## Related Documents
 

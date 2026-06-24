@@ -84,6 +84,8 @@ to validate actor, arsenal, TTP and victimology graph coverage with live data.
 
 ## MISP Dry-Run Evidence
 
+### URLHaus Large-Event Guardrail Sample
+
 Controlled input:
 
 | Field | Value |
@@ -133,6 +135,62 @@ guardrails, vulnerability extraction and source/collector context. A second
 MISP sample with Galaxy/Cluster metadata is still needed for actor, arsenal,
 TTP and victimology validation.
 
+### Packrat Galaxy Victimology Sample
+
+Controlled input:
+
+| Field | Value |
+| --- | --- |
+| Query | `*` |
+| Date range | `2015-12-09` to `2015-12-09` |
+| Event | `OSINT - Packrat: Seven Years of a South American Threat Actor` |
+| Event uuid | `5667e3ea-cec4-4a67-b7c0-f7a9950d210b` |
+| Limits | `MISP_MAX_EVENTS_PER_RUN=1`, `MISP_MAX_ATTRIBUTES_PER_EVENT=500`, `MISP_MAX_IOCS_PER_EVENT=100` |
+| Oversized action | `truncate` |
+| Action | `drop` |
+| Reason | below minimum score |
+| OpenCTI graph write | none |
+
+Observed source context:
+
+| Field | Value |
+| --- | --- |
+| Tags | `type:OSINT`, `tlp:white`, `misp-galaxy:threat-actor="Packrat"` |
+| Galaxy cluster | threat actor `Packrat` |
+| Galaxy meta victimology | targeted sectors: `Activists`, `Journalist`, `Political party` |
+| Source score | 50 |
+| Source age | 3850 days |
+
+Observed graph metadata after victimology extraction:
+
+| Area | Result |
+| --- | --- |
+| `graph_evidence` | collector 1, marking 1, source identity 1, tag 2, target sector 3, threat actor 1 |
+| Threat actor candidate | `Packrat`, STIX `threat-actor`, relationship `attributed-to`, confidence 80 |
+| Target sector candidates | `Activists`, `Journalist`, `Political party`, STIX `identity`, relationship `targets`, confidence 70 |
+| `graph_export_plan` | dry-run, 9 accepted, 0 held, 9 would-create objects, 9 would-create relationships |
+| `graph_stix_preview` | 14 bundle objects, 6 graph objects, 6 graph relationships |
+| STIX preview object types | identity 5, threat-actor 1 |
+| STIX preview relationships | attributed-to 1, collected-by 1, originated-from 1, targets 3 |
+| `contextual_scoring` | base score 50, contextual score 80, delta 30 |
+| Context categories | author 2, sector 3, threat 1 |
+
+Fine-grained finding:
+
+The first Packrat run showed the `Galaxy.meta.targeted-sector` values in the
+raw MISP Galaxy cluster, but NarrowCTI only emitted the parent threat actor.
+The graph evidence layer was extended to emit victimology evidence from
+MISP Galaxy metadata. Each derived sector candidate keeps parent cluster
+provenance through `parent_cluster_value`, `parent_cluster_uuid`, `meta_key`
+and related parent fields.
+
+Current gap:
+
+This sample validates threat actor plus targeted sectors from a real MISP
+Galaxy payload. It does not cover intrusion set, malware, tool, ATT&CK
+technique, target country or target region evidence. Additional MISP Galaxy
+samples are still needed for those categories.
+
 ## Current Acceptance Evidence
 
 Confirmed in this run:
@@ -145,6 +203,8 @@ Confirmed in this run:
 - `contextual_scoring` produced score deltas but did not apply them to final
   ingest/drop/dry-run decisions.
 - MISP oversized events were bounded by attribute and IoC guardrails.
+- A real MISP Galaxy threat-actor event produced actor and sector-victimology
+  candidates with provenance.
 - Operator reports aggregate graph export, contextual scoring and STIX preview
   evidence by source and query.
 - Host-side validation requires URL overrides when `.env` uses Docker-internal
@@ -154,8 +214,8 @@ Not complete yet:
 
 - Live OTX sample covering malware family, ATT&CK ids, sector, country and CVE
   evidence.
-- Live MISP sample covering Galaxy/Cluster actor, intrusion set, malware, tool,
-  ATT&CK, sector and geography evidence.
+- Live MISP samples covering Galaxy/Cluster intrusion set, malware, tool,
+  ATT&CK, country and region evidence.
 - OpenCTI graph import validation with graph export enabled.
 - OpenCTI-side graph lookup and post-export deduplication.
 - Direct comparison between official MISP connector import and

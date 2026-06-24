@@ -172,6 +172,14 @@ intrusion sets, malware, tools, sectors, countries and regions. This does not
 yet create OpenCTI graph entities; it gives the future graph-aware STIX builder
 clean, policy-filterable evidence with provenance.
 
+MISP Galaxy victimology metadata is also extracted when present on known
+clusters. `meta.targeted-sector`, `meta.targeted-country` and
+`meta.targeted-region` aliases become audit-only target sector, country or
+region candidates with parent cluster provenance. This is important for threat
+actor galaxies such as Packrat, where the actor is the cluster and target
+sectors are carried as cluster metadata rather than standalone sector
+clusters.
+
 MISP CVE audit extraction is also implemented. NarrowCTI extracts CVE ids from
 MISP tags, event titles/descriptions, attributes and object attributes into
 `misp_vulnerabilities`, then emits audit-only `vulnerability` graph evidence
@@ -557,9 +565,10 @@ v0.7 should not be considered complete until:
 
 Current local dry-run validation evidence is documented in
 `docs/operational-validation-v0.7.md`. It confirms graph metadata visibility
-for one live OTX sample and one live MISP sample, while keeping OpenCTI graph
-promotion blocked until richer actor, arsenal, ATT&CK, sector, geography and
-OpenCTI-side deduplication validation is complete.
+for one live OTX sample, one large MISP guardrail sample and one MISP Galaxy
+threat-actor/victimology sample, while keeping OpenCTI graph promotion blocked
+until richer arsenal, ATT&CK, geography and OpenCTI-side deduplication
+validation is complete.
 
 ## Decision
 

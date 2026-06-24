@@ -342,7 +342,10 @@ class MISPProcessorTests(unittest.TestCase):
                         "type": "threat-actor",
                         "value": "APT Example",
                         "uuid": "cluster-actor",
-                        "meta": {"synonyms": ["Example Group"]},
+                        "meta": {
+                            "synonyms": ["Example Group"],
+                            "targeted-sector": ["Activists"],
+                        },
                     }
                 ],
             },
@@ -377,7 +380,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(1, graph_evidence["counts"]["attack_pattern"])
         self.assertEqual(1, graph_evidence["counts"]["threat_actor"])
         self.assertEqual(1, graph_evidence["counts"]["malware"])
-        self.assertEqual(1, graph_evidence["counts"]["target_sector"])
+        self.assertEqual(2, graph_evidence["counts"]["target_sector"])
         graph_candidates = metadata["graph_candidates"]
         self.assertTrue(
             any(
@@ -392,6 +395,15 @@ class MISPProcessorTests(unittest.TestCase):
                 candidate["entity_type"] == "target_sector"
                 and candidate["value"] == "Finance"
                 and candidate["source_field"] == "Object[0].GalaxyCluster"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "target_sector"
+                and candidate["value"] == "Activists"
+                and candidate["source_field"] == "Galaxy.meta.targeted-sector"
+                and candidate["attributes"]["parent_cluster_value"] == "APT Example"
                 for candidate in graph_candidates["candidates"]
             )
         )

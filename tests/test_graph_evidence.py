@@ -355,7 +355,11 @@ class GraphEvidenceTests(unittest.TestCase):
                         "galaxy_type": "threat-actor",
                         "galaxy_name": "Threat Actor",
                         "source_field": "Galaxy",
-                        "meta": {"synonyms": ["Example Group"]},
+                        "meta": {
+                            "synonyms": ["Example Group"],
+                            "targeted-sector": ["Activists", "Journalist"],
+                            "targeted-country": ["AR"],
+                        },
                     },
                     {
                         "type": "sector",
@@ -370,10 +374,11 @@ class GraphEvidenceTests(unittest.TestCase):
             title="MISP event",
         )
 
-        self.assertEqual(4, evidence["record_count"])
+        self.assertEqual(7, evidence["record_count"])
         self.assertEqual(1, evidence["counts"]["attack_pattern"])
         self.assertEqual(1, evidence["counts"]["threat_actor"])
-        self.assertEqual(1, evidence["counts"]["target_sector"])
+        self.assertEqual(3, evidence["counts"]["target_sector"])
+        self.assertEqual(1, evidence["counts"]["target_country"])
         attack = next(
             record for record in evidence["records"] if record["entity_type"] == "attack_pattern"
         )
@@ -388,6 +393,23 @@ class GraphEvidenceTests(unittest.TestCase):
             ["https://attack.mitre.org/techniques/T1059/"],
             attack["attributes"]["meta"]["refs"],
         )
+        sector = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_sector"
+            and record["value"] == "Activists"
+        )
+        self.assertEqual("Galaxy.meta.targeted-sector", sector["source_field"])
+        self.assertEqual(
+            "APT Example",
+            sector["attributes"]["parent_cluster_value"],
+        )
+        country = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_country"
+        )
+        self.assertEqual("AR", country["value"])
 
     def test_builds_misp_vulnerability_graph_evidence(self):
         evidence = build_graph_evidence(

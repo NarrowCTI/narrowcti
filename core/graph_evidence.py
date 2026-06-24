@@ -297,7 +297,104 @@ def misp_galaxy_evidence(clusters, source_key=""):
         )
         if record:
             records.append(record)
+        records.extend(misp_galaxy_meta_evidence(cluster, source_key))
     return records
+
+
+def misp_galaxy_meta_evidence(cluster, source_key=""):
+    cluster = compact_mapping(cluster)
+    meta = compact_mapping(cluster.get("meta"))
+    if not meta:
+        return []
+
+    records = []
+    for entity_type, field_names, confidence in MISP_GALAXY_META_ENTITY_FIELDS:
+        seen = set()
+        for field_name in field_names:
+            values = flatten_values(meta.get(field_name))
+            for value in values:
+                normalized = clean_string(value)
+                key = normalized.casefold()
+                if not normalized or key in seen:
+                    continue
+                seen.add(key)
+                record = evidence_record(
+                    entity_type=entity_type,
+                    value=normalized,
+                    source_key=source_key,
+                    source_name="misp-galaxy",
+                    source_field=meta_source_field(cluster, field_name),
+                    confidence=confidence,
+                    attributes=misp_galaxy_meta_attributes(cluster, field_name),
+                )
+                if record:
+                    records.append(record)
+    return records
+
+
+MISP_GALAXY_META_ENTITY_FIELDS = (
+    (
+        "target_sector",
+        (
+            "targeted-sector",
+            "targeted-sectors",
+            "targeted_sector",
+            "targeted_sectors",
+            "target-sector",
+            "target-sectors",
+            "target_sector",
+            "target_sectors",
+        ),
+        70,
+    ),
+    (
+        "target_country",
+        (
+            "targeted-country",
+            "targeted-countries",
+            "targeted_country",
+            "targeted_countries",
+            "target-country",
+            "target-countries",
+            "target_country",
+            "target_countries",
+        ),
+        70,
+    ),
+    (
+        "target_region",
+        (
+            "targeted-region",
+            "targeted-regions",
+            "targeted_region",
+            "targeted_regions",
+            "target-region",
+            "target-regions",
+            "target_region",
+            "target_regions",
+        ),
+        65,
+    ),
+)
+
+
+def meta_source_field(cluster, field_name):
+    source_field = clean_string(cluster.get("source_field")) or "Galaxy"
+    return f"{source_field}.meta.{field_name}"
+
+
+def misp_galaxy_meta_attributes(cluster, field_name):
+    return compact_mapping(
+        {
+            "meta_key": field_name,
+            "parent_galaxy_type": cluster.get("galaxy_type"),
+            "parent_galaxy_name": cluster.get("galaxy_name"),
+            "parent_cluster_type": cluster.get("type"),
+            "parent_cluster_value": cluster.get("value"),
+            "parent_cluster_uuid": cluster.get("uuid"),
+            "parent_tag_name": cluster.get("tag_name"),
+        }
+    )
 
 
 def classify_misp_galaxy(cluster):

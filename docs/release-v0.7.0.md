@@ -136,6 +136,11 @@ Operational dry-run validation evidence is tracked in
   metadata. Known clusters now produce graph evidence and candidates for ATT&CK
   attack patterns, threat actors, intrusion sets, malware, tools, target
   sectors, countries and regions before future graph-aware STIX export.
+- Added MISP Galaxy metadata victimology extraction. Targeted sector, country
+  and region aliases in `GalaxyCluster.meta` now produce audit-only target
+  candidates with parent cluster provenance, covering real cases where a
+  threat actor cluster carries target-sector context instead of standalone
+  sector clusters.
 - Expanded OTX audit extraction with CVE vulnerability candidates and
   author/source identity evidence. Pulse lifecycle, vote summary and indicator
   first/last-seen windows are now preserved in audit metadata for future
@@ -165,6 +170,9 @@ Operational dry-run validation evidence is tracked in
 - Added operational dry-run validation evidence for live OTX and MISP lab
   samples, including graph export planning, STIX preview, contextual scoring,
   guardrails, confirmed gaps and safe promotion blockers.
+- Added a live MISP Packrat Galaxy validation showing threat-actor and
+  targeted-sector candidates from source metadata without OpenCTI graph
+  promotion.
 - Tightened OTX author extraction so numeric OTX author ids remain provenance
   data and do not become `source_identity` graph candidates.
 - Normalized `dry_run` decision records to `dry-run` in the decision audit
