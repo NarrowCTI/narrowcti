@@ -93,6 +93,10 @@ detailed graph-enrichment design is tracked in
   summary from accepted candidates. This validates bundle construction,
   object/relationship counts and skipped candidates in memory without importing
   graph objects into OpenCTI.
+- Extended the decision audit report to aggregate `graph_stix_preview`
+  evidence by source and query, including bundle object counts, graph object
+  counts, relationship counts, skipped candidates, STIX object types and
+  relationship types.
 - Added contextual scoring dry-run evidence from accepted graph candidates.
   OTX and MISP decision metadata now include `contextual_scoring` with base
   score, suggested contextual score, category counts, impact ratio and every
@@ -161,6 +165,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 243 tests
+Ran 246 tests
 OK
 ```

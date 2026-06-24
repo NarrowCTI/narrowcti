@@ -292,6 +292,11 @@ report also aggregates contextual score delta, category counts, capped records
 and source/query rollups. In v0.7 this remains dry-run evidence and is not
 applied to ingest/quarantine decisions.
 
+When source decision metadata includes `graph_stix_preview`, the report
+aggregates bundle object counts, graph object counts, graph relationship
+counts, skipped candidates and STIX object/relationship type rollups. This
+helps validate graph-aware STIX readiness before OpenCTI import is enabled.
+
 The local artifact deduplication index can also be summarized:
 
 ```text

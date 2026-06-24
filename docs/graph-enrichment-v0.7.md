@@ -426,6 +426,11 @@ decision records. Operators can inspect score delta totals, average contextual
 delta, max contextual score, capped records, category counts and source/query
 rollups while the contextual score remains dry-run evidence only.
 
+The decision audit report also aggregates `graph_stix_preview` evidence. This
+lets operators compare bundle object counts, graph object counts, graph
+relationship counts, skipped candidates, STIX object types and relationship
+types across sources and queries before graph export is enabled.
+
 ## Graph Hygiene
 
 v0.7 graph enrichment must avoid polluting OpenCTI.
@@ -534,9 +539,9 @@ v0.7 should not be considered complete until:
    keys during export planning; export-time marking and OpenCTI lookup remain
    pending.
 9. Add graph export dry-run reporting. Initial per-decision
-   `graph_export_plan` metadata and decision-audit aggregate rollups are
-   implemented for audit/dry-run visibility; OpenCTI comparison evidence
-   remains pending.
+   `graph_export_plan` metadata, `graph_stix_preview` metadata and
+   decision-audit aggregate rollups are implemented for audit/dry-run
+   visibility; OpenCTI comparison evidence remains pending.
 10. Validate in OpenCTI with OTX and MISP samples.
 11. Compare a direct official MISP connector import with a NarrowCTI-curated
     import for the same event and document object/relationship differences.

@@ -31,6 +31,7 @@ class DecisionAuditReport:
     score_summary: dict
     graph_export: dict
     contextual_scoring: dict
+    graph_stix_preview: dict
     sources: dict
 
     def to_dict(self):
@@ -45,6 +46,7 @@ class DecisionAuditReport:
             "score_summary": self.score_summary,
             "graph_export": self.graph_export,
             "contextual_scoring": self.contextual_scoring,
+            "graph_stix_preview": self.graph_stix_preview,
             "sources": self.sources,
         }
 
@@ -91,6 +93,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
             },
             graph_export=build_graph_export_summary([]),
             contextual_scoring=build_contextual_scoring_summary([]),
+            graph_stix_preview=build_graph_stix_preview_summary([]),
             sources={},
         )
 
@@ -161,6 +164,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
         },
         graph_export=build_graph_export_summary(records),
         contextual_scoring=build_contextual_scoring_summary(records),
+        graph_stix_preview=build_graph_stix_preview_summary(records),
         sources=sources,
     )
 
@@ -488,6 +492,116 @@ def merge_contextual_scoring(summary, scoring):
     merge_counts(summary["category_counts"], scoring.get("category_counts"))
 
 
+def build_graph_stix_preview_summary(records):
+    summary = empty_graph_stix_preview_summary()
+    by_source = {}
+    by_query = {}
+
+    for record in records or ():
+        preview = graph_stix_preview(record)
+        if not preview:
+            continue
+        source_key = normalize_value(record.get("source_key"), "unknown")
+        query = normalize_value(record.get("query"), "(none)")
+        merge_graph_stix_preview(summary, preview)
+        merge_graph_stix_preview(
+            by_source.setdefault(source_key, empty_graph_stix_preview_summary(False)),
+            preview,
+        )
+        merge_graph_stix_preview(
+            by_query.setdefault(
+                (source_key, query),
+                {
+                    "source_key": source_key,
+                    "query": query,
+                    **empty_graph_stix_preview_summary(False),
+                },
+            ),
+            preview,
+        )
+
+    normalize_graph_stix_preview_summary(summary)
+    summary["by_source"] = {
+        source: normalize_graph_stix_preview_summary(source_summary)
+        for source, source_summary in sorted(by_source.items())
+    }
+    summary["by_query"] = [
+        normalize_graph_stix_preview_summary(query_summary)
+        for _, query_summary in sorted(
+            by_query.items(),
+            key=lambda item: (
+                -int(item[1].get("record_count", 0) or 0),
+                item[1].get("source_key", ""),
+                item[1].get("query", ""),
+            ),
+        )
+    ]
+    return summary
+
+
+def empty_graph_stix_preview_summary(include_breakdowns=True):
+    summary = {
+        "record_count": 0,
+        "accepted_candidate_count": 0,
+        "bundle_object_count": 0,
+        "graph_object_count": 0,
+        "graph_relationship_count": 0,
+        "skipped_candidate_count": 0,
+        "export_enabled_count": 0,
+        "statuses": {},
+        "bundle_types": {},
+        "object_counts": {},
+        "relationship_counts": {},
+    }
+    if include_breakdowns:
+        summary["by_source"] = {}
+        summary["by_query"] = []
+    return summary
+
+
+def normalize_graph_stix_preview_summary(summary):
+    for field in (
+        "statuses",
+        "bundle_types",
+        "object_counts",
+        "relationship_counts",
+    ):
+        summary[field] = dict(sorted(summary.get(field, {}).items()))
+    return summary
+
+
+def graph_stix_preview(record):
+    metadata = record.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return {}
+    preview = metadata.get("graph_stix_preview")
+    return dict(preview) if isinstance(preview, Mapping) else {}
+
+
+def merge_graph_stix_preview(summary, preview):
+    summary["record_count"] += 1
+    summary["accepted_candidate_count"] += int(
+        preview.get("accepted_candidate_count", 0) or 0
+    )
+    summary["bundle_object_count"] += int(preview.get("bundle_object_count", 0) or 0)
+    summary["graph_object_count"] += int(preview.get("graph_object_count", 0) or 0)
+    summary["graph_relationship_count"] += int(
+        preview.get("graph_relationship_count", 0) or 0
+    )
+    summary["skipped_candidate_count"] += int(
+        preview.get("skipped_candidate_count", 0) or 0
+    )
+    if preview.get("export_enabled"):
+        summary["export_enabled_count"] += 1
+    increment_count(summary["statuses"], normalize_value(preview.get("status"), "unknown"))
+    increment_count(
+        summary["bundle_types"],
+        normalize_value(preview.get("bundle_type"), "unknown"),
+    )
+    merge_counts(summary["object_counts"], preview.get("object_counts"))
+    merge_counts(summary["relationship_counts"], preview.get("relationship_counts"))
+
+
 def merge_counts(target, counts):
     if not isinstance(counts, Mapping):
         return
@@ -595,6 +709,24 @@ def format_text_report(report):
                     f"- {query['source_key']} query={query['query']} "
                     f"{format_contextual_scoring_summary(query)}"
                 )
+    if report.graph_stix_preview.get("record_count", 0):
+        preview = report.graph_stix_preview
+        lines.append("graph_stix_preview:")
+        lines.append("- " + format_graph_stix_preview_summary(preview))
+        if preview.get("by_source"):
+            lines.append("graph_stix_preview_by_source:")
+            for source_key, source in preview["by_source"].items():
+                lines.append(
+                    f"- source={source_key} "
+                    f"{format_graph_stix_preview_summary(source)}"
+                )
+        if preview.get("by_query"):
+            lines.append("graph_stix_preview_by_query:")
+            for query in preview["by_query"]:
+                lines.append(
+                    f"- {query['source_key']} query={query['query']} "
+                    f"{format_graph_stix_preview_summary(query)}"
+                )
     if report.quarantined:
         lines.append("quarantine_candidates:")
         for item in report.quarantined:
@@ -680,6 +812,23 @@ def format_contextual_scoring_summary(summary):
         f"modes={format_compact_counts(summary.get('modes', {}))} "
         f"statuses={format_compact_counts(summary.get('statuses', {}))} "
         f"categories={format_compact_counts(summary.get('category_counts', {}))}"
+    )
+
+
+def format_graph_stix_preview_summary(summary):
+    return (
+        f"records={summary.get('record_count', 0)} "
+        f"accepted_candidates={summary.get('accepted_candidate_count', 0)} "
+        f"bundle_objects={summary.get('bundle_object_count', 0)} "
+        f"graph_objects={summary.get('graph_object_count', 0)} "
+        f"graph_relationships={summary.get('graph_relationship_count', 0)} "
+        f"skipped_candidates={summary.get('skipped_candidate_count', 0)} "
+        f"export_enabled={summary.get('export_enabled_count', 0)} "
+        f"statuses={format_compact_counts(summary.get('statuses', {}))} "
+        f"bundle_types={format_compact_counts(summary.get('bundle_types', {}))} "
+        f"objects={format_compact_counts(summary.get('object_counts', {}))} "
+        f"relationships="
+        f"{format_compact_counts(summary.get('relationship_counts', {}))}"
     )
 
 

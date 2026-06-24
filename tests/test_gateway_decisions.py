@@ -7,6 +7,7 @@ from gateway.decisions import (
     build_contextual_scoring_summary,
     build_decision_audit_report,
     build_graph_export_summary,
+    build_graph_stix_preview_summary,
     build_score_summary,
     format_text_report,
     read_decision_records,
@@ -68,6 +69,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual([], report.quarantined)
         self.assertEqual(0, report.graph_export["record_count"])
         self.assertEqual(0, report.contextual_scoring["record_count"])
+        self.assertEqual(0, report.graph_stix_preview["record_count"])
         self.assertEqual(2, len(report.queries))
         self.assertEqual("otx", report.queries[0]["source_key"])
         self.assertEqual("sample", report.queries[0]["query"])
@@ -236,6 +238,82 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual({}, summary["by_source"])
         self.assertEqual([], summary["by_query"])
 
+    def test_report_aggregates_graph_stix_preview_metadata(self):
+        records = [
+            decision_record(
+                "2026-06-22T10:00:00Z",
+                "otx",
+                "dry-run",
+                "ok",
+                metadata={
+                    "graph_stix_preview": graph_stix_preview(
+                        accepted_candidate_count=4,
+                        bundle_object_count=8,
+                        graph_object_count=3,
+                        graph_relationship_count=3,
+                        skipped_candidate_count=1,
+                        object_counts={"attack-pattern": 1, "malware": 2},
+                        relationship_counts={"uses": 3},
+                    )
+                },
+                query="lummac2",
+            ),
+            decision_record(
+                "2026-06-22T10:01:00Z",
+                "misp",
+                "ingest",
+                "ok",
+                metadata={
+                    "graph_stix_preview": graph_stix_preview(
+                        accepted_candidate_count=2,
+                        bundle_object_count=4,
+                        graph_object_count=1,
+                        graph_relationship_count=1,
+                        object_counts={"identity": 1},
+                        relationship_counts={"originated-from": 1},
+                    )
+                },
+                query="tlp:green",
+            ),
+        ]
+
+        report = build_decision_audit_report(records)
+        preview = report.graph_stix_preview
+
+        self.assertEqual(2, preview["record_count"])
+        self.assertEqual(6, preview["accepted_candidate_count"])
+        self.assertEqual(12, preview["bundle_object_count"])
+        self.assertEqual(4, preview["graph_object_count"])
+        self.assertEqual(4, preview["graph_relationship_count"])
+        self.assertEqual(1, preview["skipped_candidate_count"])
+        self.assertEqual({"preview": 2}, preview["statuses"])
+        self.assertEqual({"bundle": 2}, preview["bundle_types"])
+        self.assertEqual(
+            {"attack-pattern": 1, "identity": 1, "malware": 2},
+            preview["object_counts"],
+        )
+        self.assertEqual(
+            {"originated-from": 1, "uses": 3},
+            preview["relationship_counts"],
+        )
+        self.assertEqual(4, preview["by_source"]["otx"]["accepted_candidate_count"])
+        self.assertEqual(2, preview["by_source"]["misp"]["accepted_candidate_count"])
+        by_query = {
+            (item["source_key"], item["query"]): item
+            for item in preview["by_query"]
+        }
+        self.assertEqual(8, by_query[("otx", "lummac2")]["bundle_object_count"])
+        self.assertEqual(4, by_query[("misp", "tlp:green")]["bundle_object_count"])
+
+    def test_graph_stix_preview_summary_ignores_records_without_metadata(self):
+        summary = build_graph_stix_preview_summary(
+            [decision_record("2026-06-22T10:00:00Z", "otx", "drop", "old")]
+        )
+
+        self.assertEqual(0, summary["record_count"])
+        self.assertEqual({}, summary["by_source"])
+        self.assertEqual([], summary["by_query"])
+
     def test_score_summary_ignores_records_without_score(self):
         summary = build_score_summary(
             [
@@ -264,6 +342,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(0, report.score_summary["overall"]["records_with_score"])
         self.assertEqual(0, report.graph_export["record_count"])
         self.assertEqual(0, report.contextual_scoring["record_count"])
+        self.assertEqual(0, report.graph_stix_preview["record_count"])
         json.dumps(report.to_dict())
 
     def test_report_lists_recent_quarantined_candidates(self):
@@ -469,6 +548,37 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("categories=threat:1,ttp:1", text)
         self.assertIn("contextual_scoring_by_source:", text)
 
+    def test_text_report_includes_graph_stix_preview_summary(self):
+        report = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-22T10:00:00Z",
+                    "otx",
+                    "dry-run",
+                    "ok",
+                    metadata={
+                        "graph_stix_preview": graph_stix_preview(
+                            accepted_candidate_count=3,
+                            bundle_object_count=6,
+                            graph_object_count=2,
+                            graph_relationship_count=2,
+                            skipped_candidate_count=1,
+                            object_counts={"attack-pattern": 1},
+                            relationship_counts={"uses": 1},
+                        )
+                    },
+                )
+            ]
+        )
+
+        text = format_text_report(report)
+
+        self.assertIn("graph_stix_preview:", text)
+        self.assertIn("bundle_objects=6", text)
+        self.assertIn("skipped_candidates=1", text)
+        self.assertIn("objects=attack-pattern:1", text)
+        self.assertIn("graph_stix_preview_by_source:", text)
+
 
 def decision_record(
     recorded_at,
@@ -555,6 +665,30 @@ def contextual_scoring(
         "impact_ratio": 0,
         "capped": capped,
         "adjustments": [],
+    }
+
+
+def graph_stix_preview(
+    accepted_candidate_count=0,
+    bundle_object_count=0,
+    graph_object_count=0,
+    graph_relationship_count=0,
+    skipped_candidate_count=0,
+    object_counts=None,
+    relationship_counts=None,
+):
+    return {
+        "status": "preview",
+        "export_enabled": False,
+        "bundle_type": "bundle",
+        "accepted_candidate_count": accepted_candidate_count,
+        "bundle_object_count": bundle_object_count,
+        "graph_object_count": graph_object_count,
+        "graph_relationship_count": graph_relationship_count,
+        "skipped_candidate_count": skipped_candidate_count,
+        "object_counts": object_counts or {},
+        "relationship_counts": relationship_counts or {},
+        "skipped_candidates": [],
     }
 
 

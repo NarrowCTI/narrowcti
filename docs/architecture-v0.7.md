@@ -333,6 +333,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Decision audit contextual scoring reporting | Implemented in `gateway.decisions` with contextual score deltas, category counts, capped records, source rollups and query rollups. |
 | Initial graph-aware STIX builder | Implemented in `exporters.stix_builder` for accepted graph candidates covering attack patterns, actors, intrusion sets, malware, tools, vulnerabilities, identities, locations, detection indicators and supported observables. |
 | Graph STIX preview metadata | Implemented for OTX and MISP decisions as in-memory bundle validation summary without OpenCTI import. |
+| Decision audit graph STIX preview reporting | Implemented in `gateway.decisions` with bundle counts, graph object counts, relationship counts, skipped candidates, source rollups and query rollups. |
 | Contextual scoring evidence | Implemented as dry-run `contextual_scoring` metadata derived from accepted graph candidates; it is not applied to ingest decisions yet. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
 | Stable STIX export | Implemented as current `Report + Indicator` bundle. |
