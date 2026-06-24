@@ -272,7 +272,9 @@ plans are not marked as exported knowledge. In v0.8,
 `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` can also be enabled so OTX and MISP
 planning query OpenCTI for canonical graph objects, starting with ATT&CK
 attack-patterns, before later promotion work is allowed to create new graph
-knowledge.
+knowledge. Canonical matches are exposed as bounded
+`graph_export_plan_lookup_matches` metadata for audit and future enterprise
+reporting.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in

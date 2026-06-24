@@ -713,6 +713,10 @@ class MISPProcessorTests(unittest.TestCase):
             graph_plan["would_create_object_count"],
         )
         self.assertIn("graph_export_plan_known_keys", metadata)
+        self.assertEqual(
+            "internal--1",
+            metadata["graph_export_plan_lookup_matches"][0]["match"]["opencti_id"],
+        )
 
     def test_process_event_skips_when_all_artifacts_are_known(self):
         records = []
@@ -983,6 +987,19 @@ class FirstActionEntityKnownIndex:
         return {
             "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
             "relationship_keys": [],
+            "matches": [
+                {
+                    "entity_key": plan["actions"][0]["deduplication"]["entity_key"],
+                    "stix_object_type": "attack-pattern",
+                    "value": "T1059",
+                    "match": {
+                        "opencti_id": "internal--1",
+                        "standard_id": "attack-pattern--1111",
+                        "entity_type": "Attack-Pattern",
+                        "name": "Command and Scripting Interpreter",
+                    },
+                }
+            ],
         }
 
 

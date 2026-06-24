@@ -79,7 +79,9 @@ local graph keys and mark matching candidates as deduplicated in the plan. This
 is a read-only planning aid in v0.7; real graph export and post-export marking
 remain pending. In v0.8, `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` extends this
 planning aid to canonical OpenCTI graph lookup without creating entities,
-relationships or state marks.
+relationships or state marks. When canonical matches are found, OTX and MISP
+decision metadata can include `graph_export_plan_lookup_matches` so operators
+can audit which OpenCTI object was matched.
 
 ## Source Examples
 

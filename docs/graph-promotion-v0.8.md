@@ -51,6 +51,9 @@ The first v0.8 implementation is intentionally read-only:
 - `NARROWCTI_OPENCTI_GRAPH_LOOKUP=false` keeps the runtime read-only lookup
   disabled by default. When set to `true`, OTX and MISP planning combine local
   graph deduplication state with OpenCTI canonical graph lookup.
+- Lookup matches are retained as bounded audit evidence in
+  `graph_export_plan_lookup_matches` so analysts can inspect which canonical
+  OpenCTI object was matched before future promotion logic creates anything.
 
 This lets NarrowCTI mark a candidate such as `T1059` as already known by
 OpenCTI before future graph promotion tries to create anything.
@@ -67,6 +70,12 @@ OpenCTI before future graph promotion tries to create anything.
 
 The lookup is still read-only. It does not create entities, relationships or
 state marks in OpenCTI.
+
+When matches exist, decision metadata can include
+`graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
+type, candidate value and canonical OpenCTI match fields such as `opencti_id`,
+`standard_id`, `entity_type`, `name`, `x_mitre_id`, `match_type` and
+`match_value`.
 
 ## Canonical MITRE Linking
 

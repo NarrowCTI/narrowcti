@@ -511,6 +511,10 @@ class ProcessorTests(unittest.TestCase):
         )
         self.assertGreaterEqual(graph_plan["would_create_relationship_count"], 1)
         self.assertIn("graph_export_plan_known_keys", metadata)
+        self.assertEqual(
+            "internal--1",
+            metadata["graph_export_plan_lookup_matches"][0]["match"]["opencti_id"],
+        )
 
     def test_process_pulse_writes_quarantine_record(self):
         records = []
@@ -916,6 +920,19 @@ class FirstActionEntityKnownIndex:
         return {
             "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
             "relationship_keys": [],
+            "matches": [
+                {
+                    "entity_key": plan["actions"][0]["deduplication"]["entity_key"],
+                    "stix_object_type": "attack-pattern",
+                    "value": "T1059",
+                    "match": {
+                        "opencti_id": "internal--1",
+                        "standard_id": "attack-pattern--1111",
+                        "entity_type": "Attack-Pattern",
+                        "name": "Command and Scripting Interpreter",
+                    },
+                }
+            ],
         }
 
 

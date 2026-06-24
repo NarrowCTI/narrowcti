@@ -45,6 +45,11 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
 
         self.assertEqual("", error)
         self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(1, len(known["matches"]))
+        self.assertEqual(
+            "internal--1",
+            known["matches"][0]["match"]["opencti_id"],
+        )
         self.assertEqual(1, plan["deduplicated_entity_count"])
         self.assertEqual(0, plan["would_create_object_count"])
         lookup_known = lookup.known_keys_for_plan(plan)

@@ -354,7 +354,50 @@ def normalize_known_graph_keys(value):
             for key in known.get("relationship_keys") or []
             if clean_string(key)
         ],
+        "matches": [
+            summary
+            for summary in (
+                lookup_match_summary(match) for match in known.get("matches") or []
+            )
+            if summary
+        ],
     }
+
+
+def lookup_match_summary(value):
+    match = mapping_from(value)
+    if not match:
+        return {}
+    summary = {}
+    for field in (
+        "entity_key",
+        "relationship_key",
+        "stix_object_type",
+        "value",
+    ):
+        cleaned = clean_string(match.get(field))
+        if cleaned:
+            summary[field] = cleaned
+
+    canonical = mapping_from(match.get("match"))
+    if canonical:
+        canonical_summary = {}
+        for field in (
+            "opencti_id",
+            "standard_id",
+            "entity_type",
+            "name",
+            "x_mitre_id",
+            "match_type",
+            "match_value",
+        ):
+            cleaned = clean_string(canonical.get(field))
+            if cleaned:
+                canonical_summary[field] = cleaned
+        if canonical_summary:
+            summary["match"] = canonical_summary
+
+    return summary
 
 
 def clean_string(value):

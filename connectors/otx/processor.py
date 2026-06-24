@@ -87,6 +87,8 @@ def decision_metadata(
     )
     if known_keys["entity_keys"] or known_keys["relationship_keys"]:
         metadata["graph_export_plan_known_keys"] = known_keys
+    if known_keys.get("matches"):
+        metadata["graph_export_plan_lookup_matches"] = known_keys["matches"]
     if lookup_error:
         metadata["graph_export_plan_lookup_error"] = lookup_error
     return metadata

@@ -49,6 +49,8 @@ The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`.
 - Wired OTX and MISP runtimes to optionally combine local graph deduplication
   with read-only OpenCTI graph lookup through
   `NARROWCTI_OPENCTI_GRAPH_LOOKUP`.
+- Added bounded lookup match evidence in `graph_export_plan_lookup_matches` so
+  OpenCTI canonical graph matches are visible to analysts and future reports.
 - Added fail-open behavior for OpenCTI graph lookup errors. Lookup failures are
   logged and do not block the existing audit/dry-run plan.
 - Added unit coverage for MITRE attack-pattern lookup, fail-open behavior,
