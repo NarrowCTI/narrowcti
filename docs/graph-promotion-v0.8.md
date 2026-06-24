@@ -121,6 +121,11 @@ After ATT&CK lookup is validated, the same pattern should expand to:
 - Relationship lookup before edge creation.
 - Post-export graph state marking only after OpenCTI import succeeds.
 
+`core.graph_deduplication.GraphDeduplicationIndex.mark_exported_plan` is the
+safe post-export marking path for future promotion work. It only persists
+actions marked as `exported`, so dry-run `would_create` plans remain evidence
+and do not become exported graph knowledge.
+
 ## Validation
 
 Validation must cover:

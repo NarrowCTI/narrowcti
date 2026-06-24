@@ -59,6 +59,9 @@ Operational validation is tracked in `docs/operational-validation-v0.8.md`.
 - Extended gateway preflight output with v0.8 graph controls:
   `NARROWCTI_GRAPH_EXPORT_MODE`, `NARROWCTI_GRAPH_DEDUP_STATE_FILE` and
   `NARROWCTI_OPENCTI_GRAPH_LOOKUP`.
+- Added a safe `mark_exported_plan` path to the local graph deduplication index
+  for future post-export state marking. It ignores dry-run `would_create`
+  actions and only records actions explicitly marked as `exported`.
 - Added fail-open behavior for OpenCTI graph lookup errors. Lookup failures are
   logged and do not block the existing audit/dry-run plan.
 - Added unit coverage for MITRE attack-pattern lookup, fail-open behavior,
