@@ -149,6 +149,16 @@ python -m gateway.operational_validation `
   --output-file state\reports\v0.8-operational-validation.json
 ```
 
+HTML output is available for local review or support-safe evidence packages:
+
+```powershell
+python -m gateway.operational_validation `
+  --decision-path state\audit `
+  --required-sources otx,misp `
+  --format html `
+  --output-file state\reports\v0.8-operational-validation.html
+```
+
 Text output can also be written as a local evidence artifact:
 
 ```powershell

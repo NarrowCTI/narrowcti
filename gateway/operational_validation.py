@@ -1,4 +1,5 @@
 import argparse
+import html
 import json
 import os
 from dataclasses import dataclass
@@ -356,17 +357,81 @@ def format_text_report(report):
     return "\n".join(lines)
 
 
+def format_html_report(report):
+    data = report.to_dict()
+    counts = data["counts"]
+    rows = "\n".join(format_html_check_row(item) for item in data["checks"])
+    count_items = "\n".join(
+        f"<li><strong>{escape_html(status)}</strong>: {count}</li>"
+        for status, count in counts.items()
+    )
+    return "\n".join(
+        [
+            "<!doctype html>",
+            '<html lang="en">',
+            "<head>",
+            '  <meta charset="utf-8">',
+            "  <title>NarrowCTI v0.8 operational validation</title>",
+            "  <style>",
+            "    body { font-family: Arial, sans-serif; margin: 24px; color: #1f2933; }",
+            "    h1 { font-size: 24px; margin-bottom: 8px; }",
+            "    table { border-collapse: collapse; width: 100%; margin-top: 16px; }",
+            "    th, td { border: 1px solid #d9e2ec; padding: 8px; text-align: left; vertical-align: top; }",
+            "    th { background: #f0f4f8; }",
+            "    code { white-space: pre-wrap; word-break: break-word; }",
+            "  </style>",
+            "</head>",
+            "<body>",
+            "  <h1>NarrowCTI v0.8 operational validation</h1>",
+            f"  <p><strong>Schema:</strong> {escape_html(data['schema_version'])}</p>",
+            f"  <p><strong>Release:</strong> {escape_html(data['release'])}</p>",
+            f"  <p><strong>Overall status:</strong> {escape_html(data['overall_status'])}</p>",
+            "  <h2>Status counts</h2>",
+            f"  <ul>{count_items}</ul>",
+            "  <h2>Checks</h2>",
+            "  <table>",
+            "    <thead>",
+            "      <tr><th>Code</th><th>Status</th><th>Message</th><th>Evidence</th></tr>",
+            "    </thead>",
+            "    <tbody>",
+            rows,
+            "    </tbody>",
+            "  </table>",
+            "</body>",
+            "</html>",
+        ]
+    )
+
+
+def format_html_check_row(item):
+    evidence = json.dumps(item["evidence"], sort_keys=True)
+    return (
+        "      <tr>"
+        f"<td>{escape_html(item['code'])}</td>"
+        f"<td>{escape_html(item['status'])}</td>"
+        f"<td>{escape_html(item['message'])}</td>"
+        f"<td><code>{escape_html(evidence)}</code></td>"
+        "</tr>"
+    )
+
+
+def escape_html(value):
+    return html.escape(str(value), quote=True)
+
+
 def render_report(report, output_format="text"):
     output_format = normalize_output_format(output_format)
     if output_format == "json":
         return json.dumps(report.to_dict(), sort_keys=True)
+    if output_format == "html":
+        return format_html_report(report)
     return format_text_report(report)
 
 
 def normalize_output_format(value):
     output_format = str(value or "text").strip().lower()
-    if output_format not in ("text", "json"):
-        raise ValueError("output_format must be one of: text,json")
+    if output_format not in ("text", "json", "html"):
+        raise ValueError("output_format must be one of: text,json,html")
     return output_format
 
 
@@ -439,7 +504,7 @@ def main():
     )
     parser.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "html"),
         default="text",
         help="Output format for stdout or --output-file.",
     )

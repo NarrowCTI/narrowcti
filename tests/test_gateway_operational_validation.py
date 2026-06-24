@@ -6,6 +6,8 @@ import unittest
 from gateway.decisions import build_decision_audit_report
 from gateway.operational_validation import (
     build_operational_validation_report,
+    check,
+    format_html_report,
     format_text_report,
     normalize_output_format,
     parse_sources,
@@ -113,6 +115,16 @@ class GatewayOperationalValidationTests(unittest.TestCase):
         self.assertIn("NarrowCTI v0.8 operational validation", text)
         self.assertEqual("operational-validation/v0.8", data["schema_version"])
 
+    def test_renders_html_report_with_escaped_dynamic_content(self):
+        report = validation_report_with_dynamic_html()
+
+        html = format_html_report(report)
+
+        self.assertIn("<!doctype html>", html)
+        self.assertIn("NarrowCTI v0.8 operational validation", html)
+        self.assertIn("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;", html)
+        self.assertNotIn("<script>alert", html)
+
     def test_rejects_unknown_output_format(self):
         with self.assertRaises(ValueError):
             normalize_output_format("pdf")
@@ -158,6 +170,23 @@ def validation_report():
         full_validation_passed=True,
         opencti_ui_no_duplicate=True,
         resource_posture_ok=True,
+    )
+
+
+def validation_report_with_dynamic_html():
+    report = validation_report()
+    return type(report)(
+        schema_version=report.schema_version,
+        release=report.release,
+        overall_status=report.overall_status,
+        checks=(
+            check(
+                "dynamic-html",
+                "pass",
+                '<script>alert("x")</script>',
+                {"path": "C:\\temp\\<customer>"},
+            ),
+        ),
     )
 
 
