@@ -191,6 +191,12 @@ held graph candidates, OpenCTI lookup matches, would-create object/relationship
 counts and density ratios. It is evidence for review and promotion readiness,
 not an automatic export trigger.
 
+The executive graph-readiness summary reads the current decision-audit
+`graph_stix_preview` counters: preview record count as STIX bundle count,
+`graph_object_count` as STIX object count and `graph_relationship_count` as
+STIX relationship count. Legacy `bundle_count`, `object_count` and
+`relationship_count` fields remain accepted for older support snapshots.
+
 The context-quality summary includes source-level contextual scoring records,
 accepted context candidates, adjustment volume, average score delta, maximum
 contextual score and top context categories. In v0.8 this remains report

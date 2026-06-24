@@ -133,9 +133,21 @@ def build_executive_summary(
             "would_create_relationship_count",
             0,
         ),
-        "graph_stix_bundle_count": graph_preview.get("bundle_count", 0),
-        "graph_stix_object_count": graph_preview.get("object_count", 0),
-        "graph_stix_relationship_count": graph_preview.get("relationship_count", 0),
+        "graph_stix_bundle_count": graph_preview_int(
+            graph_preview,
+            "bundle_count",
+            "record_count",
+        ),
+        "graph_stix_object_count": graph_preview_int(
+            graph_preview,
+            "graph_object_count",
+            "object_count",
+        ),
+        "graph_stix_relationship_count": graph_preview_int(
+            graph_preview,
+            "graph_relationship_count",
+            "relationship_count",
+        ),
     }
 
 
@@ -393,7 +405,11 @@ def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
     would_create_relationship_count = int(
         graph_export.get("would_create_relationship_count", 0) or 0
     )
-    stix_relationship_count = int(graph_preview.get("graph_relationship_count", 0) or 0)
+    stix_relationship_count = graph_preview_int(
+        graph_preview,
+        "graph_relationship_count",
+        "relationship_count",
+    )
     return {
         "decision_records": decision_records,
         "candidate_count": candidate_count,
@@ -404,7 +420,11 @@ def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
             graph_export.get("would_create_object_count", 0) or 0
         ),
         "would_create_relationship_count": would_create_relationship_count,
-        "stix_object_count": int(graph_preview.get("graph_object_count", 0) or 0),
+        "stix_object_count": graph_preview_int(
+            graph_preview,
+            "graph_object_count",
+            "object_count",
+        ),
         "stix_relationship_count": stix_relationship_count,
         "candidate_density": ratio(candidate_count, decision_records),
         "relationship_density": ratio(
@@ -681,6 +701,14 @@ def ratio(value, total):
     if not total:
         return 0.0
     return round(float(value) / float(total), 2)
+
+
+def graph_preview_int(graph_preview, *keys):
+    graph_preview = graph_preview or {}
+    for key in keys:
+        if key in graph_preview:
+            return int(graph_preview.get(key, 0) or 0)
+    return 0
 
 
 def report_to_dict(report, redaction_profile="none"):

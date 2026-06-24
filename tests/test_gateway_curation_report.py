@@ -91,6 +91,45 @@ class GatewayCurationReportTests(unittest.TestCase):
         )
         json.dumps(report.to_dict())
 
+    def test_executive_summary_uses_current_graph_stix_preview_keys(self):
+        operational = build_operational_report([])
+        decisions = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-24T10:01:00Z",
+                    "otx",
+                    "dry-run",
+                    "would preview graph",
+                    metadata={
+                        "graph_stix_preview": {
+                            "status": "dry-run",
+                            "bundle_type": "bundle",
+                            "accepted_candidate_count": 2,
+                            "bundle_object_count": 7,
+                            "graph_object_count": 3,
+                            "graph_relationship_count": 4,
+                        }
+                    },
+                )
+            ]
+        )
+        review = ReviewSummary(
+            record_count=0,
+            status_counts={},
+            source_counts={},
+            pending_count=0,
+            exportable_count=0,
+        )
+
+        report = build_curation_report(operational, decisions, review)
+        summary = report.executive_summary
+        text = format_text_report(report)
+
+        self.assertEqual(1, summary["graph_stix_bundle_count"])
+        self.assertEqual(3, summary["graph_stix_object_count"])
+        self.assertEqual(4, summary["graph_stix_relationship_count"])
+        self.assertIn("stix_bundles=1 stix_objects=3 stix_relationships=4", text)
+
     def test_builds_report_from_files_with_partial_evidence(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             summary_file = os.path.join(tmpdir, "gateway_runs.jsonl")
