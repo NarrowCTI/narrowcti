@@ -81,6 +81,7 @@ for the declared edition or explicit override.
 | `NARROWCTI_LICENSE_FILE` | Future signed offline license file path. Preflight reports only whether it is configured. |
 | `NARROWCTI_LICENSED_CAPABILITIES` | Optional comma-separated capability override. Empty uses the default capability set for the declared edition. |
 | `NARROWCTI_FEATURE_GATES_ENFORCED` | Enables strict preflight validation for license configuration. Runtime feature blocking is still pending broader product validation. |
+| `NARROWCTI_OPERATIONAL_VALIDATION_SOURCES` | Optional compose-runner helper for the v0.8 operational validation service. It controls the comma-separated source list passed to `gateway.operational_validation --required-sources`. |
 
 Known v0.8 capability identifiers:
 

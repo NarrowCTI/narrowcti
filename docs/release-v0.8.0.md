@@ -87,6 +87,9 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added `ops` profile services to the deployment compose template for
   repeatable preflight, curation report and support diagnostic runs without
   starting continuous gateway ingestion.
+- Added an `ops` profile service for operational validation so deployments can
+  generate `/app/state/operational-validation.html` from the same image,
+  environment and state volume used by the gateway.
 - Added `gateway.review.AnalystReviewService` as the internal analyst review
   API for quarantine list, summary, release, partial release, reject, export
   dry-run and audit-event reads. The CLI now delegates review operations to

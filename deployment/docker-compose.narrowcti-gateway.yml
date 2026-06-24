@@ -63,6 +63,37 @@ services:
     networks:
       - opencti
 
+  narrowcti-operational-validation:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.operational_validation
+      - --decision-path
+      - /app/state/audit
+      - --required-sources
+      - ${NARROWCTI_OPERATIONAL_VALIDATION_SOURCES:-otx,misp}
+      - --format
+      - html
+      - --output-file
+      - /app/state/operational-validation.html
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+      - narrowcti-licenses:/licenses:ro
+    networks:
+      - opencti
+
   narrowcti-support-diagnostics:
     build:
       context: ..

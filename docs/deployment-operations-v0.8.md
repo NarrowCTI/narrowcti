@@ -43,6 +43,7 @@ commands:
 | --- | --- |
 | `narrowcti-preflight` | Runs `python -m gateway.preflight`. |
 | `narrowcti-curation-report` | Builds text output and writes `/app/state/curation-report.html`. |
+| `narrowcti-operational-validation` | Builds `/app/state/operational-validation.html` from preflight and decision audit evidence. |
 | `narrowcti-support-diagnostics` | Builds a support-redacted HTML snapshot and support bundle under `/app/state`. |
 
 These services reuse the same image, env file, state volume and OpenCTI network
@@ -75,6 +76,7 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops 
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml up --force-recreate narrowcti-gateway
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml logs --tail 120 narrowcti-gateway
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-curation-report
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-operational-validation
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-support-diagnostics
 ```
 
@@ -94,6 +96,8 @@ Only consider continuous operation after a bounded dry-run proves:
 - Source dry-run posture and per-source limits are visible.
 - Decision audit records are being written.
 - Quarantine repository and release audit paths are configured.
+- Operational validation has no failing checks and expected missing-evidence
+  items are understood before promotion decisions.
 - Artifact deduplication is enabled with `NARROWCTI_DEDUP_MODE=hybrid`.
 - Graph promotion remains `audit` or `dry-run`.
 - OpenCTI and Elasticsearch capacity are acceptable.
@@ -145,6 +149,8 @@ Rollback should restore the previous image and the previous state backup.
 - `.env` files with real secrets are excluded from version control.
 - Local `.lic` files and license directories are excluded from version control.
 - Preflight output is captured for the installation record.
+- Operational validation output is captured for the graph-promotion readiness
+  record.
 - Source guardrails are documented for OTX and MISP.
 - Quarantine/release workflow is documented for analysts.
 - Graph promotion mode and OpenCTI lookup posture are documented.
