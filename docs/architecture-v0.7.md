@@ -395,6 +395,12 @@ Current validation is still anchored in the existing suite:
 The script name is historical. It currently validates the active codebase,
 including v0.7 graph evidence and graph candidate tests.
 
+Operational dry-run evidence from the local OpenCTI/MISP lab is tracked in
+`docs/operational-validation-v0.7.md`. That evidence currently confirms
+observable graph metadata, graph export planning, STIX preview summaries,
+contextual scoring evidence and MISP guardrails without enabling real graph
+promotion.
+
 ## Related Documents
 
 - `docs/graph-enrichment-v0.7.md`
@@ -404,6 +410,7 @@ including v0.7 graph evidence and graph candidate tests.
 - `docs/misp-official-connector-mapping-v0.7.md`
 - `docs/otx-official-connector-mapping-v0.7.md`
 - `docs/contextual-scoring-reference-v0.7.md`
+- `docs/operational-validation-v0.7.md`
 - `docs/release-v0.7.0.md`
 
 ## Architecture Decision

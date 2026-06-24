@@ -23,6 +23,7 @@ class OTXEntityExtractionTests(unittest.TestCase):
                 "industries": "Finance, Healthcare",
                 "target_countries": ["BR", "US"],
                 "author_name": "AlienVault Research",
+                "author": "2",
                 "id": "pulse-1",
                 "created": "2026-04-01T00:00:00Z",
                 "modified": "2026-04-03T00:00:00Z",
@@ -64,6 +65,12 @@ class OTXEntityExtractionTests(unittest.TestCase):
         self.assertEqual(["Finance", "Healthcare"], entities["industries"])
         self.assertEqual(["BR", "US"], entities["targeted_countries"])
         self.assertEqual(["AlienVault Research"], entities["authors"])
+        self.assertFalse(
+            any(
+                record["entity_type"] == "source_identity" and record["value"] == "2"
+                for record in entities["records"]
+            )
+        )
         self.assertEqual("pulse-1", entities["lifecycle"]["pulse_id"])
         self.assertEqual("2026-04-03T00:00:00Z", entities["lifecycle"]["modified"])
         self.assertEqual(7, entities["vote_summary"]["upvotes"])
@@ -144,6 +151,17 @@ class OTXEntityExtractionTests(unittest.TestCase):
         self.assertEqual(
             ["T1059", "T1105", "T1566.001"],
             normalize_attack_ids("t1059, technique T1105, subtechnique T1566.001"),
+        )
+
+    def test_ignores_numeric_otx_author_ids_as_graph_identities(self):
+        entities = extract_otx_entities({"author": "2"})
+
+        self.assertEqual([], entities["authors"])
+        self.assertFalse(
+            any(
+                record["entity_type"] == "source_identity"
+                for record in entities["records"]
+            )
         )
 
     def test_normalizes_cve_ids_from_nested_values(self):

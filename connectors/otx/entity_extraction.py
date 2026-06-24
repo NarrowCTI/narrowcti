@@ -57,7 +57,7 @@ def extract_otx_entities(pulse):
         "targeted_countries": normalize_values(
             pulse.get("targeted_countries") or pulse.get("target_countries")
         ),
-        "authors": normalize_values(author_sources(pulse)),
+        "authors": normalize_authors(author_sources(pulse)),
         "lifecycle": pulse_lifecycle(pulse),
         "vote_summary": pulse_vote_summary(pulse),
         "indicator_observation_window": indicator_observation_window(
@@ -85,6 +85,31 @@ def normalize_values(value):
         if normalized and normalized not in values:
             values.append(normalized)
     return values
+
+
+def normalize_authors(value):
+    authors = []
+    for item in flatten(value):
+        normalized = normalize_author_value(item)
+        if normalized and normalized not in authors:
+            authors.append(normalized)
+    return authors
+
+
+def normalize_author_value(value):
+    if isinstance(value, dict):
+        value = (
+            value.get("name")
+            or value.get("display_name")
+            or value.get("username")
+            or value.get("user_name")
+            or value.get("email")
+            or value.get("title")
+        )
+    normalized = normalize_value(value)
+    if normalized.isdigit():
+        return ""
+    return normalized
 
 
 def normalize_attack_ids(value):

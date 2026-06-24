@@ -81,6 +81,32 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         )
         json.dumps(report.to_dict())
 
+    def test_report_normalizes_legacy_dry_run_action(self):
+        records = [
+            decision_record(
+                "2026-06-22T10:00:00Z",
+                "misp",
+                "dry_run",
+                "ok",
+                score=70,
+            ),
+        ]
+
+        report = build_decision_audit_report(records)
+
+        self.assertEqual(1, report.actions["dry-run"])
+        self.assertNotIn("dry_run", report.actions)
+        self.assertEqual(
+            {"action": "dry-run", "reason": "ok", "count": 1},
+            report.reasons[0],
+        )
+        self.assertEqual(1, report.sources["misp"]["actions"]["dry-run"])
+        self.assertEqual(1, report.queries[0]["actions"]["dry-run"])
+        self.assertEqual(
+            1,
+            report.score_summary["by_action"]["dry-run"]["records_with_score"],
+        )
+
     def test_report_aggregates_graph_export_plan_metadata(self):
         records = [
             decision_record(

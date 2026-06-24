@@ -105,7 +105,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
     records_by_source = {}
 
     for record in records:
-        action = normalize_value(record.get("action"), "unknown")
+        action = normalize_action(record.get("action"), "unknown")
         reason = normalize_value(record.get("reason"), "unspecified")
         source_key = normalize_value(record.get("source_key"), "unknown")
         query = normalize_value(record.get("query"), "(none)")
@@ -192,6 +192,14 @@ def empty_actions():
 def normalize_value(value, default):
     value = str(value or "").strip()
     return value or default
+
+
+def normalize_action(value, default):
+    action = normalize_value(value, default)
+    aliases = {
+        "dry_run": "dry-run",
+    }
+    return aliases.get(action, action)
 
 
 def top_reasons(reason_counts, limit):

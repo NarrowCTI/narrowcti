@@ -16,6 +16,8 @@ what must remain as evidence, labels, notes or quarantine context.
 The consolidated architecture is tracked in `docs/architecture-v0.7.md`. The
 detailed graph-enrichment design is tracked in
 `docs/graph-enrichment-v0.7.md`.
+Operational dry-run validation evidence is tracked in
+`docs/operational-validation-v0.7.md`.
 
 ## Initial Scope
 
@@ -160,6 +162,14 @@ detailed graph-enrichment design is tracked in
 - Added MISP detection-rule audit extraction. YARA, Sigma, Snort, Suricata and
   PCRE attributes now produce audit-only `detection_rule` / `indicator`
   candidates with pattern type, raw pattern, tags and attribute context.
+- Added operational dry-run validation evidence for live OTX and MISP lab
+  samples, including graph export planning, STIX preview, contextual scoring,
+  guardrails, confirmed gaps and safe promotion blockers.
+- Tightened OTX author extraction so numeric OTX author ids remain provenance
+  data and do not become `source_identity` graph candidates.
+- Normalized `dry_run` decision records to `dry-run` in the decision audit
+  report so operator-facing source, query, reason and score rollups use one
+  action vocabulary.
 
 ## Validation Target
 
@@ -172,6 +182,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 249 tests
+Ran 251 tests
 OK
 ```

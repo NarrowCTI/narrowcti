@@ -149,6 +149,7 @@ Detailed design:
 - `docs/graph-enrichment-v0.7.md`
 - `docs/contextual-scoring-reference-v0.7.md`
 - `docs/source-ingestion-modes-v0.7.md`
+- `docs/operational-validation-v0.7.md`
 
 Development notes:
 

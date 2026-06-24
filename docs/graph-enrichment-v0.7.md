@@ -83,6 +83,9 @@ The consolidated v0.7 architecture, including runtime boundaries, current
 contracts, policy surface and graph-export promotion path, is tracked in
 `docs/architecture-v0.7.md`.
 
+Operational dry-run validation evidence from the local OpenCTI/MISP lab is
+tracked in `docs/operational-validation-v0.7.md`.
+
 ## Initial Source Focus
 
 ### OTX
@@ -551,6 +554,12 @@ v0.7 should not be considered complete until:
     category impact configuration and decision-path application remain pending.
 13. Document and preflight the active ingestion mode: direct, MISP collector or
     hybrid.
+
+Current local dry-run validation evidence is documented in
+`docs/operational-validation-v0.7.md`. It confirms graph metadata visibility
+for one live OTX sample and one live MISP sample, while keeping OpenCTI graph
+promotion blocked until richer actor, arsenal, ATT&CK, sector, geography and
+OpenCTI-side deduplication validation is complete.
 
 ## Decision
 
