@@ -154,6 +154,8 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added operational validation status to support diagnostics text, HTML, JSON
   and bundle output so support can see which v0.8 validation criteria have
   passed, failed or still need lab evidence.
+- Added support diagnostics integration with the operational validation manual
+  evidence file so support bundles can reflect operator-recorded lab checks.
 - Added support warnings for failed or incomplete v0.8 operational validation
   so support bundles can immediately show whether graph promotion must remain
   blocked.

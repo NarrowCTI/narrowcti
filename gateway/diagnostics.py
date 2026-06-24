@@ -10,7 +10,11 @@ from datetime import datetime, timezone
 from core.decision_audit import utc_now
 from gateway.curation_report import build_curation_report_from_files
 from gateway.decisions import build_decision_audit_report, read_decision_records
-from gateway.operational_validation import build_operational_validation_report
+from gateway.operational_validation import (
+    build_operational_validation_report,
+    evidence_bool,
+    load_manual_evidence,
+)
 from gateway.preflight import build_preflight_report
 from gateway.settings import load_settings
 
@@ -53,9 +57,17 @@ def build_support_diagnostics(
     env=None,
     generated_at="",
     redaction_profile="none",
+    operational_validation_evidence_file="",
 ):
     preflight = build_preflight_report(settings, env=env)
     evidence = collect_evidence_inventory(preflight)
+    if operational_validation_evidence_file:
+        evidence.append(
+            evidence_item(
+                "operational_validation_evidence_file",
+                operational_validation_evidence_file,
+            )
+        )
     resolved_decision_paths = decision_paths or [settings.decision_audit_dir]
     curation = build_curation_report_from_files(
         summary_file=summary_file or settings.run_summary_file,
@@ -69,9 +81,27 @@ def build_support_diagnostics(
         limit=limit or None,
     )
     decisions = build_decision_audit_report(decision_records)
+    manual_evidence = load_manual_evidence(operational_validation_evidence_file)
     operational_validation = build_operational_validation_report(
         preflight,
         decisions,
+        full_validation_passed=evidence_bool(
+            manual_evidence,
+            "full_validation_passed",
+        ),
+        opencti_ui_no_duplicate=evidence_bool(
+            manual_evidence,
+            "opencti_ui_no_duplicate",
+        ),
+        opencti_ui_duplicate_found=evidence_bool(
+            manual_evidence,
+            "opencti_ui_duplicate_found",
+        ),
+        resource_posture_ok=evidence_bool(manual_evidence, "resource_posture_ok"),
+        resource_posture_unhealthy=evidence_bool(
+            manual_evidence,
+            "resource_posture_unhealthy",
+        ),
         required_sources=preflight.enabled_sources,
     )
     snapshot = SupportDiagnosticSnapshot(
@@ -768,6 +798,11 @@ def main():
         default="",
         help="Write an HTML diagnostic snapshot.",
     )
+    parser.add_argument(
+        "--operational-validation-evidence-file",
+        default=os.environ.get("NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE", ""),
+        help="Optional JSON file with manual v0.8 operational validation evidence.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -780,6 +815,7 @@ def main():
         release_audit_file=args.release_audit_file,
         limit=args.limit,
         redaction_profile=args.redaction_profile,
+        operational_validation_evidence_file=args.operational_validation_evidence_file,
     )
     bundle_result = None
     if args.bundle_file:

@@ -29,6 +29,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             summary_file = os.path.join(tmpdir, "gateway_runs.jsonl")
             decision_file = os.path.join(audit_dir, "otx_decisions.jsonl")
             release_audit_file = os.path.join(tmpdir, "releases.jsonl")
+            validation_evidence_file = os.path.join(
+                tmpdir,
+                "operational-validation-evidence.json",
+            )
             with open(summary_file, "w", encoding="utf-8") as handle:
                 handle.write(
                     json.dumps(
@@ -58,6 +62,15 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                     release_event("otx", "reject"),
                 ]:
                     handle.write(json.dumps(event) + "\n")
+            with open(validation_evidence_file, "w", encoding="utf-8") as handle:
+                json.dump(
+                    {
+                        "full_validation_passed": True,
+                        "opencti_ui_no_duplicate": True,
+                        "resource_posture_ok": True,
+                    },
+                    handle,
+                )
             settings = make_settings(
                 state_dir=tmpdir,
                 decision_audit_dir=audit_dir,
@@ -70,10 +83,15 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                 settings,
                 env={"OTX_DRY_RUN": "true"},
                 generated_at="2026-06-24T10:02:00Z",
+                operational_validation_evidence_file=validation_evidence_file,
             )
 
         data = snapshot.to_dict()
         inventory = {item["name"]: item for item in data["evidence_inventory"]}
+        validation_checks = {
+            item["code"]: item
+            for item in data["operational_validation"]["checks"]
+        }
         warning_codes = [item["code"] for item in data["support_warnings"]]
 
         self.assertEqual("support-diagnostics/v0.8", data["schema_version"])
@@ -86,6 +104,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         )
         self.assertTrue(inventory["run_summary_file"]["exists"])
         self.assertTrue(inventory["decision_audit_dir"]["exists"])
+        self.assertTrue(inventory["operational_validation_evidence_file"]["exists"])
         self.assertEqual(
             "otx",
             data["curation_report"]["source_summaries"][0]["source_key"],
@@ -94,6 +113,12 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             "needs-evidence",
             data["operational_validation"]["overall_status"],
         )
+        self.assertEqual("pass", validation_checks["full-validation"]["status"])
+        self.assertEqual(
+            "pass",
+            validation_checks["opencti-no-duplicate-attack-pattern"]["status"],
+        )
+        self.assertEqual("pass", validation_checks["resource-posture"]["status"])
         self.assertIn("operational-validation-needs-evidence", warning_codes)
         self.assertIn("source_posture:", format_text_snapshot(snapshot))
         self.assertIn("policy_insights:", format_text_snapshot(snapshot))

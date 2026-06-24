@@ -42,7 +42,8 @@ python -m gateway.diagnostics `
   --summary-file state\gateway_runs.jsonl `
   --decision-path state\audit `
   --quarantine-file state\quarantine.jsonl `
-  --release-audit-file state\audit\releases.jsonl
+  --release-audit-file state\audit\releases.jsonl `
+  --operational-validation-evidence-file state\operational-validation-evidence.json
 ```
 
 JSON snapshot:
@@ -53,6 +54,7 @@ python -m gateway.diagnostics `
   --decision-path state\audit `
   --quarantine-file state\quarantine.jsonl `
   --release-audit-file state\audit\releases.jsonl `
+  --operational-validation-evidence-file state\operational-validation-evidence.json `
   --json
 ```
 
@@ -120,7 +122,9 @@ The current snapshot contains:
 - `policy_insights`: rendered text/HTML summary of source-level policy tuning
   signals from repeated release/reject patterns.
 - `operational_validation`: rendered text/HTML summary of the v0.8 operational
-  validation checklist, including pass/fail/warn/needs-evidence state.
+  validation checklist, including pass/fail/warn/needs-evidence state. When
+  configured, it uses the same manual evidence JSON file as
+  `gateway.operational_validation`.
 - `support_warnings`: deterministic support hints for blocking preflight
   errors, preflight warnings, missing evidence, empty curation evidence and
   operational validation failures or missing evidence.

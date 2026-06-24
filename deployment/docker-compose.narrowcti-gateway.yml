@@ -112,6 +112,8 @@ services:
       - gateway.diagnostics
       - --redaction-profile
       - support
+      - --operational-validation-evidence-file
+      - ${NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE:-/app/state/operational-validation-evidence.json}
       - --html-file
       - /app/state/support-diagnostics.html
       - --bundle-file

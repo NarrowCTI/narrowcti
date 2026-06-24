@@ -93,7 +93,8 @@ The operational validation service optionally reads
 file to record manual checks such as `full_validation_passed`,
 `opencti_ui_no_duplicate` and `resource_posture_ok` after the operator has
 actually validated them. Missing evidence keeps those checks in
-`needs-evidence` state.
+`needs-evidence` state. Support diagnostics reads the same file when configured
+so the support bundle and the operational validation report do not diverge.
 
 ## Safe Promotion To Continuous Operation
 
