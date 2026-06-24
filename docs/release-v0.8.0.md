@@ -22,6 +22,7 @@ Operational validation is tracked in `docs/operational-validation-v0.8.md`.
 Deployment operations are tracked in `docs/deployment-operations-v0.8.md`.
 Analyst review design is tracked in `docs/analyst-review-v0.8.md`.
 Curation reporting is tracked in `docs/curation-reporting-v0.8.md`.
+Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 
 ## Initial Scope
 
@@ -38,6 +39,8 @@ Curation reporting is tracked in `docs/curation-reporting-v0.8.md`.
   deduplicated and promoted.
 - Start product operations hardening for installation, upgrade, configuration
   defaults and deployment templates.
+- Provide a read-only support diagnostic snapshot for preflight, evidence and
+  curation state.
 
 ## Implemented Foundation
 
@@ -85,6 +88,9 @@ Curation reporting is tracked in `docs/curation-reporting-v0.8.md`.
 - Added `gateway.curation_report` as the first analyst-facing curation report
   model. It consolidates gateway run summaries, decision audit, analyst review
   status and graph readiness evidence into text or JSON output.
+- Added `gateway.diagnostics` as the first read-only support diagnostic
+  snapshot. It combines preflight state, configured evidence inventory,
+  curation report output and deterministic support warnings.
 
 ## Promotion Boundary
 
@@ -125,6 +131,10 @@ is enabled in v0.8.
 The curation report foundation is read-only and evidence-driven. It prepares the
 enterprise reporting model without generating PDFs, mutating review state or
 calling external APIs.
+
+The support diagnostics foundation is also read-only. It inventories configured
+local evidence paths and summarizes preflight and curation posture without
+collecting secrets, calling OpenCTI or changing runtime state.
 
 ## Validation
 

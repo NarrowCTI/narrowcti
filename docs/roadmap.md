@@ -201,6 +201,7 @@ Detailed design and validation:
 - `docs/deployment-operations-v0.8.md`
 - `docs/analyst-review-v0.8.md`
 - `docs/curation-reporting-v0.8.md`
+- `docs/support-diagnostics-v0.8.md`
 
 Purpose:
 
@@ -211,6 +212,8 @@ Purpose:
   starts with a read-only curation report model over gateway, decision,
   quarantine and graph-readiness evidence.
 - Provide a cleaner installation and upgrade path.
+- Add read-only support diagnostics for preflight, evidence inventory and
+  curation posture.
 - Add deployment templates. v0.8 starts with a safe gateway compose template
   and env example for existing OpenCTI Docker networks.
 - Add controlled graph promotion with OpenCTI entity/relationship lookup,
