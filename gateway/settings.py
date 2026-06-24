@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 
+from core.graph_export_plan import normalize_graph_export_mode
 from core.mitre_attack import DEFAULT_MITRE_STIX_URL
 
 
@@ -24,6 +25,9 @@ class GatewaySettings:
     dedup_mode: str
     opencti_dedup_lookup: bool
     dedup_state_file: str
+    graph_export_mode: str
+    graph_dedup_state_file: str
+    opencti_graph_lookup: bool
     release_audit_file: str = ""
     enable_mitre_attack_resolution: bool = True
     mitre_cache_file: str = ""
@@ -120,6 +124,11 @@ def load_settings():
             "NARROWCTI_DEDUP_STATE_FILE",
             "/app/state/dedup_index.json",
         ),
+        graph_export_mode=normalize_graph_export_mode(
+            os.getenv("NARROWCTI_GRAPH_EXPORT_MODE", "audit")
+        ),
+        graph_dedup_state_file=os.getenv("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
+        opencti_graph_lookup=env_bool("NARROWCTI_OPENCTI_GRAPH_LOOKUP", False),
         release_audit_file=os.getenv(
             "NARROWCTI_RELEASE_AUDIT_FILE",
             os.path.join(state_dir, "audit", "releases.jsonl"),

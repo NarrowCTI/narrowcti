@@ -32,6 +32,9 @@ def make_settings(**overrides):
         "dedup_mode": "hybrid",
         "opencti_dedup_lookup": False,
         "dedup_state_file": "/app/state/dedup_index.json",
+        "graph_export_mode": "audit",
+        "graph_dedup_state_file": "",
+        "opencti_graph_lookup": False,
         "release_audit_file": "/app/state/audit/releases.jsonl",
         "enable_mitre_attack_resolution": True,
         "mitre_cache_file": "",
@@ -58,6 +61,8 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertEqual("hybrid", report.ingestion_mode)
         self.assertEqual(("otx", "misp"), report.enabled_sources)
         self.assertEqual("hybrid", report.settings["dedup_mode"])
+        self.assertEqual("audit", report.settings["graph_export_mode"])
+        self.assertFalse(report.settings["opencti_graph_lookup"])
         self.assertEqual(60, report.settings["min_score_to_ingest"])
         self.assertTrue(report.settings["enable_quarantine"])
         self.assertEqual(["white", "green"], report.settings["allowed_tlp"])
@@ -286,6 +291,9 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("mitre_cache_file=(disabled)", text)
         self.assertIn("enable_mitre_attack_resolution=true", text)
         self.assertIn("dedup_state_file=/app/state/dedup_index.json", text)
+        self.assertIn("graph_export_mode=audit", text)
+        self.assertIn("graph_dedup_state_file=(disabled)", text)
+        self.assertIn("opencti_graph_lookup=false", text)
         self.assertIn("otx.state_file=/app/state/otx_state.json", text)
         self.assertIn(
             "otx.decision_audit_file=/app/state/audit/otx_decisions.jsonl",
@@ -304,6 +312,26 @@ class GatewayPreflightTests(unittest.TestCase):
             data["settings"]["release_audit_file"],
         )
         json.dumps(data)
+
+    def test_preflight_reports_graph_lookup_controls(self):
+        settings = make_settings(
+            graph_export_mode="dry-run",
+            graph_dedup_state_file="/app/state/graph_dedup.json",
+            opencti_graph_lookup=True,
+        )
+
+        report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
+        text = format_text_report(report)
+
+        self.assertEqual("dry-run", report.settings["graph_export_mode"])
+        self.assertEqual(
+            "/app/state/graph_dedup.json",
+            report.evidence_paths["graph_dedup_state_file"],
+        )
+        self.assertTrue(report.settings["opencti_graph_lookup"])
+        self.assertIn("graph_export_mode=dry-run", text)
+        self.assertIn("graph_dedup_state_file=/app/state/graph_dedup.json", text)
+        self.assertIn("opencti_graph_lookup=true", text)
 
 
 if __name__ == "__main__":

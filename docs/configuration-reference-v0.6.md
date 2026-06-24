@@ -163,3 +163,7 @@ python -m gateway.quarantine --release-audit-file state\audit\releases.jsonl aud
 The validation goal is to prove that quarantine records are created, review
 actions are audited, released records remain dry-run by default and enrichment
 gaps such as a missing MITRE cache are warnings instead of ingest blockers.
+In the v0.8 development track, `gateway.preflight` also reports
+`NARROWCTI_GRAPH_EXPORT_MODE`, `NARROWCTI_GRAPH_DEDUP_STATE_FILE` and
+`NARROWCTI_OPENCTI_GRAPH_LOOKUP` so operators can confirm the graph promotion
+gate before running OTX or MISP sources.

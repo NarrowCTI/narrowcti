@@ -53,6 +53,9 @@ The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`.
   OpenCTI canonical graph matches are visible to analysts and future reports.
 - Extended the decision audit report graph export summary with OpenCTI lookup
   match counters by object type, match type and canonical entity type.
+- Extended gateway preflight output with v0.8 graph controls:
+  `NARROWCTI_GRAPH_EXPORT_MODE`, `NARROWCTI_GRAPH_DEDUP_STATE_FILE` and
+  `NARROWCTI_OPENCTI_GRAPH_LOOKUP`.
 - Added fail-open behavior for OpenCTI graph lookup errors. Lookup failures are
   logged and do not block the existing audit/dry-run plan.
 - Added unit coverage for MITRE attack-pattern lookup, fail-open behavior,
