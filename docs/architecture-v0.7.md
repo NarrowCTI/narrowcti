@@ -400,6 +400,7 @@ including v0.7 graph evidence and graph candidate tests.
 - `docs/graph-enrichment-v0.7.md`
 - `docs/metadata-validation-v0.7.md`
 - `docs/source-ingestion-modes-v0.7.md`
+- `docs/source-adapter-onboarding-v0.7.md`
 - `docs/misp-official-connector-mapping-v0.7.md`
 - `docs/otx-official-connector-mapping-v0.7.md`
 - `docs/contextual-scoring-reference-v0.7.md`

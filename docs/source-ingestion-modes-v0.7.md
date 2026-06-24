@@ -13,6 +13,9 @@ enter OpenCTI and how that intelligence should populate the graph.
 The consolidated v0.7 architecture is tracked in
 `docs/architecture-v0.7.md`.
 
+Source adapter onboarding and mapping validation requirements are tracked in
+`docs/source-adapter-onboarding-v0.7.md`.
+
 ## Product Decision
 
 NarrowCTI should support three ingestion modes:
@@ -248,9 +251,11 @@ The safe v0.7 scope is:
 
 ## Backlog
 
-1. Add a source adapter onboarding checklist.
+1. Add a source adapter onboarding checklist. Implemented in
+   `docs/source-adapter-onboarding-v0.7.md`.
 2. Add a source mapping validation template based on the MISP and OTX official
-   connector mapping documents.
+   connector mapping documents. Implemented in
+   `docs/source-adapter-onboarding-v0.7.md`.
 3. Create the shared graph candidate model. Initial model and OTX/MISP
    audit metadata attachment are implemented.
 4. Add adapter-level metadata extractor conventions.

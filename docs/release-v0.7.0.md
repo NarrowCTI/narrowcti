@@ -66,6 +66,9 @@ detailed graph-enrichment design is tracked in
   pre-ingestion scoring.
 - Added `docs/source-ingestion-modes-v0.7.md` to formalize direct source, MISP
   collector and hybrid ingestion modes.
+- Added `docs/source-adapter-onboarding-v0.7.md` with source intake,
+  metadata-mapping, adapter contract, testing, documentation and promotion-gate
+  requirements for future adapters.
 - Added preflight ingestion-mode reporting. `gateway.preflight` now emits
   `ingestion_mode=direct`, `misp-collector` or `hybrid` in text and JSON
   output based on enabled sources.
