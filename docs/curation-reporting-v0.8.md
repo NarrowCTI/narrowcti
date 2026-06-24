@@ -120,7 +120,9 @@ The current report contains:
   review-action counters.
 - `policy_insights`: source-level policy tuning hints derived from repeated
   release/reject audit patterns, with top analyst reasons attached to explain
-  what drove the signal.
+  what drove the signal and decision score distributions attached to show
+  whether the source is repeatedly producing low-score or higher-confidence
+  reviewed candidates.
 - `recommendations`: deterministic next actions based on evidence gaps and
   risk signals.
 
@@ -171,11 +173,17 @@ changes. They help operators understand whether a tuning signal came from
 examples such as repeated "out of scope" rejects, repeated high-value releases
 or recurring partial releases for specific observable types.
 
+Policy insights also include the decision score summary available for each
+source: scored record count, minimum score, maximum score, average score and
+the low-score volume from the lower bands. This makes tuning evidence more
+explicit without changing the scoring algorithm or automatically rewriting
+policy.
+
 ## Future Work
 
 - Add PDF export once the report schema stabilizes.
 - Add richer per-actor, per-sector and per-ATT&CK narratives.
-- Add deeper policy tuning insights using score distributions, source context
-  quality and repeated quarantine reasons.
+- Add deeper policy tuning insights using source context quality, repeated
+  quarantine reasons and graph evidence density.
 - Add graph-quality deltas after controlled graph promotion is enabled.
 - Add additional customer-safe redaction profiles for external report delivery.

@@ -255,6 +255,7 @@ class GatewayCurationReportTests(unittest.TestCase):
     def test_policy_insights_identify_repeated_rejects(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             release_audit_file = os.path.join(tmpdir, "releases.jsonl")
+            decision_file = os.path.join(tmpdir, "misp_decisions.jsonl")
             with open(release_audit_file, "w", encoding="utf-8") as file_obj:
                 for event in [
                     release_event("misp", "reject", reason="Out of scope"),
@@ -262,8 +263,23 @@ class GatewayCurationReportTests(unittest.TestCase):
                     release_event("misp", "reject", reason="No matching sector"),
                 ]:
                     file_obj.write(json.dumps(event) + "\n")
+            with open(decision_file, "w", encoding="utf-8") as file_obj:
+                for score in (30, 40, 80):
+                    file_obj.write(
+                        json.dumps(
+                            decision_record(
+                                "2026-06-24T10:01:00Z",
+                                "misp",
+                                "quarantine",
+                                "low score",
+                                score=score,
+                            )
+                        )
+                        + "\n"
+                    )
 
             report = build_curation_report_from_files(
+                decision_paths=[decision_file],
                 release_audit_file=release_audit_file,
             )
 
@@ -279,6 +295,8 @@ class GatewayCurationReportTests(unittest.TestCase):
             insight["signal"],
         )
         self.assertEqual(100.0, insight["reject_rate_pct"])
+        self.assertEqual(50.0, insight["score_summary"]["average_score"])
+        self.assertEqual(2, insight["low_score_count"])
         self.assertEqual(
             [
                 {
@@ -294,6 +312,7 @@ class GatewayCurationReportTests(unittest.TestCase):
             ],
             insight["top_reasons"],
         )
+        self.assertIn("scores=records=3 min=30 max=80 average=50.0 low=2", text)
         self.assertIn("top_reasons=reject:Out of scope=2", text)
         self.assertIn("Out of scope", html)
         self.assertIn("review-source-policy-insights", recommendation_codes)
@@ -489,7 +508,7 @@ def merge_result_totals(results):
     return totals
 
 
-def decision_record(recorded_at, source_key, action, reason, metadata=None):
+def decision_record(recorded_at, source_key, action, reason, metadata=None, score=70):
     return {
         "recorded_at": recorded_at,
         "source_key": source_key,
@@ -499,7 +518,7 @@ def decision_record(recorded_at, source_key, action, reason, metadata=None):
         "title": "Sample intelligence",
         "external_id": "external-1",
         "indicator_count": 1,
-        "score": 70,
+        "score": score,
         "metadata": metadata or {},
     }
 

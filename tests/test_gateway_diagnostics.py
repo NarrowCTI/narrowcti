@@ -123,6 +123,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertIn("source_posture:", format_text_snapshot(snapshot))
         self.assertIn("policy_insights:", format_text_snapshot(snapshot))
         self.assertIn(
+            "scores=records=1 min=70 max=70 average=70.0 low=0",
+            format_text_snapshot(snapshot),
+        )
+        self.assertIn(
             "top_reasons=reject:Out of scope=2",
             format_text_snapshot(snapshot),
         )
