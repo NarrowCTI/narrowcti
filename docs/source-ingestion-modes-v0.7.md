@@ -255,7 +255,8 @@ The safe v0.7 scope is:
    audit metadata attachment are implemented.
 4. Add adapter-level metadata extractor conventions.
 5. Add preflight output showing enabled ingestion mode:
-   `direct`, `misp-collector` or `hybrid`.
+   `direct`, `misp-collector` or `hybrid`. Implemented in
+   `gateway.preflight` as `ingestion_mode` in text and JSON output.
 6. Add future `NARROWCTI_ENABLED_SOURCES` examples for direct sources such as
    `otx,misp,nvd,malwarebazaar,urlhaus,abuseipdb`.
 7. Add direct adapters incrementally after the graph candidate model and STIX

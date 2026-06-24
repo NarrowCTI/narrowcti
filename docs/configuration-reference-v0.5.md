@@ -269,6 +269,10 @@ first.
 The report also aggregates source query summaries so operators can see which
 queries produced reviewed, handled, accepted, filtered or error outcomes.
 
+Gateway preflight also emits `ingestion_mode` so operators can confirm whether
+the current source posture is `direct`, `misp-collector` or `hybrid` before a
+run.
+
 The decision audit report reads source decision audit JSONL files, including
 files derived from `NARROWCTI_DECISION_AUDIT_DIR`, and summarizes actions,
 reasons and source counts. It helps operators understand the practical effect

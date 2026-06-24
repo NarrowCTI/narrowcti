@@ -66,6 +66,9 @@ detailed graph-enrichment design is tracked in
   pre-ingestion scoring.
 - Added `docs/source-ingestion-modes-v0.7.md` to formalize direct source, MISP
   collector and hybrid ingestion modes.
+- Added preflight ingestion-mode reporting. `gateway.preflight` now emits
+  `ingestion_mode=direct`, `misp-collector` or `hybrid` in text and JSON
+  output based on enabled sources.
 - Expanded OTX metadata normalization to handle `target_countries` aliases and
   object `display_name` values from OTX metadata fields.
 - Expanded MITRE technique cache metadata to preserve description, platforms,
@@ -165,6 +168,6 @@ Current validation:
 
 ```text
 .\scripts\validate-v0.6.ps1
-Ran 246 tests
+Ran 249 tests
 OK
 ```

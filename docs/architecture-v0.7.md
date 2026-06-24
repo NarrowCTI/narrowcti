@@ -335,6 +335,7 @@ NarrowCTI applies it automatically and records the decision trail.
 | Graph STIX preview metadata | Implemented for OTX and MISP decisions as in-memory bundle validation summary without OpenCTI import. |
 | Decision audit graph STIX preview reporting | Implemented in `gateway.decisions` with bundle counts, graph object counts, relationship counts, skipped candidates, source rollups and query rollups. |
 | Contextual scoring evidence | Implemented as dry-run `contextual_scoring` metadata derived from accepted graph candidates; it is not applied to ingest decisions yet. |
+| Ingestion mode preflight | Implemented in `gateway.preflight` as `ingestion_mode` with `direct`, `misp-collector` and `hybrid` values. |
 | Quarantine metadata | Implemented for OTX and MISP processors. |
 | Stable STIX export | Implemented as current `Report + Indicator` bundle. |
 

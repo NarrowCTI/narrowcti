@@ -41,6 +41,7 @@ class PreflightIssue:
 @dataclass(frozen=True)
 class PreflightReport:
     ok: bool
+    ingestion_mode: str
     enabled_sources: tuple[str, ...]
     available_sources: tuple[str, ...]
     settings: dict
@@ -51,6 +52,7 @@ class PreflightReport:
     def to_dict(self):
         return {
             "ok": self.ok,
+            "ingestion_mode": self.ingestion_mode,
             "enabled_sources": list(self.enabled_sources),
             "available_sources": list(self.available_sources),
             "settings": self.settings,
@@ -67,6 +69,7 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
     issues = []
 
     unknown_sources = tuple(source for source in enabled if source not in available)
+    ingestion_mode = active_ingestion_mode(enabled)
     for source in unknown_sources:
         issues.append(
             PreflightIssue(
@@ -186,6 +189,7 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
     ok = not any(issue.severity == "error" for issue in issues)
     return PreflightReport(
         ok=ok,
+        ingestion_mode=ingestion_mode,
         enabled_sources=enabled,
         available_sources=available,
         settings={
@@ -244,6 +248,17 @@ def build_evidence_paths(enabled_sources, settings, env):
             if source in SOURCE_EVIDENCE_PATHS
         },
     }
+
+
+def active_ingestion_mode(enabled_sources):
+    sources = {normalize_source(source) for source in enabled_sources}
+    has_misp = "misp" in sources
+    direct_sources = sources - {"misp"}
+    if has_misp and direct_sources:
+        return "hybrid"
+    if has_misp:
+        return "misp-collector"
+    return "direct"
 
 
 def mitre_cache_issues(settings):
@@ -335,7 +350,7 @@ def env_path(env, name, default):
 def gateway_file(base_dir, filename):
     if not base_dir:
         return ""
-    return os.path.join(base_dir, filename)
+    return base_dir.rstrip("/\\") + "/" + filename
 
 
 def build_source_controls(enabled_sources, env):
@@ -372,6 +387,7 @@ def format_text_report(report):
     lines = [
         "NarrowCTI gateway preflight",
         f"ok={str(report.ok).lower()}",
+        f"ingestion_mode={report.ingestion_mode}",
         f"enabled_sources={','.join(report.enabled_sources)}",
         f"available_sources={','.join(report.available_sources)}",
         f"dedup_mode={report.settings['dedup_mode']}",
@@ -429,6 +445,7 @@ def main():
         report = PreflightReport(
             ok=False,
             enabled_sources=(),
+            ingestion_mode="direct",
             available_sources=AVAILABLE_SOURCES,
             settings={},
             evidence_paths={},
