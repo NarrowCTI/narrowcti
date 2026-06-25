@@ -222,8 +222,10 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added guarded graph export state marking after successful OpenCTI import so
   local graph deduplication reflects only objects and relationships that were
   actually promoted.
-- Added export filtering for known local/OpenCTI graph keys so the first graph
-  promotion gate does not recreate canonical objects already found by lookup.
+- Added canonical existing-object references for known OpenCTI graph keys with
+  valid STIX `standard_id` values, so the graph promotion gate can link reports
+  and curated relationships to canonical ATT&CK objects without recreating
+  them.
 
 ## Promotion Boundary
 
@@ -245,9 +247,10 @@ graph candidate
   -> post-export state marking
 ```
 
-The first export gate intentionally skips known graph keys returned by local
-deduplication or OpenCTI lookup. Relationship creation against already-existing
-canonical OpenCTI objects remains a later precision task.
+The export gate intentionally avoids recreating known graph keys returned by
+local deduplication or OpenCTI lookup. When a lookup match includes a canonical
+STIX `standard_id`, NarrowCTI references that existing object in the curated
+bundle and can create report-context or semantic relationships to it.
 
 ## Product Operations Boundary
 

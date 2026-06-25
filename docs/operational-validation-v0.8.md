@@ -55,6 +55,11 @@ Observed local validation for the OTX `lummac2` query created the curated
 `Entities / Sectors`. This evidence should be repeated per source and per
 entity class before enabling broader graph export allow-lists.
 
+When ATT&CK candidates are included in a bounded export, validation should also
+confirm whether `existing_reference_count` is greater than zero. That shows
+NarrowCTI referenced canonical OpenCTI ATT&CK objects by `standard_id` instead
+of creating duplicate `attack-pattern` objects.
+
 ## Required Lab Posture
 
 Before live validation, confirm:

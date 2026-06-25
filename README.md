@@ -278,8 +278,9 @@ succeeds. In v0.8,
 planning query OpenCTI for canonical graph objects, starting with ATT&CK
 attack-patterns, before promotion creates new graph knowledge. Canonical
 matches are exposed as bounded `graph_export_plan_lookup_matches` metadata for
-audit and future enterprise reporting, and the first export gate skips known
-graph keys instead of duplicating canonical OpenCTI objects.
+audit and future enterprise reporting. When a canonical match includes a valid
+STIX `standard_id`, the export gate references that existing OpenCTI object in
+the curated STIX bundle instead of duplicating it.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in

@@ -69,8 +69,9 @@ Use `export` only with explicit graph thresholds, allow-lists and validation
 evidence. The first promotion gate can create supported STIX objects such as
 `threat-actor`, `intrusion-set`, `malware`, `tool`, `vulnerability`,
 `attack-pattern`, `identity` sectors, `location`, `indicator`, `note` and
-basic observables. It skips known graph keys returned by local or OpenCTI
-lookup instead of duplicating canonical objects.
+basic observables. When local or OpenCTI lookup reports a known graph key with
+a valid canonical STIX `standard_id`, the export gate references that existing
+object instead of duplicating it.
 
 ## v0.8 License And Feature Gate Controls
 
@@ -125,8 +126,8 @@ is read-only in audit/dry-run modes. In v0.8,
 OpenCTI graph lookup. When canonical matches are found, OTX and MISP decision
 metadata can include `graph_export_plan_lookup_matches` so operators can audit
 which OpenCTI object was matched. In `export` mode, known local/OpenCTI graph
-keys are skipped and newly promoted graph keys are marked locally only after
-successful OpenCTI import.
+keys with canonical STIX ids are referenced by the curated bundle, and newly
+promoted graph keys are marked locally only after successful OpenCTI import.
 
 ## Source Examples
 

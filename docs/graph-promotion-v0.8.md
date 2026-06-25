@@ -75,11 +75,11 @@ relationships to the same bundle. Local graph deduplication state is marked
 only after the OpenCTI import call succeeds.
 
 Known graph keys returned by local state or OpenCTI lookup are not re-created
-by the first export gate. This protects canonical objects loaded by official
-connectors, especially MITRE ATT&CK attack-patterns. Creating relationships to
-already-existing canonical OpenCTI objects remains a later precision step
-because the STIX bundle builder must reference the canonical OpenCTI/STIX id
-instead of creating a duplicate object.
+by the export gate. This protects canonical objects loaded by official
+connectors, especially MITRE ATT&CK attack-patterns. When OpenCTI lookup
+returns a valid canonical STIX `standard_id`, the curated STIX bundle references
+that existing object and can create report links or semantic relationships to
+it instead of creating a duplicate object.
 
 ## OpenCTI Tab Mapping
 
@@ -112,10 +112,12 @@ validation before NarrowCTI should promote them automatically.
   `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured.
 - `true`: NarrowCTI queries OpenCTI during graph export planning and treats
   canonical matches, such as existing ATT&CK attack-patterns, as known graph
-  entities before promotion logic is allowed to create anything.
+  entities before promotion logic creates new objects.
 
-The lookup is still read-only. It does not create entities, relationships or
-state marks in OpenCTI.
+The lookup itself is read-only. In `audit` and `dry-run` modes it does not
+create entities, relationships or state marks in OpenCTI. In `export` mode,
+matches with valid `standard_id` values can be referenced by the curated STIX
+bundle.
 
 When matches exist, decision metadata can include
 `graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
@@ -137,13 +139,15 @@ NarrowCTI
   -> finds T1059 in OTX/MISP/source metadata
   -> resolves technique context locally
   -> checks OpenCTI for canonical T1059
-  -> creates curated relationships to the existing object in a later promotion
-     step
+  -> references the canonical STIX id in the curated bundle
+  -> creates curated report links or semantic relationships to the existing
+     object when source relationship provenance supports it
 ```
 
 v0.8 must prefer linking to existing canonical ATT&CK objects over creating new
-attack-pattern objects. If the canonical object is missing, the candidate should
-remain in audit/dry-run or be held until policy explicitly allows creation.
+attack-pattern objects. If the canonical object is missing, the candidate can
+still be held by policy, remain in dry-run, or be created only when the operator
+explicitly allows that object type and the source evidence is strong enough.
 
 ## Current Non-Goals
 
@@ -151,8 +155,6 @@ The current v0.8 cut still does not:
 
 - Query every possible STIX object type.
 - Replace local graph deduplication.
-- Create relationships to already-existing canonical OpenCTI objects returned
-  by lookup.
 - Guarantee population of every OpenCTI tab without source metadata support.
 
 ## Expansion Path

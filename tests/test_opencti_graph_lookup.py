@@ -160,6 +160,38 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
         self.assertEqual(["relationship:1"], known["relationship_keys"])
         self.assertEqual([{"value": "T1059"}], known["matches"])
 
+    def test_composite_graph_lookup_marks_exported_plan_on_marking_indexes(self):
+        calls = []
+
+        def mark_exported_plan(plan, source_key="", external_id="", title=""):
+            calls.append(
+                {
+                    "plan": plan,
+                    "source_key": source_key,
+                    "external_id": external_id,
+                    "title": title,
+                }
+            )
+            return {"entities": 1, "relationships": 2}
+
+        marker = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {},
+            mark_exported_plan=mark_exported_plan,
+        )
+        lookup_only = SimpleNamespace(known_keys_for_plan=lambda plan: {})
+
+        added = CompositeGraphLookup(marker, lookup_only).mark_exported_plan(
+            {"actions": []},
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Technique pulse",
+        )
+
+        self.assertEqual({"entities": 1, "relationships": 2}, added)
+        self.assertEqual("alienvault:otx", calls[0]["source_key"])
+        self.assertEqual("pulse-1", calls[0]["external_id"])
+        self.assertEqual("Technique pulse", calls[0]["title"])
+
 
 def accepted_attack_pattern_policy():
     candidates = build_graph_candidates(

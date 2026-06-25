@@ -325,11 +325,13 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                         accepted_candidate_count=4,
                         bundle_object_count=8,
                         graph_object_count=3,
+                        existing_reference_count=1,
                         graph_relationship_count=3,
                         semantic_relationship_count=2,
                         report_relationship_count=1,
                         skipped_candidate_count=1,
                         object_counts={"attack-pattern": 1, "malware": 2},
+                        existing_reference_counts={"attack-pattern": 1},
                         relationship_counts={"related-to": 1, "uses": 2},
                         proposed_relationship_counts={"uses": 3},
                     )
@@ -364,6 +366,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(6, preview["accepted_candidate_count"])
         self.assertEqual(12, preview["bundle_object_count"])
         self.assertEqual(4, preview["graph_object_count"])
+        self.assertEqual(1, preview["existing_reference_count"])
         self.assertEqual(4, preview["graph_relationship_count"])
         self.assertEqual(2, preview["semantic_relationship_count"])
         self.assertEqual(2, preview["report_relationship_count"])
@@ -373,6 +376,10 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(
             {"attack-pattern": 1, "identity": 1, "malware": 2},
             preview["object_counts"],
+        )
+        self.assertEqual(
+            {"attack-pattern": 1},
+            preview["existing_reference_counts"],
         )
         self.assertEqual(
             {"related-to": 2, "uses": 2},
@@ -782,6 +789,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
 
         self.assertIn("graph_stix_preview:", text)
         self.assertIn("bundle_objects=6", text)
+        self.assertIn("existing_references=0", text)
         self.assertIn("skipped_candidates=1", text)
         self.assertIn("objects=attack-pattern:1", text)
         self.assertIn("graph_stix_preview_by_source:", text)
@@ -902,11 +910,13 @@ def graph_stix_preview(
     accepted_candidate_count=0,
     bundle_object_count=0,
     graph_object_count=0,
+    existing_reference_count=0,
     graph_relationship_count=0,
     semantic_relationship_count=0,
     report_relationship_count=0,
     skipped_candidate_count=0,
     object_counts=None,
+    existing_reference_counts=None,
     relationship_counts=None,
     proposed_relationship_counts=None,
 ):
@@ -917,11 +927,13 @@ def graph_stix_preview(
         "accepted_candidate_count": accepted_candidate_count,
         "bundle_object_count": bundle_object_count,
         "graph_object_count": graph_object_count,
+        "existing_reference_count": existing_reference_count,
         "graph_relationship_count": graph_relationship_count,
         "semantic_relationship_count": semantic_relationship_count,
         "report_relationship_count": report_relationship_count,
         "skipped_candidate_count": skipped_candidate_count,
         "object_counts": object_counts or {},
+        "existing_reference_counts": existing_reference_counts or {},
         "relationship_counts": relationship_counts or {},
         "proposed_relationship_counts": proposed_relationship_counts or {},
         "skipped_candidates": [],

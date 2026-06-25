@@ -41,6 +41,34 @@ class OpenCTIExporterTests(unittest.TestCase):
         self.assertTrue(has_sector_identity(objects, "Crypto"))
         self.assertIn("relationship", object_types(objects))
 
+    def test_export_mode_references_existing_opencti_graph_objects(self):
+        api_client = FakeOpenCTIClient()
+        existing_attack_pattern_ref = (
+            "attack-pattern--11111111-1111-4111-8111-111111111111"
+        )
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={
+                "accepted": [
+                    threat_actor_candidate(),
+                    existing_attack_pattern_candidate(existing_attack_pattern_ref),
+                ]
+            },
+            graph_export_mode="export",
+        )
+
+        objects = imported_objects(api_client)
+        report = first_object(objects, "report")
+        relationship = first_relationship(objects, "uses")
+
+        self.assertNotIn("attack-pattern", object_types(objects))
+        self.assertIn(existing_attack_pattern_ref, report["object_refs"])
+        self.assertEqual(existing_attack_pattern_ref, relationship["target_ref"])
+
 
 class FakeOpenCTIClient:
     def __init__(self):
@@ -72,6 +100,23 @@ def has_sector_identity(objects, name):
     )
 
 
+def first_object(objects, object_type):
+    for item in objects:
+        if item["type"] == object_type:
+            return item
+    raise AssertionError(f"missing object type: {object_type}")
+
+
+def first_relationship(objects, relationship_type):
+    for item in objects:
+        if (
+            item["type"] == "relationship"
+            and item["relationship_type"] == relationship_type
+        ):
+            return item
+    raise AssertionError(f"missing relationship type: {relationship_type}")
+
+
 def target_sector_candidate():
     return {
         "fingerprint": "sector-crypto",
@@ -85,6 +130,44 @@ def target_sector_candidate():
         "source_field": "industries",
         "confidence": 70,
         "relationship_confidence": 70,
+    }
+
+
+def threat_actor_candidate():
+    return {
+        "fingerprint": "actor-example",
+        "entity_type": "threat_actor",
+        "value": "APT Example",
+        "name": "APT Example",
+        "stix_object_type": "threat-actor",
+        "relationship_type": "related-to",
+        "source_key": "alienvault:otx",
+        "source_name": "otx",
+        "source_field": "adversary",
+        "confidence": 80,
+        "relationship_confidence": 75,
+    }
+
+
+def existing_attack_pattern_candidate(existing_ref):
+    return {
+        "fingerprint": "attack-pattern-t1059",
+        "entity_type": "attack_pattern",
+        "value": "T1059",
+        "name": "Command and Scripting Interpreter",
+        "stix_object_type": "attack-pattern",
+        "relationship_type": "uses",
+        "source_key": "alienvault:otx",
+        "source_name": "otx",
+        "source_field": "attack_ids",
+        "confidence": 80,
+        "relationship_confidence": 75,
+        "attributes": {
+            "relationship_source_stix_object_type": "threat-actor",
+            "relationship_source_value": "APT Example",
+            "relationship_source_field": "adversary",
+            "opencti_existing_ref": existing_ref,
+        },
     }
 
 

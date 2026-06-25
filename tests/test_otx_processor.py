@@ -516,6 +516,47 @@ class ProcessorTests(unittest.TestCase):
             metadata["graph_export_plan_lookup_matches"][0]["match"]["opencti_id"],
         )
 
+    def test_decision_metadata_export_preview_references_known_graph_keys(self):
+        candidate = SimpleNamespace(
+            pulse={
+                "id": "pulse-1",
+                "name": "Technique pulse",
+                "attack_ids": ["T1059"],
+                "indicators": [],
+            },
+            name="Technique pulse",
+            score_details={},
+        )
+        mitre_resolver = SimpleNamespace(
+            resolve=lambda attack_ids: [
+                {
+                    "attack_id": attack_ids[0],
+                    "found": True,
+                    "name": "Command and Scripting Interpreter",
+                    "tactics": ["execution"],
+                }
+            ]
+        )
+
+        metadata = decision_metadata(
+            candidate,
+            mitre_resolver=mitre_resolver,
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Technique pulse",
+            graph_export_mode="export",
+            graph_deduplication_index=FirstActionEntityKnownIndex(),
+        )
+
+        graph_preview = metadata["graph_stix_preview"]
+
+        self.assertTrue(graph_preview["export_enabled"])
+        self.assertEqual(1, graph_preview["existing_reference_count"])
+        self.assertEqual(
+            {"attack-pattern": 1},
+            graph_preview["existing_reference_counts"],
+        )
+
     def test_process_pulse_writes_quarantine_record(self):
         records = []
         queued = []
@@ -927,7 +968,10 @@ class FirstActionEntityKnownIndex:
                     "value": "T1059",
                     "match": {
                         "opencti_id": "internal--1",
-                        "standard_id": "attack-pattern--1111",
+                        "standard_id": (
+                            "attack-pattern--11111111-1111-4111-8111-"
+                            "111111111111"
+                        ),
                         "entity_type": "Attack-Pattern",
                         "name": "Command and Scripting Interpreter",
                     },

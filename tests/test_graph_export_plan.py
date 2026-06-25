@@ -197,7 +197,45 @@ class GraphExportPlanTests(unittest.TestCase):
         self.assertEqual("exported", plan["actions"][0]["action"])
         self.assertEqual("graph_export_enabled", plan["actions"][0]["reason"])
 
-    def test_exportable_policy_skips_known_graph_keys(self):
+    def test_exportable_policy_references_known_graph_keys(self):
+        policy = self.graph_policy().to_dict()
+        plan = build_graph_export_plan(policy, mode="export")
+        known_entity_key = plan["actions"][0]["deduplication"]["entity_key"]
+
+        exportable = exportable_graph_candidate_policy(
+            policy,
+            plan,
+            {
+                "entity_keys": [known_entity_key],
+                "relationship_keys": [],
+                "matches": [
+                    {
+                        "entity_key": known_entity_key,
+                        "stix_object_type": "attack-pattern",
+                        "value": "T1059",
+                        "match": {
+                            "standard_id": (
+                                "attack-pattern--11111111-1111-4111-8111-"
+                                "111111111111"
+                            ),
+                            "opencti_id": "internal--1",
+                            "entity_type": "Attack-Pattern",
+                            "name": "Command and Scripting Interpreter",
+                            "match_type": "mitre_attack_id",
+                            "match_value": "T1059",
+                        },
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(1, exportable["accepted_count"])
+        self.assertEqual(
+            "attack-pattern--11111111-1111-4111-8111-111111111111",
+            exportable["accepted"][0]["attributes"]["opencti_existing_ref"],
+        )
+
+    def test_exportable_policy_skips_known_graph_keys_without_standard_id(self):
         policy = self.graph_policy().to_dict()
         plan = build_graph_export_plan(policy, mode="export")
         known_entity_key = plan["actions"][0]["deduplication"]["entity_key"]
@@ -208,7 +246,6 @@ class GraphExportPlanTests(unittest.TestCase):
             {"entity_keys": [known_entity_key], "relationship_keys": []},
         )
 
-        self.assertEqual([], exportable["accepted"])
         self.assertEqual(0, exportable["accepted_count"])
 
     def test_exportable_policy_keeps_new_exported_candidates(self):

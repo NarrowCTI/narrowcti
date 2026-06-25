@@ -261,7 +261,13 @@ def exportable_graph_candidate_policy(
     known = normalize_known_graph_keys(known_graph_keys or {})
     known_entity_keys = set(known["entity_keys"])
     known_relationship_keys = set(known["relationship_keys"])
-    exportable_fingerprints = set()
+    known_matches = known_matches_by_entity_key(known.get("matches"))
+    accepted_by_fingerprint = {
+        clean_string(candidate.get("fingerprint")): candidate
+        for candidate in clean_candidates(policy.get("accepted"))
+        if clean_string(candidate.get("fingerprint"))
+    }
+    accepted = []
 
     for action in plan_actions(graph_export_plan):
         if clean_string(action.get("action")) != "exported":
@@ -269,22 +275,66 @@ def exportable_graph_candidate_policy(
         deduplication = mapping_from(action.get("deduplication"))
         entity_key = clean_string(deduplication.get("entity_key"))
         relationship_key = clean_string(deduplication.get("relationship_key"))
-        if entity_key and entity_key in known_entity_keys:
-            continue
         if relationship_key and relationship_key in known_relationship_keys:
             continue
         fingerprint = clean_string(
             mapping_from(action.get("candidate")).get("fingerprint")
         )
-        if fingerprint:
-            exportable_fingerprints.add(fingerprint)
+        candidate = accepted_by_fingerprint.get(fingerprint)
+        if not candidate:
+            continue
+        if entity_key and entity_key in known_entity_keys:
+            annotated = candidate_with_existing_opencti_ref(
+                candidate,
+                known_matches.get(entity_key),
+            )
+            if annotated:
+                accepted.append(annotated)
+            continue
+        accepted.append(candidate)
 
-    accepted = [
-        candidate
-        for candidate in clean_candidates(policy.get("accepted"))
-        if clean_string(candidate.get("fingerprint")) in exportable_fingerprints
-    ]
     return policy_with_accepted(policy, accepted)
+
+
+def known_matches_by_entity_key(matches):
+    indexed = {}
+    for match in matches or []:
+        match = mapping_from(match)
+        entity_key = clean_string(match.get("entity_key"))
+        if entity_key:
+            indexed[entity_key] = match
+    return indexed
+
+
+def candidate_with_existing_opencti_ref(candidate, match):
+    match = mapping_from(match)
+    canonical = mapping_from(match.get("match"))
+    existing_ref = clean_string(canonical.get("standard_id"))
+    if not valid_existing_ref(existing_ref, candidate):
+        return {}
+
+    annotated = dict(candidate)
+    attributes = mapping_from(annotated.get("attributes"))
+    attributes["opencti_existing_ref"] = existing_ref
+    for source_field, target_field in (
+        ("opencti_id", "opencti_existing_id"),
+        ("entity_type", "opencti_existing_entity_type"),
+        ("name", "opencti_existing_name"),
+        ("match_type", "opencti_match_type"),
+        ("match_value", "opencti_match_value"),
+    ):
+        value = clean_string(canonical.get(source_field))
+        if value:
+            attributes[target_field] = value
+    annotated["attributes"] = attributes
+    return annotated
+
+
+def valid_existing_ref(existing_ref, candidate):
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    if not existing_ref or not stix_object_type:
+        return False
+    return existing_ref.startswith(f"{stix_object_type}--")
 
 
 def policy_with_accepted(policy, accepted):

@@ -145,6 +145,24 @@ class CompositeGraphLookup:
             result["matches"] = matches
         return result
 
+    def mark_exported_plan(self, plan, source_key="", external_id="", title=""):
+        added = {"entities": 0, "relationships": 0}
+        for lookup in self.lookups:
+            marker = getattr(lookup, "mark_exported_plan", None)
+            if not marker:
+                continue
+            result = mapping_from(
+                marker(
+                    plan,
+                    source_key=source_key,
+                    external_id=external_id,
+                    title=title,
+                )
+            )
+            added["entities"] += int(result.get("entities", 0) or 0)
+            added["relationships"] += int(result.get("relationships", 0) or 0)
+        return added
+
 
 def filter_eq(key, value):
     return {

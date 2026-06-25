@@ -238,6 +238,46 @@ class GraphStixBuilderTests(unittest.TestCase):
         self.assertIn(sector["id"], report["object_refs"])
         self.assertIn(objects_by_type["indicator"][0]["id"], report["object_refs"])
 
+    def test_curated_bundle_references_existing_opencti_objects(self):
+        existing_attack_pattern_ref = (
+            "attack-pattern--11111111-1111-4111-8111-111111111111"
+        )
+        bundle, _, summary = build_curated_report_bundle(
+            "Curated ingest report",
+            "graph context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    threat_actor_candidate(),
+                    existing_attack_pattern_candidate(existing_attack_pattern_ref),
+                ]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        actor = objects_by_type["threat-actor"][0]
+        report = objects_by_type["report"][0]
+        relationship = next(
+            item
+            for item in objects_by_type["relationship"]
+            if item["relationship_type"] == "uses"
+        )
+
+        self.assertNotIn("attack-pattern", objects_by_type)
+        self.assertEqual(1, summary["existing_reference_count"])
+        self.assertEqual(
+            {"attack-pattern": 1},
+            summary["existing_reference_counts"],
+        )
+        self.assertIn(existing_attack_pattern_ref, report["object_refs"])
+        self.assertEqual(actor["id"], relationship["source_ref"])
+        self.assertEqual(existing_attack_pattern_ref, relationship["target_ref"])
+        self.assertEqual("semantic", relationship["x_narrowcti_relationship_mode"])
+
     def test_skips_invalid_or_unsupported_graph_candidates(self):
         _, summary = build_graph_report_bundle(
             "Curated graph report",
@@ -340,6 +380,21 @@ def anchored_malware_candidate():
             "relationship_source_field": "adversary",
         },
     }
+
+
+def existing_attack_pattern_candidate(existing_ref):
+    candidate = attack_pattern_candidate()
+    candidate["attributes"] = {
+        "relationship_source_stix_object_type": "threat-actor",
+        "relationship_source_value": "APT Example",
+        "relationship_source_field": "adversary",
+        "opencti_existing_ref": existing_ref,
+        "opencti_existing_id": "internal--1",
+        "opencti_existing_entity_type": "Attack-Pattern",
+        "opencti_match_type": "mitre_attack_id",
+        "opencti_match_value": "T1059",
+    }
+    return candidate
 
 
 def vulnerability_candidate():

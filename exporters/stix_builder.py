@@ -129,7 +129,7 @@ def build_curated_report_bundle(
 
     object_refs = [
         *[indicator.id for indicator in indicator_objects],
-        *[stix_object.id for stix_object in graph_content["objects"]],
+        *graph_content["object_refs"],
     ] or [identity.id]
     report = build_stix_report(
         name,
@@ -178,9 +178,7 @@ def build_graph_report_bundle(
     accepted_candidates = graph_accepted_candidates(graph_candidate_policy)
     graph_content = build_graph_content(accepted_candidates, identity.id, now)
 
-    report_refs = [
-        stix_object.id for stix_object in graph_content["objects"]
-    ] or [identity.id]
+    report_refs = graph_content["object_refs"] or [identity.id]
     report = build_stix_report(
         name,
         description,
@@ -233,10 +231,18 @@ def build_graph_content(accepted_candidates, identity_id, now):
     graph_object_ids = {}
     skipped_candidates = []
     object_counts = Counter()
+    existing_reference_counts = Counter()
 
     for candidate in accepted_candidates:
         object_key = graph_object_key(candidate)
         if object_key in graph_object_ids:
+            continue
+        existing_ref = existing_opencti_ref(candidate)
+        if existing_ref:
+            graph_object_ids[object_key] = existing_ref
+            existing_reference_counts[
+                clean_string(candidate.get("stix_object_type")).lower()
+            ] += 1
             continue
         try:
             stix_object = graph_candidate_to_stix_object(candidate, identity_id, now)
@@ -252,8 +258,10 @@ def build_graph_content(accepted_candidates, identity_id, now):
     return {
         "objects": graph_objects,
         "object_ids": graph_object_ids,
+        "object_refs": list(graph_object_ids.values()),
         "skipped_candidates": skipped_candidates,
         "object_counts": object_counts,
+        "existing_reference_counts": existing_reference_counts,
     }
 
 
@@ -326,9 +334,15 @@ def graph_bundle_summary(
         "accepted_candidate_count": len(accepted_candidates),
         "bundle_object_count": len(bundle.objects),
         "graph_object_count": len(graph_content["objects"]),
+        "existing_reference_count": sum(
+            graph_content["existing_reference_counts"].values()
+        ),
         "graph_relationship_count": len(relationship_content["relationships"]),
         "skipped_candidate_count": len(graph_content["skipped_candidates"]),
         "object_counts": dict(sorted(graph_content["object_counts"].items())),
+        "existing_reference_counts": dict(
+            sorted(graph_content["existing_reference_counts"].items())
+        ),
         "relationship_counts": dict(
             sorted(relationship_content["relationship_counts"].items())
         ),
@@ -352,6 +366,21 @@ def graph_accepted_candidates(graph_candidate_policy):
         for candidate in policy.get("accepted") or []
         if isinstance(candidate, dict)
     ]
+
+
+def existing_opencti_ref(candidate):
+    attributes = (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
+    existing_ref = clean_string(attributes.get("opencti_existing_ref"))
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    if existing_ref and stix_object_type and existing_ref.startswith(
+        f"{stix_object_type}--"
+    ):
+        return existing_ref
+    return ""
 
 
 def graph_candidate_to_stix_object(candidate, identity_id, now):

@@ -112,10 +112,18 @@ def decision_metadata(
         graph_deduplication_index=graph_deduplication_index,
     )
     metadata["graph_export_plan"] = graph_plan
+    preview_policy = graph_policy
+    if graph_plan.get("export_enabled"):
+        preview_policy = exportable_graph_candidate_policy(
+            graph_policy,
+            graph_plan,
+            known_keys,
+        )
     metadata["graph_stix_preview"] = graph_stix_preview(
         candidate_ref,
         candidate,
-        graph_policy,
+        preview_policy,
+        export_enabled=graph_plan.get("export_enabled", False),
     )
     if known_keys["entity_keys"] or known_keys["relationship_keys"]:
         metadata["graph_export_plan_known_keys"] = known_keys
@@ -126,7 +134,7 @@ def decision_metadata(
     return metadata
 
 
-def graph_stix_preview(candidate_ref, candidate, graph_policy):
+def graph_stix_preview(candidate_ref, candidate, graph_policy, export_enabled=False):
     event = compact_mapping(candidate.event if candidate else {})
     bundle, summary = build_graph_report_bundle(
         getattr(candidate, "name", "") or candidate_ref.title or "NarrowCTI graph preview",
@@ -136,7 +144,7 @@ def graph_stix_preview(candidate_ref, candidate, graph_policy):
     )
     preview = dict(summary)
     preview["status"] = "preview"
-    preview["export_enabled"] = False
+    preview["export_enabled"] = bool(export_enabled)
     preview["bundle_type"] = bundle.type
     return preview
 

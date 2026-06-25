@@ -635,6 +635,7 @@ def empty_graph_stix_preview_summary(include_breakdowns=True):
         "accepted_candidate_count": 0,
         "bundle_object_count": 0,
         "graph_object_count": 0,
+        "existing_reference_count": 0,
         "graph_relationship_count": 0,
         "semantic_relationship_count": 0,
         "report_relationship_count": 0,
@@ -643,6 +644,7 @@ def empty_graph_stix_preview_summary(include_breakdowns=True):
         "statuses": {},
         "bundle_types": {},
         "object_counts": {},
+        "existing_reference_counts": {},
         "relationship_counts": {},
         "proposed_relationship_counts": {},
     }
@@ -657,6 +659,7 @@ def normalize_graph_stix_preview_summary(summary):
         "statuses",
         "bundle_types",
         "object_counts",
+        "existing_reference_counts",
         "relationship_counts",
         "proposed_relationship_counts",
     ):
@@ -679,6 +682,9 @@ def merge_graph_stix_preview(summary, preview):
     )
     summary["bundle_object_count"] += int(preview.get("bundle_object_count", 0) or 0)
     summary["graph_object_count"] += int(preview.get("graph_object_count", 0) or 0)
+    summary["existing_reference_count"] += int(
+        preview.get("existing_reference_count", 0) or 0
+    )
     summary["graph_relationship_count"] += int(
         preview.get("graph_relationship_count", 0) or 0
     )
@@ -699,6 +705,10 @@ def merge_graph_stix_preview(summary, preview):
         normalize_value(preview.get("bundle_type"), "unknown"),
     )
     merge_counts(summary["object_counts"], preview.get("object_counts"))
+    merge_counts(
+        summary["existing_reference_counts"],
+        preview.get("existing_reference_counts"),
+    )
     merge_counts(summary["relationship_counts"], preview.get("relationship_counts"))
     merge_counts(
         summary["proposed_relationship_counts"],
@@ -1096,6 +1106,7 @@ def format_graph_stix_preview_summary(summary):
         f"accepted_candidates={summary.get('accepted_candidate_count', 0)} "
         f"bundle_objects={summary.get('bundle_object_count', 0)} "
         f"graph_objects={summary.get('graph_object_count', 0)} "
+        f"existing_references={summary.get('existing_reference_count', 0)} "
         f"graph_relationships={summary.get('graph_relationship_count', 0)} "
         f"semantic_relationships={summary.get('semantic_relationship_count', 0)} "
         f"report_relationships={summary.get('report_relationship_count', 0)} "
@@ -1104,6 +1115,8 @@ def format_graph_stix_preview_summary(summary):
         f"statuses={format_compact_counts(summary.get('statuses', {}))} "
         f"bundle_types={format_compact_counts(summary.get('bundle_types', {}))} "
         f"objects={format_compact_counts(summary.get('object_counts', {}))} "
+        f"existing_reference_objects="
+        f"{format_compact_counts(summary.get('existing_reference_counts', {}))} "
         f"relationships="
         f"{format_compact_counts(summary.get('relationship_counts', {}))} "
         f"proposed_relationships="
