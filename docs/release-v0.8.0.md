@@ -62,6 +62,20 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   OpenCTI canonical graph matches are visible to analysts and future reports.
 - Extended the decision audit report graph export summary with OpenCTI lookup
   match counters by object type, match type and canonical entity type.
+- Added deterministic STIX ids for graph SDOs created by NarrowCTI, reducing
+  duplicate graph entities across repeated exports when the same normalized
+  object type, identity class and value/name are promoted again.
+- Extended OpenCTI graph lookup to Location objects so country/location
+  candidates can reference existing OpenCTI Locations by `standard_id` or exact
+  name before controlled graph promotion creates anything new.
+- Validated controlled Country export against OpenCTI: `Argentina` was created
+  once as `entity_type=Country`, repeated import kept the count at one, and the
+  follow-up lookup export referenced the existing
+  `location--a5c43e9c-7f5e-5fc2-b9eb-3c2eaf055301` object with
+  `existing_reference_counts.location=1`.
+- Documented Report hygiene evidence: deterministic Report ids prevent another
+  row when name and description are unchanged; a changed description is treated
+  as a distinct report by design.
 - Added decision audit report file output and an `ops` profile service so
   graph lookup and curation decision evidence can be archived from the gateway
   state volume.

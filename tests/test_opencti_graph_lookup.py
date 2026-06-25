@@ -478,6 +478,56 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
             calls[0][1]["filters"]["filters"][0]["values"],
         )
 
+    def test_known_keys_for_plan_resolves_location_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "locations": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--country",
+                                    "standard_id": (
+                                        "location--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Country",
+                                    "name": "Argentina",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="location",
+                entity_type="target_country",
+                value="Argentina",
+                name="Argentina",
+                relationship_type="targets",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Country", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("locations", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertEqual(
+            ["Argentina"],
+            calls[0][1]["filters"]["filters"][0]["values"],
+        )
+
     def test_vulnerability_lookup_prefers_standard_id_before_cve_name(self):
         calls = []
 
@@ -494,6 +544,26 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
                     "stix_id": (
                         "vulnerability--11111111-1111-4111-8111-111111111111"
                     )
+                },
+            }
+        )
+
+        self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_location_lookup_prefers_standard_id_before_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {"data": {"locations": {"edges": []}}}
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        lookup.find_candidate(
+            {
+                "stix_object_type": "location",
+                "value": "Argentina",
+                "attributes": {
+                    "stix_id": "location--11111111-1111-4111-8111-111111111111"
                 },
             }
         )

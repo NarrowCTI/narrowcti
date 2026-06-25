@@ -126,6 +126,24 @@ After real import, the validation Report was authored by `OTX AlienVault` and
 referenced the existing `BlackTech` object; the OpenCTI search counts for
 `BlackTech` and `Palmerworm` remained unchanged.
 
+Observed Country export validation confirmed deterministic graph object ids and
+Location lookup. A controlled lab import created `Argentina` once in OpenCTI as
+`entity_type=Country` with
+`standard_id=location--a5c43e9c-7f5e-5fc2-b9eb-3c2eaf055301`. Repeating the
+same import kept the exact `Argentina` Country count at `1`. A follow-up lookup
+validation returned `known_entity_count=1`, `match_type=name`,
+`plan_deduplicated_entity_count=1`, `plan_exported_object_count=0` and
+`existing_reference_counts.location=1`. The validation Report
+`NarrowCTI country lookup export live validation 20260625` was authored by
+`OTX AlienVault` and referenced the existing `Argentina` object instead of
+creating another Country.
+
+Report hygiene validation confirmed that repeated imports with the same Report
+name and description do not create another OpenCTI Report row. OpenCTI can still
+hold separate Reports with the same title when the description differs, because
+NarrowCTI intentionally derives the deterministic Report STIX id from
+`name + description`.
+
 ## Required Lab Posture
 
 Before live validation, confirm:

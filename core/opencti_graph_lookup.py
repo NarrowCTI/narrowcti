@@ -160,6 +160,21 @@ query NarrowCTIVulnerabilityGraphLookup($filters: FilterGroup) {
 }
 """
 
+LOCATION_LOOKUP_QUERY = """
+query NarrowCTILocationGraphLookup($filters: FilterGroup) {
+  locations(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
 ATTACK_ID_RE = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 VULNERABILITY_ID_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 CURATED_ALIAS_GROUPS = {
@@ -260,6 +275,13 @@ class OpenCTIGraphLookup:
             )
         if stix_object_type == "vulnerability":
             return self.find_vulnerability(candidate)
+        if stix_object_type == "location":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="location",
+                collection_name="locations",
+                query_text=LOCATION_LOOKUP_QUERY,
+            )
         return None
 
     def find_attack_pattern(self, candidate):

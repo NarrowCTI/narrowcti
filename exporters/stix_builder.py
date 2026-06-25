@@ -35,6 +35,7 @@ SEMANTIC_RELATIONSHIP_TYPES = {
 }
 REPORT_ID_NAMESPACE = "https://narrowcti.local/stix/report"
 IDENTITY_ID_NAMESPACE = "https://narrowcti.local/stix/identity"
+GRAPH_OBJECT_ID_NAMESPACE = "https://narrowcti.local/stix/graph-object"
 
 
 def escape_pattern_value(value):
@@ -246,6 +247,22 @@ def deterministic_identity_id(name, identity_class="organization"):
     return f"identity--{uuid5(NAMESPACE_URL, material)}"
 
 
+def deterministic_graph_object_id(stix_object_type, name, value="", attributes=None):
+    attributes = attributes if isinstance(attributes, dict) else {}
+    object_type = clean_string(stix_object_type).lower()
+    identity_class = clean_string(attributes.get("identity_class")).casefold()
+    material = "|".join(
+        (
+            GRAPH_OBJECT_ID_NAMESPACE,
+            object_type,
+            identity_class,
+            clean_string(value or name).casefold(),
+            clean_string(name).casefold(),
+        )
+    )
+    return f"{object_type}--{uuid5(NAMESPACE_URL, material)}"
+
+
 def deterministic_report_id(name, description):
     material = "|".join(
         (
@@ -430,6 +447,7 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
         return None
 
     common = {
+        "id": deterministic_graph_object_id(stix_object_type, name, value, attributes),
         "created_by_ref": identity_id,
         "confidence": confidence,
         "custom_properties": custom_properties,

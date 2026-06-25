@@ -63,7 +63,7 @@ graph enrichment layer.
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Optional allow-list for STIX/OpenCTI object types such as `attack-pattern`, `malware`, `threat-actor`, `identity` or `marking-definition`. Empty allows all current candidate object types. |
 | `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` enables controlled graph promotion for accepted candidates. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. Exported graph state is marked only after a successful OpenCTI import. |
-| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, starting with ATT&CK attack-patterns, malware and tools, before graph promotion creates new objects. |
+| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, including ATT&CK attack-patterns, malware, tools, CVE vulnerabilities, threat actors, intrusion sets and controlled locations/countries, before graph promotion creates new objects. |
 
 Use `export` only with explicit graph thresholds, allow-lists and validation
 evidence. The first promotion gate can create supported STIX objects such as
@@ -128,6 +128,9 @@ metadata can include `graph_export_plan_lookup_matches` so operators can audit
 which OpenCTI object was matched. In `export` mode, known local/OpenCTI graph
 keys with canonical STIX ids are referenced by the curated bundle, and newly
 promoted graph keys are marked locally only after successful OpenCTI import.
+Graph SDOs created by NarrowCTI use deterministic STIX ids derived from object
+type, identity class and normalized value/name so repeated exports converge on
+the same OpenCTI `standard_id` when the curated object is unchanged.
 The STIX Author / OpenCTI Author is resolved from the logical upstream source
 for audit visibility, for example `OTX AlienVault` for `alienvault:otx` and
 `MISP` for `misp:misp`. NarrowCTI remains visible through decision audit,

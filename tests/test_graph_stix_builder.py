@@ -238,6 +238,42 @@ class GraphStixBuilderTests(unittest.TestCase):
         self.assertIn(sector["id"], report["object_refs"])
         self.assertIn(objects_by_type["indicator"][0]["id"], report["object_refs"])
 
+    def test_graph_objects_use_stable_ids_for_repeated_exports(self):
+        first_bundle, _ = build_graph_report_bundle(
+            "Curated graph report",
+            "graph context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    threat_actor_candidate(),
+                    target_sector_candidate(),
+                    target_country_candidate(),
+                    vulnerability_candidate(),
+                ]
+            },
+        )
+        second_bundle, _ = build_graph_report_bundle(
+            "Curated graph report",
+            "graph context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    threat_actor_candidate(),
+                    target_sector_candidate(),
+                    target_country_candidate(),
+                    vulnerability_candidate(),
+                ]
+            },
+        )
+
+        first_ids = graph_object_ids_by_name(first_bundle)
+        second_ids = graph_object_ids_by_name(second_bundle)
+
+        self.assertEqual(first_ids["APT Example"], second_ids["APT Example"])
+        self.assertEqual(first_ids["Finance"], second_ids["Finance"])
+        self.assertEqual(first_ids["Argentina"], second_ids["Argentina"])
+        self.assertEqual(first_ids["CVE-2026-0001"], second_ids["CVE-2026-0001"])
+
     def test_curated_bundle_references_existing_opencti_objects(self):
         existing_attack_pattern_ref = (
             "attack-pattern--11111111-1111-4111-8111-111111111111"
@@ -351,6 +387,27 @@ def target_sector_candidate():
         "source_key": "misp:misp",
         "source_name": "misp-galaxy",
         "source_field": "Galaxy.meta.targeted-sector",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "parent_cluster_type": "threat-actor",
+            "parent_cluster_value": "APT Example",
+            "parent_cluster_uuid": "cluster-actor",
+        },
+    }
+
+
+def target_country_candidate():
+    return {
+        "fingerprint": "country-1",
+        "entity_type": "target_country",
+        "value": "Argentina",
+        "name": "Argentina",
+        "stix_object_type": "location",
+        "relationship_type": "targets",
+        "source_key": "misp:misp",
+        "source_name": "misp-galaxy",
+        "source_field": "Galaxy.meta.targeted-country",
         "confidence": 70,
         "relationship_confidence": 70,
         "attributes": {
@@ -482,6 +539,25 @@ def unsupported_candidate():
         "relationship_type": "related-to",
         "confidence": 50,
         "relationship_confidence": 50,
+    }
+
+
+def graph_object_ids_by_name(bundle):
+    data = json.loads(bundle.serialize())
+    return {
+        item["name"]: item["id"]
+        for item in data["objects"]
+        if item["type"]
+        in {
+            "attack-pattern",
+            "identity",
+            "intrusion-set",
+            "location",
+            "malware",
+            "threat-actor",
+            "tool",
+            "vulnerability",
+        }
     }
 
 

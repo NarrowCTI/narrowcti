@@ -93,6 +93,19 @@ can use exact OpenCTI alias matches when the canonical object exposes aliases.
 This lets source evidence such as `Palmerworm` reference existing Intrusion Set
 `BlackTech` without creating a second actor object.
 
+Location lookup is enabled for country and location-style graph candidates.
+NarrowCTI prefers canonical `standard_id`, then exact OpenCTI location name.
+When a match is found, the export bundle references the existing OpenCTI
+`Country`, `Region`, `Administrative-Area`, `City` or other `Location`
+specialization returned by OpenCTI instead of creating a second location
+object. Region, city and position normalization still require source-specific
+metadata validation before broad export.
+
+Promoted graph SDOs created by NarrowCTI use deterministic STIX ids derived
+from object type, identity class and normalized value/name. This gives OpenCTI
+the same `standard_id` across repeated exports and reduces duplicate graph
+entities even before a live OpenCTI lookup match is available.
+
 ## Source Identity And Author Hygiene
 
 OpenCTI Author should represent the logical upstream intelligence source, not
@@ -147,8 +160,8 @@ validation before NarrowCTI should promote them automatically.
   `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured.
 - `true`: NarrowCTI queries OpenCTI during graph export planning and treats
   canonical matches, such as existing ATT&CK attack-patterns, malware, tools,
-  CVE vulnerabilities, threat actors and intrusion sets, as known graph
-  entities before promotion logic creates new objects.
+  CVE vulnerabilities, threat actors, intrusion sets and locations/countries,
+  as known graph entities before promotion logic creates new objects.
 
 The lookup itself is read-only. In `audit` and `dry-run` modes it does not
 create entities, relationships or state marks in OpenCTI. In `export` mode,
@@ -170,6 +183,10 @@ current v0.8 safety boundary.
 For Threat Actor and Intrusion Set objects, lookup is intentionally limited to
 `standard_id`, exact name and exact alias matching returned by OpenCTI search.
 This supports canonical actor naming without broad fuzzy matching.
+
+For Location objects, lookup is intentionally limited to `standard_id` and
+exact OpenCTI name. This is enough to protect controlled country export, such
+as `Argentina`, without guessing ambiguous geography from weak source text.
 
 When matches exist, decision metadata can include
 `graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
