@@ -276,7 +276,8 @@ knowledge, and export state is marked only after the OpenCTI import call
 succeeds. In v0.8,
 `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` can also be enabled so OTX and MISP
 planning query OpenCTI for canonical graph objects, starting with ATT&CK
-attack-patterns, before promotion creates new graph knowledge. Canonical
+attack-patterns, malware and tools, before promotion creates new graph
+knowledge. Canonical
 matches are exposed as bounded `graph_export_plan_lookup_matches` metadata for
 audit and future enterprise reporting. When a canonical match includes a valid
 STIX `standard_id`, the export gate references that existing OpenCTI object in

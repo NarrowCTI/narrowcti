@@ -8,6 +8,7 @@ from core.opencti_graph_lookup import (
     OpenCTIGraphLookup,
     attack_pattern_external_id,
     attack_pattern_standard_id,
+    graph_object_standard_id,
 )
 
 
@@ -125,15 +126,139 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
             calls[0][1]["filters"]["filters"][0]["key"],
         )
 
+    def test_known_keys_for_plan_resolves_malware_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "malwares": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--malware",
+                                    "standard_id": (
+                                        "malware--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Malware",
+                                    "name": "LummaC2",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="malware",
+                entity_type="malware",
+                value="LummaC2",
+                name="LummaC2",
+                relationship_type="uses",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Malware", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("malwares", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertEqual(["LummaC2"], calls[0][1]["filters"]["filters"][0]["values"])
+
+    def test_known_keys_for_plan_resolves_tool_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "tools": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--tool",
+                                    "standard_id": (
+                                        "tool--11111111-1111-4111-8111-111111111111"
+                                    ),
+                                    "entity_type": "Tool",
+                                    "name": "Mimikatz",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="tool",
+                entity_type="tool",
+                value="Mimikatz",
+                name="Mimikatz",
+                relationship_type="uses",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Tool", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("tools", calls[0][0])
+        self.assertEqual(["Mimikatz"], calls[0][1]["filters"]["filters"][0]["values"])
+
+    def test_tool_standard_id_uses_stix_id_before_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {"data": {"tools": {"edges": []}}}
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        lookup.find_candidate(
+            {
+                "stix_object_type": "tool",
+                "name": "Mimikatz",
+                "attributes": {
+                    "stix_id": "tool--11111111-1111-4111-8111-111111111111"
+                },
+            }
+        )
+
+        self.assertEqual(
+            "tool--11111111-1111-4111-8111-111111111111",
+            graph_object_standard_id(
+                {
+                    "stix_object_type": "tool",
+                    "attributes": {
+                        "stix_id": "tool--11111111-1111-4111-8111-111111111111"
+                    },
+                },
+                "tool",
+            ),
+        )
+        self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
+
     def test_unsupported_candidate_does_not_query_opencti(self):
         calls = []
-        lookup = OpenCTIGraphLookup(SimpleNamespace(query=lambda *args: calls.append(args)))
+        lookup = OpenCTIGraphLookup(
+            SimpleNamespace(query=lambda *args: calls.append(args))
+        )
 
         self.assertIsNone(
             lookup.find_candidate(
                 {
-                    "stix_object_type": "malware",
-                    "value": "LummaC2",
+                    "stix_object_type": "vulnerability",
+                    "value": "CVE-2024-0001",
                 }
             )
         )
@@ -212,6 +337,42 @@ def accepted_attack_pattern_policy():
                     "source_field": "mitre_attack.resolved",
                     "confidence": 90,
                     "relationship_confidence": 85,
+                }
+            ],
+        }
+    )
+    return apply_graph_candidate_policy(
+        candidates,
+        min_entity_confidence=50,
+        min_relationship_confidence=60,
+    ).to_dict()
+
+
+def accepted_named_object_policy(
+    stix_object_type,
+    entity_type,
+    value,
+    name,
+    relationship_type,
+):
+    candidates = build_graph_candidates(
+        {
+            "version": "v0.8.0-dev",
+            "source_key": "alienvault:otx",
+            "external_id": "pulse-1",
+            "title": "Arsenal pulse",
+            "records": [
+                {
+                    "entity_type": entity_type,
+                    "value": value,
+                    "display_name": name,
+                    "stix_object_type": stix_object_type,
+                    "relationship_type": relationship_type,
+                    "source_key": "alienvault:otx",
+                    "source_name": "otx",
+                    "source_field": "graph_evidence",
+                    "confidence": 85,
+                    "relationship_confidence": 80,
                 }
             ],
         }

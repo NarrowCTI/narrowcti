@@ -21,6 +21,36 @@ query NarrowCTIAttackPatternGraphLookup($filters: FilterGroup) {
 }
 """
 
+MALWARE_LOOKUP_QUERY = """
+query NarrowCTIMalwareGraphLookup($filters: FilterGroup) {
+  malwares(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+TOOL_LOOKUP_QUERY = """
+query NarrowCTIToolGraphLookup($filters: FilterGroup) {
+  tools(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
 ATTACK_ID_RE = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 
 
@@ -75,6 +105,20 @@ class OpenCTIGraphLookup:
         stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
         if stix_object_type == "attack-pattern":
             return self.find_attack_pattern(candidate)
+        if stix_object_type == "malware":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="malware",
+                collection_name="malwares",
+                query_text=MALWARE_LOOKUP_QUERY,
+            )
+        if stix_object_type == "tool":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="tool",
+                collection_name="tools",
+                query_text=TOOL_LOOKUP_QUERY,
+            )
         return None
 
     def find_attack_pattern(self, candidate):
@@ -85,6 +129,37 @@ class OpenCTIGraphLookup:
         standard_id = attack_pattern_standard_id(candidate)
         if standard_id:
             return self.query_attack_pattern("standard_id", standard_id, "standard_id")
+
+        return None
+
+    def find_named_graph_object(
+        self,
+        candidate,
+        stix_object_type,
+        collection_name,
+        query_text,
+    ):
+        standard_id = graph_object_standard_id(candidate, stix_object_type)
+        if standard_id:
+            return self.query_named_graph_object(
+                query_text,
+                collection_name,
+                stix_object_type,
+                "standard_id",
+                standard_id,
+                "standard_id",
+            )
+
+        name = graph_object_name(candidate)
+        if name:
+            return self.query_named_graph_object(
+                query_text,
+                collection_name,
+                stix_object_type,
+                "name",
+                name,
+                "name",
+            )
 
         return None
 
@@ -109,6 +184,38 @@ class OpenCTIGraphLookup:
             "entity_type": clean_string(node.get("entity_type")),
             "name": clean_string(node.get("name")),
             "x_mitre_id": clean_string(node.get("x_mitre_id")),
+            "match_type": match_type,
+            "match_value": value,
+        }
+
+    def query_named_graph_object(
+        self,
+        query_text,
+        collection_name,
+        stix_object_type,
+        key,
+        value,
+        match_type,
+    ):
+        variables = {"filters": filter_eq(key, value)}
+        try:
+            result = self.api_client.query(query_text, variables)
+        except Exception as exc:
+            self.logger(
+                "OpenCTI graph lookup failed: "
+                f"type={stix_object_type} key={key} value={value} error={exc}"
+            )
+            return None
+
+        node = first_node(result, collection_name)
+        if not node:
+            return None
+
+        return {
+            "opencti_id": clean_string(node.get("id")),
+            "standard_id": clean_string(node.get("standard_id")),
+            "entity_type": clean_string(node.get("entity_type")),
+            "name": clean_string(node.get("name")),
             "match_type": match_type,
             "match_value": value,
         }
@@ -231,6 +338,43 @@ def attack_pattern_standard_id(candidate):
         if standard_id:
             return standard_id
 
+    return ""
+
+
+def graph_object_standard_id(candidate, stix_object_type):
+    candidate = mapping_from(candidate)
+    prefix = f"{clean_string(stix_object_type).lower()}--"
+    for value in (candidate.get("standard_id"), candidate.get("stix_id")):
+        standard_id = normalize_stix_id(value, prefix)
+        if standard_id:
+            return standard_id
+
+    attributes = mapping_from(candidate.get("attributes"))
+    for key in ("standard_id", "stix_id"):
+        standard_id = normalize_stix_id(attributes.get(key), prefix)
+        if standard_id:
+            return standard_id
+
+    return ""
+
+
+def graph_object_name(candidate):
+    candidate = mapping_from(candidate)
+    for value in (
+        candidate.get("name"),
+        candidate.get("value"),
+        candidate.get("display_name"),
+    ):
+        name = clean_string(value)
+        if name:
+            return name
+    return ""
+
+
+def normalize_stix_id(value, prefix):
+    value = clean_string(value)
+    if value.startswith(prefix):
+        return value
     return ""
 
 

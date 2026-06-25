@@ -226,6 +226,13 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   valid STIX `standard_id` values, so the graph promotion gate can link reports
   and curated relationships to canonical ATT&CK objects without recreating
   them.
+- Extended read-only OpenCTI graph lookup to existing `Malware` and `Tool`
+  objects by canonical `standard_id` or exact name. Alias/fuzzy matching remains
+  outside the v0.8 safety boundary.
+- Validated a bounded real OTX graph export for Arsenal/Malware with the
+  `lummac2` query. The run ingested a curated report with 10 indicators and
+  referenced the existing OpenCTI `Malware` object `LummaC2` instead of creating
+  a duplicate malware entity.
 
 ## Promotion Boundary
 

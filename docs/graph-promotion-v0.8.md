@@ -76,10 +76,10 @@ only after the OpenCTI import call succeeds.
 
 Known graph keys returned by local state or OpenCTI lookup are not re-created
 by the export gate. This protects canonical objects loaded by official
-connectors, especially MITRE ATT&CK attack-patterns. When OpenCTI lookup
-returns a valid canonical STIX `standard_id`, the curated STIX bundle references
-that existing object and can create report links or semantic relationships to
-it instead of creating a duplicate object.
+connectors, especially MITRE ATT&CK attack-patterns and existing Arsenal
+objects. When OpenCTI lookup returns a valid canonical STIX `standard_id`, the
+curated STIX bundle references that existing object and can create report links
+or semantic relationships to it instead of creating a duplicate object.
 
 ## OpenCTI Tab Mapping
 
@@ -111,8 +111,8 @@ validation before NarrowCTI should promote them automatically.
 - `false`: default. NarrowCTI only uses local graph deduplication state when
   `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured.
 - `true`: NarrowCTI queries OpenCTI during graph export planning and treats
-  canonical matches, such as existing ATT&CK attack-patterns, as known graph
-  entities before promotion logic creates new objects.
+  canonical matches, such as existing ATT&CK attack-patterns, malware and tools,
+  as known graph entities before promotion logic creates new objects.
 
 The lookup itself is read-only. In `audit` and `dry-run` modes it does not
 create entities, relationships or state marks in OpenCTI. In `export` mode,
@@ -159,9 +159,11 @@ The current v0.8 cut still does not:
 
 ## Expansion Path
 
-After ATT&CK lookup is validated, the same pattern should expand to:
+After ATT&CK, malware and tool lookup are validated, the same pattern should
+expand to:
 
-- Malware and tool lookup by name, aliases and source references.
+- Malware and tool lookup beyond exact `standard_id` or name, including aliases
+  and source references.
 - Threat actor and intrusion set lookup by name, aliases and external
   references.
 - Sector and location lookup with controlled vocabulary normalization.

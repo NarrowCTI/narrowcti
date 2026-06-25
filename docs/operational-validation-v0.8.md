@@ -60,6 +60,20 @@ confirm whether `existing_reference_count` is greater than zero. That shows
 NarrowCTI referenced canonical OpenCTI ATT&CK objects by `standard_id` instead
 of creating duplicate `attack-pattern` objects.
 
+When Arsenal candidates are included, validation should prefer a bounded
+`malware` or `tool` allow-list and confirm whether the lookup matched an
+existing OpenCTI object by `standard_id` or exact name. Broader alias matching
+is not part of the current v0.8 export gate.
+
+Observed local validation for the OTX `lummac2` query with
+`NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=malware` and
+`MAX_IOCS_PER_PULSE=10` ingested one curated report with 10 indicators. OpenCTI
+GraphQL confirmed the report object references included `Malware` `LummaC2`
+with `standard_id=malware--58dd33b2-647b-5c42-89e8-09b5f64b9469`. The decision
+audit recorded `existing_reference_counts={"malware":1}`, proving that
+NarrowCTI referenced the existing OpenCTI malware object instead of creating a
+duplicate.
+
 ## Required Lab Posture
 
 Before live validation, confirm:
@@ -108,6 +122,8 @@ Expected evidence:
   `standard_id`, `entity_type`, `name`, `x_mitre_id`, `match_type` and
   `match_value`.
 - `gateway.decisions` report shows `lookup_matches` greater than zero.
+- For Arsenal validation, `graph_export_plan_lookup_matches` can include
+  existing `Malware` or `Tool` objects matched by `standard_id` or exact name.
 
 ## Controlled MISP Validation
 
