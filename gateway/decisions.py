@@ -23,12 +23,16 @@ GRAPH_ENTITY_CATEGORIES = {
     "threat_actor": "threat_actors",
     "intrusion_set": "threat_actors",
     "target_sector": "target_sectors",
+    "malware": "arsenal",
+    "tool": "arsenal",
+    "vulnerability": "arsenal",
 }
 
 GRAPH_ENTITY_TOP_FIELDS = {
     "attack_patterns": "top_attack_patterns",
     "threat_actors": "top_threat_actors",
     "target_sectors": "top_target_sectors",
+    "arsenal": "top_arsenal",
 }
 
 
@@ -747,10 +751,12 @@ def empty_graph_entity_summary(include_breakdowns=True):
         "entity_count": 0,
         "counts": {
             "attack_patterns": 0,
+            "arsenal": 0,
             "threat_actors": 0,
             "target_sectors": 0,
         },
         "top_attack_patterns": [],
+        "top_arsenal": [],
         "top_threat_actors": [],
         "top_target_sectors": [],
         "_entities": Counter(),
@@ -1101,6 +1107,7 @@ def format_graph_entity_summary(summary):
         f"counts={format_compact_counts(summary.get('counts', {}))} "
         f"attack_patterns="
         f"{format_entity_entries(summary.get('top_attack_patterns'))} "
+        f"arsenal={format_entity_entries(summary.get('top_arsenal'))} "
         f"threats={format_entity_entries(summary.get('top_threat_actors'))} "
         f"sectors={format_entity_entries(summary.get('top_target_sectors'))}"
     )

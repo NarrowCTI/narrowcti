@@ -406,10 +406,12 @@ def empty_context_narrative_summary():
         "entity_count": 0,
         "counts": {
             "attack_patterns": 0,
+            "arsenal": 0,
             "target_sectors": 0,
             "threat_actors": 0,
         },
         "top_attack_patterns": [],
+        "top_arsenal": [],
         "top_threat_actors": [],
         "top_target_sectors": [],
     }
@@ -498,10 +500,12 @@ def build_context_narrative_summary(graph_entities):
         "entity_count": int(graph_entities.get("entity_count", 0) or 0),
         "counts": {
             "attack_patterns": int(counts.get("attack_patterns", 0) or 0),
+            "arsenal": int(counts.get("arsenal", 0) or 0),
             "target_sectors": int(counts.get("target_sectors", 0) or 0),
             "threat_actors": int(counts.get("threat_actors", 0) or 0),
         },
         "top_attack_patterns": list(graph_entities.get("top_attack_patterns") or []),
+        "top_arsenal": list(graph_entities.get("top_arsenal") or []),
         "top_threat_actors": list(graph_entities.get("top_threat_actors") or []),
         "top_target_sectors": list(graph_entities.get("top_target_sectors") or []),
     }
@@ -1197,6 +1201,7 @@ def format_context_narrative_summary(summary):
         f"entities={summary.get('entity_count', 0)} "
         f"attack_patterns="
         f"{format_narrative_entries(summary.get('top_attack_patterns'))} "
+        f"arsenal={format_narrative_entries(summary.get('top_arsenal'))} "
         f"threats={format_narrative_entries(summary.get('top_threat_actors'))} "
         f"sectors={format_narrative_entries(summary.get('top_target_sectors'))}"
     )

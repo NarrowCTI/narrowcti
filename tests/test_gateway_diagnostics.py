@@ -145,7 +145,11 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             format_text_snapshot(snapshot),
         )
         self.assertIn(
-            "narrative=records=1 entities=3 attack_patterns=Command and Scripting Interpreter:1",
+            "narrative=records=1 entities=4 attack_patterns=Command and Scripting Interpreter:1",
+            format_text_snapshot(snapshot),
+        )
+        self.assertIn(
+            "arsenal=Loader Example:1",
             format_text_snapshot(snapshot),
         )
         self.assertIn(

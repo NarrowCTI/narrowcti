@@ -406,7 +406,7 @@ class GatewayCurationReportTests(unittest.TestCase):
             [{"type": "uses", "count": 6}],
             insight["graph_evidence"]["top_stix_relationships"],
         )
-        self.assertEqual(9, insight["context_narrative"]["entity_count"])
+        self.assertEqual(12, insight["context_narrative"]["entity_count"])
         self.assertEqual(
             [
                 {
@@ -428,6 +428,17 @@ class GatewayCurationReportTests(unittest.TestCase):
                 }
             ],
             insight["context_narrative"]["top_threat_actors"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "entity_type": "malware",
+                    "value": "Loader Example",
+                    "display_name": "Loader Example",
+                    "count": 3,
+                }
+            ],
+            insight["context_narrative"]["top_arsenal"],
         )
         self.assertEqual(
             [
@@ -470,9 +481,10 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("accepted_object_types=attack-pattern:3", text)
         self.assertIn("stix_relationship_types=uses:6", text)
         self.assertIn(
-            "narrative=records=3 entities=9 attack_patterns=Command and Scripting Interpreter:3",
+            "narrative=records=3 entities=12 attack_patterns=Command and Scripting Interpreter:3",
             text,
         )
+        self.assertIn("arsenal=Loader Example:3", text)
         self.assertIn("threats=APT Example:3 sectors=Finance:3", text)
         self.assertIn("context=records=3 accepted_context=9 density=3.0", text)
         self.assertIn("categories=ttp:6,threat:3", text)
@@ -776,6 +788,15 @@ def graph_metadata():
                     "source_name": "misp",
                     "source_field": "Galaxy.meta.targeted-sector",
                     "confidence": 70,
+                },
+                {
+                    "entity_type": "malware",
+                    "value": "Loader Example",
+                    "display_name": "Loader Example",
+                    "source_key": "misp",
+                    "source_name": "misp",
+                    "source_field": "Galaxy.value",
+                    "confidence": 80,
                 },
             ],
         },

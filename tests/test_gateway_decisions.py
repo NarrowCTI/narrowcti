@@ -418,9 +418,14 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         text = format_text_report(report)
 
         self.assertEqual(2, entities["record_count"])
-        self.assertEqual(6, entities["entity_count"])
+        self.assertEqual(7, entities["entity_count"])
         self.assertEqual(
-            {"attack_patterns": 2, "target_sectors": 2, "threat_actors": 2},
+            {
+                "attack_patterns": 2,
+                "arsenal": 1,
+                "target_sectors": 2,
+                "threat_actors": 2,
+            },
             entities["counts"],
         )
         self.assertEqual(
@@ -434,11 +439,13 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             ],
             entities["top_attack_patterns"],
         )
-        self.assertEqual(6, entities["by_source"]["otx"]["entity_count"])
+        self.assertEqual(7, entities["by_source"]["otx"]["entity_count"])
         self.assertEqual(2, entities["by_source"]["otx"]["counts"]["attack_patterns"])
+        self.assertEqual(1, entities["by_source"]["otx"]["counts"]["arsenal"])
         self.assertEqual(2, entities["by_query"][0]["record_count"])
         self.assertIn("graph_entities:", text)
         self.assertIn("attack_patterns=Command and Scripting Interpreter=2", text)
+        self.assertIn("arsenal=Loader Example=1", text)
         self.assertIn("sectors=Finance=2", text)
 
     def test_graph_entity_summary_ignores_records_without_metadata(self):
