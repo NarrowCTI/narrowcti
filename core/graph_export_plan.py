@@ -320,6 +320,7 @@ def candidate_with_existing_opencti_ref(candidate, match):
         ("opencti_id", "opencti_existing_id"),
         ("entity_type", "opencti_existing_entity_type"),
         ("name", "opencti_existing_name"),
+        ("observable_value", "opencti_existing_observable_value"),
         ("match_type", "opencti_match_type"),
         ("match_value", "opencti_match_value"),
     ):
@@ -331,10 +332,31 @@ def candidate_with_existing_opencti_ref(candidate, match):
 
 
 def valid_existing_ref(existing_ref, candidate):
-    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
-    if not existing_ref or not stix_object_type:
+    if not existing_ref:
         return False
-    return existing_ref.startswith(f"{stix_object_type}--")
+    return any(
+        existing_ref.startswith(f"{prefix}--")
+        for prefix in candidate_existing_ref_prefixes(candidate)
+    )
+
+
+def candidate_existing_ref_prefixes(candidate):
+    candidate = mapping_from(candidate)
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    if stix_object_type != "observable":
+        return [stix_object_type] if stix_object_type else []
+
+    attributes = mapping_from(candidate.get("attributes"))
+    observable_type = clean_string(attributes.get("observable_type")).lower()
+    supported = {
+        "domain-name",
+        "email-addr",
+        "file",
+        "ipv4-addr",
+        "ipv6-addr",
+        "url",
+    }
+    return [observable_type] if observable_type in supported else []
 
 
 def policy_with_accepted(policy, accepted):
@@ -442,13 +464,67 @@ def graph_relationship_key(candidate, entity_key=""):
     relationship_type = clean_string(candidate.get("relationship_type")).lower()
     if not relationship_type or not entity_key:
         return ""
+    source_type, source_value = graph_relationship_source_anchor(candidate)
     return stable_key(
         "relationship",
         clean_string(candidate.get("source_key")).lower(),
         clean_string(candidate.get("external_id")).lower(),
         relationship_type,
+        source_type,
+        source_value,
         entity_key,
     )
+
+
+def graph_relationship_source_anchor(candidate):
+    candidate = mapping_from(candidate)
+    attributes = mapping_from(candidate.get("attributes"))
+    source_type = first_clean_value(
+        attributes.get("relationship_source_stix_object_type"),
+        attributes.get("source_stix_object_type"),
+        parent_cluster_stix_object_type(attributes),
+    ).lower()
+    source_value = first_clean_value(
+        attributes.get("relationship_source_value"),
+        attributes.get("source_value"),
+        attributes.get("parent_cluster_value"),
+    ).lower()
+    return source_type, source_value
+
+
+def parent_cluster_stix_object_type(attributes):
+    kind = " ".join(
+        clean_string(attributes.get(field)).casefold()
+        for field in (
+            "parent_cluster_type",
+            "parent_galaxy_type",
+            "parent_galaxy_name",
+        )
+        if clean_string(attributes.get(field))
+    )
+    if "attack-pattern" in kind or "mitre-attack-pattern" in kind:
+        return "attack-pattern"
+    if "intrusion-set" in kind:
+        return "intrusion-set"
+    if "threat-actor" in kind or "threat actor" in kind:
+        return "threat-actor"
+    if "malpedia" in kind or "ransomware" in kind or "malware" in kind:
+        return "malware"
+    if "tool" in kind:
+        return "tool"
+    if "sector" in kind:
+        return "identity"
+    if "country" in kind or "region" in kind:
+        return "location"
+    return ""
+
+
+def first_clean_value(*values):
+    for value in values:
+        cleaned = clean_string(value)
+        if cleaned:
+            return cleaned
+    return ""
 
 
 def stable_key(*parts):
@@ -515,6 +591,7 @@ def lookup_match_summary(value):
             "standard_id",
             "entity_type",
             "name",
+            "observable_value",
             "x_mitre_id",
             "match_type",
             "match_value",

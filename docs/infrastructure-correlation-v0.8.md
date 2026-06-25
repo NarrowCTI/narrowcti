@@ -41,7 +41,7 @@ The intended mapping is:
 | IPv4 address | `ipv4-addr` SCO | Already supported as observable candidate. |
 | IPv6 address | `ipv6-addr` SCO | Already supported as observable candidate. |
 | Network range or CIDR | `ipv4-addr` / `ipv6-addr` SCO with CIDR value where accepted by STIX/OpenCTI | Requires OpenCTI lab validation before broad export. |
-| Autonomous System | `autonomous-system` SCO | Supported by the local STIX library; OpenCTI ingestion/rendering must be validated before export gate activation. |
+| Autonomous System | `autonomous-system` SCO | Supported by the local STIX library and validated through native NarrowCTI export. OpenCTI stores it under `stixCyberObservables`. |
 | Actor or intrusion set uses infrastructure | STIX `uses` relationship | Source must support attribution or NarrowCTI must hold it for review. |
 | Infrastructure contains IP/domain/ASN | STIX `consists-of` or OpenCTI-supported relationship | Requires lab validation because OpenCTI rendering can vary by object type. |
 | IP belongs to ASN | STIX/OpenCTI `belongs-to` relationship | Requires lab validation and source/enrichment provenance. |
@@ -207,7 +207,7 @@ The decision audit and future enterprise CTI report should summarize:
 - Whether the relationship was promoted, deduplicated, held, quarantined or
   released by an analyst.
 
-## Open Questions For Lab Validation
+## Lab Validation Evidence
 
 Observed local validation on June 25, 2026 confirmed:
 
@@ -224,6 +224,15 @@ Observed local validation on June 25, 2026 confirmed:
 - `IPv4-Addr CIDR -> belongs-to -> Autonomous-System` imports and is queryable.
 - Reimporting the same deterministic STIX bundle did not duplicate the
   controlled Infrastructure, ASN, IP, CIDR or Report objects.
+- Native NarrowCTI export can now build and import the same ASN/IP/CIDR model
+  without a hand-built STIX bundle.
+- The lookup-backed native export can reference existing Infrastructure, ASN,
+  IP and CIDR objects instead of recreating them.
+- Generic NarrowCTI `observable` candidates can safely reference concrete
+  OpenCTI SCO ids such as `ipv4-addr--...` during export.
+- Relationship deduplication now distinguishes semantic source anchors, so
+  `IP -> belongs-to -> ASN` and `CIDR -> belongs-to -> ASN` can coexist for
+  the same ASN.
 
 Controlled validation objects:
 
@@ -244,31 +253,50 @@ Observed relationships:
 | IP `belongs-to` ASN | Imported and queryable. |
 | CIDR `belongs-to` ASN | Imported and queryable. |
 
+Native NarrowCTI validation on June 25, 2026 used the controlled report
+`NarrowCTI native ASN graph validation 20260625`.
+
+The final lookup-backed export produced:
+
+| Evidence | Result |
+| --- | --- |
+| Existing graph entities found by lookup | 4 |
+| New graph objects exported | 0 |
+| Existing references in the bundle | 1 Infrastructure, 1 Autonomous-System, 2 Observables |
+| Relationships imported | 6 |
+| OpenCTI object counts after import | 1 Infrastructure, 1 ASN, 1 IP, 1 CIDR, 1 Report |
+| Queryable semantic relationships | `Infrastructure -> ASN`, `Infrastructure -> IP`, `Infrastructure -> CIDR`, `IP -> ASN`, `CIDR -> ASN` |
+
 Open questions before broad activation:
 
 - Confirm the same relationships visually in OpenCTI's graph and knowledge UI,
   not only via GraphQL.
 - Validate `IPv6-Addr -> belongs-to -> Autonomous-System`.
 - Validate how noisy broad ASN searches become in larger OpenCTI datasets.
-- Add exact lookup helpers because broad `stixCyberObservables(search=...)`
-  can return unrelated objects for CIDR-like search strings.
 - Validate real MISP/OTX payloads that carry ASN/netblock metadata before
   enabling source-driven ASN promotion.
+- Validate whether source payloads provide enough actor, malware, sector,
+  location and campaign context to populate Diamond, Timeline and Knowledge
+  views from the same curated bundle.
 
 ## Backlog
 
 Safe implementation sequence:
 
-1. Add unit-level STIX support for `autonomous-system` observable candidates.
-2. Add OpenCTI exact lookup support for ASN/IP/CIDR cyber observables through
-   `stixCyberObservables`.
-3. Add controlled graph export for ASN only when explicitly allow-listed.
+1. Done: add unit-level STIX support for `autonomous-system` observable
+   candidates.
+2. Done: add OpenCTI exact lookup support for ASN/IP/CIDR cyber observables
+   through `stixCyberObservables`.
+3. Done: add controlled native graph export for ASN/IP/CIDR relationships when
+   candidates are explicitly accepted by policy.
 4. Add MISP metadata extraction for ASN/netblock/domain-ip/ip-port objects.
-5. Add optional IP-to-ASN enrichment provider interface with offline-first
+5. Add OTX metadata extraction for ASN/netblock evidence when OTX payloads or
+   enrichment responses provide it.
+6. Add optional IP-to-ASN enrichment provider interface with offline-first
    behavior.
-6. Add relationship evidence for IP belongs-to ASN and infrastructure
+7. Add relationship evidence for IP belongs-to ASN and infrastructure
    consists-of ASN/IP when the source supports it.
-7. Add curation report sections for ASN concentration, shared infrastructure
+8. Add curation report sections for ASN concentration, shared infrastructure
    and actor/malware/infrastructure overlaps.
 
 This backlog is intentionally staged. The product value is very high, but the

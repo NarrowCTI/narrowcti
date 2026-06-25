@@ -11,6 +11,7 @@ ENTITY_TARGETS = {
     "threat_actor": ("threat-actor", "attributed-to"),
     "intrusion_set": ("intrusion-set", "attributed-to"),
     "infrastructure": ("infrastructure", "uses"),
+    "autonomous_system": ("autonomous-system", "related-to"),
     "malware": ("malware", "uses"),
     "tool": ("tool", "uses"),
     "vulnerability": ("vulnerability", "related-to"),

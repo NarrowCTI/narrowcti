@@ -581,6 +581,124 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
             calls[0][1]["filters"]["filters"][0]["values"],
         )
 
+    def test_known_keys_for_plan_resolves_autonomous_system_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "stixCyberObservables": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--asn",
+                                    "standard_id": (
+                                        "autonomous-system--11111111-1111-4111-"
+                                        "8111-111111111111"
+                                    ),
+                                    "entity_type": "Autonomous-System",
+                                    "observable_value": (
+                                        "AS64512 NarrowCTI Validation ASN"
+                                    ),
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="autonomous-system",
+                entity_type="autonomous_system",
+                value="AS64512",
+                name="NarrowCTI Validation ASN",
+                relationship_type="related-to",
+                attributes={"asn": 64512},
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(
+            "Autonomous-System",
+            known["matches"][0]["match"]["entity_type"],
+        )
+        self.assertEqual(
+            "AS64512 NarrowCTI Validation ASN",
+            known["matches"][0]["match"]["observable_value"],
+        )
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("stixCyberObservables", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertEqual(
+            ["AS64512 NarrowCTI Validation ASN"],
+            calls[0][1]["filters"]["filters"][0]["values"],
+        )
+
+    def test_known_keys_for_plan_resolves_ipv4_observable_by_value(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "stixCyberObservables": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--ipv4",
+                                    "standard_id": (
+                                        "ipv4-addr--11111111-1111-4111-"
+                                        "8111-111111111111"
+                                    ),
+                                    "entity_type": "IPv4-Addr",
+                                    "observable_value": "203.0.113.11",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="observable",
+                entity_type="observable",
+                value="203.0.113.11",
+                name="203.0.113.11",
+                relationship_type="related-to",
+                attributes={"observable_type": "ipv4-addr"},
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(
+            "IPv4-Addr",
+            known["matches"][0]["match"]["entity_type"],
+        )
+        self.assertEqual(
+            "203.0.113.11",
+            known["matches"][0]["match"]["observable_value"],
+        )
+        self.assertEqual("value", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("stixCyberObservables", calls[0][0])
+        self.assertEqual("value", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertEqual(
+            ["203.0.113.11"],
+            calls[0][1]["filters"]["filters"][0]["values"],
+        )
+
     def test_vulnerability_lookup_prefers_standard_id_before_cve_name(self):
         calls = []
 
@@ -639,6 +757,51 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
                     "stix_id": (
                         "infrastructure--11111111-1111-4111-8111-111111111111"
                     )
+                },
+            }
+        )
+
+        self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_autonomous_system_lookup_prefers_standard_id_before_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {"data": {"stixCyberObservables": {"edges": []}}}
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        lookup.find_candidate(
+            {
+                "stix_object_type": "autonomous-system",
+                "value": "AS64512",
+                "attributes": {
+                    "stix_id": (
+                        "autonomous-system--11111111-1111-4111-8111-111111111111"
+                    )
+                },
+            }
+        )
+
+        self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_observable_lookup_prefers_actual_standard_id_before_value(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {"data": {"stixCyberObservables": {"edges": []}}}
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        lookup.find_candidate(
+            {
+                "stix_object_type": "observable",
+                "value": "203.0.113.11",
+                "attributes": {
+                    "observable_type": "ipv4-addr",
+                    "stix_id": (
+                        "ipv4-addr--11111111-1111-4111-8111-111111111111"
+                    ),
                 },
             }
         )
@@ -768,27 +931,29 @@ def accepted_named_object_policy(
     value,
     name,
     relationship_type,
+    attributes=None,
 ):
+    record = {
+        "entity_type": entity_type,
+        "value": value,
+        "display_name": name,
+        "stix_object_type": stix_object_type,
+        "relationship_type": relationship_type,
+        "source_key": "alienvault:otx",
+        "source_name": "otx",
+        "source_field": "graph_evidence",
+        "confidence": 85,
+        "relationship_confidence": 80,
+    }
+    if attributes:
+        record["attributes"] = attributes
     candidates = build_graph_candidates(
         {
             "version": "v0.8.0-dev",
             "source_key": "alienvault:otx",
             "external_id": "pulse-1",
             "title": "Arsenal pulse",
-            "records": [
-                {
-                    "entity_type": entity_type,
-                    "value": value,
-                    "display_name": name,
-                    "stix_object_type": stix_object_type,
-                    "relationship_type": relationship_type,
-                    "source_key": "alienvault:otx",
-                    "source_name": "otx",
-                    "source_field": "graph_evidence",
-                    "confidence": 85,
-                    "relationship_confidence": 80,
-                }
-            ],
+            "records": [record],
         }
     )
     return apply_graph_candidate_policy(

@@ -38,6 +38,42 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_maps_explicit_autonomous_system_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "autonomous_system",
+                            "value": "AS64512 NarrowCTI Validation ASN",
+                            "source_field": "asn",
+                            "confidence": 70,
+                            "attributes": {"asn": 64512, "rir": "PRIVATE"},
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="ASN pulse",
+        )
+
+        self.assertEqual(1, evidence["counts"]["autonomous_system"])
+        self.assertIn(
+            {
+                "entity_type": "autonomous_system",
+                "value": "AS64512 NarrowCTI Validation ASN",
+                "stix_object_type": "autonomous-system",
+                "relationship_type": "related-to",
+                "source_key": "alienvault:otx",
+                "source_name": "otx",
+                "source_field": "asn",
+                "confidence": 70,
+                "attributes": {"asn": 64512, "rir": "PRIVATE"},
+            },
+            evidence["records"],
+        )
+
     def test_builds_otx_and_mitre_graph_evidence_records(self):
         evidence = build_graph_evidence(
             {

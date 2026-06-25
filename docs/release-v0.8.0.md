@@ -18,6 +18,7 @@ evidence, policy, deduplication, canonical lookup and audit requirements are
 satisfied.
 
 The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`.
+The v0.8 architecture supplement is tracked in `docs/architecture-v0.8.md`.
 Operational validation is tracked in `docs/operational-validation-v0.8.md`.
 Deployment operations are tracked in `docs/deployment-operations-v0.8.md`.
 Analyst review design is tracked in `docs/analyst-review-v0.8.md`.
@@ -90,6 +91,27 @@ Infrastructure ASN/IP correlation is tracked in
   `consists-of` ASN/IP/CIDR, and IP/CIDR can `belongs-to` ASN. The controlled
   bundle for `AS64512 NarrowCTI Validation ASN`, `203.0.113.10` and
   `203.0.113.0/24` reimported without duplicating the controlled objects.
+- Enabled native NarrowCTI graph export support for `autonomous-system`
+  candidates and exact OpenCTI observable lookup for supported observables such
+  as `ipv4-addr`, `ipv6-addr`, `domain-name`, `url` and `email-addr`.
+  OpenCTI lookup now treats ASN and generic observables as
+  `stixCyberObservables` and can reference their real STIX ids, such as
+  `autonomous-system--...` or `ipv4-addr--...`, from a generic NarrowCTI
+  `observable` candidate without recreating the object.
+- Tightened graph relationship deduplication so semantic edges with the same
+  target and relationship type remain distinct when they have different source
+  anchors. This is required for infrastructure intelligence such as
+  `203.0.113.11 -> belongs-to -> AS64513` and
+  `203.0.113.0/25 -> belongs-to -> AS64513` to coexist.
+- Validated native NarrowCTI ASN/IP/CIDR graph export against OpenCTI with the
+  controlled report `NarrowCTI native ASN graph validation 20260625`. The
+  final lookup-backed export found 4 existing graph entities, exported 0 new
+  graph objects, referenced 1 Infrastructure, 1 Autonomous-System and 2
+  Observables, and imported 6 relationships. OpenCTI returned exactly 1
+  Infrastructure, 1 ASN, 1 IP, 1 CIDR and 1 Report, with queryable
+  `Infrastructure -> consists-of -> ASN`, `Infrastructure -> consists-of -> IP`,
+  `Infrastructure -> consists-of -> CIDR`, `IP -> belongs-to -> ASN` and
+  `CIDR -> belongs-to -> ASN` relationships.
 - Documented Report hygiene evidence: deterministic Report ids prevent another
   row when name and description are unchanged; a changed description is treated
   as a distinct report by design.

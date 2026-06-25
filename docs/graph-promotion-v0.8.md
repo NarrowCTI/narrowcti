@@ -203,8 +203,13 @@ ASN/IP infrastructure correlation is tracked separately in
 `docs/infrastructure-correlation-v0.8.md`. Local validation confirmed that
 OpenCTI can ingest `Autonomous-System` as a cyber observable and can represent
 `Infrastructure -> consists-of -> ASN/IP/CIDR` plus
-`IP/CIDR -> belongs-to -> ASN` relationships. Broad activation still requires
-source-backed provenance and exact observable lookup helpers.
+`IP/CIDR -> belongs-to -> ASN` relationships. Native NarrowCTI export now
+supports `autonomous-system` graph candidates and exact OpenCTI lookup for
+supported `stixCyberObservable` values. The lookup uses `name` for ASN objects
+in this lab and `value` for generic observables such as IPv4, IPv6, domain,
+URL and email values. Broad source activation still requires source-backed
+provenance, source-specific ASN/netblock payload validation and relationship
+policy controls.
 
 For Location objects, lookup is intentionally limited to `standard_id` and
 exact OpenCTI name. This is enough to protect controlled country export, such
@@ -213,10 +218,10 @@ as `Argentina`, without guessing ambiguous geography from weak source text.
 When matches exist, decision metadata can include
 `graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
 type, candidate value and canonical OpenCTI match fields such as `opencti_id`,
-`standard_id`, `entity_type`, `name`, `x_mitre_id`, `match_type` and
-`match_value`. The decision audit report also aggregates these matches in the
-`graph_export` summary with counters by candidate object type, canonical match
-type and canonical entity type.
+`standard_id`, `entity_type`, `name`, `observable_value`, `x_mitre_id`,
+`match_type` and `match_value`. The decision audit report also aggregates these
+matches in the `graph_export` summary with counters by candidate object type,
+canonical match type and canonical entity type.
 
 ## Canonical MITRE Linking
 

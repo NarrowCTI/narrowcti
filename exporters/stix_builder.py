@@ -1,9 +1,11 @@
 from collections import Counter
 from datetime import datetime, timezone
+import re
 from uuid import NAMESPACE_URL, uuid5
 
 from stix2 import (
     AttackPattern,
+    AutonomousSystem,
     Bundle,
     DomainName,
     EmailAddress,
@@ -29,6 +31,8 @@ from stix2 import (
 SEMANTIC_RELATIONSHIP_TYPES = {
     "attributed-to",
     "based-on",
+    "belongs-to",
+    "consists-of",
     "detects",
     "indicates",
     "targets",
@@ -424,12 +428,34 @@ def existing_opencti_ref(candidate):
         else {}
     )
     existing_ref = clean_string(attributes.get("opencti_existing_ref"))
-    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
-    if existing_ref and stix_object_type and existing_ref.startswith(
-        f"{stix_object_type}--"
+    if existing_ref and any(
+        existing_ref.startswith(f"{prefix}--")
+        for prefix in candidate_existing_ref_prefixes(candidate)
     ):
         return existing_ref
     return ""
+
+
+def candidate_existing_ref_prefixes(candidate):
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    if stix_object_type != "observable":
+        return [stix_object_type] if stix_object_type else []
+
+    attributes = (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
+    observable_type = clean_string(attributes.get("observable_type")).lower()
+    supported = {
+        "domain-name",
+        "email-addr",
+        "file",
+        "ipv4-addr",
+        "ipv6-addr",
+        "url",
+    }
+    return [observable_type] if observable_type in supported else []
 
 
 def graph_candidate_to_stix_object(candidate, identity_id, now):
@@ -466,6 +492,11 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
         return IntrusionSet(name=name, **common)
     if stix_object_type == "infrastructure":
         return Infrastructure(name=name, **common)
+    if stix_object_type == "autonomous-system":
+        return autonomous_system_candidate_to_stix(
+            candidate,
+            custom_properties,
+        )
     if stix_object_type == "malware":
         return Malware(
             name=name,
@@ -513,6 +544,77 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
     if stix_object_type == "observable":
         return observable_candidate_to_stix(candidate, custom_properties)
     return None
+
+
+def autonomous_system_candidate_to_stix(candidate, custom_properties):
+    attributes = (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
+    number = autonomous_system_number(candidate, attributes)
+    if number is None:
+        return None
+    name = clean_string(
+        attributes.get("as_name")
+        or attributes.get("asn_name")
+        or attributes.get("name")
+        or candidate.get("name")
+        or candidate.get("value")
+    )
+    rir = clean_string(attributes.get("rir"))
+    properties = {
+        "id": deterministic_autonomous_system_id(number),
+        "number": number,
+        "custom_properties": custom_properties,
+        "allow_custom": True,
+    }
+    if name and name != f"AS{number}":
+        properties["name"] = name
+    if rir:
+        properties["rir"] = rir
+    return AutonomousSystem(**properties)
+
+
+def autonomous_system_number(candidate, attributes):
+    for value in (
+        attributes.get("number"),
+        attributes.get("asn"),
+        attributes.get("as_number"),
+        attributes.get("autonomous_system_number"),
+        candidate.get("value"),
+        candidate.get("name"),
+    ):
+        parsed = parse_autonomous_system_number(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def parse_autonomous_system_number(value):
+    text = clean_string(value)
+    if not text:
+        return None
+    match = re.search(r"\bAS\s*([0-9]{1,10})\b", text, re.IGNORECASE)
+    if not match and text.isdigit():
+        match = re.match(r"^([0-9]{1,10})$", text)
+    if not match:
+        return None
+    number = int(match.group(1))
+    if number < 0 or number > 4294967295:
+        return None
+    return number
+
+
+def deterministic_autonomous_system_id(number):
+    material = "|".join(
+        (
+            GRAPH_OBJECT_ID_NAMESPACE,
+            "autonomous-system",
+            str(int(number)),
+        )
+    )
+    return f"autonomous-system--{uuid5(NAMESPACE_URL, material)}"
 
 
 def observable_candidate_to_stix(candidate, custom_properties):

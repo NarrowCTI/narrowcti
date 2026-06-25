@@ -115,6 +115,27 @@ class GraphExportPlanTests(unittest.TestCase):
             plan["actions"][1]["deduplication"]["relationship_duplicate"]
         )
 
+    def test_keeps_same_target_relationships_with_distinct_source_anchors(self):
+        policy = {
+            "accepted": [
+                accepted_asn_relationship_candidate("203.0.113.11"),
+                accepted_asn_relationship_candidate("203.0.113.0/25"),
+            ]
+        }
+
+        plan = build_graph_export_plan(policy, mode="export")
+
+        self.assertEqual(2, plan["accepted_count"])
+        self.assertEqual(1, plan["deduplicated_candidate_count"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertEqual(0, plan["deduplicated_relationship_count"])
+        self.assertEqual(1, plan["exported_object_count"])
+        self.assertEqual(2, plan["exported_relationship_count"])
+        self.assertNotEqual(
+            plan["actions"][0]["deduplication"]["relationship_key"],
+            plan["actions"][1]["deduplication"]["relationship_key"],
+        )
+
     def test_uses_known_graph_keys_for_persistent_deduplication(self):
         policy = apply_graph_candidate_policy(
             build_graph_candidates(
@@ -235,6 +256,50 @@ class GraphExportPlanTests(unittest.TestCase):
             exportable["accepted"][0]["attributes"]["opencti_existing_ref"],
         )
 
+    def test_exportable_policy_references_existing_observable_graph_keys(self):
+        policy = {"accepted": [accepted_ipv4_observable_candidate()]}
+        plan = build_graph_export_plan(policy, mode="export")
+        known_entity_key = plan["actions"][0]["deduplication"]["entity_key"]
+
+        exportable = exportable_graph_candidate_policy(
+            policy,
+            plan,
+            {
+                "entity_keys": [known_entity_key],
+                "relationship_keys": [],
+                "matches": [
+                    {
+                        "entity_key": known_entity_key,
+                        "stix_object_type": "observable",
+                        "value": "203.0.113.11",
+                        "match": {
+                            "standard_id": (
+                                "ipv4-addr--11111111-1111-4111-8111-"
+                                "111111111111"
+                            ),
+                            "opencti_id": "internal--ipv4",
+                            "entity_type": "IPv4-Addr",
+                            "name": "203.0.113.11",
+                            "observable_value": "203.0.113.11",
+                            "match_type": "value",
+                            "match_value": "203.0.113.11",
+                        },
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(1, exportable["accepted_count"])
+        attributes = exportable["accepted"][0]["attributes"]
+        self.assertEqual(
+            "ipv4-addr--11111111-1111-4111-8111-111111111111",
+            attributes["opencti_existing_ref"],
+        )
+        self.assertEqual(
+            "203.0.113.11",
+            attributes["opencti_existing_observable_value"],
+        )
+
     def test_exportable_policy_skips_known_graph_keys_without_standard_id(self):
         policy = self.graph_policy().to_dict()
         plan = build_graph_export_plan(policy, mode="export")
@@ -314,6 +379,44 @@ def accepted_attack_pattern_record():
         "source_field": "mitre_attack.resolved",
         "confidence": 90,
         "relationship_confidence": 85,
+    }
+
+
+def accepted_ipv4_observable_candidate():
+    return {
+        "fingerprint": "observable-ipv4",
+        "entity_type": "observable",
+        "value": "203.0.113.11",
+        "name": "203.0.113.11",
+        "stix_object_type": "observable",
+        "relationship_type": "related-to",
+        "source_key": "validation:narrowcti",
+        "source_name": "validation",
+        "source_field": "ip",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {"observable_type": "ipv4-addr"},
+    }
+
+
+def accepted_asn_relationship_candidate(source_value):
+    return {
+        "fingerprint": f"asn-belongs-to-{source_value}",
+        "entity_type": "autonomous_system",
+        "value": "AS64513 NarrowCTI Native ASN",
+        "name": "AS64513 NarrowCTI Native ASN",
+        "stix_object_type": "autonomous-system",
+        "relationship_type": "belongs-to",
+        "source_key": "validation:narrowcti",
+        "source_name": "validation",
+        "source_field": "asn",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "asn": 64513,
+            "relationship_source_stix_object_type": "observable",
+            "relationship_source_value": source_value,
+        },
     }
 
 

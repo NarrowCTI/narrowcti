@@ -1,3 +1,4 @@
+import ipaddress
 import re
 from collections.abc import Mapping
 
@@ -206,8 +207,24 @@ query NarrowCTILocationGraphLookup($filters: FilterGroup) {
 }
 """
 
+STIX_CYBER_OBSERVABLE_LOOKUP_QUERY = """
+query NarrowCTIStixCyberObservableGraphLookup($filters: FilterGroup) {
+  stixCyberObservables(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        observable_value
+      }
+    }
+  }
+}
+"""
+
 ATTACK_ID_RE = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 VULNERABILITY_ID_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
+AUTONOMOUS_SYSTEM_RE = re.compile(r"\bAS\s*(\d{1,10})\b", re.IGNORECASE)
 CURATED_ALIAS_GROUPS = {
     "malware": [
         {
@@ -321,6 +338,10 @@ class OpenCTIGraphLookup:
                 collection_name="locations",
                 query_text=LOCATION_LOOKUP_QUERY,
             )
+        if stix_object_type == "autonomous-system":
+            return self.find_autonomous_system(candidate)
+        if stix_object_type == "observable":
+            return self.find_observable(candidate)
         return None
 
     def find_attack_pattern(self, candidate):
@@ -356,6 +377,40 @@ class OpenCTIGraphLookup:
                 vulnerability_id,
                 "cve_id",
             )
+
+        return None
+
+    def find_autonomous_system(self, candidate):
+        standard_id = graph_object_standard_id(candidate, "autonomous-system")
+        if standard_id:
+            return self.query_cyber_observable(
+                "standard_id",
+                standard_id,
+                "standard_id",
+            )
+
+        observable_value = autonomous_system_observable_value(candidate)
+        if observable_value:
+            return self.query_cyber_observable("name", observable_value, "name")
+
+        return None
+
+    def find_observable(self, candidate):
+        observable_type = observable_stix_object_type(candidate)
+        if not observable_type:
+            return None
+
+        standard_id = graph_object_standard_id(candidate, observable_type)
+        if standard_id:
+            return self.query_cyber_observable(
+                "standard_id",
+                standard_id,
+                "standard_id",
+            )
+
+        value = observable_value(candidate)
+        if value:
+            return self.query_cyber_observable("value", value, "value")
 
         return None
 
@@ -507,6 +562,35 @@ class OpenCTIGraphLookup:
             "match_value": value,
         }
 
+    def query_cyber_observable(self, key, value, match_type):
+        variables = {"filters": filter_eq(key, value)}
+        try:
+            result = self.api_client.query(
+                STIX_CYBER_OBSERVABLE_LOOKUP_QUERY,
+                variables,
+            )
+        except Exception as exc:
+            self.logger(
+                "OpenCTI graph lookup failed: "
+                f"type=stix-cyber-observable key={key} value={value} error={exc}"
+            )
+            return None
+
+        node = first_node(result, "stixCyberObservables")
+        if not node:
+            return None
+
+        observable_value = clean_string(node.get("observable_value"))
+        return {
+            "opencti_id": clean_string(node.get("id")),
+            "standard_id": clean_string(node.get("standard_id")),
+            "entity_type": clean_string(node.get("entity_type")),
+            "name": observable_value,
+            "observable_value": observable_value,
+            "match_type": match_type,
+            "match_value": value,
+        }
+
 
 class CompositeGraphLookup:
     def __init__(self, *lookups):
@@ -651,6 +735,109 @@ def vulnerability_external_id(candidate):
         if normalized:
             return normalized
 
+    return ""
+
+
+def autonomous_system_observable_value(candidate):
+    candidate = mapping_from(candidate)
+    attributes = mapping_from(candidate.get("attributes"))
+    number = autonomous_system_number(candidate, attributes)
+    if number is None:
+        return ""
+    name = clean_string(
+        attributes.get("as_name")
+        or attributes.get("asn_name")
+        or attributes.get("name")
+        or candidate.get("name")
+        or candidate.get("value")
+    )
+    as_prefix = f"AS{number}"
+    if name and name != as_prefix and not name.upper().startswith(as_prefix.upper()):
+        return f"{as_prefix} {name}"
+    return name or as_prefix
+
+
+def autonomous_system_number(candidate, attributes=None):
+    candidate = mapping_from(candidate)
+    attributes = mapping_from(
+        attributes if attributes is not None else candidate.get("attributes")
+    )
+    for value in (
+        attributes.get("number"),
+        attributes.get("asn"),
+        attributes.get("as_number"),
+        attributes.get("autonomous_system_number"),
+        candidate.get("value"),
+        candidate.get("name"),
+    ):
+        parsed = parse_autonomous_system_number(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def parse_autonomous_system_number(value):
+    text = clean_string(value)
+    if not text:
+        return None
+    match = AUTONOMOUS_SYSTEM_RE.search(text)
+    if not match and text.isdigit():
+        match = re.match(r"^([0-9]{1,10})$", text)
+    if not match:
+        return None
+    number = int(match.group(1))
+    if number < 0 or number > 4294967295:
+        return None
+    return number
+
+
+def observable_stix_object_type(candidate):
+    candidate = mapping_from(candidate)
+    attributes = mapping_from(candidate.get("attributes"))
+    observable_type = clean_string(attributes.get("observable_type")).lower()
+    supported = {
+        "domain-name",
+        "url",
+        "ipv4-addr",
+        "ipv6-addr",
+        "email-addr",
+        "file",
+    }
+    if observable_type in supported:
+        return observable_type
+    return infer_observable_stix_object_type(observable_value(candidate))
+
+
+def infer_observable_stix_object_type(value):
+    value = clean_string(value)
+    if not value:
+        return ""
+    try:
+        network = ipaddress.ip_network(value, strict=False)
+    except ValueError:
+        network = None
+    if network:
+        return "ipv4-addr" if network.version == 4 else "ipv6-addr"
+    lowered = value.lower()
+    if lowered.startswith(("http://", "https://")):
+        return "url"
+    if "@" in value and not any(char.isspace() for char in value):
+        return "email-addr"
+    if re.match(r"^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", value):
+        return "domain-name"
+    return ""
+
+
+def observable_value(candidate):
+    candidate = mapping_from(candidate)
+    for value in (
+        candidate.get("value"),
+        candidate.get("name"),
+        candidate.get("display_name"),
+    ):
+        cleaned = clean_string(value)
+        if cleaned:
+            return cleaned
     return ""
 
 

@@ -221,6 +221,82 @@ class GraphStixBuilderTests(unittest.TestCase):
             relationship["x_narrowcti_relationship_source_field"],
         )
 
+    def test_builds_infrastructure_asn_ip_relationships(self):
+        bundle, summary = build_graph_report_bundle(
+            "Curated infrastructure report",
+            "ASN/IP context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    infrastructure_candidate(),
+                    infrastructure_asn_candidate("consists-of"),
+                    infrastructure_ip_candidate(),
+                    infrastructure_asn_candidate(
+                        "belongs-to",
+                        source_type="observable",
+                        source_value="203.0.113.10",
+                    ),
+                ]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        self.assertEqual(4, summary["accepted_candidate_count"])
+        self.assertEqual(3, summary["graph_object_count"])
+        self.assertEqual(
+            {
+                "autonomous-system": 1,
+                "infrastructure": 1,
+                "ipv4-addr": 1,
+            },
+            summary["object_counts"],
+        )
+        self.assertEqual(
+            {"belongs-to": 1, "consists-of": 2, "related-to": 1},
+            summary["relationship_counts"],
+        )
+        self.assertEqual(3, summary["semantic_relationship_count"])
+        self.assertEqual(1, summary["report_relationship_count"])
+        self.assertEqual(1, len(objects_by_type["autonomous-system"]))
+        self.assertEqual(1, len(objects_by_type["ipv4-addr"]))
+
+        infrastructure = objects_by_type["infrastructure"][0]
+        autonomous_system = objects_by_type["autonomous-system"][0]
+        ip_address = objects_by_type["ipv4-addr"][0]
+        self.assertEqual(64512, autonomous_system["number"])
+        self.assertEqual("AS64512 NarrowCTI Validation ASN", autonomous_system["name"])
+        self.assertEqual("203.0.113.10", ip_address["value"])
+
+        relationships = objects_by_type["relationship"]
+        self.assertTrue(
+            any(
+                relationship["source_ref"] == infrastructure["id"]
+                and relationship["relationship_type"] == "consists-of"
+                and relationship["target_ref"] == autonomous_system["id"]
+                for relationship in relationships
+            )
+        )
+        self.assertTrue(
+            any(
+                relationship["source_ref"] == infrastructure["id"]
+                and relationship["relationship_type"] == "consists-of"
+                and relationship["target_ref"] == ip_address["id"]
+                for relationship in relationships
+            )
+        )
+        self.assertTrue(
+            any(
+                relationship["source_ref"] == ip_address["id"]
+                and relationship["relationship_type"] == "belongs-to"
+                and relationship["target_ref"] == autonomous_system["id"]
+                for relationship in relationships
+            )
+        )
+
     def test_builds_curated_bundle_with_indicators_and_graph_entities(self):
         bundle, indicator_count, summary = build_curated_report_bundle(
             "Curated ingest report",
@@ -342,6 +418,38 @@ class GraphStixBuilderTests(unittest.TestCase):
         self.assertEqual(existing_attack_pattern_ref, relationship["target_ref"])
         self.assertEqual("semantic", relationship["x_narrowcti_relationship_mode"])
 
+    def test_curated_bundle_references_existing_opencti_observables(self):
+        existing_observable_ref = (
+            "ipv4-addr--11111111-1111-4111-8111-111111111111"
+        )
+        bundle, _, summary = build_curated_report_bundle(
+            "Curated observable report",
+            "graph context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    existing_ipv4_observable_candidate(existing_observable_ref)
+                ]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        report = objects_by_type["report"][0]
+        relationship = objects_by_type["relationship"][0]
+
+        self.assertNotIn("ipv4-addr", objects_by_type)
+        self.assertEqual(1, summary["existing_reference_count"])
+        self.assertEqual(
+            {"observable": 1},
+            summary["existing_reference_counts"],
+        )
+        self.assertIn(existing_observable_ref, report["object_refs"])
+        self.assertEqual(existing_observable_ref, relationship["target_ref"])
+
     def test_skips_invalid_or_unsupported_graph_candidates(self):
         _, summary = build_graph_report_bundle(
             "Curated graph report",
@@ -425,6 +533,55 @@ def infrastructure_candidate():
     }
 
 
+def infrastructure_asn_candidate(
+    relationship_type,
+    source_type="infrastructure",
+    source_value="Validation C2 Infrastructure",
+):
+    return {
+        "fingerprint": f"asn-{relationship_type}-{source_type}",
+        "entity_type": "autonomous_system",
+        "value": "AS64512 NarrowCTI Validation ASN",
+        "name": "AS64512 NarrowCTI Validation ASN",
+        "stix_object_type": "autonomous-system",
+        "relationship_type": relationship_type,
+        "source_key": "misp:misp",
+        "source_name": "misp-object",
+        "source_field": "asn",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "asn": 64512,
+            "rir": "PRIVATE",
+            "relationship_source_stix_object_type": source_type,
+            "relationship_source_value": source_value,
+            "relationship_source_field": "asn-enrichment",
+        },
+    }
+
+
+def infrastructure_ip_candidate():
+    return {
+        "fingerprint": "infra-ip-1",
+        "entity_type": "observable",
+        "value": "203.0.113.10",
+        "name": "203.0.113.10",
+        "stix_object_type": "observable",
+        "relationship_type": "consists-of",
+        "source_key": "misp:misp",
+        "source_name": "misp-object",
+        "source_field": "ip",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "observable_type": "ipv4-addr",
+            "relationship_source_stix_object_type": "infrastructure",
+            "relationship_source_value": "Validation C2 Infrastructure",
+            "relationship_source_field": "ip-enrichment",
+        },
+    }
+
+
 def target_sector_candidate():
     return {
         "fingerprint": "sector-1",
@@ -499,6 +656,16 @@ def existing_attack_pattern_candidate(existing_ref):
         "opencti_existing_entity_type": "Attack-Pattern",
         "opencti_match_type": "mitre_attack_id",
         "opencti_match_value": "T1059",
+    }
+    return candidate
+
+
+def existing_ipv4_observable_candidate(existing_ref):
+    candidate = infrastructure_ip_candidate()
+    candidate["relationship_type"] = "related-to"
+    candidate["attributes"] = {
+        "observable_type": "ipv4-addr",
+        "opencti_existing_ref": existing_ref,
     }
     return candidate
 
@@ -599,6 +766,7 @@ def graph_object_ids_by_name(bundle):
         if item["type"]
         in {
             "attack-pattern",
+            "autonomous-system",
             "identity",
             "infrastructure",
             "intrusion-set",
