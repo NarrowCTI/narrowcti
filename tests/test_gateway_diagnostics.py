@@ -145,6 +145,14 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             format_text_snapshot(snapshot),
         )
         self.assertIn(
+            "narrative=records=1 entities=3 attack_patterns=Command and Scripting Interpreter:1",
+            format_text_snapshot(snapshot),
+        )
+        self.assertIn(
+            "threats=APT Example:1 sectors=Finance:1",
+            format_text_snapshot(snapshot),
+        )
+        self.assertIn(
             "top_reasons=reject:Out of scope=2",
             format_text_snapshot(snapshot),
         )

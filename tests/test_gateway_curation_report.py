@@ -406,6 +406,40 @@ class GatewayCurationReportTests(unittest.TestCase):
             [{"type": "uses", "count": 6}],
             insight["graph_evidence"]["top_stix_relationships"],
         )
+        self.assertEqual(9, insight["context_narrative"]["entity_count"])
+        self.assertEqual(
+            [
+                {
+                    "entity_type": "attack_pattern",
+                    "value": "T1059",
+                    "display_name": "Command and Scripting Interpreter",
+                    "count": 3,
+                }
+            ],
+            insight["context_narrative"]["top_attack_patterns"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "entity_type": "threat_actor",
+                    "value": "APT Example",
+                    "display_name": "APT Example",
+                    "count": 3,
+                }
+            ],
+            insight["context_narrative"]["top_threat_actors"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "entity_type": "target_sector",
+                    "value": "Finance",
+                    "display_name": "Finance",
+                    "count": 3,
+                }
+            ],
+            insight["context_narrative"]["top_target_sectors"],
+        )
         self.assertEqual(9, insight["context_quality"]["accepted_candidate_count"])
         self.assertEqual(3.0, insight["context_quality"]["candidate_density"])
         self.assertEqual(
@@ -435,6 +469,11 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("graph=candidates=6 density=2.0", text)
         self.assertIn("accepted_object_types=attack-pattern:3", text)
         self.assertIn("stix_relationship_types=uses:6", text)
+        self.assertIn(
+            "narrative=records=3 entities=9 attack_patterns=Command and Scripting Interpreter:3",
+            text,
+        )
+        self.assertIn("threats=APT Example:3 sectors=Finance:3", text)
         self.assertIn("context=records=3 accepted_context=9 density=3.0", text)
         self.assertIn("categories=ttp:6,threat:3", text)
         self.assertIn("quarantine_reasons=quarantine:low score=3", text)
@@ -703,6 +742,42 @@ def graph_metadata():
             "graph_relationship_count": 2,
             "object_counts": {"attack-pattern": 1, "malware": 1},
             "relationship_counts": {"uses": 2},
+        },
+        "graph_evidence": {
+            "version": "v0.7.0-dev",
+            "source_key": "misp",
+            "external_id": "external-1",
+            "title": "Sample intelligence",
+            "record_count": 3,
+            "records": [
+                {
+                    "entity_type": "attack_pattern",
+                    "value": "T1059",
+                    "display_name": "Command and Scripting Interpreter",
+                    "source_key": "misp",
+                    "source_name": "mitre-attack",
+                    "source_field": "mitre_attack.resolved",
+                    "confidence": 90,
+                },
+                {
+                    "entity_type": "threat_actor",
+                    "value": "APT Example",
+                    "display_name": "APT Example",
+                    "source_key": "misp",
+                    "source_name": "misp",
+                    "source_field": "Galaxy.value",
+                    "confidence": 80,
+                },
+                {
+                    "entity_type": "target_sector",
+                    "value": "Finance",
+                    "display_name": "Finance",
+                    "source_key": "misp",
+                    "source_name": "misp",
+                    "source_field": "Galaxy.meta.targeted-sector",
+                    "confidence": 70,
+                },
+            ],
         },
     }
 

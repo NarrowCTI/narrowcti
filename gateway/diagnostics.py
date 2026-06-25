@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from core.decision_audit import utc_now
 from gateway.curation_report import (
     build_curation_report_from_files,
+    format_context_narrative_summary,
     format_context_quality_summary,
     format_graph_evidence_summary,
     format_policy_score_summary,
@@ -530,7 +531,9 @@ def format_text_snapshot(snapshot):
                 f"{source.get('source_key')} posture={source.get('posture')} "
                 f"runs={source.get('runs', 0)} failed={source.get('failed', 0)} "
                 f"decision_records={source.get('decision_records', 0)} "
-                f"pending_review={source.get('pending_review', 0)}"
+                f"pending_review={source.get('pending_review', 0)} "
+                f"narrative="
+                f"{format_context_narrative_summary(source.get('context_narrative'))}"
             )
     if curation.get("policy_insights"):
         lines.append("policy_insights:")
@@ -545,6 +548,8 @@ def format_text_snapshot(snapshot):
                 f"scores={format_policy_score_summary(insight.get('score_summary'))} "
                 f"graph={format_graph_evidence_summary(insight.get('graph_evidence'))} "
                 f"context={format_context_quality_summary(insight.get('context_quality'))} "
+                f"narrative="
+                f"{format_context_narrative_summary(insight.get('context_narrative'))} "
                 f"quarantine_reasons="
                 f"{format_reason_entries(insight.get('top_quarantine_reasons'))} "
                 f"top_reasons={format_reason_entries(insight.get('top_reasons'))}"
@@ -596,11 +601,12 @@ def format_html_snapshot(snapshot):
             source.get("failed"),
             source.get("decision_records"),
             source.get("pending_review"),
+            format_context_narrative_summary(source.get("context_narrative")),
         )
         for source in curation.get("source_summaries") or []
     )
     if not source_rows:
-        source_rows = html_table_row("none", "", 0, 0, 0, 0)
+        source_rows = html_table_row("none", "", 0, 0, 0, 0, "")
     policy_rows = "\n".join(
         html_table_row(
             insight.get("source_key"),
@@ -612,13 +618,14 @@ def format_html_snapshot(snapshot):
             format_policy_score_summary(insight.get("score_summary")),
             format_graph_evidence_summary(insight.get("graph_evidence")),
             format_context_quality_summary(insight.get("context_quality")),
+            format_context_narrative_summary(insight.get("context_narrative")),
             format_reason_entries(insight.get("top_quarantine_reasons")),
             format_reason_entries(insight.get("top_reasons")),
         )
         for insight in curation.get("policy_insights") or []
     )
     if not policy_rows:
-        policy_rows = html_table_row("none", "", "", 0, 0, 0, "", "", "", "", "")
+        policy_rows = html_table_row("none", "", "", 0, 0, 0, "", "", "", "", "", "")
     validation_rows = "\n".join(
         html_table_row(
             item.get("code"),
@@ -693,14 +700,14 @@ def format_html_snapshot(snapshot):
   <section>
     <h2>Source Posture</h2>
     <table>
-      <tr><th>source</th><th>posture</th><th>runs</th><th>failed</th><th>decision records</th><th>pending review</th></tr>
+      <tr><th>source</th><th>posture</th><th>runs</th><th>failed</th><th>decision records</th><th>pending review</th><th>context narrative</th></tr>
       {source_rows}
     </table>
   </section>
   <section>
     <h2>Policy Insights</h2>
     <table>
-      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>context quality</th><th>quarantine reasons</th><th>top reasons</th></tr>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>context quality</th><th>context narrative</th><th>quarantine reasons</th><th>top reasons</th></tr>
       {policy_rows}
     </table>
   </section>

@@ -6,6 +6,7 @@ import unittest
 from gateway.decisions import (
     build_contextual_scoring_summary,
     build_decision_audit_report,
+    build_graph_entity_summary,
     build_graph_export_summary,
     build_graph_stix_preview_summary,
     build_score_summary,
@@ -363,6 +364,90 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         )
 
         self.assertEqual(0, summary["record_count"])
+        self.assertEqual({}, summary["by_source"])
+        self.assertEqual([], summary["by_query"])
+
+    def test_report_aggregates_graph_entity_narrative_metadata(self):
+        records = [
+            decision_record(
+                "2026-06-22T10:00:00Z",
+                "otx",
+                "dry-run",
+                "ok",
+                metadata={
+                    "graph_evidence": graph_evidence(
+                        [
+                            graph_entity(
+                                "attack_pattern",
+                                "T1059",
+                                "Command and Scripting Interpreter",
+                            ),
+                            graph_entity("threat_actor", "APT Example"),
+                            graph_entity("target_sector", "Finance"),
+                        ]
+                    )
+                },
+                query="lummac2",
+            ),
+            decision_record(
+                "2026-06-22T10:01:00Z",
+                "otx",
+                "dry-run",
+                "ok",
+                metadata={
+                    "graph_evidence": graph_evidence(
+                        [
+                            graph_entity(
+                                "attack_pattern",
+                                "T1059",
+                                "Command and Scripting Interpreter",
+                            ),
+                            graph_entity("intrusion_set", "Intrusion Example"),
+                            graph_entity("target_sector", "Finance"),
+                            graph_entity("malware", "Loader Example"),
+                        ]
+                    )
+                },
+                query="lummac2",
+            ),
+            decision_record("2026-06-22T10:02:00Z", "misp", "drop", "old"),
+        ]
+
+        report = build_decision_audit_report(records)
+        entities = report.graph_entities
+        text = format_text_report(report)
+
+        self.assertEqual(2, entities["record_count"])
+        self.assertEqual(6, entities["entity_count"])
+        self.assertEqual(
+            {"attack_patterns": 2, "target_sectors": 2, "threat_actors": 2},
+            entities["counts"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "entity_type": "attack_pattern",
+                    "value": "T1059",
+                    "display_name": "Command and Scripting Interpreter",
+                    "count": 2,
+                }
+            ],
+            entities["top_attack_patterns"],
+        )
+        self.assertEqual(6, entities["by_source"]["otx"]["entity_count"])
+        self.assertEqual(2, entities["by_source"]["otx"]["counts"]["attack_patterns"])
+        self.assertEqual(2, entities["by_query"][0]["record_count"])
+        self.assertIn("graph_entities:", text)
+        self.assertIn("attack_patterns=Command and Scripting Interpreter=2", text)
+        self.assertIn("sectors=Finance=2", text)
+
+    def test_graph_entity_summary_ignores_records_without_metadata(self):
+        summary = build_graph_entity_summary(
+            [decision_record("2026-06-22T10:00:00Z", "otx", "drop", "old")]
+        )
+
+        self.assertEqual(0, summary["record_count"])
+        self.assertEqual(0, summary["entity_count"])
         self.assertEqual({}, summary["by_source"])
         self.assertEqual([], summary["by_query"])
 
@@ -795,6 +880,29 @@ def graph_stix_preview(
         "relationship_counts": relationship_counts or {},
         "proposed_relationship_counts": proposed_relationship_counts or {},
         "skipped_candidates": [],
+    }
+
+
+def graph_evidence(records):
+    return {
+        "version": "v0.7.0-dev",
+        "source_key": "otx",
+        "external_id": "external-1",
+        "title": "Sample intelligence",
+        "record_count": len(records),
+        "records": records,
+    }
+
+
+def graph_entity(entity_type, value, display_name=""):
+    return {
+        "entity_type": entity_type,
+        "value": value,
+        "display_name": display_name,
+        "source_key": "otx",
+        "source_name": "test",
+        "source_field": "fixture",
+        "confidence": 80,
     }
 
 

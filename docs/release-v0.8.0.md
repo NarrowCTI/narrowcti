@@ -133,6 +133,10 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added context-quality metrics to curation policy insights so analyst reports
   show contextual scoring volume, score delta and top CTI categories per source
   without applying contextual score to final ingest decisions.
+- Added the first evidence-driven context narrative over decision
+  `graph_evidence` so curation reports and support diagnostics can show top
+  ATT&CK techniques, threat actors/intrusion sets and target sectors per source
+  without inventing missing context.
 - Added source-level quarantine reason rollups to policy insights so repeated
   hold conditions from decision audit are visible next to analyst release/reject
   feedback.

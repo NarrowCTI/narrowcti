@@ -400,6 +400,21 @@ def empty_context_quality_summary():
     }
 
 
+def empty_context_narrative_summary():
+    return {
+        "record_count": 0,
+        "entity_count": 0,
+        "counts": {
+            "attack_patterns": 0,
+            "target_sectors": 0,
+            "threat_actors": 0,
+        },
+        "top_attack_patterns": [],
+        "top_threat_actors": [],
+        "top_target_sectors": [],
+    }
+
+
 def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
     graph_export = graph_export or {}
     graph_preview = graph_preview or {}
@@ -475,6 +490,23 @@ def build_context_quality_summary(contextual_scoring, decision_records):
     }
 
 
+def build_context_narrative_summary(graph_entities):
+    graph_entities = graph_entities or {}
+    counts = dict(graph_entities.get("counts") or {})
+    return {
+        "record_count": int(graph_entities.get("record_count", 0) or 0),
+        "entity_count": int(graph_entities.get("entity_count", 0) or 0),
+        "counts": {
+            "attack_patterns": int(counts.get("attack_patterns", 0) or 0),
+            "target_sectors": int(counts.get("target_sectors", 0) or 0),
+            "threat_actors": int(counts.get("threat_actors", 0) or 0),
+        },
+        "top_attack_patterns": list(graph_entities.get("top_attack_patterns") or []),
+        "top_threat_actors": list(graph_entities.get("top_threat_actors") or []),
+        "top_target_sectors": list(graph_entities.get("top_target_sectors") or []),
+    }
+
+
 def build_source_summaries(operational, decisions, analyst_review, review_actions):
     source_keys = set()
     source_keys.update((operational.get("sources") or {}).keys())
@@ -524,6 +556,12 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
             or {},
             decision_source.get("records", 0),
         )
+        context_narrative = build_context_narrative_summary(
+            ((decisions.get("graph_entities") or {}).get("by_source") or {}).get(
+                source_key,
+            )
+            or {}
+        )
         totals = operational_source.get("totals") or {}
         metrics = operational_source.get("metrics") or {}
         statuses = quarantine_source.get("statuses") or {}
@@ -551,6 +589,7 @@ def build_source_summaries(operational, decisions, analyst_review, review_action
             + int((score_summary.get("bands") or {}).get("30-49", 0)),
             "graph_evidence": graph_evidence,
             "context_quality": context_quality,
+            "context_narrative": context_narrative,
             "quarantine_records": quarantine_source.get("records", 0)
             or (analyst_review.get("source_counts") or {}).get(source_key, 0),
             "pending_review": statuses.get("pending", 0),
@@ -612,6 +651,10 @@ def build_policy_insights(source_summaries):
             "context_quality": source.get(
                 "context_quality",
                 empty_context_quality_summary(),
+            ),
+            "context_narrative": source.get(
+                "context_narrative",
+                empty_context_narrative_summary(),
             ),
             "severity": "info",
             "signal": "observe-review-pattern",
@@ -835,7 +878,9 @@ def format_text_report(report, redaction_profile="none"):
                 f"decision_records={source['decision_records']} "
                 f"pending_review={source['pending_review']} "
                 f"release_count={source['release_count']} "
-                f"reject_count={source['reject_count']}"
+                f"reject_count={source['reject_count']} "
+                f"narrative="
+                f"{format_context_narrative_summary(source.get('context_narrative'))}"
             )
     if data.get("policy_insights"):
         lines.append("policy_insights:")
@@ -850,6 +895,8 @@ def format_text_report(report, redaction_profile="none"):
                 f"scores={format_policy_score_summary(insight.get('score_summary'))} "
                 f"graph={format_graph_evidence_summary(insight.get('graph_evidence'))} "
                 f"context={format_context_quality_summary(insight.get('context_quality'))} "
+                f"narrative="
+                f"{format_context_narrative_summary(insight.get('context_narrative'))} "
                 f"quarantine_reasons="
                 f"{format_reason_entries(insight.get('top_quarantine_reasons'))} "
                 f"top_reasons={format_reason_entries(insight.get('top_reasons'))}: "
@@ -889,11 +936,12 @@ def format_html_report(report, redaction_profile="none"):
             source.get("pending_review"),
             source.get("release_count"),
             source.get("reject_count"),
+            format_context_narrative_summary(source.get("context_narrative")),
         )
         for source in data.get("source_summaries") or []
     )
     if not source_rows:
-        source_rows = html_table_row("none", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        source_rows = html_table_row("none", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "")
     policy_rows = "\n".join(
         html_table_row(
             insight.get("source_key"),
@@ -907,6 +955,7 @@ def format_html_report(report, redaction_profile="none"):
             format_policy_score_summary(insight.get("score_summary")),
             format_graph_evidence_summary(insight.get("graph_evidence")),
             format_context_quality_summary(insight.get("context_quality")),
+            format_context_narrative_summary(insight.get("context_narrative")),
             format_reason_entries(insight.get("top_quarantine_reasons")),
             format_reason_entries(insight.get("top_reasons")),
             insight.get("message"),
@@ -923,6 +972,7 @@ def format_html_report(report, redaction_profile="none"):
             0,
             0,
             0,
+            "",
             "",
             "",
             "",
@@ -988,14 +1038,14 @@ def format_html_report(report, redaction_profile="none"):
   <section>
     <h2>Source Summaries</h2>
     <table>
-      <tr><th>source</th><th>posture</th><th>runs</th><th>failed</th><th>reviewed</th><th>accepted</th><th>filtered</th><th>errors</th><th>decision records</th><th>pending review</th><th>released</th><th>rejected</th></tr>
+      <tr><th>source</th><th>posture</th><th>runs</th><th>failed</th><th>reviewed</th><th>accepted</th><th>filtered</th><th>errors</th><th>decision records</th><th>pending review</th><th>released</th><th>rejected</th><th>context narrative</th></tr>
       {source_rows}
     </table>
   </section>
   <section>
     <h2>Policy Insights</h2>
     <table>
-      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>context quality</th><th>quarantine reasons</th><th>top reasons</th><th>message</th></tr>
+      <tr><th>source</th><th>severity</th><th>signal</th><th>review decisions</th><th>released</th><th>rejected</th><th>release rate</th><th>reject rate</th><th>scores</th><th>graph evidence</th><th>context quality</th><th>context narrative</th><th>quarantine reasons</th><th>top reasons</th><th>message</th></tr>
       {policy_rows}
     </table>
   </section>
@@ -1140,6 +1190,18 @@ def format_context_quality_summary(summary):
     )
 
 
+def format_context_narrative_summary(summary):
+    summary = summary or empty_context_narrative_summary()
+    return (
+        f"records={summary.get('record_count', 0)} "
+        f"entities={summary.get('entity_count', 0)} "
+        f"attack_patterns="
+        f"{format_narrative_entries(summary.get('top_attack_patterns'))} "
+        f"threats={format_narrative_entries(summary.get('top_threat_actors'))} "
+        f"sectors={format_narrative_entries(summary.get('top_target_sectors'))}"
+    )
+
+
 def format_category_entries(entries):
     entries = list(entries or [])
     if not entries:
@@ -1147,6 +1209,19 @@ def format_category_entries(entries):
     return ",".join(
         "{}:{}".format(
             entry.get("category", "unknown"),
+            entry.get("count", 0),
+        )
+        for entry in entries
+    )
+
+
+def format_narrative_entries(entries):
+    entries = list(entries or [])
+    if not entries:
+        return "none"
+    return ",".join(
+        "{}:{}".format(
+            entry.get("display_name") or entry.get("value") or "unknown",
             entry.get("count", 0),
         )
         for entry in entries

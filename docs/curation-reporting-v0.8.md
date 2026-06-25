@@ -128,7 +128,9 @@ The current report contains:
   feedback for policy tuning, including top review reasons by action and
   source.
 - `source_summaries`: per-source posture with operational, decision, review and
-  review-action counters.
+  review-action counters, plus an evidence-driven context narrative when
+  source decision metadata carries ATT&CK, threat actor/intrusion set or
+  target-sector graph evidence.
 - `policy_insights`: source-level policy tuning hints derived from repeated
   release/reject audit patterns, with top analyst reasons attached to explain
   what drove the signal and decision score distributions attached to show
@@ -137,7 +139,9 @@ The current report contains:
   see whether a source is producing graph context, OpenCTI canonical matches and
   relationship-ready evidence. Context-quality metrics are attached from
   contextual scoring evidence so analysts can see whether reviewed candidates
-  carry actor, TTP, sector, arsenal or other high-value CTI context.
+  carry actor, TTP, sector, arsenal or other high-value CTI context. The same
+  evidence also feeds a compact context narrative with top ATT&CK techniques,
+  top threat actors/intrusion sets and top target sectors per source.
   Repeated quarantine reasons are attached from source-level decision audit
   action reasons so operators can see which policy condition is holding a
   source back.
@@ -216,6 +220,12 @@ accepted context candidates, adjustment volume, average score delta, maximum
 contextual score and top context categories. In v0.8 this remains report
 evidence only; it does not apply contextual scoring to final ingest decisions.
 
+The context narrative summary is also evidence-only. It is built from
+`graph_evidence.records` in decision metadata and currently surfaces top
+`attack_pattern`, `threat_actor`/`intrusion_set` and `target_sector` values by
+source. It does not invent missing actors, sectors or ATT&CK techniques; if a
+feed does not provide those fields, the report shows `none`.
+
 Repeated quarantine reasons are taken from decision audit evidence grouped by
 source and action. They explain why candidates are being held, for example low
 score, missing relationship provenance or blocked TLP, without changing
@@ -224,7 +234,8 @@ quarantine policy automatically.
 ## Future Work
 
 - Add PDF export once the report schema stabilizes.
-- Add richer per-actor, per-sector and per-ATT&CK narratives.
+- Expand the first evidence-driven context narrative into richer per-actor,
+  per-sector and per-ATT&CK report sections.
 - Add graph-quality deltas after controlled graph promotion is enabled.
 - Add profile-specific redaction policy controls for future tenant-specific
   external report delivery.

@@ -18,6 +18,19 @@ ACTION_ORDER = (
     "error",
 )
 
+GRAPH_ENTITY_CATEGORIES = {
+    "attack_pattern": "attack_patterns",
+    "threat_actor": "threat_actors",
+    "intrusion_set": "threat_actors",
+    "target_sector": "target_sectors",
+}
+
+GRAPH_ENTITY_TOP_FIELDS = {
+    "attack_patterns": "top_attack_patterns",
+    "threat_actors": "top_threat_actors",
+    "target_sectors": "top_target_sectors",
+}
+
 
 @dataclass(frozen=True)
 class DecisionAuditReport:
@@ -32,6 +45,7 @@ class DecisionAuditReport:
     graph_export: dict
     contextual_scoring: dict
     graph_stix_preview: dict
+    graph_entities: dict
     sources: dict
 
     def to_dict(self):
@@ -47,6 +61,7 @@ class DecisionAuditReport:
             "graph_export": self.graph_export,
             "contextual_scoring": self.contextual_scoring,
             "graph_stix_preview": self.graph_stix_preview,
+            "graph_entities": self.graph_entities,
             "sources": self.sources,
         }
 
@@ -94,6 +109,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
             graph_export=build_graph_export_summary([]),
             contextual_scoring=build_contextual_scoring_summary([]),
             graph_stix_preview=build_graph_stix_preview_summary([]),
+            graph_entities=build_graph_entity_summary([]),
             sources={},
         )
 
@@ -174,6 +190,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
         graph_export=build_graph_export_summary(records),
         contextual_scoring=build_contextual_scoring_summary(records),
         graph_stix_preview=build_graph_stix_preview_summary(records),
+        graph_entities=build_graph_entity_summary(records),
         sources=sources,
     )
 
@@ -677,6 +694,149 @@ def merge_graph_stix_preview(summary, preview):
     )
 
 
+def build_graph_entity_summary(records):
+    summary = empty_graph_entity_summary()
+    by_source = {}
+    by_query = {}
+
+    for record in records or ():
+        entities = graph_entity_entries(record)
+        if not entities:
+            continue
+        source_key = normalize_value(record.get("source_key"), "unknown")
+        query = normalize_value(record.get("query"), "(none)")
+        merge_graph_entity_entries(summary, entities)
+        merge_graph_entity_entries(
+            by_source.setdefault(source_key, empty_graph_entity_summary(False)),
+            entities,
+        )
+        merge_graph_entity_entries(
+            by_query.setdefault(
+                (source_key, query),
+                {
+                    "source_key": source_key,
+                    "query": query,
+                    **empty_graph_entity_summary(False),
+                },
+            ),
+            entities,
+        )
+
+    normalize_graph_entity_summary(summary)
+    summary["by_source"] = {
+        source: normalize_graph_entity_summary(source_summary)
+        for source, source_summary in sorted(by_source.items())
+    }
+    summary["by_query"] = [
+        normalize_graph_entity_summary(query_summary)
+        for _, query_summary in sorted(
+            by_query.items(),
+            key=lambda item: (
+                -int(item[1].get("record_count", 0) or 0),
+                item[1].get("source_key", ""),
+                item[1].get("query", ""),
+            ),
+        )
+    ]
+    return summary
+
+
+def empty_graph_entity_summary(include_breakdowns=True):
+    summary = {
+        "record_count": 0,
+        "entity_count": 0,
+        "counts": {
+            "attack_patterns": 0,
+            "threat_actors": 0,
+            "target_sectors": 0,
+        },
+        "top_attack_patterns": [],
+        "top_threat_actors": [],
+        "top_target_sectors": [],
+        "_entities": Counter(),
+    }
+    if include_breakdowns:
+        summary["by_source"] = {}
+        summary["by_query"] = []
+    return summary
+
+
+def graph_entity_entries(record):
+    metadata = record.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return []
+    evidence = metadata.get("graph_evidence")
+    if not isinstance(evidence, Mapping):
+        return []
+    entries = []
+    for item in evidence.get("records") or ():
+        if not isinstance(item, Mapping):
+            continue
+        entry = graph_entity_entry(item)
+        if entry:
+            entries.append(entry)
+    return entries
+
+
+def graph_entity_entry(item):
+    entity_type = normalize_value(item.get("entity_type"), "")
+    category = GRAPH_ENTITY_CATEGORIES.get(entity_type)
+    if not category:
+        return {}
+    value = normalize_value(item.get("value"), "")
+    display_name = normalize_value(item.get("display_name"), value)
+    if not value and not display_name:
+        return {}
+    return {
+        "category": category,
+        "entity_type": entity_type,
+        "value": value or display_name,
+        "display_name": display_name or value,
+    }
+
+
+def merge_graph_entity_entries(summary, entries):
+    summary["record_count"] += 1
+    for entry in entries:
+        category = entry["category"]
+        summary["entity_count"] += 1
+        summary["counts"][category] = int(summary["counts"].get(category, 0) or 0) + 1
+        summary["_entities"][
+            (
+                category,
+                entry["entity_type"],
+                entry["value"],
+                entry["display_name"],
+            )
+        ] += 1
+
+
+def normalize_graph_entity_summary(summary):
+    summary["counts"] = dict(sorted((summary.get("counts") or {}).items()))
+    counters = summary.pop("_entities", Counter())
+    for category, field_name in GRAPH_ENTITY_TOP_FIELDS.items():
+        summary[field_name] = top_graph_entity_entries(counters, category)
+    return summary
+
+
+def top_graph_entity_entries(counter, category, limit=5):
+    items = [
+        (key, count)
+        for key, count in (counter or {}).items()
+        if key[0] == category and int(count or 0) > 0
+    ]
+    items.sort(key=lambda item: (-item[1], item[0][3], item[0][2], item[0][1]))
+    return [
+        {
+            "entity_type": entity_type,
+            "value": value,
+            "display_name": display_name,
+            "count": count,
+        }
+        for (_, entity_type, value, display_name), count in items[:limit]
+    ]
+
+
 def merge_counts(target, counts):
     if not isinstance(counts, Mapping):
         return
@@ -802,6 +962,24 @@ def format_text_report(report):
                     f"- {query['source_key']} query={query['query']} "
                     f"{format_graph_stix_preview_summary(query)}"
                 )
+    if report.graph_entities.get("record_count", 0):
+        entities = report.graph_entities
+        lines.append("graph_entities:")
+        lines.append("- " + format_graph_entity_summary(entities))
+        if entities.get("by_source"):
+            lines.append("graph_entities_by_source:")
+            for source_key, source in entities["by_source"].items():
+                lines.append(
+                    f"- source={source_key} "
+                    f"{format_graph_entity_summary(source)}"
+                )
+        if entities.get("by_query"):
+            lines.append("graph_entities_by_query:")
+            for query in entities["by_query"]:
+                lines.append(
+                    f"- {query['source_key']} query={query['query']} "
+                    f"{format_graph_entity_summary(query)}"
+                )
     if report.quarantined:
         lines.append("quarantine_candidates:")
         for item in report.quarantined:
@@ -913,6 +1091,31 @@ def format_graph_stix_preview_summary(summary):
         f"{format_compact_counts(summary.get('relationship_counts', {}))} "
         f"proposed_relationships="
         f"{format_compact_counts(summary.get('proposed_relationship_counts', {}))}"
+    )
+
+
+def format_graph_entity_summary(summary):
+    return (
+        f"records={summary.get('record_count', 0)} "
+        f"entities={summary.get('entity_count', 0)} "
+        f"counts={format_compact_counts(summary.get('counts', {}))} "
+        f"attack_patterns="
+        f"{format_entity_entries(summary.get('top_attack_patterns'))} "
+        f"threats={format_entity_entries(summary.get('top_threat_actors'))} "
+        f"sectors={format_entity_entries(summary.get('top_target_sectors'))}"
+    )
+
+
+def format_entity_entries(entries):
+    entries = list(entries or [])
+    if not entries:
+        return "(none)"
+    return ",".join(
+        "{}={}".format(
+            entry.get("display_name") or entry.get("value") or "(unknown)",
+            entry.get("count", 0),
+        )
+        for entry in entries
     )
 
 
