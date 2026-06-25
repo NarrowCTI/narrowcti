@@ -489,6 +489,31 @@ class StixBuilderTests(unittest.TestCase):
 
         self.assertEqual("Custom Connector", identities[0]["name"])
 
+    def test_build_report_bundle_uses_stable_identity_id(self):
+        first_bundle, _ = build_report_bundle(
+            "Example report",
+            "description",
+            80,
+            identity_name="OTX AlienVault",
+        )
+        second_bundle, _ = build_report_bundle(
+            "Another report",
+            "other description",
+            80,
+            identity_name="OTX AlienVault",
+        )
+
+        first_data = json.loads(first_bundle.serialize())
+        second_data = json.loads(second_bundle.serialize())
+        first_identity = [
+            item for item in first_data["objects"] if item["type"] == "identity"
+        ][0]
+        second_identity = [
+            item for item in second_data["objects"] if item["type"] == "identity"
+        ][0]
+
+        self.assertEqual(first_identity["id"], second_identity["id"])
+
 
 if __name__ == "__main__":
     unittest.main()

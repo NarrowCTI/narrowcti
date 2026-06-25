@@ -283,6 +283,13 @@ audit and future enterprise reporting. When a canonical match includes a valid
 STIX `standard_id`, the export gate references that existing OpenCTI object in
 the curated STIX bundle instead of duplicating it.
 
+For audit visibility, exported STIX bundles now use the upstream source as the
+OpenCTI Author where NarrowCTI can resolve it. OTX exports appear as
+`OTX AlienVault`, MISP exports appear as `MISP`, and future adapters should
+define their own source identity mapping. NarrowCTI still remains visible as
+the curation gateway through decision audit records, curation reports, export
+plans and `x_narrowcti_*` graph metadata.
+
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in
 `docs/configuration-reference-v0.5.md`.

@@ -198,6 +198,11 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added HTML output for the operational validation checklist so operators and
   support can review v0.8 graph-promotion evidence in a local browser without
   opening raw decision audit files.
+- Added source-aware author identity hygiene for exported STIX bundles. OTX and
+  MISP exports now use upstream source identities such as `OTX AlienVault` and
+  `MISP` as OpenCTI Author values, while NarrowCTI provenance remains in audit
+  metadata and graph custom properties. Author identities are deterministic to
+  avoid creating duplicate OpenCTI identity objects for repeated exports.
 - Added `reports.operational_validation` to the preflight-visible capability
   inventory so the v0.8 validation checklist is represented in product
   operations and future licensing controls.

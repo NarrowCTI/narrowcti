@@ -828,7 +828,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertTrue(processed)
         self.assertEqual(["pulse-1"], marked)
         self.assertEqual("LummaC2 fresh", export_calls[0]["name"])
-        self.assertEqual("Test Connector", export_calls[0]["identity_name"])
+        self.assertEqual("OTX AlienVault", export_calls[0]["identity_name"])
         self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)
 
     def test_process_pulse_does_not_mark_state_when_export_fails(self):

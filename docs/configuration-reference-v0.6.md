@@ -128,6 +128,12 @@ metadata can include `graph_export_plan_lookup_matches` so operators can audit
 which OpenCTI object was matched. In `export` mode, known local/OpenCTI graph
 keys with canonical STIX ids are referenced by the curated bundle, and newly
 promoted graph keys are marked locally only after successful OpenCTI import.
+The STIX Author / OpenCTI Author is resolved from the logical upstream source
+for audit visibility, for example `OTX AlienVault` for `alienvault:otx` and
+`MISP` for `misp:misp`. NarrowCTI remains visible through decision audit,
+curation reports, export plans and `x_narrowcti_*` graph metadata. Existing
+OpenCTI objects keep their previous author; the source-aware identity mapping
+is applied to new exported bundles and newly created objects.
 
 ## Source Examples
 

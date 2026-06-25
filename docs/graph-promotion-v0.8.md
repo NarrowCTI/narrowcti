@@ -81,6 +81,29 @@ objects. When OpenCTI lookup returns a valid canonical STIX `standard_id`, the
 curated STIX bundle references that existing object and can create report links
 or semantic relationships to it instead of creating a duplicate object.
 
+## Source Identity And Author Hygiene
+
+OpenCTI Author should represent the logical upstream intelligence source, not
+only the NarrowCTI runtime that curated the bundle. In v0.8, OTX and MISP
+exports use source-aware STIX identities:
+
+| Source key | OpenCTI Author / STIX Identity |
+| --- | --- |
+| `alienvault:otx` | `OTX AlienVault` |
+| `alienvault:otx-premium` | `OTX AlienVault Premium` |
+| `misp:misp` | `MISP` |
+
+NarrowCTI remains the curation layer. Its decisions stay visible through the
+decision audit, graph export plan, curation reports and `x_narrowcti_*` custom
+properties on promoted graph objects. Source identities use deterministic STIX
+IDs so repeated exports reuse the same author identity instead of creating
+duplicate author objects in OpenCTI.
+
+This mapping is applied to new exported STIX bundles. It is not a historical
+rewrite mechanism: when OpenCTI already has a Report, Indicator or graph object,
+the import path should preserve the existing object and its original author
+instead of changing provenance retroactively.
+
 ## OpenCTI Tab Mapping
 
 The first controlled export can populate these OpenCTI areas when the source

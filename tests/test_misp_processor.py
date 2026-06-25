@@ -949,7 +949,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(10, records[0].indicator_count)
         self.assertEqual(records[0].score, records[0].metadata["scoring"]["final_score"])
         self.assertEqual("tlp green event", export_calls[0]["name"])
-        self.assertEqual("Test Connector", export_calls[0]["identity_name"])
+        self.assertEqual("MISP", export_calls[0]["identity_name"])
         self.assertEqual(1, len(export_calls[0]["indicators"]))
 
     def test_process_event_does_not_mark_state_when_export_fails(self):

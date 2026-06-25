@@ -89,6 +89,7 @@ shared gateway pipeline.
 Minimum adapter output:
 
 - `source.key` and `source.name`.
+- Source identity display mapping for OpenCTI Author auditing.
 - Stable `external_id`.
 - Human-readable title.
 - Description or narrative when available.
@@ -130,6 +131,8 @@ Use this table for operational controls:
 Each new adapter should add focused tests for:
 
 - Settings loading and required configuration validation.
+- Source identity mapping, including deterministic author identity behavior in
+  exported STIX bundles.
 - Feed search/list behavior with pagination or limits.
 - Enrichment of one source record into a normalized candidate.
 - Guardrail behavior for oversized or unsafe records.

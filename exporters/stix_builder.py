@@ -34,6 +34,7 @@ SEMANTIC_RELATIONSHIP_TYPES = {
     "uses",
 }
 REPORT_ID_NAMESPACE = "https://narrowcti.local/stix/report"
+IDENTITY_ID_NAMESPACE = "https://narrowcti.local/stix/identity"
 
 
 def escape_pattern_value(value):
@@ -95,7 +96,7 @@ def build_report_bundle(
     identity_name="NarrowCTI Gateway",
 ):
     now = datetime.now(timezone.utc)
-    identity = Identity(name=identity_name, identity_class="organization")
+    identity = build_identity(identity_name)
     indicator_objects = build_indicators(indicators or [], identity.id, score, now)
     object_refs = [indicator.id for indicator in indicator_objects] or [identity.id]
 
@@ -121,7 +122,7 @@ def build_curated_report_bundle(
     identity_name="NarrowCTI Gateway",
 ):
     now = datetime.now(timezone.utc)
-    identity = Identity(name=identity_name, identity_class="organization")
+    identity = build_identity(identity_name)
     indicator_objects = build_indicators(indicators or [], identity.id, score, now)
     accepted_candidates = graph_accepted_candidates(graph_candidate_policy)
     graph_content = build_graph_content(accepted_candidates, identity.id, now)
@@ -173,7 +174,7 @@ def build_graph_report_bundle(
     identity_name="NarrowCTI Gateway",
 ):
     now = datetime.now(timezone.utc)
-    identity = Identity(name=identity_name, identity_class="organization")
+    identity = build_identity(identity_name)
     accepted_candidates = graph_accepted_candidates(graph_candidate_policy)
     graph_content = build_graph_content(accepted_candidates, identity.id, now)
 
@@ -224,6 +225,25 @@ def build_stix_report(name, description, score, now, identity_id, object_refs):
         created_by_ref=identity_id,
         object_refs=object_refs,
     )
+
+
+def build_identity(identity_name, identity_class="organization"):
+    return Identity(
+        id=deterministic_identity_id(identity_name, identity_class),
+        name=identity_name,
+        identity_class=identity_class,
+    )
+
+
+def deterministic_identity_id(name, identity_class="organization"):
+    material = "|".join(
+        (
+            IDENTITY_ID_NAMESPACE,
+            clean_string(identity_class).casefold() or "organization",
+            clean_string(name).casefold() or "unknown",
+        )
+    )
+    return f"identity--{uuid5(NAMESPACE_URL, material)}"
 
 
 def deterministic_report_id(name, description):

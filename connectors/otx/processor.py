@@ -20,6 +20,7 @@ from core.quarantine import (
     bounded_raw_snapshot,
 )
 from core.scoring import age_days, calculate_score_details
+from core.source_identity import feed_source_identity_name, source_identity_name
 from core.state_repository import PulseStateRepository
 from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
@@ -84,6 +85,7 @@ def decision_metadata(
         graph_deduplication_index=graph_deduplication_index,
     )
     metadata["graph_export_plan"] = graph_plan
+    resolved_source_identity_name = source_identity_name(source_key=source_key)
     preview_policy = graph_policy
     if graph_plan.get("export_enabled"):
         preview_policy = exportable_graph_candidate_policy(
@@ -94,7 +96,7 @@ def decision_metadata(
     metadata["graph_stix_preview"] = graph_stix_preview(
         candidate,
         preview_policy,
-        identity_name=getattr(candidate, "identity_name", "NarrowCTI Gateway"),
+        identity_name=resolved_source_identity_name,
         export_enabled=graph_plan.get("export_enabled", False),
     )
     if known_keys["entity_keys"] or known_keys["relationship_keys"]:
@@ -592,7 +594,9 @@ class OTXProcessor:
         try:
             graph_policy = None
             graph_metadata = None
-            export_kwargs = {"identity_name": self.settings.connector_name}
+            export_kwargs = {
+                "identity_name": feed_source_identity_name(candidate_ref.source)
+            }
             if getattr(self.settings, "graph_export_mode", "audit") == "export":
                 graph_policy, graph_metadata = self.graph_policy_for_export(
                     candidate_ref,

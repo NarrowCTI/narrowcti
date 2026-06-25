@@ -22,6 +22,7 @@ from core.quarantine import (
     bounded_raw_snapshot,
 )
 from core.scoring import age_days, calculate_score_details
+from core.source_identity import feed_source_identity_name
 from core.state_repository import MISPEventStateRepository
 from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
@@ -123,6 +124,7 @@ def decision_metadata(
         candidate_ref,
         candidate,
         preview_policy,
+        identity_name=feed_source_identity_name(candidate_ref.source),
         export_enabled=graph_plan.get("export_enabled", False),
     )
     if known_keys["entity_keys"] or known_keys["relationship_keys"]:
@@ -134,13 +136,20 @@ def decision_metadata(
     return metadata
 
 
-def graph_stix_preview(candidate_ref, candidate, graph_policy, export_enabled=False):
+def graph_stix_preview(
+    candidate_ref,
+    candidate,
+    graph_policy,
+    identity_name="NarrowCTI Gateway",
+    export_enabled=False,
+):
     event = compact_mapping(candidate.event if candidate else {})
     bundle, summary = build_graph_report_bundle(
         getattr(candidate, "name", "") or candidate_ref.title or "NarrowCTI graph preview",
         event.get("info", ""),
         candidate_score(candidate),
         graph_candidate_policy=graph_policy,
+        identity_name=identity_name,
     )
     preview = dict(summary)
     preview["status"] = "preview"
@@ -1190,7 +1199,9 @@ class MISPProcessor:
         try:
             graph_policy = None
             graph_metadata = None
-            export_kwargs = {"identity_name": self.settings.connector_name}
+            export_kwargs = {
+                "identity_name": feed_source_identity_name(candidate_ref.source)
+            }
             if getattr(self.settings, "graph_export_mode", "audit") == "export":
                 graph_policy, graph_metadata = self.graph_policy_for_export(
                     candidate_ref,
