@@ -83,6 +83,68 @@ query NarrowCTIToolGraphSearch($search: String) {
 }
 """
 
+THREAT_ACTOR_LOOKUP_QUERY = """
+query NarrowCTIThreatActorGraphLookup($filters: FilterGroup) {
+  threatActors(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+THREAT_ACTOR_SEARCH_QUERY = """
+query NarrowCTIThreatActorGraphSearch($search: String) {
+  threatActors(search: $search, first: 10) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        aliases
+      }
+    }
+  }
+}
+"""
+
+INTRUSION_SET_LOOKUP_QUERY = """
+query NarrowCTIIntrusionSetGraphLookup($filters: FilterGroup) {
+  intrusionSets(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+INTRUSION_SET_SEARCH_QUERY = """
+query NarrowCTIIntrusionSetGraphSearch($search: String) {
+  intrusionSets(search: $search, first: 10) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        aliases
+      }
+    }
+  }
+}
+"""
+
 VULNERABILITY_LOOKUP_QUERY = """
 query NarrowCTIVulnerabilityGraphLookup($filters: FilterGroup) {
   vulnerabilities(first: 1, filters: $filters) {
@@ -178,6 +240,24 @@ class OpenCTIGraphLookup:
                 query_text=TOOL_LOOKUP_QUERY,
                 search_query_text=TOOL_SEARCH_QUERY,
             )
+        if stix_object_type == "threat-actor":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="threat-actor",
+                collection_name="threatActors",
+                query_text=THREAT_ACTOR_LOOKUP_QUERY,
+                search_query_text=THREAT_ACTOR_SEARCH_QUERY,
+                enable_alias_search_by_default=True,
+            )
+        if stix_object_type == "intrusion-set":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="intrusion-set",
+                collection_name="intrusionSets",
+                query_text=INTRUSION_SET_LOOKUP_QUERY,
+                search_query_text=INTRUSION_SET_SEARCH_QUERY,
+                enable_alias_search_by_default=True,
+            )
         if stix_object_type == "vulnerability":
             return self.find_vulnerability(candidate)
         return None
@@ -225,6 +305,7 @@ class OpenCTIGraphLookup:
         collection_name,
         query_text,
         search_query_text="",
+        enable_alias_search_by_default=False,
     ):
         standard_id = graph_object_standard_id(candidate, stix_object_type)
         if standard_id:
@@ -242,6 +323,7 @@ class OpenCTIGraphLookup:
             stix_object_type,
             collection_name,
             search_query_text,
+            enable_by_default=enable_alias_search_by_default,
         )
         if alias_match:
             return alias_match
@@ -265,11 +347,16 @@ class OpenCTIGraphLookup:
         stix_object_type,
         collection_name,
         search_query_text,
+        enable_by_default=False,
     ):
         if not search_query_text:
             return None
 
-        lookup = graph_object_alias_lookup(candidate, stix_object_type)
+        lookup = graph_object_alias_lookup(
+            candidate,
+            stix_object_type,
+            enable_by_default=enable_by_default,
+        )
         if not lookup["enabled"]:
             return None
         for search_value in lookup["search_values"]:
@@ -557,7 +644,7 @@ def graph_object_name(candidate):
     return ""
 
 
-def graph_object_alias_lookup(candidate, stix_object_type):
+def graph_object_alias_lookup(candidate, stix_object_type, enable_by_default=False):
     candidate_terms = graph_object_alias_terms(candidate)
     alias_group = find_curated_alias_group(stix_object_type, candidate_terms)
     explicit_alias_values = graph_object_explicit_alias_values(candidate)
@@ -582,7 +669,7 @@ def graph_object_alias_lookup(candidate, stix_object_type):
 
     return {
         "candidate_terms": candidate_terms,
-        "enabled": bool(alias_group or explicit_alias_values),
+        "enabled": bool(alias_group or explicit_alias_values or enable_by_default),
         "preferred": preferred,
         "search_values": search_values,
     }

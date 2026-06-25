@@ -245,6 +245,12 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   `CVE-2019-13939`. The export plan deduplicated the CVE, the curated bundle
   referenced the existing Vulnerability object, and OpenCTI did not create a
   duplicate Vulnerability.
+- Added conservative Threat Actor and Intrusion Set OpenCTI lookup by
+  canonical `standard_id`, exact name and exact alias search.
+- Validated a bounded real Intrusion Set export with source value `Palmerworm`.
+  The export resolved the alias to existing OpenCTI `BlackTech`, referenced the
+  canonical Intrusion Set in the validation Report and did not create a
+  duplicate actor object.
 - Tightened Arsenal hygiene after lab review showed that `LummaC2` and
   `Lumma Stealer` can exist as separate OpenCTI malware objects. The lookup now
   supports conservative curated alias groups so future `LummaC2` candidates

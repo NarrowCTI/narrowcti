@@ -87,6 +87,12 @@ by OpenCTI Vulnerability `name`. When a match is found, the export bundle
 references the existing Vulnerability instead of creating a duplicate CVE
 object.
 
+Threat Actor and Intrusion Set lookup is enabled with the same conservative
+posture. NarrowCTI prefers canonical `standard_id`, then exact OpenCTI name, and
+can use exact OpenCTI alias matches when the canonical object exposes aliases.
+This lets source evidence such as `Palmerworm` reference existing Intrusion Set
+`BlackTech` without creating a second actor object.
+
 ## Source Identity And Author Hygiene
 
 OpenCTI Author should represent the logical upstream intelligence source, not
@@ -140,9 +146,9 @@ validation before NarrowCTI should promote them automatically.
 - `false`: default. NarrowCTI only uses local graph deduplication state when
   `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured.
 - `true`: NarrowCTI queries OpenCTI during graph export planning and treats
-  canonical matches, such as existing ATT&CK attack-patterns, malware, tools
-  and CVE vulnerabilities, as known graph entities before promotion logic
-  creates new objects.
+  canonical matches, such as existing ATT&CK attack-patterns, malware, tools,
+  CVE vulnerabilities, threat actors and intrusion sets, as known graph
+  entities before promotion logic creates new objects.
 
 The lookup itself is read-only. In `audit` and `dry-run` modes it does not
 create entities, relationships or state marks in OpenCTI. In `export` mode,
@@ -160,6 +166,10 @@ For Vulnerability objects, lookup is intentionally CVE-id based. Exact
 `standard_id` matches are preferred, and `CVE-*` values are then matched against
 OpenCTI Vulnerability names. Broad vendor advisory aliases are outside the
 current v0.8 safety boundary.
+
+For Threat Actor and Intrusion Set objects, lookup is intentionally limited to
+`standard_id`, exact name and exact alias matching returned by OpenCTI search.
+This supports canonical actor naming without broad fuzzy matching.
 
 When matches exist, decision metadata can include
 `graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
@@ -206,8 +216,8 @@ expand to:
 
 - Malware and tool lookup beyond exact `standard_id` or name, including aliases
   and source references.
-- Threat actor and intrusion set lookup by name, aliases and external
-  references.
+- External-reference based threat actor and intrusion set lookup beyond exact
+  name or alias.
 - Sector and location lookup with controlled vocabulary normalization.
 - Relationship lookup before edge creation.
 - Post-export graph state marking only after OpenCTI import succeeds.

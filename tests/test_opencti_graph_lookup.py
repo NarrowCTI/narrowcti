@@ -279,6 +279,123 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
         self.assertIn("tools", calls[0][0])
         self.assertEqual(["Mimikatz"], calls[0][1]["filters"]["filters"][0]["values"])
 
+    def test_known_keys_for_plan_resolves_intrusion_set_by_alias(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "intrusionSets": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--blacktech",
+                                    "standard_id": (
+                                        "intrusion-set--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Intrusion-Set",
+                                    "name": "BlackTech",
+                                    "aliases": ["Palmerworm"],
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="intrusion-set",
+                entity_type="intrusion_set",
+                value="Palmerworm",
+                name="Palmerworm",
+                relationship_type="attributed-to",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("BlackTech", known["matches"][0]["match"]["name"])
+        self.assertEqual("alias", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("intrusionSets", calls[0][0])
+        self.assertEqual("Palmerworm", calls[0][1]["search"])
+
+    def test_known_keys_for_plan_resolves_threat_actor_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            if "ThreatActorGraphSearch" in query_text:
+                return {"data": {"threatActors": {"edges": []}}}
+            return {
+                "data": {
+                    "threatActors": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--actor",
+                                    "standard_id": (
+                                        "threat-actor--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Threat-Actor",
+                                    "name": "Example Actor",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="threat-actor",
+                entity_type="threat_actor",
+                value="Example Actor",
+                name="Example Actor",
+                relationship_type="attributed-to",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Threat-Actor", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("threatActors", calls[-1][0])
+        self.assertEqual("name", calls[-1][1]["filters"]["filters"][0]["key"])
+
+    def test_intrusion_set_lookup_prefers_standard_id_before_alias(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {"data": {"intrusionSets": {"edges": []}}}
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        lookup.find_candidate(
+            {
+                "stix_object_type": "intrusion-set",
+                "value": "Palmerworm",
+                "attributes": {
+                    "stix_id": (
+                        "intrusion-set--11111111-1111-4111-8111-111111111111"
+                    )
+                },
+            }
+        )
+
+        self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
+
     def test_tool_standard_id_uses_stix_id_before_name(self):
         calls = []
 

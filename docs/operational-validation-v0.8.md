@@ -71,6 +71,14 @@ existing OpenCTI Vulnerability is referenced by `standard_id`, the export
 summary shows `existing_reference_counts.vulnerability=1`, and the OpenCTI
 Vulnerability count for that CVE does not increase.
 
+When Intrusion Set or Threat Actor candidates are included, validation should
+prefer one canonical object that already exists in OpenCTI and, when possible,
+one source alias. The expected result is that the export summary shows
+`existing_reference_counts.intrusion-set=1` or
+`existing_reference_counts.threat-actor=1`, the validation Report references
+the existing object, and the OpenCTI object count for the canonical name or
+alias search does not increase.
+
 Observed local validation for the OTX `lummac2` query with
 `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=malware` and
 `MAX_IOCS_PER_PULSE=10` ingested one curated report with 10 indicators. OpenCTI
@@ -107,6 +115,16 @@ curated bundle summary reported `existing_reference_counts.vulnerability=1`.
 After real import, the validation Report was authored by `OTX AlienVault` and
 referenced the existing CVE; the OpenCTI Vulnerability count for that search
 remained unchanged.
+
+Observed Intrusion Set export validation confirmed exact alias linking. The lab
+used existing OpenCTI Intrusion Set `BlackTech` with alias `Palmerworm` and
+`standard_id=intrusion-set--058f30a0-efd4-5d3a-aa39-a8dd414ba288`. NarrowCTI
+lookup returned one known entity for source value `Palmerworm`, the export plan
+reported `deduplicated_entity_count=1` and `would_create_object_count=0`, and
+the curated bundle summary reported `existing_reference_counts.intrusion-set=1`.
+After real import, the validation Report was authored by `OTX AlienVault` and
+referenced the existing `BlackTech` object; the OpenCTI search counts for
+`BlackTech` and `Palmerworm` remained unchanged.
 
 ## Required Lab Posture
 
