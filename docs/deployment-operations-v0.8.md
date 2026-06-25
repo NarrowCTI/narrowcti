@@ -43,7 +43,7 @@ commands:
 | --- | --- |
 | `narrowcti-preflight` | Runs `python -m gateway.preflight`. |
 | `narrowcti-gateway-report` | Builds `/app/state/gateway-operational-report.txt` from gateway run and quarantine evidence. |
-| `narrowcti-curation-report` | Builds text output and writes `/app/state/curation-report.html`. |
+| `narrowcti-curation-report` | Writes `/app/state/curation-report.txt`, `/app/state/curation-report.json` and `/app/state/curation-report.html`. |
 | `narrowcti-decision-report` | Builds `/app/state/decision-audit-report.txt` from `/app/state/audit`. |
 | `narrowcti-correlation-report` | Builds `/app/state/artifact-correlation-report.txt` from the local artifact deduplication index. |
 | `narrowcti-operational-validation` | Builds `/app/state/operational-validation.html` from preflight, decision audit and optional manual evidence. |
@@ -101,6 +101,11 @@ file to record manual checks such as `full_validation_passed`,
 actually validated them. Missing evidence keeps those checks in
 `needs-evidence` state. Support diagnostics reads the same file when configured
 so the support bundle and the operational validation report do not diverge.
+
+The curation report service writes text, JSON and HTML artifacts from the same
+evidence snapshot. Use the JSON file as the stable contract artifact for
+comparison between validation runs, the text file for terminal review and the
+HTML file for local analyst or support review.
 
 ## Safe Promotion To Continuous Operation
 

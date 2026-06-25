@@ -12,6 +12,7 @@ from gateway.curation_report import (
     normalize_redaction_profile,
     report_to_dict,
     write_html_report,
+    write_report,
 )
 from gateway.decisions import build_decision_audit_report
 from gateway.report import build_operational_report
@@ -669,6 +670,39 @@ class GatewayCurationReportTests(unittest.TestCase):
 
         self.assertEqual(html_file, result)
         self.assertIn("NarrowCTI curation report", html)
+
+    def test_write_report_creates_text_and_json_artifacts(self):
+        operational = build_operational_report([])
+        decisions = build_decision_audit_report([])
+        review = ReviewSummary(
+            record_count=0,
+            status_counts={},
+            source_counts={},
+            pending_count=0,
+            exportable_count=0,
+        )
+        report = build_curation_report(
+            operational,
+            decisions,
+            review,
+            generated_at="2026-06-24T10:02:00Z",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            text_file = os.path.join(tmpdir, "reports", "curation.txt")
+            json_file = os.path.join(tmpdir, "reports", "curation.json")
+            text_result = write_report(report, text_file)
+            json_result = write_report(report, json_file, output_format="json")
+            with open(text_file, "r", encoding="utf-8") as handle:
+                text = handle.read()
+            with open(json_file, "r", encoding="utf-8") as handle:
+                data = json.loads(handle.read())
+
+        self.assertEqual(text_file, text_result)
+        self.assertEqual(json_file, json_result)
+        self.assertIn("schema_version=curation-report/v0.8", text)
+        self.assertEqual("curation-report/v0.8", data["schema_version"])
+        self.assertEqual("none", data["redaction_profile"])
 
 
 def gateway_record(recorded_at, results):

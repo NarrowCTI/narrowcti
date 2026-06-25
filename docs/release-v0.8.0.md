@@ -112,6 +112,10 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added HTML output for the curation report through
   `python -m gateway.curation_report --html-file ...`, keeping the report
   read-only and evidence-driven.
+- Added text and JSON curation report file output through `--output-file` and
+  `--json-file`, and updated the `ops` compose service to persist
+  `/app/state/curation-report.txt`, `/app/state/curation-report.json` and
+  `/app/state/curation-report.html` from the same evidence snapshot.
 - Added aggregated analyst review action feedback to the curation report. It
   summarizes release, reject and export audit events without exposing detailed
   queue records, preparing the later policy tuning workflow.

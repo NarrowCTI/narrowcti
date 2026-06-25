@@ -81,6 +81,10 @@ services:
       - python
       - -m
       - gateway.curation_report
+      - --output-file
+      - /app/state/curation-report.txt
+      - --json-file
+      - /app/state/curation-report.json
       - --html-file
       - /app/state/curation-report.html
     restart: "no"

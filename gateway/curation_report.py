@@ -1320,6 +1320,42 @@ def write_html_report(report, html_file, redaction_profile="none"):
     return html_file
 
 
+def render_report(report, output_format="text", redaction_profile="none"):
+    output_format = normalize_output_format(output_format)
+    if output_format == "json":
+        return json.dumps(
+            report_to_dict(report, redaction_profile=redaction_profile),
+            sort_keys=True,
+        )
+    return format_text_report(report, redaction_profile=redaction_profile)
+
+
+def normalize_output_format(value):
+    output_format = str(value or "text").strip().lower()
+    if output_format not in ("text", "json"):
+        raise ValueError("output_format must be one of: text,json")
+    return output_format
+
+
+def write_report(report, output_file, output_format="text", redaction_profile="none"):
+    output_file = str(output_file or "").strip()
+    if not output_file:
+        raise ValueError("output_file is required")
+    directory = os.path.dirname(output_file)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(output_file, "w", encoding="utf-8") as handle:
+        handle.write(
+            render_report(
+                report,
+                output_format=output_format,
+                redaction_profile=redaction_profile,
+            )
+            + "\n"
+        )
+    return output_file
+
+
 def escape(value):
     return html.escape("" if value is None else str(value), quote=True)
 
@@ -1517,6 +1553,16 @@ def main():
         help="Optional HTML report output file.",
     )
     parser.add_argument(
+        "--output-file",
+        default="",
+        help="Optional text report output file.",
+    )
+    parser.add_argument(
+        "--json-file",
+        default="",
+        help="Optional JSON report output file.",
+    )
+    parser.add_argument(
         "--redaction-profile",
         choices=REDACTION_PROFILES,
         default="none",
@@ -1539,15 +1585,24 @@ def main():
             args.html_file,
             redaction_profile=args.redaction_profile,
         )
-    if args.json:
-        print(
-            json.dumps(
-                report_to_dict(report, args.redaction_profile),
-                sort_keys=True,
-            )
+    if args.output_file:
+        write_report(
+            report,
+            args.output_file,
+            output_format="text",
+            redaction_profile=args.redaction_profile,
         )
+    if args.json_file:
+        write_report(
+            report,
+            args.json_file,
+            output_format="json",
+            redaction_profile=args.redaction_profile,
+        )
+    if args.json:
+        print(render_report(report, "json", redaction_profile=args.redaction_profile))
     else:
-        print(format_text_report(report, redaction_profile=args.redaction_profile))
+        print(render_report(report, "text", redaction_profile=args.redaction_profile))
 
 
 if __name__ == "__main__":

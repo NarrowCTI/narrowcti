@@ -49,7 +49,9 @@ It exposes:
 - `build_curation_report_from_files`
 - `format_html_report`
 - `format_text_report`
+- `render_report`
 - `write_html_report`
+- `write_report`
 - CLI entrypoint: `python -m gateway.curation_report`
 
 ## CLI Usage
@@ -61,7 +63,8 @@ python -m gateway.curation_report `
   --summary-file state\gateway_runs.jsonl `
   --decision-path state\audit `
   --quarantine-file state\quarantine.jsonl `
-  --release-audit-file state\audit\releases.jsonl
+  --release-audit-file state\audit\releases.jsonl `
+  --output-file state\curation-report.txt
 ```
 
 JSON report:
@@ -72,6 +75,7 @@ python -m gateway.curation_report `
   --decision-path state\audit `
   --quarantine-file state\quarantine.jsonl `
   --release-audit-file state\audit\releases.jsonl `
+  --json-file state\curation-report.json `
   --json
 ```
 
