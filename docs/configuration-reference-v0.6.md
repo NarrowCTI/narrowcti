@@ -61,9 +61,16 @@ graph enrichment layer.
 | `NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE` | Requires graph candidates to carry source provenance before they are accepted by graph candidate policy. |
 | `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES` | Optional allow-list for NarrowCTI graph entity types such as `attack_pattern`, `malware`, `threat_actor`, `source_identity` or `marking`. Empty allows all current candidate types. |
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Optional allow-list for STIX/OpenCTI object types such as `attack-pattern`, `malware`, `threat-actor`, `identity` or `marking-definition`. Empty allows all current candidate object types. |
-| `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export planning mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` is currently blocked until graph-aware STIX export is implemented. |
-| `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a read-only known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. v0.7 does not mark plans as exported from this setting. |
-| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in read-only OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, starting with ATT&CK attack-patterns, before future graph promotion creates anything. |
+| `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` enables controlled graph promotion for accepted candidates. |
+| `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. Exported graph state is marked only after a successful OpenCTI import. |
+| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, starting with ATT&CK attack-patterns, before graph promotion creates new objects. |
+
+Use `export` only with explicit graph thresholds, allow-lists and validation
+evidence. The first promotion gate can create supported STIX objects such as
+`threat-actor`, `intrusion-set`, `malware`, `tool`, `vulnerability`,
+`attack-pattern`, `identity` sectors, `location`, `indicator`, `note` and
+basic observables. It skips known graph keys returned by local or OpenCTI
+lookup instead of duplicating canonical objects.
 
 ## v0.8 License And Feature Gate Controls
 
@@ -103,23 +110,23 @@ deployment.templates
 mssp.multi_environment
 ```
 
-Current graph controls do not create new OpenCTI graph objects. They make the
-future graph promotion decision visible in decision audit and quarantine
-metadata through `graph_candidate_policy` and `graph_export_plan`. The
-decision audit report also aggregates graph export plan evidence so operators
-can review modes, statuses, actions, would-create counts, held reasons and
-source/query rollups without reading raw JSONL records. v0.7 graph export
-plans also include local intra-plan entity and relationship deduplication
-evidence. This reduces duplicate dry-run intent inside one decision record, but
-does not replace future OpenCTI graph lookup. When
+Graph controls make promotion decisions visible in decision audit and
+quarantine metadata through `graph_candidate_policy` and `graph_export_plan`.
+The decision audit report also aggregates graph export plan evidence so
+operators can review modes, statuses, actions, would-create counts, exported
+counts, held reasons and source/query rollups without reading raw JSONL
+records. v0.7 graph export plans also include local intra-plan entity and
+relationship deduplication evidence. This reduces duplicate dry-run intent
+inside one decision record, but does not replace OpenCTI graph lookup. When
 `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured, OTX and MISP can read known
 local graph keys and mark matching candidates as deduplicated in the plan. This
-is a read-only planning aid in v0.7; real graph export and post-export marking
-remain pending. In v0.8, `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` extends this
-planning aid to canonical OpenCTI graph lookup without creating entities,
-relationships or state marks. When canonical matches are found, OTX and MISP
-decision metadata can include `graph_export_plan_lookup_matches` so operators
-can audit which OpenCTI object was matched.
+is read-only in audit/dry-run modes. In v0.8,
+`NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` extends this planning aid to canonical
+OpenCTI graph lookup. When canonical matches are found, OTX and MISP decision
+metadata can include `graph_export_plan_lookup_matches` so operators can audit
+which OpenCTI object was matched. In `export` mode, known local/OpenCTI graph
+keys are skipped and newly promoted graph keys are marked locally only after
+successful OpenCTI import.
 
 ## Source Examples
 

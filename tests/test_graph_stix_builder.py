@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from exporters.stix_builder import build_graph_report_bundle
+from exporters.stix_builder import build_curated_report_bundle, build_graph_report_bundle
 
 
 class GraphStixBuilderTests(unittest.TestCase):
@@ -200,6 +200,43 @@ class GraphStixBuilderTests(unittest.TestCase):
             "adversary",
             relationship["x_narrowcti_relationship_source_field"],
         )
+
+    def test_builds_curated_bundle_with_indicators_and_graph_entities(self):
+        bundle, indicator_count, summary = build_curated_report_bundle(
+            "Curated ingest report",
+            "graph context",
+            80,
+            indicators=[{"type": "domain", "indicator": "one.example"}],
+            graph_candidate_policy={
+                "accepted": [
+                    threat_actor_candidate(),
+                    target_sector_candidate(),
+                    anchored_malware_candidate(),
+                ]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        sector = next(
+            item
+            for item in objects_by_type["identity"]
+            if item["name"] == "Finance"
+        )
+        report = objects_by_type["report"][0]
+
+        self.assertEqual(1, indicator_count)
+        self.assertEqual(1, summary["indicator_count"])
+        self.assertEqual(3, summary["graph_object_count"])
+        self.assertEqual("class", sector["identity_class"])
+        self.assertEqual(1, len(objects_by_type["indicator"]))
+        self.assertEqual(1, len(objects_by_type["malware"]))
+        self.assertEqual(1, len(objects_by_type["threat-actor"]))
+        self.assertIn(sector["id"], report["object_refs"])
+        self.assertIn(objects_by_type["indicator"][0]["id"], report["object_refs"])
 
     def test_skips_invalid_or_unsupported_graph_candidates(self):
         _, summary = build_graph_report_bundle(

@@ -361,6 +361,8 @@ def empty_graph_export_summary(include_breakdowns=True):
         "deduplicated_relationship_count": 0,
         "would_create_object_count": 0,
         "would_create_relationship_count": 0,
+        "exported_object_count": 0,
+        "exported_relationship_count": 0,
         "modes": {},
         "statuses": {},
         "actions": {},
@@ -429,6 +431,12 @@ def merge_graph_export_plan(summary, plan, lookup_matches=None):
     )
     summary["would_create_relationship_count"] += int(
         plan.get("would_create_relationship_count", 0) or 0
+    )
+    summary["exported_object_count"] += int(
+        plan.get("exported_object_count", 0) or 0
+    )
+    summary["exported_relationship_count"] += int(
+        plan.get("exported_relationship_count", 0) or 0
     )
     increment_count(summary["modes"], normalize_value(plan.get("mode"), "unknown"))
     increment_count(summary["statuses"], normalize_value(plan.get("status"), "unknown"))
@@ -1049,6 +1057,9 @@ def format_graph_export_summary(summary):
         f"would_create_objects={summary.get('would_create_object_count', 0)} "
         f"would_create_relationships="
         f"{summary.get('would_create_relationship_count', 0)} "
+        f"exported_objects={summary.get('exported_object_count', 0)} "
+        f"exported_relationships="
+        f"{summary.get('exported_relationship_count', 0)} "
         f"lookup_matches={summary.get('lookup_match_count', 0)} "
         f"modes={format_compact_counts(summary.get('modes', {}))} "
         f"statuses={format_compact_counts(summary.get('statuses', {}))} "

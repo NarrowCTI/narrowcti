@@ -55,6 +55,9 @@ def build_graph_export_plan(
     create_actions = [
         action for action in accepted_actions if action.get("action") == "would_create"
     ]
+    export_actions = [
+        action for action in accepted_actions if action.get("action") == "exported"
+    ]
     duplicate_actions = [
         action
         for action in accepted_actions
@@ -65,7 +68,7 @@ def build_graph_export_plan(
         "version": GRAPH_EXPORT_PLAN_VERSION,
         "mode": mode,
         "status": plan_status(mode),
-        "export_enabled": False,
+        "export_enabled": mode == "export",
         "candidate_count": int(
             policy.get("candidate_count") or len(accepted) + len(held)
         ),
@@ -102,6 +105,23 @@ def build_graph_export_plan(
         )
         if would_create
         else 0,
+        "exported_object_count": len(
+            [
+                action
+                for action in export_actions
+                if not action.get("deduplication", {}).get("entity_duplicate")
+            ]
+        ),
+        "exported_relationship_count": len(
+            [
+                action
+                for action in export_actions
+                if action.get("deduplication", {}).get("relationship_key")
+                and not action.get("deduplication", {}).get(
+                    "relationship_duplicate"
+                )
+            ]
+        ),
         "actions": actions,
     }
 
@@ -139,7 +159,11 @@ def planned_accepted_actions(
     known_entity_keys=None,
     known_relationship_keys=None,
 ):
-    entity_keys = {clean_string(key) for key in known_entity_keys or [] if clean_string(key)}
+    entity_keys = {
+        clean_string(key)
+        for key in known_entity_keys or []
+        if clean_string(key)
+    }
     relationship_keys = {
         clean_string(key)
         for key in known_relationship_keys or []
@@ -189,7 +213,7 @@ def planned_accepted_action(mode, entity_duplicate=False, relationship_duplicate
     if mode == "dry-run":
         return "would_create"
     if mode == "export":
-        return "blocked"
+        return "exported"
     return "audit_only"
 
 
@@ -203,7 +227,7 @@ def planned_accepted_reason(mode, entity_duplicate=False, relationship_duplicate
     if mode == "dry-run":
         return "graph_export_dry_run"
     if mode == "export":
-        return "graph_export_not_implemented"
+        return "graph_export_enabled"
     return "graph_export_mode_audit"
 
 
@@ -221,8 +245,62 @@ def plan_status(mode):
     if mode == "dry-run":
         return "dry-run"
     if mode == "export":
-        return "blocked"
+        return "export"
     return "audit-only"
+
+
+def exportable_graph_candidate_policy(
+    graph_candidate_policy,
+    graph_export_plan,
+    known_graph_keys=None,
+):
+    policy = mapping_from(graph_candidate_policy)
+    if not mapping_from(graph_export_plan).get("export_enabled"):
+        return policy_with_accepted(policy, [])
+
+    known = normalize_known_graph_keys(known_graph_keys or {})
+    known_entity_keys = set(known["entity_keys"])
+    known_relationship_keys = set(known["relationship_keys"])
+    exportable_fingerprints = set()
+
+    for action in plan_actions(graph_export_plan):
+        if clean_string(action.get("action")) != "exported":
+            continue
+        deduplication = mapping_from(action.get("deduplication"))
+        entity_key = clean_string(deduplication.get("entity_key"))
+        relationship_key = clean_string(deduplication.get("relationship_key"))
+        if entity_key and entity_key in known_entity_keys:
+            continue
+        if relationship_key and relationship_key in known_relationship_keys:
+            continue
+        fingerprint = clean_string(
+            mapping_from(action.get("candidate")).get("fingerprint")
+        )
+        if fingerprint:
+            exportable_fingerprints.add(fingerprint)
+
+    accepted = [
+        candidate
+        for candidate in clean_candidates(policy.get("accepted"))
+        if clean_string(candidate.get("fingerprint")) in exportable_fingerprints
+    ]
+    return policy_with_accepted(policy, accepted)
+
+
+def policy_with_accepted(policy, accepted):
+    updated = dict(policy)
+    updated["accepted"] = accepted
+    updated["accepted_count"] = len(accepted)
+    return updated
+
+
+def plan_actions(plan):
+    plan = mapping_from(plan)
+    return [
+        dict(action)
+        for action in plan.get("actions") or []
+        if isinstance(action, Mapping)
+    ]
 
 
 def clean_candidates(value):

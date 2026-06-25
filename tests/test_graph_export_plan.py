@@ -4,6 +4,7 @@ from core.graph_candidates import apply_graph_candidate_policy, build_graph_cand
 from core.graph_export_plan import (
     build_graph_export_plan,
     build_graph_export_plan_with_known_keys,
+    exportable_graph_candidate_policy,
     normalize_graph_export_mode,
 )
 
@@ -183,19 +184,41 @@ class GraphExportPlanTests(unittest.TestCase):
         self.assertEqual(1, plan["would_create_object_count"])
         self.assertEqual(1, plan["would_create_relationship_count"])
 
-    def test_export_mode_is_blocked_until_graph_export_exists(self):
+    def test_export_mode_marks_accepted_actions_as_exported(self):
         policy = self.graph_policy().to_dict()
 
         plan = build_graph_export_plan(policy, mode="export")
 
         self.assertEqual("export", plan["mode"])
-        self.assertEqual("blocked", plan["status"])
-        self.assertFalse(plan["export_enabled"])
-        self.assertEqual("blocked", plan["actions"][0]["action"])
-        self.assertEqual(
-            "graph_export_not_implemented",
-            plan["actions"][0]["reason"],
+        self.assertEqual("export", plan["status"])
+        self.assertTrue(plan["export_enabled"])
+        self.assertEqual(1, plan["exported_object_count"])
+        self.assertEqual(1, plan["exported_relationship_count"])
+        self.assertEqual("exported", plan["actions"][0]["action"])
+        self.assertEqual("graph_export_enabled", plan["actions"][0]["reason"])
+
+    def test_exportable_policy_skips_known_graph_keys(self):
+        policy = self.graph_policy().to_dict()
+        plan = build_graph_export_plan(policy, mode="export")
+        known_entity_key = plan["actions"][0]["deduplication"]["entity_key"]
+
+        exportable = exportable_graph_candidate_policy(
+            policy,
+            plan,
+            {"entity_keys": [known_entity_key], "relationship_keys": []},
         )
+
+        self.assertEqual([], exportable["accepted"])
+        self.assertEqual(0, exportable["accepted_count"])
+
+    def test_exportable_policy_keeps_new_exported_candidates(self):
+        policy = self.graph_policy().to_dict()
+        plan = build_graph_export_plan(policy, mode="export")
+
+        exportable = exportable_graph_candidate_policy(policy, plan)
+
+        self.assertEqual(1, len(exportable["accepted"]))
+        self.assertEqual("T1059", exportable["accepted"][0]["value"])
 
     def test_rejects_unknown_graph_export_mode(self):
         with self.assertRaisesRegex(ValueError, "graph export mode"):

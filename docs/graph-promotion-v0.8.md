@@ -39,7 +39,7 @@ source metadata
 
 ## v0.8 First Cut
 
-The first v0.8 implementation is intentionally read-only:
+The first v0.8 implementation started as read-only:
 
 - `core/opencti_graph_lookup.py` provides an OpenCTI graph lookup adapter.
 - ATT&CK attack-pattern candidates can be looked up by `x_mitre_id`.
@@ -56,7 +56,53 @@ The first v0.8 implementation is intentionally read-only:
   OpenCTI object was matched before future promotion logic creates anything.
 
 This lets NarrowCTI mark a candidate such as `T1059` as already known by
-OpenCTI before future graph promotion tries to create anything.
+OpenCTI before graph promotion tries to create anything.
+
+## Controlled Export Gate
+
+v0.8 now includes the first guarded graph promotion path. The default remains
+safe:
+
+- `NARROWCTI_GRAPH_EXPORT_MODE=audit`: records policy and graph evidence only.
+- `NARROWCTI_GRAPH_EXPORT_MODE=dry-run`: records what would be created.
+- `NARROWCTI_GRAPH_EXPORT_MODE=export`: imports the curated STIX bundle after
+  source policy, graph candidate policy and graph deduplication planning pass.
+
+In export mode, OTX and MISP use the same `graph_candidate_policy` and
+`graph_export_plan` recorded in the decision audit. The exporter sends the
+legacy `Report + Indicators` objects and appends accepted graph entities and
+relationships to the same bundle. Local graph deduplication state is marked
+only after the OpenCTI import call succeeds.
+
+Known graph keys returned by local state or OpenCTI lookup are not re-created
+by the first export gate. This protects canonical objects loaded by official
+connectors, especially MITRE ATT&CK attack-patterns. Creating relationships to
+already-existing canonical OpenCTI objects remains a later precision step
+because the STIX bundle builder must reference the canonical OpenCTI/STIX id
+instead of creating a duplicate object.
+
+## OpenCTI Tab Mapping
+
+The first controlled export can populate these OpenCTI areas when the source
+metadata supports them and the candidate passes policy:
+
+| OpenCTI area | Current NarrowCTI mapping | Notes |
+| --- | --- | --- |
+| Observations / Indicators | IOC indicators and detection-rule candidates as STIX `indicator` objects | Existing behavior remains active in every mode. |
+| Observations / Observables | Domain, URL, IPv4, IPv6, email and file-hash observables from graph candidates | Artifact and infrastructure-specific promotion is still pending. |
+| Threats / Threat actors | STIX `threat-actor` | Created only from explicit supported metadata such as OTX adversary or MISP galaxy evidence. |
+| Threats / Intrusion sets | STIX `intrusion-set` | Depends on source metadata or galaxy mapping. |
+| Arsenal / Malware | STIX `malware` | Useful for malware families and actor arsenal enrichment. |
+| Arsenal / Tools | STIX `tool` | Depends on source metadata or galaxy mapping. |
+| Arsenal / Vulnerabilities | STIX `vulnerability` with CVE external references when available | CVE evidence can come from MISP attributes, tags or OTX indicators. |
+| Techniques / Attack patterns | STIX `attack-pattern` with MITRE external id when available | Canonical MITRE lookup should be enabled before broad export. |
+| Techniques / Narratives | STIX `note` for supported event report or narrative evidence | OpenCTI placement depends on its note/report rendering. |
+| Entities / Sectors | STIX `identity` with `identity_class=class` for `target_sector` | This is the mapping expected to feed OpenCTI Sectors. |
+| Locations / Countries | STIX `location` with country value | Region, administrative area, city and position enrichment are backlog items. |
+
+OpenCTI tabs not listed above are not guaranteed by this version. They remain
+part of the graph enrichment backlog and require broader source metadata
+validation before NarrowCTI should promote them automatically.
 
 ## Runtime Configuration
 
@@ -101,13 +147,13 @@ remain in audit/dry-run or be held until policy explicitly allows creation.
 
 ## Current Non-Goals
 
-The first v0.8 cut does not:
+The current v0.8 cut still does not:
 
-- Import graph objects into OpenCTI.
-- Mark graph objects or relationships as exported.
-- Create OpenCTI relationships.
 - Query every possible STIX object type.
 - Replace local graph deduplication.
+- Create relationships to already-existing canonical OpenCTI objects returned
+  by lookup.
+- Guarantee population of every OpenCTI tab without source metadata support.
 
 ## Expansion Path
 

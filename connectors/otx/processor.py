@@ -5,7 +5,11 @@ from core.contextual_scoring import build_contextual_score_evidence
 from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
 from core.graph_deduplication import GraphDeduplicationIndex
 from core.graph_evidence import build_graph_evidence
-from core.graph_export_plan import build_graph_export_plan_with_known_keys
+from core.graph_export_plan import (
+    build_graph_export_plan,
+    build_graph_export_plan_with_known_keys,
+    exportable_graph_candidate_policy,
+)
 from core.indicator_policy import filter_indicators_by_type
 from core.opencti_graph_lookup import CompositeGraphLookup, OpenCTIGraphLookup
 from core.mitre_attack import MITREAttackResolver
@@ -335,7 +339,8 @@ class OTXProcessor:
             )
             return "dry_run"
 
-        if not self.ingest_candidate(candidate, reason):
+        ingest_result = self.ingest_candidate(candidate_ref, candidate, reason)
+        if not ingest_result:
             self.record_decision(
                 query,
                 candidate_ref,
@@ -348,6 +353,8 @@ class OTXProcessor:
         self.mark_artifacts(candidate_ref, candidate)
         state.mark_pulse(pulse_id)
         self.record_decision(query, candidate_ref, "ingest", reason, candidate)
+        if isinstance(ingest_result, dict):
+            self.mark_exported_graph_plan(candidate_ref, candidate, ingest_result)
         return "ingest"
 
     def normalize_feed_candidate(self, pulse):
@@ -567,23 +574,87 @@ class OTXProcessor:
         if added:
             self.log(f"Artifact dedup mark: {candidate.name} added={added}")
 
-    def ingest_candidate(self, candidate, reason):
+    def ingest_candidate(self, candidate_ref, candidate, reason):
         self.log(f"Ingest: {candidate.name} score={candidate.score} reason={reason}")
         try:
+            graph_policy = None
+            graph_metadata = None
+            export_kwargs = {"identity_name": self.settings.connector_name}
+            if getattr(self.settings, "graph_export_mode", "audit") == "export":
+                graph_policy, graph_metadata = self.graph_policy_for_export(
+                    candidate_ref,
+                    candidate,
+                )
+                export_kwargs.update(
+                    {
+                        "graph_candidate_policy": graph_policy,
+                        "graph_export_mode": getattr(
+                            self.settings,
+                            "graph_export_mode",
+                            "audit",
+                        ),
+                    }
+                )
             imported_iocs = self.exporter(
                 self.api_client,
                 candidate.name,
                 candidate.description,
                 candidate.score,
                 candidate.indicators,
-                identity_name=self.settings.connector_name,
+                **export_kwargs,
             )
         except Exception as exc:
             self.log(f"Ingest failed: {candidate.name} error={exc}")
             return False
 
         self.log(f"Ingest complete: {candidate.name} indicators={imported_iocs}")
-        return True
+        return graph_metadata or True
+
+    def graph_policy_for_export(self, candidate_ref, candidate):
+        metadata = decision_metadata(
+            candidate,
+            getattr(self.settings, "enable_otx_entity_extraction", True),
+            self.mitre_resolver,
+            source_key=candidate_ref.source.key,
+            external_id=candidate_ref.external_id,
+            title=candidate.name or candidate_ref.title,
+            graph_candidate_policy=self.graph_candidate_policy,
+            graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
+            graph_deduplication_index=self.graph_deduplication_index,
+        )
+        graph_policy = exportable_graph_candidate_policy(
+            metadata.get("graph_candidate_policy", {}),
+            metadata.get("graph_export_plan", {}),
+            metadata.get("graph_export_plan_known_keys", {}),
+        )
+        metadata["graph_export_plan"] = build_graph_export_plan(
+            graph_policy,
+            mode="export",
+        )
+        return graph_policy, metadata
+
+    def mark_exported_graph_plan(self, candidate_ref, candidate, metadata):
+        if not self.graph_deduplication_index or not hasattr(
+            self.graph_deduplication_index,
+            "mark_exported_plan",
+        ):
+            return
+        try:
+            added = self.graph_deduplication_index.mark_exported_plan(
+                metadata.get("graph_export_plan", {}),
+                source_key=candidate_ref.source.key,
+                external_id=candidate_ref.external_id,
+                title=candidate.name or candidate_ref.title,
+            )
+        except Exception as exc:
+            self.log(f"Graph dedup mark failed: {candidate.name} error={exc}")
+            return
+        if added.get("entities") or added.get("relationships"):
+            self.log(
+                f"Graph dedup mark: {candidate.name} "
+                f"entities={added.get('entities', 0)} "
+                f"relationships={added.get('relationships', 0)}"
+            )
 
     def prepare_candidate(self, query, pulse):
         indicators = pulse.get("indicators", [])

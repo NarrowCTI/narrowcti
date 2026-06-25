@@ -212,11 +212,25 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added gateway operational report file output and an `ops` profile service so
   run, source, quarantine and value-metric evidence can be archived from the
   gateway state volume.
+- Added the first controlled graph promotion export gate. When
+  `NARROWCTI_GRAPH_EXPORT_MODE=export` is explicitly enabled, OTX and MISP send
+  accepted graph candidates in the STIX bundle with the legacy report and
+  indicators, allowing supported OpenCTI tabs such as Sectors, Malware,
+  Vulnerabilities, Attack patterns, Threat actors, Intrusion sets, Countries,
+  Indicators and Observables to be populated when source metadata supports
+  them.
+- Added guarded graph export state marking after successful OpenCTI import so
+  local graph deduplication reflects only objects and relationships that were
+  actually promoted.
+- Added export filtering for known local/OpenCTI graph keys so the first graph
+  promotion gate does not recreate canonical objects already found by lookup.
 
 ## Promotion Boundary
 
-The v0.8 first cut is still read-only. It does not import graph objects into
-OpenCTI and does not mark graph objects as exported.
+The v0.8 default remains read-only, but `NARROWCTI_GRAPH_EXPORT_MODE=export`
+now enables the first controlled graph promotion gate. This should stay
+disabled in production-like environments until source-specific validation,
+OpenCTI duplicate review and rollback evidence are available.
 
 The correct sequence remains:
 
@@ -230,6 +244,10 @@ graph candidate
   -> controlled graph promotion
   -> post-export state marking
 ```
+
+The first export gate intentionally skips known graph keys returned by local
+deduplication or OpenCTI lookup. Relationship creation against already-existing
+canonical OpenCTI objects remains a later precision task.
 
 ## Product Operations Boundary
 

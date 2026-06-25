@@ -175,6 +175,8 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(1, graph["deduplicated_relationship_count"])
         self.assertEqual(2, graph["would_create_object_count"])
         self.assertEqual(2, graph["would_create_relationship_count"])
+        self.assertEqual(0, graph["exported_object_count"])
+        self.assertEqual(0, graph["exported_relationship_count"])
         self.assertEqual(1, graph["lookup_match_count"])
         self.assertEqual({"attack-pattern": 1}, graph["lookup_match_object_counts"])
         self.assertEqual({"mitre_attack_id": 1}, graph["lookup_match_type_counts"])
@@ -207,6 +209,37 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(0, summary["record_count"])
         self.assertEqual({}, summary["by_source"])
         self.assertEqual([], summary["by_query"])
+
+    def test_report_aggregates_exported_graph_counts(self):
+        report = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-22T10:00:00Z",
+                    "otx",
+                    "ingest",
+                    "ok",
+                    metadata={
+                        "graph_export_plan": graph_export_plan(
+                            mode="export",
+                            status="export",
+                            candidate_count=2,
+                            accepted_count=2,
+                            exported_object_count=1,
+                            exported_relationship_count=2,
+                            actions=["exported", "exported"],
+                        )
+                    },
+                )
+            ]
+        )
+
+        graph = report.graph_export
+
+        self.assertEqual({"export": 1}, graph["modes"])
+        self.assertEqual({"export": 1}, graph["statuses"])
+        self.assertEqual(1, graph["exported_object_count"])
+        self.assertEqual(2, graph["exported_relationship_count"])
+        self.assertEqual({"exported": 2}, graph["actions"])
 
     def test_report_aggregates_contextual_scoring_metadata(self):
         records = [
@@ -687,6 +720,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("graph_export:", text)
         self.assertIn("deduplicated=1", text)
         self.assertIn("would_create_objects=2", text)
+        self.assertIn("exported_objects=0", text)
         self.assertIn("lookup_matches=1", text)
         self.assertIn("lookup_match_types=mitre_attack_id:1", text)
         self.assertIn("actions=would_create:2", text)
@@ -788,6 +822,8 @@ def graph_export_plan(
     deduplicated_relationship_count=0,
     would_create_object_count=0,
     would_create_relationship_count=0,
+    exported_object_count=0,
+    exported_relationship_count=0,
     actions=None,
     held_reasons=None,
     accepted_object_counts=None,
@@ -809,6 +845,8 @@ def graph_export_plan(
         "accepted_relationship_counts": accepted_relationship_counts or {},
         "would_create_object_count": would_create_object_count,
         "would_create_relationship_count": would_create_relationship_count,
+        "exported_object_count": exported_object_count,
+        "exported_relationship_count": exported_relationship_count,
         "actions": [{"action": action} for action in actions or []],
     }
 

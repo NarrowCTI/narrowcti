@@ -7,8 +7,8 @@ promotion gate.
 
 v0.8 remains conservative. The goal is to prove that NarrowCTI can detect
 canonical OpenCTI graph objects, record lookup evidence, summarize that evidence
-for operators and keep graph promotion blocked until lab validation explicitly
-allows controlled export.
+for operators and keep graph promotion in dry-run until lab validation
+explicitly allows controlled export.
 
 No secrets should be recorded here. Local `.env` files remain unversioned.
 
@@ -26,12 +26,34 @@ NARROWCTI_GRAPH_DEDUP_STATE_FILE=/app/state/graph_dedup.json
 Expected safety result:
 
 - OpenCTI indicator/report export follows existing dry-run behavior.
-- Graph objects and relationships are not promoted.
+- Graph objects and relationships are not promoted unless
+  `NARROWCTI_GRAPH_EXPORT_MODE=export` is explicitly enabled for a bounded lab
+  import.
 - OpenCTI graph lookup is read-only.
 - Lookup errors fail open and are logged as evidence.
 - Canonical graph matches are recorded in
   `graph_export_plan_lookup_matches`.
 - The decision audit report aggregates lookup match counts in `graph_export`.
+
+## Controlled Export Evidence
+
+A bounded lab export can be used to validate a single OpenCTI tab mapping after
+dry-run evidence is acceptable. The recommended pattern is:
+
+```text
+NARROWCTI_GRAPH_EXPORT_MODE=export
+NARROWCTI_OPENCTI_GRAPH_LOOKUP=true
+NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=target_sector
+MAX_PULSES_PER_QUERY=1
+MAX_SEARCH_RESULTS_PER_QUERY=1
+MAX_IOCS_PER_PULSE=10
+```
+
+Observed local validation for the OTX `lummac2` query created the curated
+`Crypto` object in OpenCTI as `entity_type=Sector`, confirming that
+`target_sector` metadata exported by NarrowCTI can populate
+`Entities / Sectors`. This evidence should be repeated per source and per
+entity class before enabling broader graph export allow-lists.
 
 ## Required Lab Posture
 

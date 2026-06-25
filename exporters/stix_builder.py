@@ -113,6 +113,59 @@ def build_report_bundle(
     return bundle, len(indicator_objects)
 
 
+def build_curated_report_bundle(
+    name,
+    description,
+    score,
+    indicators=None,
+    graph_candidate_policy=None,
+    identity_name="NarrowCTI Gateway",
+):
+    now = datetime.now(timezone.utc)
+    identity = Identity(name=identity_name, identity_class="organization")
+    indicator_objects = build_indicators(indicators or [], identity.id, score, now)
+    accepted_candidates = graph_accepted_candidates(graph_candidate_policy)
+    graph_content = build_graph_content(accepted_candidates, identity.id, now)
+
+    object_refs = [
+        *[indicator.id for indicator in indicator_objects],
+        *[stix_object.id for stix_object in graph_content["objects"]],
+    ] or [identity.id]
+    report = build_stix_report(
+        name,
+        description,
+        score,
+        now,
+        identity.id,
+        object_refs,
+    )
+    relationship_content = build_graph_relationships(
+        accepted_candidates,
+        graph_content["object_ids"],
+        report.id,
+        identity.id,
+    )
+
+    bundle = Bundle(
+        objects=[
+            identity,
+            *indicator_objects,
+            *graph_content["objects"],
+            *relationship_content["relationships"],
+            report,
+        ],
+        allow_custom=True,
+    )
+    summary = graph_bundle_summary(
+        accepted_candidates,
+        bundle,
+        graph_content,
+        relationship_content,
+    )
+    summary["indicator_count"] = len(indicator_objects)
+    return bundle, len(indicator_objects), summary
+
+
 def build_graph_report_bundle(
     name,
     description,
@@ -123,7 +176,59 @@ def build_graph_report_bundle(
     now = datetime.now(timezone.utc)
     identity = Identity(name=identity_name, identity_class="organization")
     accepted_candidates = graph_accepted_candidates(graph_candidate_policy)
+    graph_content = build_graph_content(accepted_candidates, identity.id, now)
 
+    report_refs = [
+        stix_object.id for stix_object in graph_content["objects"]
+    ] or [identity.id]
+    report = build_stix_report(
+        name,
+        description,
+        score,
+        now,
+        identity.id,
+        report_refs,
+    )
+    relationship_content = build_graph_relationships(
+        accepted_candidates,
+        graph_content["object_ids"],
+        report.id,
+        identity.id,
+    )
+
+    bundle = Bundle(
+        objects=[
+            identity,
+            *graph_content["objects"],
+            *relationship_content["relationships"],
+            report,
+        ],
+        allow_custom=True,
+    )
+    summary = graph_bundle_summary(
+        accepted_candidates,
+        bundle,
+        graph_content,
+        relationship_content,
+    )
+    return bundle, summary
+
+
+def build_stix_report(name, description, score, now, identity_id, object_refs):
+    return Report(
+        name=name,
+        description=description or "",
+        report_types=["threat-report"],
+        confidence=score,
+        created=now,
+        modified=now,
+        published=now,
+        created_by_ref=identity_id,
+        object_refs=object_refs,
+    )
+
+
+def build_graph_content(accepted_candidates, identity_id, now):
     graph_objects = []
     graph_object_ids = {}
     skipped_candidates = []
@@ -134,7 +239,7 @@ def build_graph_report_bundle(
         if object_key in graph_object_ids:
             continue
         try:
-            stix_object = graph_candidate_to_stix_object(candidate, identity.id, now)
+            stix_object = graph_candidate_to_stix_object(candidate, identity_id, now)
         except Exception:
             stix_object = None
         if not stix_object:
@@ -144,19 +249,20 @@ def build_graph_report_bundle(
         graph_objects.append(stix_object)
         object_counts[stix_object.type] += 1
 
-    report_refs = [stix_object.id for stix_object in graph_objects] or [identity.id]
-    report = Report(
-        name=name,
-        description=description or "",
-        report_types=["threat-report"],
-        confidence=score,
-        created=now,
-        modified=now,
-        published=now,
-        created_by_ref=identity.id,
-        object_refs=report_refs,
-    )
+    return {
+        "objects": graph_objects,
+        "object_ids": graph_object_ids,
+        "skipped_candidates": skipped_candidates,
+        "object_counts": object_counts,
+    }
 
+
+def build_graph_relationships(
+    accepted_candidates,
+    graph_object_ids,
+    report_id,
+    identity_id,
+):
     graph_relationships = []
     relationship_keys = set()
     relationship_counts = Counter()
@@ -170,7 +276,7 @@ def build_graph_report_bundle(
         source_ref, relationship_type, relationship_mode = graph_relationship_endpoint(
             candidate,
             graph_object_ids,
-            report.id,
+            report_id,
             target_ref,
         )
         relationship_key = (source_ref, relationship_type, target_ref)
@@ -184,7 +290,7 @@ def build_graph_report_bundle(
             confidence=clamp_stix_confidence(
                 candidate.get("relationship_confidence", candidate.get("confidence"))
             ),
-            created_by_ref=identity.id,
+            created_by_ref=identity_id,
             custom_properties=graph_relationship_custom_properties(
                 candidate,
                 relationship_mode,
@@ -201,26 +307,42 @@ def build_graph_report_bundle(
         else:
             report_relationship_count += 1
 
-    bundle = Bundle(
-        objects=[identity, *graph_objects, *graph_relationships, report],
-        allow_custom=True,
-    )
-    summary = {
-        "accepted_candidate_count": len(accepted_candidates),
-        "bundle_object_count": len(bundle.objects),
-        "graph_object_count": len(graph_objects),
-        "graph_relationship_count": len(graph_relationships),
-        "skipped_candidate_count": len(skipped_candidates),
-        "object_counts": dict(sorted(object_counts.items())),
-        "relationship_counts": dict(sorted(relationship_counts.items())),
-        "proposed_relationship_counts": dict(
-            sorted(proposed_relationship_counts.items())
-        ),
+    return {
+        "relationships": graph_relationships,
+        "relationship_counts": relationship_counts,
+        "proposed_relationship_counts": proposed_relationship_counts,
         "semantic_relationship_count": semantic_relationship_count,
         "report_relationship_count": report_relationship_count,
-        "skipped_candidates": skipped_candidates,
     }
-    return bundle, summary
+
+
+def graph_bundle_summary(
+    accepted_candidates,
+    bundle,
+    graph_content,
+    relationship_content,
+):
+    return {
+        "accepted_candidate_count": len(accepted_candidates),
+        "bundle_object_count": len(bundle.objects),
+        "graph_object_count": len(graph_content["objects"]),
+        "graph_relationship_count": len(relationship_content["relationships"]),
+        "skipped_candidate_count": len(graph_content["skipped_candidates"]),
+        "object_counts": dict(sorted(graph_content["object_counts"].items())),
+        "relationship_counts": dict(
+            sorted(relationship_content["relationship_counts"].items())
+        ),
+        "proposed_relationship_counts": dict(
+            sorted(relationship_content["proposed_relationship_counts"].items())
+        ),
+        "semantic_relationship_count": relationship_content[
+            "semantic_relationship_count"
+        ],
+        "report_relationship_count": relationship_content[
+            "report_relationship_count"
+        ],
+        "skipped_candidates": graph_content["skipped_candidates"],
+    }
 
 
 def graph_accepted_candidates(graph_candidate_policy):

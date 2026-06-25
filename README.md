@@ -261,25 +261,25 @@ enterprise controls should cover actor, arsenal, ATT&CK, victimology, graph
 state and quarantine release workflows without hiding those policy choices from
 operators.
 
-The v0.7 graph layer currently records `graph_candidate_policy` and
-`graph_export_plan` metadata. `NARROWCTI_GRAPH_EXPORT_MODE=audit` keeps the
-plan audit-only, while `dry-run` records what graph objects and relationships
-would be attempted later. The first graph-aware STIX builder foundation can
-convert accepted candidates into STIX objects for validation, and OTX/MISP
-decision metadata now records a safe `graph_stix_preview` summary with bundle,
-object, relationship and skipped-candidate counts. Real graph export remains
-blocked until controlled export wiring, deduplication promotion and OpenCTI
-validation are complete. The local graph deduplication state can be read with
+The graph layer records `graph_candidate_policy` and `graph_export_plan`
+metadata. `NARROWCTI_GRAPH_EXPORT_MODE=audit` keeps the plan audit-only, while
+`dry-run` records what graph objects and relationships would be attempted. In
+v0.8, `NARROWCTI_GRAPH_EXPORT_MODE=export` enables the first controlled graph
+promotion gate: OTX and MISP still export the legacy report and indicators, but
+also add accepted graph entities and relationships to the same STIX bundle.
+This can feed OpenCTI areas such as Threats, Arsenal, Techniques, Sectors,
+Locations and Observations when source metadata supports those entities. The
+local graph deduplication state can be read with
 `NARROWCTI_GRAPH_DEDUP_STATE_FILE` so OTX and MISP export plans can mark known
-local graph keys as deduplicated. This is read-only planning evidence; dry-run
-plans are not marked as exported knowledge. In v0.8,
+local graph keys as deduplicated. Dry-run plans are not marked as exported
+knowledge, and export state is marked only after the OpenCTI import call
+succeeds. In v0.8,
 `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` can also be enabled so OTX and MISP
 planning query OpenCTI for canonical graph objects, starting with ATT&CK
-attack-patterns, before later promotion work is allowed to create new graph
-knowledge. Canonical matches are exposed as bounded
-`graph_export_plan_lookup_matches` metadata for audit and future enterprise
-reporting, and the decision audit report summarizes lookup match counts by
-object type and match type.
+attack-patterns, before promotion creates new graph knowledge. Canonical
+matches are exposed as bounded `graph_export_plan_lookup_matches` metadata for
+audit and future enterprise reporting, and the first export gate skips known
+graph keys instead of duplicating canonical OpenCTI objects.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in
