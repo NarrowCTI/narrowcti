@@ -390,6 +390,7 @@ class GatewayCurationReportTests(unittest.TestCase):
             )
 
         insight = report.policy_insights[0]
+        context_sections = report.context_sections
         text = format_text_report(report)
         html = format_html_report(report)
         recommendation_codes = [item["code"] for item in report.recommendations]
@@ -482,6 +483,25 @@ class GatewayCurationReportTests(unittest.TestCase):
             [{"action": "quarantine", "reason": "low score", "count": 3}],
             insight["top_quarantine_reasons"],
         )
+        self.assertEqual(3, context_sections["attack_patterns"]["observation_count"])
+        self.assertEqual(3, context_sections["arsenal"]["observation_count"])
+        self.assertEqual(3, context_sections["threat_actors"]["observation_count"])
+        self.assertEqual(3, context_sections["target_sectors"]["observation_count"])
+        self.assertEqual(
+            [
+                {
+                    "entity_type": "attack_pattern",
+                    "value": "T1059",
+                    "display_name": "Command and Scripting Interpreter",
+                    "count": 3,
+                }
+            ],
+            context_sections["attack_patterns"]["top_entities"],
+        )
+        self.assertEqual(
+            "Command and Scripting Interpreter",
+            context_sections["attack_patterns"]["source_entries"][0]["display_name"],
+        )
         self.assertEqual(
             [
                 {
@@ -507,6 +527,9 @@ class GatewayCurationReportTests(unittest.TestCase):
         )
         self.assertIn("arsenal=Loader Example:3", text)
         self.assertIn("threats=APT Example:3 sectors=Finance:3", text)
+        self.assertIn("context_sections:", text)
+        self.assertIn("attack_patterns label=ATT&CK techniques", text)
+        self.assertIn("Context Sections", html)
         self.assertIn("context=records=3 accepted_context=9 density=3.0", text)
         self.assertIn("categories=ttp:6,threat:3", text)
         self.assertIn("quarantine_reasons=quarantine:low score=3", text)

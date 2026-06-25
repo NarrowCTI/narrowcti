@@ -140,6 +140,10 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   `graph_evidence` so curation reports and support diagnostics can show top
   ATT&CK techniques, arsenal, threat actors/intrusion sets and target sectors
   per source without inventing missing context.
+- Added structured curation report context sections for ATT&CK, arsenal,
+  threat actors/intrusion sets and target sectors. These sections aggregate top
+  entities and source-level observations from existing graph evidence without
+  creating OpenCTI entities or inferring unsupported context.
 - Added source-level quarantine reason rollups to policy insights so repeated
   hold conditions from decision audit are visible next to analyst release/reject
   feedback.

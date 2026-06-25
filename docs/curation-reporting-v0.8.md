@@ -153,6 +153,11 @@ The current report contains:
   source decision metadata carries ATT&CK, threat actor/intrusion set or
   target-sector graph evidence, or arsenal evidence such as malware, tools and
   vulnerabilities.
+- `context_sections`: structured report sections for ATT&CK techniques,
+  arsenal, threat actors/intrusion sets and target sectors. Each section keeps
+  aggregate observations, distinct entity counts, top entities and source-level
+  entries derived only from graph evidence already present in decision audit
+  metadata.
 - `policy_insights`: source-level policy tuning hints derived from repeated
   release/reject audit patterns, with top analyst reasons attached to explain
   what drove the signal and decision score distributions attached to show
@@ -250,6 +255,18 @@ The context narrative summary is also evidence-only. It is built from
 not invent missing actors, arsenal, sectors or ATT&CK techniques; if a feed does
 not provide those fields, the report shows `none`.
 
+The structured context sections reuse the same evidence and make it easier to
+turn the report into future enterprise CTI output. They currently cover:
+
+- ATT&CK techniques, from `attack_pattern` graph evidence.
+- Arsenal, from `malware`, `tool` and `vulnerability` graph evidence.
+- Threat actors and intrusion sets, from `threat_actor` and `intrusion_set`
+  graph evidence.
+- Target sectors, from `target_sector` graph evidence.
+
+These sections remain report evidence only. They do not create OpenCTI
+entities, infer unsupported victimology or promote graph relationships.
+
 Repeated quarantine reasons are taken from decision audit evidence grouped by
 source and action. They explain why candidates are being held, for example low
 score, missing relationship provenance or blocked TLP, without changing
@@ -258,8 +275,8 @@ quarantine policy automatically.
 ## Future Work
 
 - Add PDF export once the report schema stabilizes.
-- Expand the first evidence-driven context narrative into richer per-actor,
-  per-arsenal, per-sector and per-ATT&CK report sections.
+- Expand structured context sections with relationship-level narrative once
+  controlled graph promotion evidence is available.
 - Add graph-quality deltas after controlled graph promotion is enabled.
 - Add tenant-configurable redaction policies for future customer-specific
   external report delivery.

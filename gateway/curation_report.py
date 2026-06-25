@@ -19,6 +19,12 @@ from gateway.settings import load_settings
 
 REDACTION_PROFILES = ("none", "support", "external")
 SCHEMA_VERSION = "curation-report/v0.8"
+CONTEXT_SECTION_DEFINITIONS = (
+    ("attack_patterns", "ATT&CK techniques", "top_attack_patterns"),
+    ("arsenal", "Arsenal", "top_arsenal"),
+    ("threat_actors", "Threat actors and intrusion sets", "top_threat_actors"),
+    ("target_sectors", "Target sectors", "top_target_sectors"),
+)
 REDACTION_POLICIES = {
     "none": {
         "audience": "local-operator",
@@ -32,6 +38,7 @@ REDACTION_POLICIES = {
             "analyst_review",
             "analyst_review_actions",
             "source_summaries",
+            "context_sections",
             "policy_insights",
             "recommendations",
         ],
@@ -50,6 +57,7 @@ REDACTION_POLICIES = {
         "retained_sections": [
             "executive_summary",
             "source_summaries",
+            "context_sections",
             "policy_insights",
             "recommendations",
         ],
@@ -68,6 +76,7 @@ REDACTION_POLICIES = {
         "retained_sections": [
             "executive_summary",
             "source_summaries",
+            "context_sections",
             "policy_insights",
             "recommendations",
         ],
@@ -85,6 +94,7 @@ class CurationReport:
     analyst_review: dict
     analyst_review_actions: dict
     source_summaries: list
+    context_sections: dict
     policy_insights: list
     recommendations: list
 
@@ -98,6 +108,7 @@ class CurationReport:
             "analyst_review": self.analyst_review,
             "analyst_review_actions": self.analyst_review_actions,
             "source_summaries": list(self.source_summaries),
+            "context_sections": self.context_sections,
             "policy_insights": list(self.policy_insights),
             "recommendations": list(self.recommendations),
         }
@@ -126,6 +137,7 @@ def build_curation_report(
         analyst_review,
         review_actions,
     )
+    context_sections = build_context_sections(source_summaries)
     policy_insights = build_policy_insights(source_summaries)
     return CurationReport(
         schema_version=SCHEMA_VERSION,
@@ -136,6 +148,7 @@ def build_curation_report(
         analyst_review=analyst_review,
         analyst_review_actions=review_actions,
         source_summaries=source_summaries,
+        context_sections=context_sections,
         policy_insights=policy_insights,
         recommendations=build_recommendations(
             executive,
@@ -569,6 +582,85 @@ def build_context_narrative_summary(graph_entities):
     }
 
 
+def build_context_sections(source_summaries):
+    return {
+        category: build_context_section(source_summaries, category, label, field_name)
+        for category, label, field_name in CONTEXT_SECTION_DEFINITIONS
+    }
+
+
+def build_context_section(source_summaries, category, label, field_name):
+    entity_counts = Counter()
+    source_entries = []
+    source_keys = set()
+    for source in source_summaries or []:
+        narrative = source.get("context_narrative") or {}
+        for item in narrative.get(field_name) or []:
+            entry = context_section_entry(source, item)
+            if not entry:
+                continue
+            source_keys.add(entry["source_key"])
+            entity_counts[
+                (
+                    entry["entity_type"],
+                    entry["value"],
+                    entry["display_name"],
+                )
+            ] += entry["count"]
+            source_entries.append(entry)
+    source_entries.sort(
+        key=lambda item: (
+            -int(item.get("count", 0) or 0),
+            item.get("display_name", ""),
+            item.get("source_key", ""),
+            item.get("entity_type", ""),
+        )
+    )
+    return {
+        "category": category,
+        "label": label,
+        "source_count": len(source_keys),
+        "distinct_entity_count": len(entity_counts),
+        "observation_count": sum(entity_counts.values()),
+        "top_entities": context_section_top_entities(entity_counts),
+        "source_entries": source_entries,
+    }
+
+
+def context_section_entry(source, item):
+    count = int(item.get("count", 0) or 0)
+    if count <= 0:
+        return {}
+    value = str(item.get("value") or item.get("display_name") or "").strip()
+    display_name = str(item.get("display_name") or value).strip()
+    if not value and not display_name:
+        return {}
+    return {
+        "source_key": source.get("source_key", "(unknown)"),
+        "source_name": source.get("source_name", source.get("source_key", "")),
+        "entity_type": str(item.get("entity_type") or "unknown").strip() or "unknown",
+        "value": value or display_name,
+        "display_name": display_name or value,
+        "count": count,
+    }
+
+
+def context_section_top_entities(counter, limit=10):
+    items = sorted(
+        (counter or {}).items(),
+        key=lambda item: (-item[1], item[0][2], item[0][1], item[0][0]),
+    )
+    return [
+        {
+            "entity_type": entity_type,
+            "value": value,
+            "display_name": display_name,
+            "count": count,
+        }
+        for (entity_type, value, display_name), count in items[:limit]
+    ]
+
+
 def build_source_summaries(operational, decisions, analyst_review, review_actions):
     source_keys = set()
     source_keys.update((operational.get("sources") or {}).keys())
@@ -940,6 +1032,18 @@ def format_text_report(report, redaction_profile="none"):
         f"stix_objects={summary['graph_stix_object_count']} "
         f"stix_relationships={summary['graph_stix_relationship_count']}",
     ]
+    if data.get("context_sections"):
+        lines.append("context_sections:")
+        sections = sorted(
+            (data.get("context_sections") or {}).values(),
+            key=lambda item: item.get("category", ""),
+        )
+        for section in sections:
+            lines.append(
+                "- "
+                f"{section.get('category')} "
+                f"{format_context_section_summary(section)}"
+            )
     if data.get("source_summaries"):
         lines.append("source_summaries:")
         for source in data["source_summaries"]:
@@ -1055,6 +1159,22 @@ def format_html_report(report, redaction_profile="none"):
             "",
             "",
         )
+    context_rows = "\n".join(
+        html_table_row(
+            section.get("category"),
+            section.get("label"),
+            section.get("source_count"),
+            section.get("distinct_entity_count"),
+            section.get("observation_count"),
+            format_narrative_entries(section.get("top_entities")),
+        )
+        for section in sorted(
+            (data.get("context_sections") or {}).values(),
+            key=lambda item: item.get("category", ""),
+        )
+    )
+    if not context_rows:
+        context_rows = html_table_row("none", "", 0, 0, 0, "")
 
     return """<!doctype html>
 <html lang="en">
@@ -1111,6 +1231,13 @@ def format_html_report(report, redaction_profile="none"):
     <table>
       <tr><th>STIX bundles</th><th>STIX objects</th><th>STIX relationships</th></tr>
       <tr><td>{stix_bundles}</td><td>{stix_objects}</td><td>{stix_relationships}</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Context Sections</h2>
+    <table>
+      <tr><th>category</th><th>label</th><th>sources</th><th>distinct entities</th><th>observations</th><th>top entities</th></tr>
+      {context_rows}
     </table>
   </section>
   <section>
@@ -1172,6 +1299,7 @@ def format_html_report(report, redaction_profile="none"):
         stix_bundles=escape(summary["graph_stix_bundle_count"]),
         stix_objects=escape(summary["graph_stix_object_count"]),
         stix_relationships=escape(summary["graph_stix_relationship_count"]),
+        context_rows=context_rows,
         source_rows=source_rows,
         policy_rows=policy_rows,
         recommendations=recommendations,
@@ -1295,6 +1423,17 @@ def format_context_narrative_summary(summary):
         f"arsenal={format_narrative_entries(summary.get('top_arsenal'))} "
         f"threats={format_narrative_entries(summary.get('top_threat_actors'))} "
         f"sectors={format_narrative_entries(summary.get('top_target_sectors'))}"
+    )
+
+
+def format_context_section_summary(section):
+    section = section or {}
+    return (
+        f"label={section.get('label', '')} "
+        f"sources={section.get('source_count', 0)} "
+        f"distinct_entities={section.get('distinct_entity_count', 0)} "
+        f"observations={section.get('observation_count', 0)} "
+        f"top={format_narrative_entries(section.get('top_entities'))}"
     )
 
 

@@ -134,7 +134,9 @@ The current snapshot contains:
   size and modification metadata.
 - `curation_report`: executive curation summary, decisions, analyst review and
   graph-readiness evidence, including the embedded curation report
-  `redaction_profile` and `redaction_policy`.
+  `redaction_profile`, `redaction_policy` and structured context sections for
+  ATT&CK, arsenal, threat actors/intrusion sets and target sectors when graph
+  evidence is available.
 - `source_posture`: rendered text/HTML summary of per-source curation posture
   from the embedded curation report, including compact context narrative
   evidence when ATT&CK, arsenal, threat actor/intrusion set or target-sector
