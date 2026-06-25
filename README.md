@@ -425,8 +425,10 @@ The v0.8 template is dry-run/run-once by default, joins an existing OpenCTI
 Docker network and must be validated with `gateway.preflight` before any source
 execution. Its `ops` profile can run preflight, curation reporting,
 decision audit reporting, artifact correlation reporting, operational
-validation and support diagnostics without starting continuous ingestion. Older
-deployment snippets in
+validation and support diagnostics without starting continuous ingestion. The
+curation report service persists text, JSON and HTML artifacts under the
+gateway state volume, while support diagnostics can produce a redacted HTML
+snapshot and support bundle for review. Older deployment snippets in
 release-specific documents are
 historical context; use `docs/deployment-operations-v0.8.md` for the current
 procedure.
