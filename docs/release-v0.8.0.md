@@ -23,6 +23,8 @@ Deployment operations are tracked in `docs/deployment-operations-v0.8.md`.
 Analyst review design is tracked in `docs/analyst-review-v0.8.md`.
 Curation reporting is tracked in `docs/curation-reporting-v0.8.md`.
 Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
+Infrastructure ASN/IP correlation is tracked in
+`docs/infrastructure-correlation-v0.8.md`.
 
 ## Initial Scope
 
@@ -83,6 +85,11 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   follow-up lookup export referenced
   `infrastructure--f5564d5a-ff0d-59cc-a79e-7d06c08e22bf` with
   `existing_reference_counts.infrastructure=1`.
+- Validated ASN/IP infrastructure correlation against OpenCTI:
+  `Autonomous-System` imports as a `stixCyberObservable`, Infrastructure can
+  `consists-of` ASN/IP/CIDR, and IP/CIDR can `belongs-to` ASN. The controlled
+  bundle for `AS64512 NarrowCTI Validation ASN`, `203.0.113.10` and
+  `203.0.113.0/24` reimported without duplicating the controlled objects.
 - Documented Report hygiene evidence: deterministic Report ids prevent another
   row when name and description are unchanged; a changed description is treated
   as a distinct report by design.

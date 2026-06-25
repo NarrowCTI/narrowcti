@@ -202,6 +202,7 @@ Detailed design and validation:
 - `docs/analyst-review-v0.8.md`
 - `docs/curation-reporting-v0.8.md`
 - `docs/support-diagnostics-v0.8.md`
+- `docs/infrastructure-correlation-v0.8.md`
 
 Purpose:
 
@@ -219,6 +220,9 @@ Purpose:
   and env example for existing OpenCTI Docker networks.
 - Add controlled graph promotion with OpenCTI entity/relationship lookup,
   including canonical ATT&CK lookup by external id or STIX id.
+- Validate the Infrastructure/ASN/IP correlation model so NarrowCTI can enrich
+  actor and malware infrastructure with IP, CIDR and ASN relationships without
+  turning raw IOCs into low-context graph entities.
 - Add an operational validation checklist for v0.8 graph lookup evidence,
   OpenCTI duplicate review and local resource posture.
 - Harden configuration defaults.

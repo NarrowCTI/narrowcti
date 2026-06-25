@@ -199,6 +199,13 @@ exact name and exact alias matching returned by OpenCTI search. NarrowCTI does
 not infer Infrastructure from every observable because that would pollute the
 OpenCTI graph with low-context network artifacts.
 
+ASN/IP infrastructure correlation is tracked separately in
+`docs/infrastructure-correlation-v0.8.md`. Local validation confirmed that
+OpenCTI can ingest `Autonomous-System` as a cyber observable and can represent
+`Infrastructure -> consists-of -> ASN/IP/CIDR` plus
+`IP/CIDR -> belongs-to -> ASN` relationships. Broad activation still requires
+source-backed provenance and exact observable lookup helpers.
+
 For Location objects, lookup is intentionally limited to `standard_id` and
 exact OpenCTI name. This is enough to protect controlled country export, such
 as `Argentina`, without guessing ambiguous geography from weak source text.
@@ -251,6 +258,8 @@ expand to:
 - External-reference based threat actor and intrusion set lookup beyond exact
   name or alias.
 - Sector and location lookup with controlled vocabulary normalization.
+- ASN/IP/CIDR infrastructure correlation through `stixCyberObservables`, with
+  exact lookup and source-backed relationship provenance.
 - Relationship lookup before edge creation.
 - Post-export graph state marking only after OpenCTI import succeeds.
 
