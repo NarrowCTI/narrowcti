@@ -9,6 +9,7 @@ from core.opencti_graph_lookup import (
     attack_pattern_external_id,
     attack_pattern_standard_id,
     graph_object_standard_id,
+    vulnerability_external_id,
 )
 
 
@@ -310,6 +311,95 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
         )
         self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
 
+    def test_known_keys_for_plan_resolves_vulnerability_by_cve_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "vulnerabilities": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--vuln",
+                                    "standard_id": (
+                                        "vulnerability--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Vulnerability",
+                                    "name": "CVE-2026-0001",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="vulnerability",
+                entity_type="vulnerability",
+                value="cve-2026-0001",
+                name="CVE-2026-0001",
+                relationship_type="related-to",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Vulnerability", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("cve_id", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("vulnerabilities", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertEqual(
+            ["CVE-2026-0001"],
+            calls[0][1]["filters"]["filters"][0]["values"],
+        )
+
+    def test_vulnerability_lookup_prefers_standard_id_before_cve_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {"data": {"vulnerabilities": {"edges": []}}}
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        lookup.find_candidate(
+            {
+                "stix_object_type": "vulnerability",
+                "value": "CVE-2026-0001",
+                "attributes": {
+                    "stix_id": (
+                        "vulnerability--11111111-1111-4111-8111-111111111111"
+                    )
+                },
+            }
+        )
+
+        self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_vulnerability_external_id_reads_cve_reference(self):
+        self.assertEqual(
+            "CVE-2026-0001",
+            vulnerability_external_id(
+                {
+                    "stix_object_type": "vulnerability",
+                    "value": "known vuln",
+                    "attributes": {
+                        "external_references": [
+                            {"source_name": "vendor", "external_id": "X-1"},
+                            {"source_name": "cve", "external_id": "cve-2026-0001"},
+                        ]
+                    },
+                }
+            ),
+        )
+
     def test_unsupported_candidate_does_not_query_opencti(self):
         calls = []
         lookup = OpenCTIGraphLookup(
@@ -319,8 +409,8 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
         self.assertIsNone(
             lookup.find_candidate(
                 {
-                    "stix_object_type": "vulnerability",
-                    "value": "CVE-2024-0001",
+                    "stix_object_type": "identity",
+                    "value": "Finance",
                 }
             )
         )

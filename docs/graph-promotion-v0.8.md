@@ -81,6 +81,12 @@ objects. When OpenCTI lookup returns a valid canonical STIX `standard_id`, the
 curated STIX bundle references that existing object and can create report links
 or semantic relationships to it instead of creating a duplicate object.
 
+The same guarded lookup now covers Vulnerability objects by CVE id. A candidate
+such as `CVE-2019-13939` is looked up by canonical STIX id when present and then
+by OpenCTI Vulnerability `name`. When a match is found, the export bundle
+references the existing Vulnerability instead of creating a duplicate CVE
+object.
+
 ## Source Identity And Author Hygiene
 
 OpenCTI Author should represent the logical upstream intelligence source, not
@@ -134,8 +140,9 @@ validation before NarrowCTI should promote them automatically.
 - `false`: default. NarrowCTI only uses local graph deduplication state when
   `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured.
 - `true`: NarrowCTI queries OpenCTI during graph export planning and treats
-  canonical matches, such as existing ATT&CK attack-patterns, malware and tools,
-  as known graph entities before promotion logic creates new objects.
+  canonical matches, such as existing ATT&CK attack-patterns, malware, tools
+  and CVE vulnerabilities, as known graph entities before promotion logic
+  creates new objects.
 
 The lookup itself is read-only. In `audit` and `dry-run` modes it does not
 create entities, relationships or state marks in OpenCTI. In `export` mode,
@@ -148,6 +155,11 @@ resolve known equivalences such as `LummaC2` to an existing canonical
 `Lumma Stealer` object when the canonical object is present in OpenCTI. This is
 not broad fuzzy matching: if no explicit alias evidence or curated alias group
 exists, NarrowCTI does not guess.
+
+For Vulnerability objects, lookup is intentionally CVE-id based. Exact
+`standard_id` matches are preferred, and `CVE-*` values are then matched against
+OpenCTI Vulnerability names. Broad vendor advisory aliases are outside the
+current v0.8 safety boundary.
 
 When matches exist, decision metadata can include
 `graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
@@ -197,7 +209,6 @@ expand to:
 - Threat actor and intrusion set lookup by name, aliases and external
   references.
 - Sector and location lookup with controlled vocabulary normalization.
-- Vulnerability lookup by CVE id.
 - Relationship lookup before edge creation.
 - Post-export graph state marking only after OpenCTI import succeeds.
 

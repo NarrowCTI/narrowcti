@@ -83,7 +83,23 @@ query NarrowCTIToolGraphSearch($search: String) {
 }
 """
 
+VULNERABILITY_LOOKUP_QUERY = """
+query NarrowCTIVulnerabilityGraphLookup($filters: FilterGroup) {
+  vulnerabilities(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
 ATTACK_ID_RE = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
+VULNERABILITY_ID_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 CURATED_ALIAS_GROUPS = {
     "malware": [
         {
@@ -162,6 +178,8 @@ class OpenCTIGraphLookup:
                 query_text=TOOL_LOOKUP_QUERY,
                 search_query_text=TOOL_SEARCH_QUERY,
             )
+        if stix_object_type == "vulnerability":
+            return self.find_vulnerability(candidate)
         return None
 
     def find_attack_pattern(self, candidate):
@@ -172,6 +190,31 @@ class OpenCTIGraphLookup:
         standard_id = attack_pattern_standard_id(candidate)
         if standard_id:
             return self.query_attack_pattern("standard_id", standard_id, "standard_id")
+
+        return None
+
+    def find_vulnerability(self, candidate):
+        standard_id = graph_object_standard_id(candidate, "vulnerability")
+        if standard_id:
+            return self.query_named_graph_object(
+                VULNERABILITY_LOOKUP_QUERY,
+                "vulnerabilities",
+                "vulnerability",
+                "standard_id",
+                standard_id,
+                "standard_id",
+            )
+
+        vulnerability_id = vulnerability_external_id(candidate)
+        if vulnerability_id:
+            return self.query_named_graph_object(
+                VULNERABILITY_LOOKUP_QUERY,
+                "vulnerabilities",
+                "vulnerability",
+                "name",
+                vulnerability_id,
+                "cve_id",
+            )
 
         return None
 
@@ -432,6 +475,40 @@ def attack_pattern_external_id(candidate):
             return attack_id
 
     return ""
+
+
+def vulnerability_external_id(candidate):
+    candidate = mapping_from(candidate)
+    for value in (
+        candidate.get("value"),
+        candidate.get("name"),
+        candidate.get("display_name"),
+    ):
+        normalized = normalize_vulnerability_id(value)
+        if normalized:
+            return normalized
+
+    attributes = mapping_from(candidate.get("attributes"))
+    for key in ("external_id", "cve_id", "name", "value"):
+        normalized = normalize_vulnerability_id(attributes.get(key))
+        if normalized:
+            return normalized
+
+    for reference in attributes.get("external_references") or []:
+        reference = mapping_from(reference)
+        source_name = clean_string(reference.get("source_name")).lower()
+        if source_name not in {"cve", "nvd", "mitre-cve"}:
+            continue
+        normalized = normalize_vulnerability_id(reference.get("external_id"))
+        if normalized:
+            return normalized
+
+    return ""
+
+
+def normalize_vulnerability_id(value):
+    match = VULNERABILITY_ID_RE.search(clean_string(value))
+    return match.group(0).upper() if match else ""
 
 
 def attack_pattern_standard_id(candidate):

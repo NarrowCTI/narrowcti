@@ -65,6 +65,12 @@ When Arsenal candidates are included, validation should prefer a bounded
 existing OpenCTI object by `standard_id`, exact name or a curated alias group.
 Broader fuzzy matching is not part of the current v0.8 export gate.
 
+When Vulnerability candidates are included, validation should prefer a bounded
+CVE-only export with OpenCTI lookup enabled. The expected result is that an
+existing OpenCTI Vulnerability is referenced by `standard_id`, the export
+summary shows `existing_reference_counts.vulnerability=1`, and the OpenCTI
+Vulnerability count for that CVE does not increase.
+
 Observed local validation for the OTX `lummac2` query with
 `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=malware` and
 `MAX_IOCS_PER_PULSE=10` ingested one curated report with 10 indicators. OpenCTI
@@ -91,6 +97,16 @@ with `standard_id=report--d6555acf-74d4-5841-948b-4dde4c06cbe8`; a second
 forced run with a fresh state file kept the count at 6 instead of creating a
 seventh Report. The newest Report references `Malware` `Lumma Stealer` with
 `standard_id=malware--961a6bc2-1b2e-5f56-ba42-4655b23fd730`.
+
+Observed Vulnerability export validation confirmed the same guarded promotion
+model for CVEs. The lab used existing OpenCTI Vulnerability `CVE-2019-13939`
+with `standard_id=vulnerability--00055e46-c19c-50c1-8d3b-58dd0a63a66e`.
+NarrowCTI lookup returned one known entity, the export plan reported
+`deduplicated_entity_count=1` and `would_create_object_count=0`, and the
+curated bundle summary reported `existing_reference_counts.vulnerability=1`.
+After real import, the validation Report was authored by `OTX AlienVault` and
+referenced the existing CVE; the OpenCTI Vulnerability count for that search
+remained unchanged.
 
 ## Required Lab Posture
 

@@ -238,6 +238,13 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   `lummac2` query. The run ingested a curated report with 10 indicators and
   referenced the existing OpenCTI `Malware` object `LummaC2` instead of creating
   a duplicate malware entity.
+- Added CVE-aware OpenCTI graph lookup for Vulnerability promotion. The lookup
+  prefers canonical Vulnerability `standard_id` and then matches `CVE-*` values
+  against OpenCTI Vulnerability names.
+- Validated a bounded real Vulnerability export against existing OpenCTI
+  `CVE-2019-13939`. The export plan deduplicated the CVE, the curated bundle
+  referenced the existing Vulnerability object, and OpenCTI did not create a
+  duplicate Vulnerability.
 - Tightened Arsenal hygiene after lab review showed that `LummaC2` and
   `Lumma Stealer` can exist as separate OpenCTI malware objects. The lookup now
   supports conservative curated alias groups so future `LummaC2` candidates
