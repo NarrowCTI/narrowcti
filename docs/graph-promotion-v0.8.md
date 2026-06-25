@@ -119,6 +119,13 @@ create entities, relationships or state marks in OpenCTI. In `export` mode,
 matches with valid `standard_id` values can be referenced by the curated STIX
 bundle.
 
+For Arsenal objects, lookup is intentionally conservative. Exact
+`standard_id` wins, exact name remains the default, and curated alias groups can
+resolve known equivalences such as `LummaC2` to an existing canonical
+`Lumma Stealer` object when the canonical object is present in OpenCTI. This is
+not broad fuzzy matching: if no explicit alias evidence or curated alias group
+exists, NarrowCTI does not guess.
+
 When matches exist, decision metadata can include
 `graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
 type, candidate value and canonical OpenCTI match fields such as `opencti_id`,

@@ -143,9 +143,71 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
                                         "111111111111"
                                     ),
                                     "entity_type": "Malware",
-                                    "name": "LummaC2",
+                                    "name": "ExampleMalware",
                                 }
                             }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="malware",
+                entity_type="malware",
+                value="ExampleMalware",
+                name="ExampleMalware",
+                relationship_type="uses",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Malware", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("malwares", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertEqual(
+            ["ExampleMalware"],
+            calls[0][1]["filters"]["filters"][0]["values"],
+        )
+
+    def test_known_keys_for_plan_prefers_curated_malware_alias(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "malwares": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--lumma-stealer",
+                                    "standard_id": (
+                                        "malware--22222222-2222-4222-8222-"
+                                        "222222222222"
+                                    ),
+                                    "entity_type": "Malware",
+                                    "name": "Lumma Stealer",
+                                    "aliases": ["LummaStealer"],
+                                }
+                            },
+                            {
+                                "node": {
+                                    "id": "internal--lummac2-duplicate",
+                                    "standard_id": (
+                                        "malware--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Malware",
+                                    "name": "LummaC2",
+                                    "aliases": [],
+                                }
+                            },
                         ]
                     }
                 }
@@ -166,11 +228,11 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
 
         self.assertEqual("", error)
         self.assertEqual(1, len(known["entity_keys"]))
-        self.assertEqual("Malware", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("Lumma Stealer", known["matches"][0]["match"]["name"])
+        self.assertEqual("alias", known["matches"][0]["match"]["match_type"])
         self.assertEqual(1, plan["deduplicated_entity_count"])
         self.assertIn("malwares", calls[0][0])
-        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
-        self.assertEqual(["LummaC2"], calls[0][1]["filters"]["filters"][0]["values"])
+        self.assertEqual("Lumma", calls[0][1]["search"])
 
     def test_known_keys_for_plan_resolves_tool_by_name(self):
         calls = []

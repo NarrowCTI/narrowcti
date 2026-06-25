@@ -233,6 +233,17 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
   `lummac2` query. The run ingested a curated report with 10 indicators and
   referenced the existing OpenCTI `Malware` object `LummaC2` instead of creating
   a duplicate malware entity.
+- Tightened Arsenal hygiene after lab review showed that `LummaC2` and
+  `Lumma Stealer` can exist as separate OpenCTI malware objects. The lookup now
+  supports conservative curated alias groups so future `LummaC2` candidates
+  resolve to the existing canonical `Lumma Stealer` object when present.
+- Added deterministic STIX Report ids based on report name and description so
+  repeated export of the same source report updates the same OpenCTI Report
+  instead of creating another duplicate report row.
+- Validated repeated real OTX exports with fresh state files. The first stable
+  Report-id run created one canonical Report for the already-duplicated LummaC2
+  title, and the second run kept the OpenCTI Report count unchanged while
+  linking the Report to canonical `Malware` `Lumma Stealer`.
 
 ## Promotion Boundary
 

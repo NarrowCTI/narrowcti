@@ -69,6 +69,31 @@ class OpenCTIExporterTests(unittest.TestCase):
         self.assertIn(existing_attack_pattern_ref, report["object_refs"])
         self.assertEqual(existing_attack_pattern_ref, relationship["target_ref"])
 
+    def test_repeated_report_exports_use_stable_report_id(self):
+        api_client = FakeOpenCTIClient()
+
+        for _ in range(2):
+            send_bundle(
+                api_client,
+                "LummaC2 Stealer: A Potent Threat to Crypto Users",
+                "description",
+                75,
+                indicators=[{"type": "domain", "indicator": "one.example"}],
+                graph_export_mode="audit",
+            )
+
+        first_report = first_object(
+            api_client.stix2.imports[0]["bundle"]["objects"],
+            "report",
+        )
+        second_report = first_object(
+            api_client.stix2.imports[1]["bundle"]["objects"],
+            "report",
+        )
+
+        self.assertEqual(first_report["id"], second_report["id"])
+        self.assertTrue(first_report["id"].startswith("report--"))
+
 
 class FakeOpenCTIClient:
     def __init__(self):

@@ -36,6 +36,22 @@ query NarrowCTIMalwareGraphLookup($filters: FilterGroup) {
 }
 """
 
+MALWARE_SEARCH_QUERY = """
+query NarrowCTIMalwareGraphSearch($search: String) {
+  malwares(search: $search, first: 10) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        aliases
+      }
+    }
+  }
+}
+"""
+
 TOOL_LOOKUP_QUERY = """
 query NarrowCTIToolGraphLookup($filters: FilterGroup) {
   tools(first: 1, filters: $filters) {
@@ -51,7 +67,32 @@ query NarrowCTIToolGraphLookup($filters: FilterGroup) {
 }
 """
 
+TOOL_SEARCH_QUERY = """
+query NarrowCTIToolGraphSearch($search: String) {
+  tools(search: $search, first: 10) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        aliases
+      }
+    }
+  }
+}
+"""
+
 ATTACK_ID_RE = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
+CURATED_ALIAS_GROUPS = {
+    "malware": [
+        {
+            "preferred": "Lumma Stealer",
+            "aliases": ("Lumma Stealer", "LummaStealer", "LummaC2", "Lumma C2"),
+            "search": "Lumma",
+        }
+    ],
+}
 
 
 class OpenCTIGraphLookup:
@@ -111,6 +152,7 @@ class OpenCTIGraphLookup:
                 stix_object_type="malware",
                 collection_name="malwares",
                 query_text=MALWARE_LOOKUP_QUERY,
+                search_query_text=MALWARE_SEARCH_QUERY,
             )
         if stix_object_type == "tool":
             return self.find_named_graph_object(
@@ -118,6 +160,7 @@ class OpenCTIGraphLookup:
                 stix_object_type="tool",
                 collection_name="tools",
                 query_text=TOOL_LOOKUP_QUERY,
+                search_query_text=TOOL_SEARCH_QUERY,
             )
         return None
 
@@ -138,6 +181,7 @@ class OpenCTIGraphLookup:
         stix_object_type,
         collection_name,
         query_text,
+        search_query_text="",
     ):
         standard_id = graph_object_standard_id(candidate, stix_object_type)
         if standard_id:
@@ -150,6 +194,15 @@ class OpenCTIGraphLookup:
                 "standard_id",
             )
 
+        alias_match = self.find_named_graph_object_by_alias(
+            candidate,
+            stix_object_type,
+            collection_name,
+            search_query_text,
+        )
+        if alias_match:
+            return alias_match
+
         name = graph_object_name(candidate)
         if name:
             return self.query_named_graph_object(
@@ -161,6 +214,31 @@ class OpenCTIGraphLookup:
                 "name",
             )
 
+        return None
+
+    def find_named_graph_object_by_alias(
+        self,
+        candidate,
+        stix_object_type,
+        collection_name,
+        search_query_text,
+    ):
+        if not search_query_text:
+            return None
+
+        lookup = graph_object_alias_lookup(candidate, stix_object_type)
+        if not lookup["enabled"]:
+            return None
+        for search_value in lookup["search_values"]:
+            result = self.query_named_graph_object_search(
+                search_query_text,
+                collection_name,
+                stix_object_type,
+                search_value,
+            )
+            match = select_alias_match(result, lookup)
+            if match:
+                return match
         return None
 
     def query_attack_pattern(self, key, value, match_type):
@@ -187,6 +265,24 @@ class OpenCTIGraphLookup:
             "match_type": match_type,
             "match_value": value,
         }
+
+    def query_named_graph_object_search(
+        self,
+        query_text,
+        collection_name,
+        stix_object_type,
+        search_value,
+    ):
+        try:
+            result = self.api_client.query(query_text, {"search": search_value})
+        except Exception as exc:
+            self.logger(
+                "OpenCTI graph lookup failed: "
+                f"type={stix_object_type} search={search_value} error={exc}"
+            )
+            return []
+
+        return nodes_from(result, collection_name)
 
     def query_named_graph_object(
         self,
@@ -297,6 +393,19 @@ def first_node(result, collection_name):
     return {}
 
 
+def nodes_from(result, collection_name):
+    edges = (((result or {}).get("data") or {}).get(collection_name) or {}).get(
+        "edges",
+        [],
+    )
+    nodes = []
+    for edge in edges:
+        node = mapping_from(edge.get("node") if isinstance(edge, Mapping) else None)
+        if node:
+            nodes.append(node)
+    return nodes
+
+
 def attack_pattern_external_id(candidate):
     candidate = mapping_from(candidate)
     for value in (
@@ -369,6 +478,145 @@ def graph_object_name(candidate):
         if name:
             return name
     return ""
+
+
+def graph_object_alias_lookup(candidate, stix_object_type):
+    candidate_terms = graph_object_alias_terms(candidate)
+    alias_group = find_curated_alias_group(stix_object_type, candidate_terms)
+    explicit_alias_values = graph_object_explicit_alias_values(candidate)
+    if alias_group:
+        group_terms = {
+            normalize_alias_value(term)
+            for term in alias_group.get("aliases") or []
+            if normalize_alias_value(term)
+        }
+        candidate_terms.update(group_terms)
+        preferred = normalize_alias_value(alias_group.get("preferred"))
+        search_values = ordered_search_values(
+            [
+                alias_group.get("search"),
+                alias_group.get("preferred"),
+                *alias_group.get("aliases", ()),
+            ]
+        )
+    else:
+        preferred = ""
+        search_values = ordered_search_values(graph_object_alias_raw_values(candidate))
+
+    return {
+        "candidate_terms": candidate_terms,
+        "enabled": bool(alias_group or explicit_alias_values),
+        "preferred": preferred,
+        "search_values": search_values,
+    }
+
+
+def graph_object_alias_terms(candidate):
+    return {
+        normalize_alias_value(value)
+        for value in graph_object_alias_raw_values(candidate)
+        if normalize_alias_value(value)
+    }
+
+
+def graph_object_alias_raw_values(candidate):
+    candidate = mapping_from(candidate)
+    values = [
+        candidate.get("name"),
+        candidate.get("value"),
+        candidate.get("display_name"),
+    ]
+    values.extend(graph_object_explicit_alias_values(candidate))
+    return [clean_string(value) for value in values if clean_string(value)]
+
+
+def graph_object_explicit_alias_values(candidate):
+    candidate = mapping_from(candidate)
+    values = []
+    attributes = mapping_from(candidate.get("attributes"))
+    for key in ("aliases", "alias", "x_opencti_aliases"):
+        values.extend(list_values(attributes.get(key)))
+    return [clean_string(value) for value in values if clean_string(value)]
+
+
+def find_curated_alias_group(stix_object_type, candidate_terms):
+    for group in CURATED_ALIAS_GROUPS.get(clean_string(stix_object_type).lower(), []):
+        group_terms = {
+            normalize_alias_value(term)
+            for term in group.get("aliases") or []
+            if normalize_alias_value(term)
+        }
+        if candidate_terms.intersection(group_terms):
+            return group
+    return {}
+
+
+def select_alias_match(nodes, lookup):
+    candidate_terms = lookup.get("candidate_terms") or set()
+    preferred = lookup.get("preferred") or ""
+    matches = []
+    for node in nodes:
+        node_terms = graph_node_alias_terms(node)
+        if not candidate_terms.intersection(node_terms):
+            continue
+        match = node_to_match(
+            node,
+            match_type="alias",
+            match_value=clean_string(node.get("name")),
+        )
+        if preferred and normalize_alias_value(node.get("name")) == preferred:
+            return match
+        matches.append(match)
+
+    if len(matches) == 1:
+        return matches[0]
+    return {}
+
+
+def graph_node_alias_terms(node):
+    node = mapping_from(node)
+    values = [node.get("name")]
+    values.extend(list_values(node.get("aliases")))
+    return {
+        normalize_alias_value(value)
+        for value in values
+        if normalize_alias_value(value)
+    }
+
+
+def node_to_match(node, match_type, match_value):
+    return {
+        "opencti_id": clean_string(node.get("id")),
+        "standard_id": clean_string(node.get("standard_id")),
+        "entity_type": clean_string(node.get("entity_type")),
+        "name": clean_string(node.get("name")),
+        "match_type": match_type,
+        "match_value": match_value,
+    }
+
+
+def ordered_search_values(values):
+    ordered = []
+    seen = set()
+    for value in values:
+        value = clean_string(value)
+        key = value.casefold()
+        if value and key not in seen:
+            ordered.append(value)
+            seen.add(key)
+    return ordered
+
+
+def normalize_alias_value(value):
+    return re.sub(r"[^a-z0-9]+", "", clean_string(value).casefold())
+
+
+def list_values(value):
+    if value in ("", None):
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return list(value)
+    return [value]
 
 
 def normalize_stix_id(value, prefix):

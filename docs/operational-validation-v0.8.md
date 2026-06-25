@@ -62,17 +62,35 @@ of creating duplicate `attack-pattern` objects.
 
 When Arsenal candidates are included, validation should prefer a bounded
 `malware` or `tool` allow-list and confirm whether the lookup matched an
-existing OpenCTI object by `standard_id` or exact name. Broader alias matching
-is not part of the current v0.8 export gate.
+existing OpenCTI object by `standard_id`, exact name or a curated alias group.
+Broader fuzzy matching is not part of the current v0.8 export gate.
 
 Observed local validation for the OTX `lummac2` query with
 `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=malware` and
 `MAX_IOCS_PER_PULSE=10` ingested one curated report with 10 indicators. OpenCTI
 GraphQL confirmed the report object references included `Malware` `LummaC2`
 with `standard_id=malware--58dd33b2-647b-5c42-89e8-09b5f64b9469`. The decision
-audit recorded `existing_reference_counts={"malware":1}`, proving that
-NarrowCTI referenced the existing OpenCTI malware object instead of creating a
-duplicate.
+audit recorded `existing_reference_counts={"malware":1}`. Follow-up review
+showed this was still not the desired canonical object because OpenCTI already
+contained `Lumma Stealer` with alias `LummaStealer`.
+
+The guardrail was tightened so future `LummaC2` candidates resolve to
+`Lumma Stealer` by curated alias match when that canonical object is present.
+The validation query returned `match_type=alias`, `name=Lumma Stealer` and
+`standard_id=malware--961a6bc2-1b2e-5f56-ba42-4655b23fd730`.
+
+Report hygiene must also be checked during repeated validation. Report STIX ids
+are now deterministic from report name and description, so repeated export of
+the same source report should update the same OpenCTI Report rather than create
+another duplicate report row.
+
+Observed repeated export validation confirmed the behavior: before the stable
+Report id change, the lab had 5 duplicate OpenCTI Reports with the same LummaC2
+title. The first run with deterministic Report ids created one stable Report
+with `standard_id=report--d6555acf-74d4-5841-948b-4dde4c06cbe8`; a second
+forced run with a fresh state file kept the count at 6 instead of creating a
+seventh Report. The newest Report references `Malware` `Lumma Stealer` with
+`standard_id=malware--961a6bc2-1b2e-5f56-ba42-4655b23fd730`.
 
 ## Required Lab Posture
 
@@ -123,7 +141,8 @@ Expected evidence:
   `match_value`.
 - `gateway.decisions` report shows `lookup_matches` greater than zero.
 - For Arsenal validation, `graph_export_plan_lookup_matches` can include
-  existing `Malware` or `Tool` objects matched by `standard_id` or exact name.
+  existing `Malware` or `Tool` objects matched by `standard_id`, exact name or
+  curated alias group.
 
 ## Controlled MISP Validation
 

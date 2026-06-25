@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import datetime, timezone
+from uuid import NAMESPACE_URL, uuid5
 
 from stix2 import (
     AttackPattern,
@@ -32,6 +33,7 @@ SEMANTIC_RELATIONSHIP_TYPES = {
     "targets",
     "uses",
 }
+REPORT_ID_NAMESPACE = "https://narrowcti.local/stix/report"
 
 
 def escape_pattern_value(value):
@@ -97,16 +99,13 @@ def build_report_bundle(
     indicator_objects = build_indicators(indicators or [], identity.id, score, now)
     object_refs = [indicator.id for indicator in indicator_objects] or [identity.id]
 
-    report = Report(
-        name=name,
-        description=description or "",
-        report_types=["threat-report"],
-        confidence=score,
-        created=now,
-        modified=now,
-        published=now,
-        created_by_ref=identity.id,
-        object_refs=object_refs,
+    report = build_stix_report(
+        name,
+        description,
+        score,
+        now,
+        identity.id,
+        object_refs,
     )
 
     bundle = Bundle(objects=[identity, *indicator_objects, report], allow_custom=True)
@@ -214,6 +213,7 @@ def build_graph_report_bundle(
 
 def build_stix_report(name, description, score, now, identity_id, object_refs):
     return Report(
+        id=deterministic_report_id(name, description),
         name=name,
         description=description or "",
         report_types=["threat-report"],
@@ -224,6 +224,17 @@ def build_stix_report(name, description, score, now, identity_id, object_refs):
         created_by_ref=identity_id,
         object_refs=object_refs,
     )
+
+
+def deterministic_report_id(name, description):
+    material = "|".join(
+        (
+            "narrowcti-report",
+            clean_string(name).casefold(),
+            clean_string(description).casefold(),
+        )
+    )
+    return f"report--{uuid5(NAMESPACE_URL, material)}"
 
 
 def build_graph_content(accepted_candidates, identity_id, now):
