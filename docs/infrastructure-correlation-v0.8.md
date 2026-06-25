@@ -111,6 +111,91 @@ Infrastructure correlation should produce explainable evidence such as:
 - `ipv4-addr -> belongs-to -> autonomous-system`
 - `report -> related-to -> infrastructure`
 
+## OpenCTI Knowledge, Diamond, Timeline And Kill Chain
+
+The infrastructure model is expected to feed multiple OpenCTI views, but each
+view depends on different graph material.
+
+### Knowledge
+
+Knowledge is fed when NarrowCTI exports graph objects and relationships, not
+only Report references.
+
+Already validated:
+
+- `Infrastructure -> consists-of -> Autonomous-System`
+- `Infrastructure -> consists-of -> IPv4-Addr`
+- `Infrastructure -> consists-of -> IPv4-Addr` with CIDR value
+- `IPv4-Addr -> belongs-to -> Autonomous-System`
+- `IPv4-Addr CIDR -> belongs-to -> Autonomous-System`
+
+This means ASN/IP infrastructure intelligence can become navigable OpenCTI
+knowledge when the source evidence supports those relationships.
+
+### Diamond
+
+The Diamond-style analyst experience is a composition of graph relationships.
+NarrowCTI should provide the four core pivots:
+
+| Diamond facet | NarrowCTI/OpenCTI material |
+| --- | --- |
+| Adversary | `threat-actor` or `intrusion-set` |
+| Capability | `malware`, `tool`, `vulnerability` and `attack-pattern` |
+| Infrastructure | `infrastructure`, `ipv4-addr`, `ipv6-addr`, CIDR values and `autonomous-system` |
+| Victimology | `identity` sectors, organizations, countries, regions and other locations |
+
+The ASN/IP validation proved the infrastructure facet. Full Diamond population
+requires the same curated bundle, or correlated source evidence, to also carry
+actor, arsenal/TTP and victimology relationships such as:
+
+```text
+actor -> uses -> malware/tool/infrastructure/attack-pattern
+actor -> targets -> sector/location/organization
+infrastructure -> consists-of -> IP/CIDR/ASN
+IP/CIDR -> belongs-to -> ASN
+```
+
+NarrowCTI should hold or quarantine unsupported Diamond edges rather than
+guessing attribution from weak IOC-only evidence.
+
+### Timeline
+
+Timeline depends on timestamped entities and relationships.
+
+Already validated:
+
+- Controlled ASN/IP Infrastructure Reports include OpenCTI `created`,
+  `modified` and `published` timestamps.
+- OTX/MISP adapters preserve source `created`, `modified`, `first_seen` and
+  `last_seen` evidence in metadata and graph candidate attributes.
+
+Implementation gap:
+
+- The graph exporter still needs broader source-time mapping so promoted
+  Infrastructure, observable and relationship objects can carry the most useful
+  source-backed temporal fields instead of only import time.
+
+### Kill Chain
+
+Kill Chain is primarily fed by ATT&CK `attack-pattern` objects and their
+`killChainPhases`.
+
+Already validated:
+
+- The local OpenCTI MITRE baseline contains canonical ATT&CK techniques such as
+  `T1059 Command and Scripting Interpreter`.
+- `T1059` has `kill_chain_name=mitre-attack` and `phase_name=execution`.
+- NarrowCTI can reference canonical ATT&CK objects instead of creating
+  duplicate attack-patterns.
+
+Implementation gap:
+
+- If NarrowCTI creates an attack-pattern itself, the current graph STIX builder
+  does not yet export `kill_chain_phases`; this should remain a backlog item.
+  The preferred production posture is still to use the official MITRE connector
+  for canonical ATT&CK loading and let NarrowCTI link curated source evidence
+  to those canonical techniques.
+
 The decision audit and future enterprise CTI report should summarize:
 
 - Top ASNs observed.
