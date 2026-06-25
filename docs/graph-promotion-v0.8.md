@@ -106,6 +106,14 @@ from object type, identity class and normalized value/name. This gives OpenCTI
 the same `standard_id` across repeated exports and reduces duplicate graph
 entities even before a live OpenCTI lookup match is available.
 
+Infrastructure promotion is enabled as a controlled STIX `infrastructure`
+mapping. This is not the same as promoting every domain, URL or IP observable
+as infrastructure. A source must provide explicit infrastructure evidence or a
+curated candidate must be released by policy before NarrowCTI populates
+`Observations / Infrastructures`. Lookup prefers canonical `standard_id`, then
+exact OpenCTI name, with alias search available only when OpenCTI returns exact
+aliases.
+
 ## Source Identity And Author Hygiene
 
 OpenCTI Author should represent the logical upstream intelligence source, not
@@ -137,12 +145,13 @@ metadata supports them and the candidate passes policy:
 | OpenCTI area | Current NarrowCTI mapping | Notes |
 | --- | --- | --- |
 | Observations / Indicators | IOC indicators and detection-rule candidates as STIX `indicator` objects | Existing behavior remains active in every mode. |
-| Observations / Observables | Domain, URL, IPv4, IPv6, email and file-hash observables from graph candidates | Artifact and infrastructure-specific promotion is still pending. |
+| Observations / Observables | Domain, URL, IPv4, IPv6, email and file-hash observables from graph candidates | Artifact-specific promotion is still pending. |
 | Threats / Threat actors | STIX `threat-actor` | Created only from explicit supported metadata such as OTX adversary or MISP galaxy evidence. |
 | Threats / Intrusion sets | STIX `intrusion-set` | Depends on source metadata or galaxy mapping. |
 | Arsenal / Malware | STIX `malware` | Useful for malware families and actor arsenal enrichment. |
 | Arsenal / Tools | STIX `tool` | Depends on source metadata or galaxy mapping. |
 | Arsenal / Vulnerabilities | STIX `vulnerability` with CVE external references when available | CVE evidence can come from MISP attributes, tags or OTX indicators. |
+| Observations / Infrastructures | STIX `infrastructure` | Requires explicit infrastructure evidence; raw indicators alone are not automatically promoted as infrastructure. |
 | Techniques / Attack patterns | STIX `attack-pattern` with MITRE external id when available | Canonical MITRE lookup should be enabled before broad export. |
 | Techniques / Narratives | STIX `note` for supported event report or narrative evidence | OpenCTI placement depends on its note/report rendering. |
 | Entities / Sectors | STIX `identity` with `identity_class=class` for `target_sector` | This is the mapping expected to feed OpenCTI Sectors. |
@@ -160,8 +169,9 @@ validation before NarrowCTI should promote them automatically.
   `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured.
 - `true`: NarrowCTI queries OpenCTI during graph export planning and treats
   canonical matches, such as existing ATT&CK attack-patterns, malware, tools,
-  CVE vulnerabilities, threat actors, intrusion sets and locations/countries,
-  as known graph entities before promotion logic creates new objects.
+  infrastructure, CVE vulnerabilities, threat actors, intrusion sets and
+  locations/countries, as known graph entities before promotion logic creates
+  new objects.
 
 The lookup itself is read-only. In `audit` and `dry-run` modes it does not
 create entities, relationships or state marks in OpenCTI. In `export` mode,
@@ -183,6 +193,11 @@ current v0.8 safety boundary.
 For Threat Actor and Intrusion Set objects, lookup is intentionally limited to
 `standard_id`, exact name and exact alias matching returned by OpenCTI search.
 This supports canonical actor naming without broad fuzzy matching.
+
+For Infrastructure objects, lookup is intentionally limited to `standard_id`,
+exact name and exact alias matching returned by OpenCTI search. NarrowCTI does
+not infer Infrastructure from every observable because that would pollute the
+OpenCTI graph with low-context network artifacts.
 
 For Location objects, lookup is intentionally limited to `standard_id` and
 exact OpenCTI name. This is enough to protect controlled country export, such

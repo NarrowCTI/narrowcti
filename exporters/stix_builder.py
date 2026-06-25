@@ -11,6 +11,7 @@ from stix2 import (
     IPv4Address,
     IPv6Address,
     Identity,
+    Infrastructure,
     Indicator,
     IntrusionSet,
     Location,
@@ -463,6 +464,8 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
         return ThreatActor(name=name, **common)
     if stix_object_type == "intrusion-set":
         return IntrusionSet(name=name, **common)
+    if stix_object_type == "infrastructure":
+        return Infrastructure(name=name, **common)
     if stix_object_type == "malware":
         return Malware(
             name=name,

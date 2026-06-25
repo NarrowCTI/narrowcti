@@ -68,11 +68,21 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Extended OpenCTI graph lookup to Location objects so country/location
   candidates can reference existing OpenCTI Locations by `standard_id` or exact
   name before controlled graph promotion creates anything new.
+- Added controlled STIX `infrastructure` promotion and OpenCTI Infrastructure
+  lookup so explicit infrastructure evidence can populate
+  `Observations / Infrastructures` without turning every raw observable into
+  graph infrastructure.
 - Validated controlled Country export against OpenCTI: `Argentina` was created
   once as `entity_type=Country`, repeated import kept the count at one, and the
   follow-up lookup export referenced the existing
   `location--a5c43e9c-7f5e-5fc2-b9eb-3c2eaf055301` object with
   `existing_reference_counts.location=1`.
+- Validated controlled Infrastructure export against OpenCTI:
+  `NarrowCTI Validation Infrastructure 20260625` was created once as
+  `entity_type=Infrastructure`, repeated import kept the count at one, and the
+  follow-up lookup export referenced
+  `infrastructure--f5564d5a-ff0d-59cc-a79e-7d06c08e22bf` with
+  `existing_reference_counts.infrastructure=1`.
 - Documented Report hygiene evidence: deterministic Report ids prevent another
   row when name and description are unchanged; a changed description is treated
   as a distinct report by design.

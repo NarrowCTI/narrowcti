@@ -276,15 +276,21 @@ knowledge, and export state is marked only after the OpenCTI import call
 succeeds. In v0.8,
 `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` can also be enabled so OTX and MISP
 planning query OpenCTI for canonical graph objects, starting with ATT&CK
-attack-patterns, malware, tools, CVE vulnerabilities, threat actors and
-intrusion sets, and controlled locations/countries, before promotion creates
-new graph knowledge. Canonical matches are exposed as bounded
+attack-patterns, malware, tools, infrastructure, CVE vulnerabilities, threat
+actors and intrusion sets, and controlled locations/countries, before promotion
+creates new graph knowledge. Canonical matches are exposed as bounded
 `graph_export_plan_lookup_matches` metadata for audit and future enterprise
 reporting. When a canonical match includes a valid STIX `standard_id`, the
 export gate references that existing OpenCTI object in the curated STIX bundle
 instead of duplicating it. Graph SDOs created by NarrowCTI also use
 deterministic STIX ids so repeated exports of the same curated object converge
 on the same OpenCTI `standard_id`.
+
+Infrastructure promotion is intentionally conservative: raw domains, IPs and
+URLs continue to be handled as Indicators or Observables unless source metadata
+or review policy explicitly supports a STIX `infrastructure` candidate. This
+keeps `Observations / Infrastructures` useful for curated threat infrastructure
+instead of turning it into another raw IOC bucket.
 
 For audit visibility, exported STIX bundles now use the upstream source as the
 OpenCTI Author where NarrowCTI can resolve it. OTX exports appear as

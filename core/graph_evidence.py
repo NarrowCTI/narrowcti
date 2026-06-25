@@ -10,6 +10,7 @@ GRAPH_EVIDENCE_VERSION = "v0.7.0-dev"
 ENTITY_TARGETS = {
     "threat_actor": ("threat-actor", "attributed-to"),
     "intrusion_set": ("intrusion-set", "attributed-to"),
+    "infrastructure": ("infrastructure", "uses"),
     "malware": ("malware", "uses"),
     "tool": ("tool", "uses"),
     "vulnerability": ("vulnerability", "related-to"),

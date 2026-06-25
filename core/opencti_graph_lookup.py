@@ -145,6 +145,37 @@ query NarrowCTIIntrusionSetGraphSearch($search: String) {
 }
 """
 
+INFRASTRUCTURE_LOOKUP_QUERY = """
+query NarrowCTIInfrastructureGraphLookup($filters: FilterGroup) {
+  infrastructures(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+INFRASTRUCTURE_SEARCH_QUERY = """
+query NarrowCTIInfrastructureGraphSearch($search: String) {
+  infrastructures(search: $search, first: 10) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        aliases
+      }
+    }
+  }
+}
+"""
+
 VULNERABILITY_LOOKUP_QUERY = """
 query NarrowCTIVulnerabilityGraphLookup($filters: FilterGroup) {
   vulnerabilities(first: 1, filters: $filters) {
@@ -272,6 +303,14 @@ class OpenCTIGraphLookup:
                 query_text=INTRUSION_SET_LOOKUP_QUERY,
                 search_query_text=INTRUSION_SET_SEARCH_QUERY,
                 enable_alias_search_by_default=True,
+            )
+        if stix_object_type == "infrastructure":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="infrastructure",
+                collection_name="infrastructures",
+                query_text=INFRASTRUCTURE_LOOKUP_QUERY,
+                search_query_text=INFRASTRUCTURE_SEARCH_QUERY,
             )
         if stix_object_type == "vulnerability":
             return self.find_vulnerability(candidate)

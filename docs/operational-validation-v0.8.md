@@ -144,6 +144,18 @@ hold separate Reports with the same title when the description differs, because
 NarrowCTI intentionally derives the deterministic Report STIX id from
 `name + description`.
 
+Observed Infrastructure export validation confirmed controlled population of
+`Observations / Infrastructures`. The lab imported
+`NarrowCTI Validation Infrastructure 20260625` once as
+`entity_type=Infrastructure` with
+`standard_id=infrastructure--f5564d5a-ff0d-59cc-a79e-7d06c08e22bf`. Repeating
+the same import kept the exact Infrastructure count at `1`. A follow-up lookup
+validation returned `known_entity_count=1`, `match_type=name`,
+`plan_deduplicated_entity_count=1`, `plan_exported_object_count=0` and
+`existing_reference_counts.infrastructure=1`. The validation Reports were
+authored by `OTX AlienVault`, and the repeated exact Report count for
+`NarrowCTI infrastructure export live validation 20260625` remained `1`.
+
 ## Required Lab Posture
 
 Before live validation, confirm:

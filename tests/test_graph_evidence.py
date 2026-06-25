@@ -4,6 +4,40 @@ from core.graph_evidence import build_graph_evidence
 
 
 class GraphEvidenceTests(unittest.TestCase):
+    def test_maps_explicit_infrastructure_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "infrastructure",
+                            "value": "Validation C2 Infrastructure",
+                            "source_field": "infrastructure",
+                            "confidence": 70,
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Infrastructure pulse",
+        )
+
+        self.assertEqual(1, evidence["counts"]["infrastructure"])
+        self.assertIn(
+            {
+                "entity_type": "infrastructure",
+                "value": "Validation C2 Infrastructure",
+                "stix_object_type": "infrastructure",
+                "relationship_type": "uses",
+                "source_key": "alienvault:otx",
+                "source_name": "otx",
+                "source_field": "infrastructure",
+                "confidence": 70,
+            },
+            evidence["records"],
+        )
+
     def test_builds_otx_and_mitre_graph_evidence_records(self):
         evidence = build_graph_evidence(
             {

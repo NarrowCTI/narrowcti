@@ -63,15 +63,18 @@ graph enrichment layer.
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Optional allow-list for STIX/OpenCTI object types such as `attack-pattern`, `malware`, `threat-actor`, `identity` or `marking-definition`. Empty allows all current candidate object types. |
 | `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` enables controlled graph promotion for accepted candidates. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. Exported graph state is marked only after a successful OpenCTI import. |
-| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, including ATT&CK attack-patterns, malware, tools, CVE vulnerabilities, threat actors, intrusion sets and controlled locations/countries, before graph promotion creates new objects. |
+| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, including ATT&CK attack-patterns, malware, tools, infrastructure, CVE vulnerabilities, threat actors, intrusion sets and controlled locations/countries, before graph promotion creates new objects. |
 
 Use `export` only with explicit graph thresholds, allow-lists and validation
 evidence. The first promotion gate can create supported STIX objects such as
-`threat-actor`, `intrusion-set`, `malware`, `tool`, `vulnerability`,
-`attack-pattern`, `identity` sectors, `location`, `indicator`, `note` and
-basic observables. When local or OpenCTI lookup reports a known graph key with
-a valid canonical STIX `standard_id`, the export gate references that existing
-object instead of duplicating it.
+`threat-actor`, `intrusion-set`, `infrastructure`, `malware`, `tool`,
+`vulnerability`, `attack-pattern`, `identity` sectors, `location`, `indicator`,
+`note` and basic observables. Infrastructure should be allowed only when the
+source provides explicit infrastructure evidence or the candidate has been
+curated for release; raw observables alone should remain Observables or
+Indicators. When local or OpenCTI lookup reports a known graph key with a valid
+canonical STIX `standard_id`, the export gate references that existing object
+instead of duplicating it.
 
 ## v0.8 License And Feature Gate Controls
 

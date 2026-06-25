@@ -15,6 +15,7 @@ class GraphStixBuilderTests(unittest.TestCase):
                     attack_pattern_candidate(),
                     attack_pattern_candidate(),
                     threat_actor_candidate(),
+                    infrastructure_candidate(),
                     vulnerability_candidate(),
                     observable_candidate(),
                     detection_rule_candidate(),
@@ -34,15 +35,16 @@ class GraphStixBuilderTests(unittest.TestCase):
         for item in data["objects"]:
             objects_by_type.setdefault(item["type"], []).append(item)
 
-        self.assertEqual(7, summary["accepted_candidate_count"])
-        self.assertEqual(14, summary["bundle_object_count"])
-        self.assertEqual(6, summary["graph_object_count"])
-        self.assertEqual(6, summary["graph_relationship_count"])
+        self.assertEqual(8, summary["accepted_candidate_count"])
+        self.assertEqual(16, summary["bundle_object_count"])
+        self.assertEqual(7, summary["graph_object_count"])
+        self.assertEqual(7, summary["graph_relationship_count"])
         self.assertEqual(0, summary["skipped_candidate_count"])
         self.assertEqual(
             {
                 "attack-pattern": 1,
                 "domain-name": 1,
+                "infrastructure": 1,
                 "indicator": 1,
                 "note": 1,
                 "threat-actor": 1,
@@ -50,7 +52,10 @@ class GraphStixBuilderTests(unittest.TestCase):
             },
             summary["object_counts"],
         )
-        self.assertEqual({"related-to": 6}, summary["relationship_counts"])
+        self.assertEqual(
+            {"related-to": 6, "uses": 1},
+            summary["relationship_counts"],
+        )
         self.assertEqual(
             {
                 "attributed-to": 1,
@@ -58,19 +63,20 @@ class GraphStixBuilderTests(unittest.TestCase):
                 "detects": 1,
                 "documents": 1,
                 "related-to": 1,
-                "uses": 1,
+                "uses": 2,
             },
             summary["proposed_relationship_counts"],
         )
-        self.assertEqual(0, summary["semantic_relationship_count"])
+        self.assertEqual(1, summary["semantic_relationship_count"])
         self.assertEqual(6, summary["report_relationship_count"])
         self.assertEqual(1, len(objects_by_type["attack-pattern"]))
         self.assertEqual(1, len(objects_by_type["threat-actor"]))
+        self.assertEqual(1, len(objects_by_type["infrastructure"]))
         self.assertEqual(1, len(objects_by_type["vulnerability"]))
         self.assertEqual(1, len(objects_by_type["domain-name"]))
         self.assertEqual(1, len(objects_by_type["indicator"]))
         self.assertEqual(1, len(objects_by_type["note"]))
-        self.assertEqual(6, len(objects_by_type["relationship"]))
+        self.assertEqual(7, len(objects_by_type["relationship"]))
 
         attack_pattern = objects_by_type["attack-pattern"][0]
         self.assertEqual("Command and Scripting Interpreter", attack_pattern["name"])
@@ -95,14 +101,28 @@ class GraphStixBuilderTests(unittest.TestCase):
 
         reports = objects_by_type["report"]
         self.assertEqual(1, len(reports))
-        self.assertEqual(6, len(reports[0]["object_refs"]))
+        self.assertEqual(7, len(reports[0]["object_refs"]))
+        report_context_relationships = [
+            relationship
+            for relationship in objects_by_type["relationship"]
+            if relationship["x_narrowcti_relationship_mode"] == "report-context"
+        ]
+        semantic_relationships = [
+            relationship
+            for relationship in objects_by_type["relationship"]
+            if relationship["x_narrowcti_relationship_mode"] == "semantic"
+        ]
+        self.assertEqual(6, len(report_context_relationships))
         self.assertTrue(
             all(
                 relationship["source_ref"] == reports[0]["id"]
                 and relationship["relationship_type"] == "related-to"
-                and relationship["x_narrowcti_relationship_mode"] == "report-context"
-                for relationship in objects_by_type["relationship"]
+                for relationship in report_context_relationships
             )
+        )
+        self.assertEqual(
+            ["uses"],
+            [relationship["relationship_type"] for relationship in semantic_relationships],
         )
 
     def test_builds_semantic_relationship_when_source_anchor_is_trusted(self):
@@ -210,6 +230,7 @@ class GraphStixBuilderTests(unittest.TestCase):
             graph_candidate_policy={
                 "accepted": [
                     threat_actor_candidate(),
+                    infrastructure_candidate(),
                     target_sector_candidate(),
                     anchored_malware_candidate(),
                 ]
@@ -230,9 +251,10 @@ class GraphStixBuilderTests(unittest.TestCase):
 
         self.assertEqual(1, indicator_count)
         self.assertEqual(1, summary["indicator_count"])
-        self.assertEqual(3, summary["graph_object_count"])
+        self.assertEqual(4, summary["graph_object_count"])
         self.assertEqual("class", sector["identity_class"])
         self.assertEqual(1, len(objects_by_type["indicator"]))
+        self.assertEqual(1, len(objects_by_type["infrastructure"]))
         self.assertEqual(1, len(objects_by_type["malware"]))
         self.assertEqual(1, len(objects_by_type["threat-actor"]))
         self.assertIn(sector["id"], report["object_refs"])
@@ -246,6 +268,7 @@ class GraphStixBuilderTests(unittest.TestCase):
             graph_candidate_policy={
                 "accepted": [
                     threat_actor_candidate(),
+                    infrastructure_candidate(),
                     target_sector_candidate(),
                     target_country_candidate(),
                     vulnerability_candidate(),
@@ -259,6 +282,7 @@ class GraphStixBuilderTests(unittest.TestCase):
             graph_candidate_policy={
                 "accepted": [
                     threat_actor_candidate(),
+                    infrastructure_candidate(),
                     target_sector_candidate(),
                     target_country_candidate(),
                     vulnerability_candidate(),
@@ -270,6 +294,10 @@ class GraphStixBuilderTests(unittest.TestCase):
         second_ids = graph_object_ids_by_name(second_bundle)
 
         self.assertEqual(first_ids["APT Example"], second_ids["APT Example"])
+        self.assertEqual(
+            first_ids["Validation C2 Infrastructure"],
+            second_ids["Validation C2 Infrastructure"],
+        )
         self.assertEqual(first_ids["Finance"], second_ids["Finance"])
         self.assertEqual(first_ids["Argentina"], second_ids["Argentina"])
         self.assertEqual(first_ids["CVE-2026-0001"], second_ids["CVE-2026-0001"])
@@ -373,6 +401,27 @@ def threat_actor_candidate():
         "source_field": "adversary",
         "confidence": 70,
         "relationship_confidence": 65,
+    }
+
+
+def infrastructure_candidate():
+    return {
+        "fingerprint": "infrastructure-1",
+        "entity_type": "infrastructure",
+        "value": "Validation C2 Infrastructure",
+        "name": "Validation C2 Infrastructure",
+        "stix_object_type": "infrastructure",
+        "relationship_type": "uses",
+        "source_key": "misp:misp",
+        "source_name": "misp-object",
+        "source_field": "ObjectReference",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "relationship_source_stix_object_type": "threat-actor",
+            "relationship_source_value": "APT Example",
+            "relationship_source_field": "threat-actor",
+        },
     }
 
 
@@ -551,6 +600,7 @@ def graph_object_ids_by_name(bundle):
         in {
             "attack-pattern",
             "identity",
+            "infrastructure",
             "intrusion-set",
             "location",
             "malware",
