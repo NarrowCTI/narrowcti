@@ -65,8 +65,11 @@ class GatewayCurationReportTests(unittest.TestCase):
         )
         summary = report.executive_summary
         source_summary = report.source_summaries[0]
+        rendered = report_to_dict(report)
 
         self.assertEqual("curation-report/v0.8", report.to_dict()["schema_version"])
+        self.assertEqual("none", rendered["redaction_profile"])
+        self.assertTrue(rendered["redaction_policy"]["raw_evidence_included"])
         self.assertEqual(1, summary["run_count"])
         self.assertEqual(4, summary["reviewed_count"])
         self.assertEqual(2, summary["accepted_count"])
@@ -217,6 +220,13 @@ class GatewayCurationReportTests(unittest.TestCase):
         html = format_html_report(report, redaction_profile="support")
 
         self.assertEqual("curation-report/v0.8", redacted["schema_version"])
+        self.assertEqual("support", redacted["redaction_profile"])
+        self.assertFalse(redacted["redaction_policy"]["raw_evidence_included"])
+        self.assertTrue(redacted["redaction_policy"]["aggregate_only"])
+        self.assertIn(
+            "decisions.quarantined",
+            redacted["redaction_policy"]["removed_fields"],
+        )
         self.assertEqual([], redacted["operational"]["failures"])
         self.assertEqual([], redacted["operational"]["queries"])
         self.assertEqual([], redacted["operational"]["sources"]["otx"]["failures"])
@@ -224,7 +234,10 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual([], redacted["decisions"]["queries"])
         self.assertEqual(1, redacted["executive_summary"]["decision_record_count"])
         self.assertIn("schema_version=curation-report/v0.8", text)
+        self.assertIn("redaction_profile=support", text)
+        self.assertIn("raw_evidence_included=false", text)
         self.assertIn("curation-report/v0.8", html)
+        self.assertIn("redaction_profile", html)
         self.assertIn("NarrowCTI curation report", text)
         self.assertIn("NarrowCTI curation report", html)
 
@@ -265,12 +278,16 @@ class GatewayCurationReportTests(unittest.TestCase):
         redacted = report_to_dict(report, redaction_profile="external")
         text = format_text_report(report, redaction_profile="external")
 
+        self.assertEqual("external", redacted["redaction_profile"])
+        self.assertEqual("external-recipient", redacted["redaction_policy"]["audience"])
+        self.assertFalse(redacted["redaction_policy"]["raw_evidence_included"])
         self.assertEqual([], redacted["operational"]["failures"])
         self.assertEqual([], redacted["operational"]["queries"])
         self.assertEqual([], redacted["operational"]["sources"]["misp"]["failures"])
         self.assertEqual([], redacted["decisions"]["quarantined"])
         self.assertEqual([], redacted["decisions"]["queries"])
         self.assertEqual(1, redacted["executive_summary"]["decision_record_count"])
+        self.assertIn("redaction_profile=external", text)
         self.assertIn("NarrowCTI curation report", text)
 
     def test_rejects_unknown_redaction_profile(self):

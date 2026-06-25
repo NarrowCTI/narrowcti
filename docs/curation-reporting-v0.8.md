@@ -112,6 +112,20 @@ curation report with support.
 shape for customer-safe or external report delivery when raw local evidence
 should not be exposed.
 
+Each rendered report includes the selected profile and policy metadata:
+
+- `audience`: intended recipient category, such as local operator, support or
+  external recipient.
+- `raw_evidence_included`: whether detailed local evidence remains present.
+- `aggregate_only`: whether the report is reduced to aggregate posture and
+  decision evidence.
+- `removed_fields`: detailed report fields intentionally removed from shared
+  profiles, currently operational failures, operational queries, per-source
+  failures, quarantined candidate details and decision query detail.
+- `retained_sections`: sections intentionally kept because they preserve
+  executive posture, graph readiness, source posture, policy insights and
+  recommendations without exposing raw local evidence.
+
 When arguments are omitted, the command falls back to the corresponding
 `NARROWCTI_*` settings. Missing evidence is treated as empty input so an
 operator can still generate a partial report during early validation.
@@ -123,6 +137,10 @@ The current report contains:
 - `schema_version`: stable report contract identifier, currently
   `curation-report/v0.8`, used by JSON, text, HTML and embedded support
   diagnostics output.
+- `redaction_profile` and `redaction_policy`: explicit report sharing contract
+  for the selected profile. `none` keeps local raw evidence, while `support`
+  and `external` expose aggregate-only output and list the detailed fields that
+  were removed.
 - `executive_summary`: compact counts and graph readiness indicators.
 - `operational`: gateway run and source outcome rollups.
 - `decisions`: decision audit, score, graph export and graph STIX summaries.
@@ -243,5 +261,5 @@ quarantine policy automatically.
 - Expand the first evidence-driven context narrative into richer per-actor,
   per-arsenal, per-sector and per-ATT&CK report sections.
 - Add graph-quality deltas after controlled graph promotion is enabled.
-- Add profile-specific redaction policy controls for future tenant-specific
+- Add tenant-configurable redaction policies for future customer-specific
   external report delivery.

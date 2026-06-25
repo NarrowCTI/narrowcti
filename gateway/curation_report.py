@@ -19,6 +19,60 @@ from gateway.settings import load_settings
 
 REDACTION_PROFILES = ("none", "support", "external")
 SCHEMA_VERSION = "curation-report/v0.8"
+REDACTION_POLICIES = {
+    "none": {
+        "audience": "local-operator",
+        "raw_evidence_included": True,
+        "aggregate_only": False,
+        "removed_fields": [],
+        "retained_sections": [
+            "executive_summary",
+            "operational",
+            "decisions",
+            "analyst_review",
+            "analyst_review_actions",
+            "source_summaries",
+            "policy_insights",
+            "recommendations",
+        ],
+    },
+    "support": {
+        "audience": "support",
+        "raw_evidence_included": False,
+        "aggregate_only": True,
+        "removed_fields": [
+            "operational.failures",
+            "operational.queries",
+            "operational.sources.*.failures",
+            "decisions.quarantined",
+            "decisions.queries",
+        ],
+        "retained_sections": [
+            "executive_summary",
+            "source_summaries",
+            "policy_insights",
+            "recommendations",
+        ],
+    },
+    "external": {
+        "audience": "external-recipient",
+        "raw_evidence_included": False,
+        "aggregate_only": True,
+        "removed_fields": [
+            "operational.failures",
+            "operational.queries",
+            "operational.sources.*.failures",
+            "decisions.quarantined",
+            "decisions.queries",
+        ],
+        "retained_sections": [
+            "executive_summary",
+            "source_summaries",
+            "policy_insights",
+            "recommendations",
+        ],
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -795,6 +849,8 @@ def graph_preview_int(graph_preview, *keys):
 def report_to_dict(report, redaction_profile="none"):
     data = report.to_dict()
     profile = normalize_redaction_profile(redaction_profile)
+    data["redaction_profile"] = profile
+    data["redaction_policy"] = redaction_policy_for_profile(profile)
     if profile == "none":
         return data
     return redact_report_dict(data)
@@ -807,6 +863,11 @@ def normalize_redaction_profile(value):
             "redaction_profile must be one of: " + ",".join(REDACTION_PROFILES)
         )
     return profile
+
+
+def redaction_policy_for_profile(value):
+    profile = normalize_redaction_profile(value)
+    return copy.deepcopy(REDACTION_POLICIES[profile])
 
 
 def redact_report_dict(report):
@@ -828,10 +889,14 @@ def format_text_report(report, redaction_profile="none"):
     data = report_to_dict(report, redaction_profile=redaction_profile)
     summary = data["executive_summary"]
     review_actions = data.get("analyst_review_actions") or {}
+    redaction_policy = data.get("redaction_policy") or {}
     lines = [
         "NarrowCTI curation report",
         f"schema_version={data['schema_version']}",
         f"generated_at={data['generated_at']}",
+        f"redaction_profile={data['redaction_profile']}",
+        "redaction_policy:",
+        f"- {format_redaction_policy(redaction_policy)}",
         "executive_summary:",
         "- "
         f"runs={summary['run_count']} "
@@ -922,6 +987,7 @@ def format_html_report(report, redaction_profile="none"):
     data = report_to_dict(report, redaction_profile=redaction_profile)
     summary = data["executive_summary"]
     review_actions = data.get("analyst_review_actions") or {}
+    redaction_policy = data.get("redaction_policy") or {}
     recommendations = "\n".join(
         "<li><strong>{}</strong>: {}</li>".format(
             escape(item.get("code")),
@@ -1011,6 +1077,8 @@ def format_html_report(report, redaction_profile="none"):
     <h2>Snapshot</h2>
     <p><strong>schema:</strong> <code>{schema}</code></p>
     <p><strong>generated_at:</strong> <code>{generated_at}</code></p>
+    <p><strong>redaction_profile:</strong> <code>{redaction_profile}</code></p>
+    <p><strong>redaction_policy:</strong> <code>{redaction_policy}</code></p>
   </section>
   <section>
     <h2>Executive Summary</h2>
@@ -1069,6 +1137,8 @@ def format_html_report(report, redaction_profile="none"):
 </html>""".format(
         schema=escape(data["schema_version"]),
         generated_at=escape(data["generated_at"]),
+        redaction_profile=escape(data["redaction_profile"]),
+        redaction_policy=escape(format_redaction_policy(redaction_policy)),
         runs=escape(summary["run_count"]),
         sources=escape(summary["source_count"]),
         decision_records=escape(summary["decision_record_count"]),
@@ -1129,6 +1199,20 @@ def escape(value):
 def html_table_row(*values):
     return "<tr>{}</tr>".format(
         "".join(f"<td>{escape(value)}</td>" for value in values)
+    )
+
+
+def format_redaction_policy(policy):
+    policy = policy or {}
+    removed_fields = policy.get("removed_fields") or ["none"]
+    retained_sections = policy.get("retained_sections") or ["none"]
+    return (
+        f"audience={policy.get('audience', '')} "
+        f"raw_evidence_included="
+        f"{str(policy.get('raw_evidence_included', False)).lower()} "
+        f"aggregate_only={str(policy.get('aggregate_only', False)).lower()} "
+        f"removed_fields={','.join(removed_fields)} "
+        f"retained_sections={','.join(retained_sections)}"
     )
 
 

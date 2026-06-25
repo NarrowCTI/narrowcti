@@ -103,6 +103,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             "curation-report/v0.8",
             data["curation_report"]["schema_version"],
         )
+        self.assertEqual("none", data["curation_report"]["redaction_profile"])
+        self.assertTrue(
+            data["curation_report"]["redaction_policy"]["raw_evidence_included"]
+        )
         self.assertEqual(1, data["curation_report"]["executive_summary"]["run_count"])
         self.assertEqual(
             1,
@@ -246,6 +250,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         serialized = json.dumps(data)
 
         self.assertEqual("support", data["redaction_profile"])
+        self.assertEqual("support", data["curation_report"]["redaction_profile"])
+        self.assertFalse(
+            data["curation_report"]["redaction_policy"]["raw_evidence_included"]
+        )
         self.assertEqual("[redacted]", data["preflight"]["settings"]["license_customer_id"])
         self.assertNotIn(tmpdir, serialized)
         self.assertIn("[redacted-path]", serialized)
@@ -254,6 +262,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertEqual(1, data["curation_report"]["executive_summary"]["run_count"])
         self.assertIn("operational_validation", data)
         self.assertIn("redaction_profile=support", format_text_snapshot(snapshot))
+        self.assertIn("curation_report_profile=support", format_text_snapshot(snapshot))
         self.assertIn("NarrowCTI support diagnostics", format_html_snapshot(snapshot))
 
     def test_external_redaction_masks_paths_and_customer_context(self):
@@ -304,12 +313,18 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         serialized = json.dumps(data)
 
         self.assertEqual("external", data["redaction_profile"])
+        self.assertEqual("external", data["curation_report"]["redaction_profile"])
+        self.assertEqual(
+            "external-recipient",
+            data["curation_report"]["redaction_policy"]["audience"],
+        )
         self.assertEqual("[redacted]", data["preflight"]["settings"]["license_customer_id"])
         self.assertNotIn(tmpdir, serialized)
         self.assertIn("[redacted-path]", serialized)
         self.assertEqual([], data["curation_report"]["decisions"]["quarantined"])
         self.assertEqual([], data["curation_report"]["decisions"]["queries"])
         self.assertIn("redaction_profile=external", format_text_snapshot(snapshot))
+        self.assertIn("curation_report_profile=external", format_text_snapshot(snapshot))
         self.assertIn("NarrowCTI support diagnostics", format_html_snapshot(snapshot))
 
     def test_rejects_unknown_redaction_profile(self):

@@ -87,6 +87,12 @@ without exposing local workstation paths or customer context.
 redaction model for customer-safe or external report delivery without raw local
 evidence.
 
+The embedded curation report carries its own `redaction_profile` and
+`redaction_policy` metadata. The diagnostic text and HTML render
+`curation_report_profile` and `curation_report_policy` so support can confirm
+whether raw curation evidence was retained or removed before the snapshot is
+shared.
+
 HTML snapshot:
 
 ```powershell
@@ -127,7 +133,8 @@ The current snapshot contains:
 - `evidence_inventory`: configured local evidence paths with existence, kind,
   size and modification metadata.
 - `curation_report`: executive curation summary, decisions, analyst review and
-  graph-readiness evidence.
+  graph-readiness evidence, including the embedded curation report
+  `redaction_profile` and `redaction_policy`.
 - `source_posture`: rendered text/HTML summary of per-source curation posture
   from the embedded curation report, including compact context narrative
   evidence when ATT&CK, arsenal, threat actor/intrusion set or target-sector

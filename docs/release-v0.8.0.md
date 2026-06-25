@@ -159,6 +159,10 @@ Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 - Added an `external` redaction profile for curation reports and support
   diagnostics so customer-safe report delivery can reuse the conservative
   aggregate-only redaction model without exposing raw local evidence.
+- Added explicit curation report redaction policy metadata. JSON, text, HTML
+  and embedded diagnostics now show the selected report profile, intended
+  audience, raw-evidence posture and detailed fields removed by shared
+  profiles.
 - Added `reports.support_diagnostics` to the preflight-visible capability
   inventory so the support snapshot is represented in the product operations
   model.

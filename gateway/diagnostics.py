@@ -15,6 +15,8 @@ from gateway.curation_report import (
     format_graph_evidence_summary,
     format_policy_score_summary,
     format_reason_entries,
+    format_redaction_policy,
+    report_to_dict,
 )
 from gateway.decisions import build_decision_audit_report, read_decision_records
 from gateway.operational_validation import (
@@ -66,6 +68,7 @@ def build_support_diagnostics(
     redaction_profile="none",
     operational_validation_evidence_file="",
 ):
+    profile = normalize_redaction_profile(redaction_profile)
     preflight = build_preflight_report(settings, env=env)
     evidence = collect_evidence_inventory(preflight)
     if operational_validation_evidence_file:
@@ -114,10 +117,10 @@ def build_support_diagnostics(
     snapshot = SupportDiagnosticSnapshot(
         schema_version=SCHEMA_VERSION,
         generated_at=generated_at or utc_now(),
-        redaction_profile=normalize_redaction_profile(redaction_profile),
+        redaction_profile=profile,
         preflight=preflight.to_dict(),
         evidence_inventory=evidence,
-        curation_report=curation.to_dict(),
+        curation_report=report_to_dict(curation, redaction_profile=profile),
         operational_validation=operational_validation.to_dict(),
         support_warnings=build_support_warnings(
             preflight,
@@ -496,6 +499,9 @@ def format_text_snapshot(snapshot):
         f"schema_version={data['schema_version']}",
         f"generated_at={data['generated_at']}",
         f"redaction_profile={data.get('redaction_profile', 'none')}",
+        f"curation_report_profile={curation.get('redaction_profile', 'none')}",
+        "curation_report_policy:",
+        f"- {format_redaction_policy(curation.get('redaction_policy'))}",
         f"preflight_ok={str(preflight.get('ok', False)).lower()}",
         f"ingestion_mode={preflight.get('ingestion_mode', '')}",
         "enabled_sources=" + ",".join(preflight.get("enabled_sources") or []),
@@ -678,6 +684,8 @@ def format_html_snapshot(snapshot):
     <p><strong>schema:</strong> <code>{schema}</code></p>
     <p><strong>generated_at:</strong> <code>{generated_at}</code></p>
     <p><strong>redaction_profile:</strong> <code>{redaction_profile}</code></p>
+    <p><strong>curation_report_profile:</strong> <code>{curation_report_profile}</code></p>
+    <p><strong>curation_report_policy:</strong> <code>{curation_report_policy}</code></p>
     <p><strong>preflight_ok:</strong> <code>{preflight_ok}</code></p>
     <p><strong>ingestion_mode:</strong> <code>{ingestion_mode}</code></p>
     <p><strong>enabled_sources:</strong> <code>{enabled_sources}</code></p>
@@ -737,6 +745,10 @@ def format_html_snapshot(snapshot):
         schema=escape(data.get("schema_version")),
         generated_at=escape(data.get("generated_at")),
         redaction_profile=escape(data.get("redaction_profile")),
+        curation_report_profile=escape(curation.get("redaction_profile")),
+        curation_report_policy=escape(
+            format_redaction_policy(curation.get("redaction_policy"))
+        ),
         preflight_ok=escape(str(preflight.get("ok", False)).lower()),
         ingestion_mode=escape(preflight.get("ingestion_mode")),
         enabled_sources=escape(",".join(preflight.get("enabled_sources") or [])),
