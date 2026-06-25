@@ -120,6 +120,9 @@ operator can still generate a partial report during early validation.
 
 The current report contains:
 
+- `schema_version`: stable report contract identifier, currently
+  `curation-report/v0.8`, used by JSON, text, HTML and embedded support
+  diagnostics output.
 - `executive_summary`: compact counts and graph readiness indicators.
 - `operational`: gateway run and source outcome rollups.
 - `decisions`: decision audit, score, graph export and graph STIX summaries.

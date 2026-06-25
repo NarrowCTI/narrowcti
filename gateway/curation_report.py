@@ -18,10 +18,12 @@ from gateway.settings import load_settings
 
 
 REDACTION_PROFILES = ("none", "support", "external")
+SCHEMA_VERSION = "curation-report/v0.8"
 
 
 @dataclass(frozen=True)
 class CurationReport:
+    schema_version: str
     generated_at: str
     executive_summary: dict
     operational: dict
@@ -34,6 +36,7 @@ class CurationReport:
 
     def to_dict(self):
         return {
+            "schema_version": self.schema_version,
             "generated_at": self.generated_at,
             "executive_summary": self.executive_summary,
             "operational": self.operational,
@@ -71,6 +74,7 @@ def build_curation_report(
     )
     policy_insights = build_policy_insights(source_summaries)
     return CurationReport(
+        schema_version=SCHEMA_VERSION,
         generated_at=generated_at or utc_now(),
         executive_summary=executive,
         operational=operational,
@@ -826,6 +830,7 @@ def format_text_report(report, redaction_profile="none"):
     review_actions = data.get("analyst_review_actions") or {}
     lines = [
         "NarrowCTI curation report",
+        f"schema_version={data['schema_version']}",
         f"generated_at={data['generated_at']}",
         "executive_summary:",
         "- "
@@ -1004,6 +1009,7 @@ def format_html_report(report, redaction_profile="none"):
   <h1>NarrowCTI curation report</h1>
   <section>
     <h2>Snapshot</h2>
+    <p><strong>schema:</strong> <code>{schema}</code></p>
     <p><strong>generated_at:</strong> <code>{generated_at}</code></p>
   </section>
   <section>
@@ -1061,6 +1067,7 @@ def format_html_report(report, redaction_profile="none"):
   </section>
 </body>
 </html>""".format(
+        schema=escape(data["schema_version"]),
         generated_at=escape(data["generated_at"]),
         runs=escape(summary["run_count"]),
         sources=escape(summary["source_count"]),

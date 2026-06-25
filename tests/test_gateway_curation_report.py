@@ -66,6 +66,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         summary = report.executive_summary
         source_summary = report.source_summaries[0]
 
+        self.assertEqual("curation-report/v0.8", report.to_dict()["schema_version"])
         self.assertEqual(1, summary["run_count"])
         self.assertEqual(4, summary["reviewed_count"])
         self.assertEqual(2, summary["accepted_count"])
@@ -215,12 +216,15 @@ class GatewayCurationReportTests(unittest.TestCase):
         text = format_text_report(report, redaction_profile="support")
         html = format_html_report(report, redaction_profile="support")
 
+        self.assertEqual("curation-report/v0.8", redacted["schema_version"])
         self.assertEqual([], redacted["operational"]["failures"])
         self.assertEqual([], redacted["operational"]["queries"])
         self.assertEqual([], redacted["operational"]["sources"]["otx"]["failures"])
         self.assertEqual([], redacted["decisions"]["quarantined"])
         self.assertEqual([], redacted["decisions"]["queries"])
         self.assertEqual(1, redacted["executive_summary"]["decision_record_count"])
+        self.assertIn("schema_version=curation-report/v0.8", text)
+        self.assertIn("curation-report/v0.8", html)
         self.assertIn("NarrowCTI curation report", text)
         self.assertIn("NarrowCTI curation report", html)
 

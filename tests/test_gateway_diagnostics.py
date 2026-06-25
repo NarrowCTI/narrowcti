@@ -99,6 +99,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertEqual("support-diagnostics/v0.8", data["schema_version"])
         self.assertEqual("none", data["redaction_profile"])
         self.assertTrue(data["preflight"]["ok"])
+        self.assertEqual(
+            "curation-report/v0.8",
+            data["curation_report"]["schema_version"],
+        )
         self.assertEqual(1, data["curation_report"]["executive_summary"]["run_count"])
         self.assertEqual(
             1,
