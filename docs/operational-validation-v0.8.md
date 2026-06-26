@@ -277,6 +277,22 @@ Suricata, PCRE and similar rules should remain Indicators with stricter
 pattern typing or be represented through a more suitable OpenCTI object and
 relationship model.
 
+The controlled polish decision is to keep detection rules in the native
+OpenCTI Indicator workflow for v0.8, but to make them richer and more
+discoverable. Detection-rule Indicators now receive:
+
+- Canonical names such as `SIGMA: Suspicious PowerShell`.
+- STIX `indicator_types=malicious-activity`.
+- Labels such as `narrowcti:detection-rule` and `rule-type:sigma`.
+- Source-backed descriptions.
+- External references for source identifiers such as MISP attribute UUID,
+  OTX indicator id or object UUID when present.
+
+This preserves native OpenCTI behavior and avoids a custom detection-rule SDO
+before the UI/relationship model is proven. The next evidence step is real
+OpenCTI UI/API validation that polished YARA, Sigma, Snort, Suricata and PCRE
+Indicators are queryable by name, label and source reference.
+
 The same real MISP ingestion also confirmed an important Infrastructure
 boundary: the IP `206.81.5.253` was ingested and queryable as a normal
 Indicator, but it was not related to an Infrastructure object because the

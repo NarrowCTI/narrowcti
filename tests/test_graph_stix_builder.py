@@ -81,6 +81,23 @@ class GraphStixBuilderTests(unittest.TestCase):
         self.assertEqual(1, len(objects_by_type["indicator"]))
         self.assertEqual(1, len(objects_by_type["note"]))
         self.assertEqual(7, len(objects_by_type["relationship"]))
+        detection_indicator = objects_by_type["indicator"][0]
+        self.assertEqual("SIGMA: Suspicious PowerShell", detection_indicator["name"])
+        self.assertEqual("sigma", detection_indicator["pattern_type"])
+        self.assertEqual(["malicious-activity"], detection_indicator["indicator_types"])
+        self.assertIn("narrowcti:detection-rule", detection_indicator["labels"])
+        self.assertIn("rule-type:sigma", detection_indicator["labels"])
+        self.assertEqual(
+            "Source-backed SIGMA detection rule observed by misp at Attribute[0].",
+            detection_indicator["description"],
+        )
+        self.assertIn(
+            {
+                "source_name": "narrowcti-attribute-uuid",
+                "external_id": "attribute-rule-1",
+            },
+            detection_indicator["external_references"],
+        )
 
         attack_pattern = objects_by_type["attack-pattern"][0]
         self.assertEqual("Command and Scripting Interpreter", attack_pattern["name"])
@@ -1884,6 +1901,7 @@ def detection_rule_candidate():
         "attributes": {
             "pattern": "title: Suspicious PowerShell",
             "pattern_type": "sigma",
+            "attribute_uuid": "attribute-rule-1",
         },
     }
 

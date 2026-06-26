@@ -672,6 +672,8 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
         return None
     if stix_object_type == "threat-actor" and entity_type == "threat_actor_individual":
         return None
+    if stix_object_type == "indicator" and entity_type == "detection_rule":
+        name = detection_rule_indicator_name(name, attributes)
 
     common = {
         "id": deterministic_graph_object_id(
@@ -752,11 +754,15 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
         pattern_type = clean_string(attributes.get("pattern_type")) or "stix"
         if not pattern:
             return None
+        indicator_kwargs = {}
+        if entity_type == "detection_rule":
+            indicator_kwargs.update(detection_rule_indicator_properties(candidate, attributes))
         return Indicator(
             name=name,
             pattern=pattern,
             pattern_type=pattern_type,
             valid_from=now,
+            **indicator_kwargs,
             **described_common,
         )
     if stix_object_type in CUSTOM_GRAPH_OBJECTS:
@@ -1026,6 +1032,22 @@ def graph_candidate_description(candidate, attributes):
         return description
 
     entity_type = clean_string(candidate.get("entity_type")).lower()
+    if entity_type == "detection_rule":
+        rule_type = first_clean_value(
+            attributes.get("rule_type"),
+            attributes.get("pattern_type"),
+        )
+        source_name = first_clean_value(
+            candidate.get("source_name"),
+            candidate.get("source_key"),
+        )
+        source_field = clean_string(candidate.get("source_field"))
+        label = f"{rule_type.upper()} detection rule" if rule_type else "Detection rule"
+        if source_name and source_field:
+            return f"Source-backed {label} observed by {source_name} at {source_field}."
+        if source_name:
+            return f"Source-backed {label} observed by {source_name}."
+        return f"Source-backed {label}."
     if entity_type not in TARGET_CONTEXT_ENTITY_TYPES:
         return ""
 
@@ -1193,6 +1215,60 @@ def vulnerability_references(value):
     if not normalized.startswith("CVE-"):
         return None
     return [{"source_name": "cve", "external_id": normalized}]
+
+
+def detection_rule_indicator_name(name, attributes):
+    rule_type = first_clean_value(
+        attributes.get("rule_type"),
+        attributes.get("pattern_type"),
+    ).upper()
+    name = clean_string(name)
+    if not rule_type or name.upper().startswith(f"{rule_type}:"):
+        return name
+    return f"{rule_type}: {name}"
+
+
+def detection_rule_indicator_properties(candidate, attributes):
+    properties = {
+        "labels": detection_rule_labels(attributes),
+        "external_references": detection_rule_external_references(candidate, attributes),
+        "indicator_types": ["malicious-activity"],
+    }
+    return {key: value for key, value in properties.items() if value}
+
+
+def detection_rule_labels(attributes):
+    labels = ["narrowcti:detection-rule"]
+    rule_type = first_clean_value(
+        attributes.get("rule_type"),
+        attributes.get("pattern_type"),
+    ).lower()
+    if rule_type:
+        labels.append(f"rule-type:{rule_type}")
+    return labels
+
+
+def detection_rule_external_references(candidate, attributes):
+    references = []
+    for key in ("attribute_uuid", "indicator_id", "object_uuid"):
+        value = clean_string(attributes.get(key))
+        if value:
+            references.append(
+                {
+                    "source_name": f"narrowcti-{key.replace('_', '-')}",
+                    "external_id": value,
+                }
+            )
+    source_name = first_clean_value(candidate.get("source_name"), candidate.get("source_key"))
+    source_field = clean_string(candidate.get("source_field"))
+    if source_name and source_field:
+        references.append(
+            {
+                "source_name": source_name,
+                "description": f"Detection rule source field: {source_field}",
+            }
+        )
+    return references
 
 
 def graph_custom_properties(candidate):

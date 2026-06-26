@@ -153,7 +153,7 @@ metadata supports them and the candidate passes policy:
 
 | OpenCTI area | Current NarrowCTI mapping | Notes |
 | --- | --- | --- |
-| Observations / Indicators | IOC indicators and detection-rule candidates as STIX `indicator` objects | Existing behavior remains active in every mode. |
+| Observations / Indicators | IOC indicators and detection-rule candidates as STIX `indicator` objects | IOC behavior remains active in every mode. Detection rules stay as native Indicators but use canonical names, labels, source references and descriptions for analyst discoverability. |
 | Observations / Observables | Domain, URL, IPv4, IPv6, email and file-hash observables from graph candidates | Artifact-specific promotion is still pending. |
 | Threats / Threat actors | STIX `threat-actor` for group actors; native OpenCTI `ThreatActorIndividual` for individual actors | Created only from explicit supported metadata such as OTX adversary or MISP galaxy evidence. Individual actors use native GraphQL export so they materialize in the correct OpenCTI tab. |
 | Threats / Intrusion sets | STIX `intrusion-set` | Depends on source metadata or galaxy mapping. |

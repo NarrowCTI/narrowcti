@@ -106,7 +106,7 @@ The v0.8 export gate is intentionally conservative:
 | --- | --- | --- | --- | --- | --- |
 | Observations | Observables | SCO values such as `ipv4-addr`, `domain-name`, `url`, `email-addr` | Validated export | Observable export and lookup are active for supported concrete values. The real MISP validation confirmed that a standalone IP indicator can be ingested as an Indicator/Observable without becoming Infrastructure. | Continue type normalization. When source-backed Infrastructure exists, relate IP/domain/CIDR/ASN evidence to it; otherwise keep raw IoCs out of Infrastructure. |
 | Observations | Artifacts | STIX Artifact | Validated export | Controlled Artifact export is active only for explicit source-backed `artifact` observable candidates with artifact-level metadata. NarrowCTI requires a hash algorithm and hash value, can preserve optional `artifact_url`, `mime_type`, `payload_bin`, encryption metadata and provenance, and resolves existing Artifacts through `stixCyberObservables` by hash before creation. Live validation imported `NarrowCTI Matrix Artifact Builder Validation 20260626B` and OpenCTI returned exactly one `Artifact` with the expected SHA-256 `observable_value`. Generic file hashes still remain file observables or Indicators and are not promoted to Artifact automatically. | Expand source-specific mapping for feeds that provide sample/package metadata or binary artifact context, while keeping ordinary IoC hashes out of Artifact promotion. |
-| Observations | Indicators | `indicator` | Validated export | Legacy indicator export remains active. Detection rules can also materialize as pattern-aware Indicators, but the real MISP validation showed that detection-rule evidence exported as a generic Indicator may not be queryable or visible in OpenCTI with the same reliability as normal IoC indicators. | Keep normal indicator export active. Move detection-rule object typing and OpenCTI placement polish to the final v0.8 polish pass, covering YARA, Sigma, Snort, Suricata, PCRE and STIX patterns. |
+| Observations | Indicators | `indicator` | Validated export | Legacy indicator export remains active. Detection rules materialize as pattern-aware Indicators with canonical names such as `SIGMA: Suspicious PowerShell`, STIX `indicator_types=malicious-activity`, labels such as `narrowcti:detection-rule` and `rule-type:sigma`, source external references and source-backed descriptions. This keeps YARA, Sigma, Snort, Suricata and PCRE evidence in the OpenCTI Indicator workflow without inventing a non-standard detection-rule SDO. | Validate the polished detection-rule Indicator placement with real MISP/OTX export in OpenCTI UI/API before marking production-ready. |
 | Observations | Infrastructures | `infrastructure` | Validated export | Curated Infrastructure export is active for source-backed infrastructure. Validations cover actor infrastructure, MISP infrastructure objects and ASN/IP/CIDR relationships. Raw IP indicators are intentionally not promoted into Infrastructure by themselves. | Expand true external MISP/OTX payload validation for ASN, netblock, domain-ip and ip-port evidence, and verify that source-backed IPs attach to Infrastructure through `consists-of` or compatible OpenCTI relationships. |
 
 ## Analysis And Context Objects
@@ -145,11 +145,11 @@ NarrowCTI flag.
    now implemented with IOC/provenance guardrails and covered by unit tests;
    the remaining work is live source-payload evidence and conservative
    promotion policy tuning.
-5. Final polish: review detection-rule promotion. Real MISP validation showed
-   that YARA/Sigma/Snort/Suricata/PCRE-style detection-rule evidence should not
-   remain a generic Indicator if OpenCTI cannot reliably surface it by name,
-   STIX id or analyst workflow. Validate the best OpenCTI object placement
-   before marking detection-rule export as production-ready.
+5. Final polish: validate detection-rule Indicator placement with real
+   OpenCTI export. Detection rules now use canonical names, labels, source
+   external references and source-backed descriptions; the remaining work is
+   live UI/API evidence that YARA/Sigma/Snort/Suricata/PCRE-style rules are
+   discoverable and useful in the analyst workflow.
 
 ## Guardrails
 
