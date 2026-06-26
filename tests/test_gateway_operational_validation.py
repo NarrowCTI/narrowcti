@@ -105,6 +105,63 @@ class GatewayOperationalValidationTests(unittest.TestCase):
         )
         self.assertEqual("fail", checks["resource-posture"].status)
 
+    def test_structured_resource_posture_evidence_can_pass(self):
+        preflight = build_preflight_report(
+            validation_settings(),
+            env={"OTX_DRY_RUN": "true", "MISP_DRY_RUN": "true"},
+        )
+        decisions = build_decision_audit_report(
+            [validation_decision("otx"), validation_decision("misp")]
+        )
+
+        report = build_operational_validation_report(
+            preflight,
+            decisions,
+            full_validation_passed=True,
+            opencti_ui_no_duplicate=True,
+            resource_posture_evidence={
+                "docker_stats_captured": True,
+                "docker_system_df_captured": True,
+                "containers_healthy": True,
+                "disk_posture_ok": True,
+                "docker_stats_command": "docker stats --no-stream",
+            },
+        )
+        checks = {item.code: item for item in report.checks}
+
+        self.assertEqual("pass", checks["resource-posture"].status)
+        self.assertEqual(
+            "docker stats --no-stream",
+            checks["resource-posture"].evidence["resource_posture"][
+                "docker_stats_command"
+            ],
+        )
+
+    def test_structured_resource_posture_evidence_can_fail(self):
+        preflight = build_preflight_report(
+            validation_settings(),
+            env={"OTX_DRY_RUN": "true", "MISP_DRY_RUN": "true"},
+        )
+        decisions = build_decision_audit_report(
+            [validation_decision("otx"), validation_decision("misp")]
+        )
+
+        report = build_operational_validation_report(
+            preflight,
+            decisions,
+            full_validation_passed=True,
+            opencti_ui_no_duplicate=True,
+            resource_posture_evidence={
+                "docker_stats_captured": True,
+                "docker_system_df_captured": True,
+                "containers_healthy": False,
+                "disk_posture_ok": True,
+            },
+        )
+        checks = {item.code: item for item in report.checks}
+
+        self.assertEqual("fail", checks["resource-posture"].status)
+
     def test_parse_sources_normalizes_comma_separated_values(self):
         self.assertEqual(("otx", "misp"), parse_sources(" OTX, misp ,, "))
 
@@ -117,6 +174,10 @@ class GatewayOperationalValidationTests(unittest.TestCase):
                         "full_validation_passed": True,
                         "opencti_ui_no_duplicate": "yes",
                         "resource_posture_ok": "true",
+                        "resource_posture": {
+                            "docker_stats_captured": True,
+                            "docker_system_df_captured": True,
+                        },
                     },
                     handle,
                 )
@@ -126,6 +187,7 @@ class GatewayOperationalValidationTests(unittest.TestCase):
         self.assertTrue(evidence_bool(evidence, "full_validation_passed"))
         self.assertTrue(evidence_bool(evidence, "opencti_ui_no_duplicate"))
         self.assertTrue(evidence_bool(evidence, "resource_posture_ok"))
+        self.assertTrue(evidence["resource_posture"]["docker_stats_captured"])
         self.assertFalse(evidence_bool(evidence, "opencti_ui_duplicate_found"))
 
     def test_missing_manual_evidence_file_is_empty(self):

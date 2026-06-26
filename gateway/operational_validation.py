@@ -58,6 +58,7 @@ def build_operational_validation_report(
     opencti_ui_duplicate_found=False,
     resource_posture_ok=False,
     resource_posture_unhealthy=False,
+    resource_posture_evidence=None,
     required_sources=("otx", "misp"),
 ):
     preflight = preflight_report.to_dict()
@@ -74,7 +75,11 @@ def build_operational_validation_report(
             opencti_ui_no_duplicate,
             opencti_ui_duplicate_found,
         ),
-        resource_posture_check(resource_posture_ok, resource_posture_unhealthy),
+        resource_posture_check(
+            resource_posture_ok,
+            resource_posture_unhealthy,
+            resource_posture_evidence=resource_posture_evidence,
+        ),
     ]
     return OperationalValidationReport(
         schema_version="operational-validation/v0.8",
@@ -281,23 +286,27 @@ def duplicate_attack_pattern_check(no_duplicate, duplicate_found):
     )
 
 
-def resource_posture_check(resource_ok, resource_unhealthy):
+def resource_posture_check(resource_ok, resource_unhealthy, resource_posture_evidence=None):
+    resource_posture_evidence = (
+        resource_posture_evidence if isinstance(resource_posture_evidence, dict) else {}
+    )
     evidence = {
         "resource_posture_ok": bool(resource_ok),
         "resource_posture_unhealthy": bool(resource_unhealthy),
+        "resource_posture": dict(resource_posture_evidence),
     }
-    if resource_unhealthy:
+    if resource_unhealthy or structured_resource_posture_unhealthy(resource_posture_evidence):
         return check(
             "resource-posture",
             "fail",
             "Local lab resource posture was marked unhealthy after bounded validation.",
             evidence,
         )
-    if resource_ok:
+    if resource_ok or structured_resource_posture_ok(resource_posture_evidence):
         return check(
             "resource-posture",
             "pass",
-            "Local lab resource posture was marked healthy after bounded validation.",
+            "Local lab resource posture evidence was captured and marked healthy after bounded validation.",
             evidence,
         )
     return check(
@@ -306,6 +315,37 @@ def resource_posture_check(resource_ok, resource_unhealthy):
         "Record local lab resource posture after bounded OTX and MISP validation.",
         evidence,
     )
+
+
+def structured_resource_posture_ok(evidence):
+    evidence = evidence if isinstance(evidence, dict) else {}
+    status = normalized_status(evidence.get("status"))
+    if status in {"ok", "pass", "healthy"}:
+        return True
+    return all(
+        evidence_bool(evidence, key)
+        for key in (
+            "docker_stats_captured",
+            "docker_system_df_captured",
+            "containers_healthy",
+            "disk_posture_ok",
+        )
+    )
+
+
+def structured_resource_posture_unhealthy(evidence):
+    evidence = evidence if isinstance(evidence, dict) else {}
+    status = normalized_status(evidence.get("status"))
+    if status in {"fail", "failed", "unhealthy", "error"}:
+        return True
+    for key in ("containers_healthy", "disk_posture_ok"):
+        if key in evidence and not evidence_bool(evidence, key):
+            return True
+    return False
+
+
+def normalized_status(value):
+    return str(value or "").strip().lower()
 
 
 def check(code, status, message, evidence=None):
@@ -567,6 +607,7 @@ def main():
         or evidence_bool(manual_evidence, "resource_posture_ok"),
         resource_posture_unhealthy=args.resource_posture_unhealthy
         or evidence_bool(manual_evidence, "resource_posture_unhealthy"),
+        resource_posture_evidence=manual_evidence.get("resource_posture"),
         required_sources=parse_sources(args.required_sources),
     )
     output_format = "json" if args.json else args.format

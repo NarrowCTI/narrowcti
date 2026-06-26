@@ -678,9 +678,25 @@ in the local state volume without changing the compose command:
   "opencti_ui_no_duplicate": true,
   "opencti_ui_duplicate_found": false,
   "resource_posture_ok": true,
-  "resource_posture_unhealthy": false
+  "resource_posture_unhealthy": false,
+  "resource_posture": {
+    "docker_stats_captured": true,
+    "docker_stats_command": "docker stats --no-stream",
+    "docker_system_df_captured": true,
+    "docker_system_df_command": "docker system df",
+    "containers_healthy": true,
+    "disk_posture_ok": true,
+    "notes": "Captured after bounded OTX/MISP validation."
+  }
 }
 ```
+
+`resource_posture_ok=true` remains supported for quick manual checks. The
+structured `resource_posture` block is preferred because it documents what was
+actually reviewed: live container resource usage, Docker disk posture, container
+health and whether disk pressure is acceptable for the lab. If
+`containers_healthy=false`, `disk_posture_ok=false` or `status=unhealthy`, the
+check fails even when the old boolean is omitted.
 
 Then run:
 
