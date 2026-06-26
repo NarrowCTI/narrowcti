@@ -561,6 +561,10 @@ OpenCTI tab/export coverage is tracked in
   temporal evidence as `x_narrowcti_*` custom properties on objects and
   relationships, covering source created/modified/timestamp, first_seen,
   last_seen, valid_from and valid_until values when candidates provide them.
+  OTX graph evidence now carries pulse lifecycle and aggregate indicator
+  observation-window timestamps into promoted records so source-created,
+  source-modified, first-seen and last-seen values survive the full graph
+  promotion path.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

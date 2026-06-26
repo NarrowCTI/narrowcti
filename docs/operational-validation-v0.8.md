@@ -897,6 +897,14 @@ relationship preserved those values without changing deterministic object ids
 or forcing unvalidated native STIX lifecycle fields. This closes the first
 audit layer for future OpenCTI Timeline validation.
 
+Follow-up controlled unit validation confirmed that OTX pulse lifecycle and
+indicator observation-window evidence now flow into each OTX graph evidence
+record as source-backed attributes. Pulse `created` and `modified` become
+`source_created` and `source_modified`; aggregate indicator `first_seen_min`
+and `last_seen_max` remain available unless a specific record carries a more
+precise timestamp. The STIX builder then emits these values as the
+`x_narrowcti_*` timeline properties above.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

@@ -395,6 +395,44 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_adds_otx_timeline_attributes_to_entity_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "lifecycle": {
+                        "created": "2026-04-01T00:00:00Z",
+                        "modified": "2026-04-03T00:00:00Z",
+                    },
+                    "indicator_observation_window": {
+                        "first_seen_min": "2026-04-01T10:00:00Z",
+                        "last_seen_max": "2026-04-05T10:00:00Z",
+                    },
+                    "records": [
+                        {
+                            "entity_type": "infrastructure",
+                            "value": "APT Example OTX observed infrastructure",
+                            "source_field": "infrastructures",
+                            "confidence": 70,
+                            "attributes": {
+                                "first_seen": "2026-04-02T10:00:00Z",
+                            },
+                        }
+                    ],
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="OTX pulse",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        attributes = evidence["records"][0]["attributes"]
+        self.assertEqual("2026-04-01T00:00:00Z", attributes["source_created"])
+        self.assertEqual("2026-04-03T00:00:00Z", attributes["source_modified"])
+        self.assertEqual("2026-04-02T10:00:00Z", attributes["first_seen"])
+        self.assertEqual("2026-04-01T10:00:00Z", attributes["first_seen_min"])
+        self.assertEqual("2026-04-05T10:00:00Z", attributes["last_seen_max"])
+
     def test_preserves_otx_relationship_override(self):
         evidence = build_graph_evidence(
             {
