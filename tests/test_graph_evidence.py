@@ -74,6 +74,31 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_normalizes_otx_target_sector_aliases(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "target_sector",
+                            "value": "Defence",
+                            "source_field": "industries",
+                            "confidence": 50,
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Sector pulse",
+        )
+
+        sector = evidence["records"][0]
+        self.assertEqual("Defense", sector["value"])
+        self.assertEqual("Defence", sector["attributes"]["source_value"])
+        self.assertTrue(sector["attributes"]["normalized_value"])
+        self.assertEqual("target_sector", sector["attributes"]["normalization_scope"])
+
     def test_builds_otx_and_mitre_graph_evidence_records(self):
         evidence = build_graph_evidence(
             {
@@ -619,6 +644,37 @@ class GraphEvidenceTests(unittest.TestCase):
             if record["entity_type"] == "target_country"
         )
         self.assertEqual("AR", country["value"])
+
+    def test_normalizes_misp_target_sector_aliases_before_deduplication(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Example",
+                        "uuid": "cluster-actor",
+                        "galaxy_type": "threat-actor",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "targeted-sector": ["Financial Services", "Finance"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        sectors = [
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_sector"
+        ]
+        self.assertEqual(1, len(sectors))
+        self.assertEqual("Finance", sectors[0]["value"])
+        self.assertEqual("Financial Services", sectors[0]["attributes"]["source_value"])
+        self.assertTrue(sectors[0]["attributes"]["normalized_value"])
 
     def test_builds_misp_threat_actor_individual_evidence_only_class(self):
         evidence = build_graph_evidence(

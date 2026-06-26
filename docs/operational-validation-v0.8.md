@@ -927,6 +927,14 @@ the MISP sighting type in `x_narrowcti_*` provenance. Non-positive MISP sighting
 types, such as false-positive sightings, are no longer emitted as positive STIX
 Sightings.
 
+Controlled unit validation added conservative target-sector synonym
+normalization across OTX and MISP graph evidence. Clear aliases such as
+`Financial Services` -> `Finance` and `Defence` -> `Defense` now deduplicate
+before graph promotion, while `source_value`, `normalized_value` and
+`normalization_scope` preserve the original feed wording for audit. Ambiguous
+victimology labels are intentionally not remapped without source-backed
+evidence.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

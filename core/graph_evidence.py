@@ -49,6 +49,30 @@ ENTITY_TARGETS = {
     "object_reference": ("relationship", "related-to"),
 }
 
+TARGET_SECTOR_ALIASES = {
+    "aerospace and defense": "Defense",
+    "banking": "Finance",
+    "banking and finance": "Finance",
+    "defence": "Defense",
+    "defense industrial base": "Defense",
+    "e-commerce": "Retail",
+    "financial": "Finance",
+    "financial sector": "Finance",
+    "financial services": "Finance",
+    "fintech": "Finance",
+    "government and public sector": "Government",
+    "health": "Healthcare",
+    "health care": "Healthcare",
+    "healthcare and public health": "Healthcare",
+    "information technology": "Technology",
+    "it": "Technology",
+    "oil and gas": "Energy",
+    "public sector": "Government",
+    "telecom": "Telecommunications",
+    "telecommunications": "Telecommunications",
+    "transport": "Transportation",
+}
+
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 
@@ -455,7 +479,17 @@ def misp_galaxy_meta_evidence(cluster, source_key=""):
         for field_name in field_names:
             values = flatten_values(meta.get(field_name))
             for value in values:
-                normalized = clean_string(value)
+                source_value = clean_string(value)
+                attributes = misp_galaxy_meta_attributes(
+                    cluster,
+                    field_name,
+                    entity_type,
+                )
+                normalized, attributes = normalize_evidence_value(
+                    entity_type,
+                    source_value,
+                    attributes,
+                )
                 key = normalized.casefold()
                 if not normalized or key in seen:
                     continue
@@ -469,11 +503,7 @@ def misp_galaxy_meta_evidence(cluster, source_key=""):
                     source_name="misp-galaxy",
                     source_field=meta_source_field(cluster, field_name),
                     confidence=confidence,
-                    attributes=misp_galaxy_meta_attributes(
-                        cluster,
-                        field_name,
-                        entity_type,
-                    ),
+                    attributes=attributes,
                 )
                 if record:
                     records.append(record)
@@ -1397,6 +1427,12 @@ def evidence_record(
 ):
     entity_type = clean_string(entity_type)
     value = clean_string(value)
+    compact_attributes = compact_mapping(attributes)
+    value, compact_attributes = normalize_evidence_value(
+        entity_type,
+        value,
+        compact_attributes,
+    )
     if not entity_type or not value:
         return {}
 
@@ -1419,10 +1455,26 @@ def evidence_record(
     display_name = clean_string(display_name)
     if display_name and display_name != value:
         record["display_name"] = display_name
-    compact_attributes = compact_mapping(attributes)
     if compact_attributes:
         record["attributes"] = compact_attributes
     return record
+
+
+def normalize_evidence_value(entity_type, value, attributes):
+    if entity_type == "target_sector":
+        return normalize_target_sector_value(value, attributes)
+    return value, attributes
+
+
+def normalize_target_sector_value(value, attributes):
+    canonical = TARGET_SECTOR_ALIASES.get(value.casefold(), value)
+    if canonical == value:
+        return value, attributes
+    attributes = dict(attributes)
+    attributes.setdefault("source_value", value)
+    attributes["normalized_value"] = True
+    attributes["normalization_scope"] = "target_sector"
+    return canonical, compact_mapping(attributes)
 
 
 def compact_mapping(value):

@@ -573,6 +573,10 @@ OpenCTI tab/export coverage is tracked in
   `date_sighting` as STIX Sighting `first_seen`/`last_seen`, carry source
   confidence when supplied and avoid exporting non-positive MISP sighting types
   such as false positives as positive STIX Sightings.
+- Added conservative target-sector synonym normalization for graph evidence.
+  Clear aliases such as `Financial Services` -> `Finance` and `Defence` ->
+  `Defense` deduplicate before export while preserving the source value in
+  candidate provenance.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI
