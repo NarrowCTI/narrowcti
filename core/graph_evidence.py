@@ -1261,6 +1261,8 @@ def misp_sighting_evidence(sightings, source_key=""):
                 "sighting_type": sighting.get("sighting_type"),
                 "date_sighting": sighting.get("date_sighting"),
                 "source": sighting.get("source"),
+                "confidence": sighting.get("confidence"),
+                "source_confidence": sighting.get("source_confidence"),
                 "organization": sighting.get("organization"),
                 "organization_uuid": sighting.get("organization_uuid"),
                 "attribute_type": sighting.get("attribute_type"),
@@ -1276,12 +1278,20 @@ def misp_sighting_evidence(sightings, source_key=""):
             source_key=source_key,
             source_name="misp",
             source_field=sighting.get("source_field") or "Sighting",
-            confidence=65,
+            confidence=misp_sighting_confidence(sighting),
             attributes=attributes,
         )
         if record:
             records.append(record)
     return records
+
+
+def misp_sighting_confidence(sighting):
+    return first_confidence_value(
+        sighting.get("confidence"),
+        sighting.get("source_confidence"),
+        65,
+    )
 
 
 def misp_object_reference_evidence(object_references, source_key=""):
@@ -1498,3 +1508,11 @@ def clamp_confidence(value):
     except (TypeError, ValueError):
         confidence = 50
     return max(0, min(100, confidence))
+
+
+def first_confidence_value(*values):
+    for value in values:
+        clean = clean_string(value)
+        if clean:
+            return clamp_confidence(clean)
+    return 50

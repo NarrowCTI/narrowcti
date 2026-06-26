@@ -569,6 +569,10 @@ OpenCTI tab/export coverage is tracked in
   records when available. Attribute-level MISP `first_seen` and `last_seen`
   values now override those event defaults for precise Vulnerability, Campaign,
   Detection Rule, Infrastructure, Observable and ASN evidence.
+- Tightened MISP Sighting export semantics. Positive MISP sightings now preserve
+  `date_sighting` as STIX Sighting `first_seen`/`last_seen`, carry source
+  confidence when supplied and avoid exporting non-positive MISP sighting types
+  such as false positives as positive STIX Sightings.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

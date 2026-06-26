@@ -733,6 +733,8 @@ def normalize_misp_sighting(sighting, source, source_field):
             "sighting_type": sighting.get("type"),
             "date_sighting": sighting.get("date_sighting"),
             "source": sighting.get("source"),
+            "confidence": sighting.get("confidence"),
+            "source_confidence": sighting.get("source_confidence"),
             "organization": organization.get("name") or organization.get("uuid"),
             "organization_uuid": organization.get("uuid"),
             "attribute_type": source.get("attribute_type"),

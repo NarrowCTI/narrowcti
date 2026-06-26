@@ -1452,6 +1452,8 @@ def sighting_candidate_to_stix(
     )
     if not target_ref or not sighting_target_is_sdo(target_ref):
         return None
+    if not positive_sighting(attributes):
+        return None
     first_seen = parse_sighting_time(attributes.get("date_sighting")) or now
     return Sighting(
         id=deterministic_sighting_id(candidate, target_ref),
@@ -1509,6 +1511,11 @@ def sighting_target_is_sdo(ref):
         "tool",
         "vulnerability",
     }
+
+
+def positive_sighting(attributes):
+    sighting_type = clean_string(attributes.get("sighting_type")).lower()
+    return sighting_type in {"", "0", "sighting", "positive"}
 
 
 def deterministic_sighting_id(candidate, target_ref):

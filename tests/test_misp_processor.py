@@ -680,6 +680,7 @@ class MISPProcessorTests(unittest.TestCase):
                         "type": "0",
                         "date_sighting": "1782004900",
                         "source": "SOC",
+                        "confidence": "82",
                         "Organisation": {
                             "uuid": "org-1",
                             "name": "Example Org",
@@ -700,6 +701,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(1, len(metadata["misp_sightings"]))
         self.assertEqual("evil.example", metadata["misp_sightings"][0]["value"])
         self.assertEqual("Example Org", metadata["misp_sightings"][0]["organization"])
+        self.assertEqual("82", metadata["misp_sightings"][0]["confidence"])
         graph_evidence = metadata["graph_evidence"]
         self.assertEqual(1, graph_evidence["counts"]["sighting"])
         self.assertTrue(
@@ -707,6 +709,7 @@ class MISPProcessorTests(unittest.TestCase):
                 record["entity_type"] == "sighting"
                 and record["stix_object_type"] == "sighting"
                 and record["attributes"]["organization"] == "Example Org"
+                and record["confidence"] == 82
                 for record in graph_evidence["records"]
             )
         )
@@ -717,6 +720,7 @@ class MISPProcessorTests(unittest.TestCase):
                 candidate["entity_type"] == "sighting"
                 and candidate["value"] == "evil.example"
                 and candidate["relationship_type"] == "sighting-of"
+                and candidate["confidence"] == 82
                 for candidate in graph_candidates["candidates"]
             )
         )

@@ -920,6 +920,13 @@ values through Vulnerability, Campaign, Detection Rule, Infrastructure,
 Observable and ASN graph evidence, overriding event-level defaults only for the
 specific record that supplied the more precise observation window.
 
+Controlled unit validation also tightened MISP sighting semantics. Positive
+MISP sightings preserve source `date_sighting` as STIX Sighting
+`first_seen`/`last_seen`, carry source-backed confidence when supplied and keep
+the MISP sighting type in `x_narrowcti_*` provenance. Non-positive MISP sighting
+types, such as false-positive sightings, are no longer emitted as positive STIX
+Sightings.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

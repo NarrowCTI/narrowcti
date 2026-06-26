@@ -783,7 +783,27 @@ class GraphStixBuilderTests(unittest.TestCase):
         self.assertEqual(1, summary["graph_relationship_count"])
         self.assertEqual(indicator["id"], sighting["sighting_of_ref"])
         self.assertIn("identity--", sighting["where_sighted_refs"][0])
+        self.assertEqual(65, sighting["confidence"])
+        self.assertEqual("2026-06-21T01:21:40Z", sighting["first_seen"])
+        self.assertEqual("2026-06-21T01:21:40Z", sighting["last_seen"])
         self.assertEqual(1, summary["relationship_counts"]["sighting-of"])
+
+    def test_skips_non_positive_misp_sighting(self):
+        candidate = sighting_candidate()
+        candidate["attributes"]["sighting_type"] = "1"
+        bundle, indicator_count, summary = build_curated_report_bundle(
+            "Curated false-positive sighting report",
+            "Sighting context",
+            80,
+            indicators=[{"type": "domain", "indicator": "evil.example"}],
+            graph_candidate_policy={"accepted": [candidate]},
+        )
+
+        data = json.loads(bundle.serialize())
+        self.assertEqual(1, indicator_count)
+        self.assertNotIn("sighting", {item["type"] for item in data["objects"]})
+        self.assertEqual(0, summary["graph_relationship_count"])
+        self.assertEqual({}, summary["relationship_counts"])
 
 
     def test_builds_curated_bundle_with_indicators_and_graph_entities(self):
