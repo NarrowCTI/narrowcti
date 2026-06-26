@@ -877,6 +877,26 @@ This polish keeps OpenCTI object Overview pages useful for analysts without
 fabricating feed content. Explicit feed descriptions still take precedence, and
 existing non-empty OpenCTI descriptions remain protected.
 
+On June 26, 2026, controlled unit validation expanded temporal provenance
+preservation for graph promotion. When accepted candidates carry source-backed
+timestamp fields, NarrowCTI now emits them as custom STIX/OpenCTI properties on
+promoted objects and semantic relationships:
+
+- `x_narrowcti_source_created`
+- `x_narrowcti_source_modified`
+- `x_narrowcti_source_timestamp`
+- `x_narrowcti_first_seen`
+- `x_narrowcti_last_seen`
+- `x_narrowcti_valid_from`
+- `x_narrowcti_valid_until`
+
+The validation used Infrastructure and ASN relationship candidates carrying
+source `created`, `modified`, `first_seen` and `last_seen` evidence. The
+resulting Infrastructure object and `Infrastructure -> consists-of -> ASN`
+relationship preserved those values without changing deterministic object ids
+or forcing unvalidated native STIX lifecycle fields. This closes the first
+audit layer for future OpenCTI Timeline validation.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

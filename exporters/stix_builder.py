@@ -1338,8 +1338,44 @@ def graph_custom_properties(candidate):
             attributes.get("parent_tag_name"),
             attributes.get("parent_cluster_uuid"),
         ),
+        **graph_timeline_custom_properties(attributes),
     }
     return {key: value for key, value in custom.items() if value}
+
+
+def graph_timeline_custom_properties(attributes):
+    return {
+        "x_narrowcti_source_created": first_clean_value(
+            attributes.get("source_created"),
+            attributes.get("created"),
+        ),
+        "x_narrowcti_source_modified": first_clean_value(
+            attributes.get("source_modified"),
+            attributes.get("modified"),
+        ),
+        "x_narrowcti_source_timestamp": first_clean_value(
+            attributes.get("source_timestamp"),
+            attributes.get("timestamp"),
+            attributes.get("date_sighting"),
+        ),
+        "x_narrowcti_first_seen": first_clean_value(
+            attributes.get("first_seen"),
+            attributes.get("first_seen_min"),
+        ),
+        "x_narrowcti_last_seen": first_clean_value(
+            attributes.get("last_seen"),
+            attributes.get("last_seen_max"),
+        ),
+        "x_narrowcti_valid_from": first_clean_value(
+            attributes.get("valid_from"),
+            attributes.get("valid_start"),
+        ),
+        "x_narrowcti_valid_until": first_clean_value(
+            attributes.get("valid_until"),
+            attributes.get("valid_stop"),
+            attributes.get("expiration"),
+        ),
+    }
 
 
 def graph_relationship_custom_properties(candidate, relationship_mode):

@@ -184,6 +184,16 @@ NarrowCTI can generate a conservative provenance description such as
 Telegram C2.` This description is intentionally audit-focused: it explains why
 the object exists without claiming context the source did not provide.
 
+Timeline evidence follows the same conservative model. When a graph candidate
+carries source-backed timestamps, NarrowCTI preserves them as `x_narrowcti_*`
+custom properties on promoted objects and semantic relationships, including
+`x_narrowcti_source_created`, `x_narrowcti_source_modified`,
+`x_narrowcti_source_timestamp`, `x_narrowcti_first_seen`,
+`x_narrowcti_last_seen`, `x_narrowcti_valid_from` and
+`x_narrowcti_valid_until`. This keeps temporal provenance available for
+OpenCTI inspection, reporting and future Timeline validation without forcing
+native STIX lifecycle fields where object-type support has not been validated.
+
 ## Runtime Configuration
 
 `NARROWCTI_OPENCTI_GRAPH_LOOKUP` controls the v0.8 OpenCTI graph lookup gate.

@@ -557,7 +557,10 @@ OpenCTI tab/export coverage is tracked in
   Security Platform, native Threat Actor Individual, MITRE Data Source and
   MITRE Data Component objects so their OpenCTI Overview pages explain the
   source and relationship context even when feeds do not provide native
-  descriptions.
+  descriptions. The same graph promotion path now preserves source-backed
+  temporal evidence as `x_narrowcti_*` custom properties on objects and
+  relationships, covering source created/modified/timestamp, first_seen,
+  last_seen, valid_from and valid_until values when candidates provide them.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

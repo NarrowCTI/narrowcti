@@ -540,6 +540,22 @@ class GraphStixBuilderTests(unittest.TestCase):
         self.assertEqual(64512, autonomous_system["number"])
         self.assertEqual("AS64512 NarrowCTI Validation ASN", autonomous_system["name"])
         self.assertEqual("203.0.113.10", ip_address["value"])
+        self.assertEqual(
+            "2026-06-20T10:00:00Z",
+            infrastructure["x_narrowcti_source_created"],
+        )
+        self.assertEqual(
+            "2026-06-22T10:00:00Z",
+            infrastructure["x_narrowcti_source_modified"],
+        )
+        self.assertEqual(
+            "2026-06-20T10:05:00Z",
+            infrastructure["x_narrowcti_first_seen"],
+        )
+        self.assertEqual(
+            "2026-06-22T10:05:00Z",
+            infrastructure["x_narrowcti_last_seen"],
+        )
 
         relationships = objects_by_type["relationship"]
         self.assertTrue(
@@ -549,6 +565,21 @@ class GraphStixBuilderTests(unittest.TestCase):
                 and relationship["target_ref"] == autonomous_system["id"]
                 for relationship in relationships
             )
+        )
+        infrastructure_asn_relationship = next(
+            relationship
+            for relationship in relationships
+            if relationship["source_ref"] == infrastructure["id"]
+            and relationship["relationship_type"] == "consists-of"
+            and relationship["target_ref"] == autonomous_system["id"]
+        )
+        self.assertEqual(
+            "2026-06-20T10:00:00Z",
+            infrastructure_asn_relationship["x_narrowcti_source_created"],
+        )
+        self.assertEqual(
+            "2026-06-22T10:05:00Z",
+            infrastructure_asn_relationship["x_narrowcti_last_seen"],
         )
         self.assertTrue(
             any(
@@ -1225,6 +1256,10 @@ def infrastructure_candidate():
             "relationship_source_stix_object_type": "threat-actor",
             "relationship_source_value": "APT Example",
             "relationship_source_field": "threat-actor",
+            "created": "2026-06-20T10:00:00Z",
+            "modified": "2026-06-22T10:00:00Z",
+            "first_seen": "2026-06-20T10:05:00Z",
+            "last_seen": "2026-06-22T10:05:00Z",
         },
     }
 
@@ -1252,6 +1287,10 @@ def infrastructure_asn_candidate(
             "relationship_source_stix_object_type": source_type,
             "relationship_source_value": source_value,
             "relationship_source_field": "asn-enrichment",
+            "created": "2026-06-20T10:00:00Z",
+            "modified": "2026-06-22T10:00:00Z",
+            "first_seen": "2026-06-20T10:05:00Z",
+            "last_seen": "2026-06-22T10:05:00Z",
         },
     }
 
