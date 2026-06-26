@@ -121,7 +121,8 @@ Only consider continuous operation after a bounded dry-run proves:
 - Graph promotion remains `audit` or `dry-run`.
 - OpenCTI and Elasticsearch capacity are acceptable.
 - OpenCTI graph lookup is intentionally enabled or intentionally disabled.
-- License and feature gate inventory is visible in preflight.
+- Open source distribution posture and capability inventory are visible in
+  preflight.
 
 Continuous operation requires explicit changes:
 
@@ -134,6 +135,31 @@ MISP_DRY_RUN=false
 
 For constrained environments, enable one source at a time and keep MISP bounded
 with date range, TLP tags and per-run volume limits.
+
+Real graph export requires one additional, explicit promotion step after the
+bounded validation evidence is clean:
+
+```env
+NARROWCTI_GRAPH_EXPORT_MODE=export
+NARROWCTI_OPENCTI_GRAPH_LOOKUP=true
+```
+
+If `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES` and
+`NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` are left empty in `export` mode,
+NarrowCTI applies the safe export default. It promotes source-backed CTI graph
+objects such as infrastructure, ASN, observables, sectors, locations, arsenal,
+ATT&CK, vulnerabilities and reports, while holding collector/source identity,
+labels and markings in audit/report metadata unless the operator explicitly
+allow-lists those candidate types.
+
+For bounded MISP validation, direct event replay can be used:
+
+```env
+MISP_QUERIES=event:<id>
+```
+
+This loads a known event by id/uuid and avoids broad MISP searches while
+validating object mapping and OpenCTI import behavior.
 
 ## Upgrade Procedure
 
@@ -159,27 +185,27 @@ Rollback is valid when preflight fails, graph evidence changes unexpectedly,
 source volume exceeds capacity or OpenCTI import behavior is not acceptable.
 Rollback should restore the previous image and the previous state backup.
 
-## Customer Handoff Checklist
+## Deployment Handoff Checklist
 
 - Product purpose and gateway boundary are explained.
 - OpenCTI remains the graph and knowledge platform.
 - NarrowCTI remains the curation, policy, deduplication, enrichment and audit
   layer before ingestion.
 - `.env` files with real secrets are excluded from version control.
-- Local `.lic` files and license directories are excluded from version control.
 - Preflight output is captured for the installation record.
 - Operational validation output is captured for the graph-promotion readiness
   record.
 - Source guardrails are documented for OTX and MISP.
 - Quarantine/release workflow is documented for analysts.
 - Graph promotion mode and OpenCTI lookup posture are documented.
-- License edition, customer id and feature gate state are visible in preflight.
+- `distribution_model=open_source`, `open_source=true` and capability inventory
+  are visible in preflight.
 - Upgrade and rollback procedures are understood before continuous operation.
 
 ## Non-Goals In v0.8
 
 - Managed installer.
 - Hosted activation service.
-- Runtime license parsing.
-- Automatic OpenCTI graph writes from graph candidates.
+- Runtime commercial activation parsing or paid feature blocking.
+- Unbounded automatic OpenCTI graph writes from graph candidates.
 - Customer-facing administration UI.

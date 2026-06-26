@@ -2,7 +2,12 @@ import time
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.contextual_scoring import build_contextual_score_evidence
-from core.graph_candidates import apply_graph_candidate_policy, build_graph_candidates
+from core.graph_candidates import (
+    apply_graph_candidate_policy,
+    build_graph_candidates,
+    safe_graph_export_allowed_entity_types,
+    safe_graph_export_allowed_stix_object_types,
+)
 from core.graph_deduplication import GraphDeduplicationIndex
 from core.graph_evidence import build_graph_evidence
 from core.graph_export_plan import (
@@ -698,6 +703,7 @@ class OTXProcessor:
 
 
 def graph_candidate_policy_from_settings(settings):
+    graph_export_mode = getattr(settings, "graph_export_mode", "audit")
     return {
         "min_entity_confidence": getattr(settings, "graph_min_entity_confidence", 0),
         "min_relationship_confidence": getattr(
@@ -705,11 +711,13 @@ def graph_candidate_policy_from_settings(settings):
             "graph_min_relationship_confidence",
             0,
         ),
-        "allowed_entity_types": getattr(settings, "graph_allowed_entity_types", []),
-        "allowed_stix_object_types": getattr(
-            settings,
-            "graph_allowed_stix_object_types",
-            [],
+        "allowed_entity_types": safe_graph_export_allowed_entity_types(
+            graph_export_mode,
+            getattr(settings, "graph_allowed_entity_types", []),
+        ),
+        "allowed_stix_object_types": safe_graph_export_allowed_stix_object_types(
+            graph_export_mode,
+            getattr(settings, "graph_allowed_stix_object_types", []),
         ),
         "require_relationship_provenance": getattr(
             settings,

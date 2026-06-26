@@ -343,12 +343,20 @@ def valid_existing_ref(existing_ref, candidate):
 def candidate_existing_ref_prefixes(candidate):
     candidate = mapping_from(candidate)
     stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    canonical_prefixes = {
+        "security-platform": ["identity", "security-platform"],
+        "x-mitre-data-component": ["data-component", "x-mitre-data-component"],
+        "x-mitre-data-source": ["data-source", "x-mitre-data-source"],
+    }
+    if stix_object_type in canonical_prefixes:
+        return canonical_prefixes[stix_object_type]
     if stix_object_type != "observable":
         return [stix_object_type] if stix_object_type else []
 
     attributes = mapping_from(candidate.get("attributes"))
     observable_type = clean_string(attributes.get("observable_type")).lower()
     supported = {
+        "artifact",
         "domain-name",
         "email-addr",
         "file",
@@ -504,6 +512,8 @@ def parent_cluster_stix_object_type(attributes):
     )
     if "attack-pattern" in kind or "mitre-attack-pattern" in kind:
         return "attack-pattern"
+    if "campaign" in kind:
+        return "campaign"
     if "intrusion-set" in kind:
         return "intrusion-set"
     if "threat-actor" in kind or "threat actor" in kind:

@@ -130,10 +130,11 @@ class GraphEvidenceTests(unittest.TestCase):
 
         self.assertEqual("v0.7.0-dev", evidence["version"])
         self.assertEqual("alienvault:otx", evidence["source_key"])
-        self.assertEqual(9, evidence["record_count"])
+        self.assertEqual(10, evidence["record_count"])
         self.assertEqual(2, evidence["counts"]["attack_pattern"])
         self.assertEqual(1, evidence["counts"]["vulnerability"])
         self.assertEqual(1, evidence["counts"]["attack_platform"])
+        self.assertEqual(1, evidence["counts"]["attack_data_component"])
         self.assertEqual(1, evidence["counts"]["attack_data_source"])
         self.assertEqual(1, evidence["counts"]["detection_guidance"])
         self.assertEqual(1, evidence["counts"]["external_reference"])
@@ -173,7 +174,12 @@ class GraphEvidenceTests(unittest.TestCase):
                 "source_name": "mitre-attack",
                 "source_field": "mitre_attack.resolved.tactics",
                 "confidence": 85,
-                "attributes": {"technique": "T1059"},
+                "attributes": {
+                    "technique": "T1059",
+                    "relationship_source_stix_object_type": "attack-pattern",
+                    "relationship_source_value": "T1059",
+                    "relationship_source_field": "mitre_attack.resolved.tactics",
+                },
             },
             evidence["records"],
         )
@@ -236,7 +242,12 @@ class GraphEvidenceTests(unittest.TestCase):
                 "source_name": "mitre-attack",
                 "source_field": "mitre_attack.resolved.platforms",
                 "confidence": 75,
-                "attributes": {"technique": "T1059"},
+                "attributes": {
+                    "technique": "T1059",
+                    "relationship_source_stix_object_type": "attack-pattern",
+                    "relationship_source_value": "T1059",
+                    "relationship_source_field": "mitre_attack.resolved.platforms",
+                },
             },
             evidence["records"],
         )
@@ -250,7 +261,32 @@ class GraphEvidenceTests(unittest.TestCase):
                 "source_name": "mitre-attack",
                 "source_field": "mitre_attack.resolved.data_sources",
                 "confidence": 80,
-                "attributes": {"technique": "T1059"},
+                "attributes": {
+                    "technique": "T1059",
+                    "relationship_source_stix_object_type": "attack-pattern",
+                    "relationship_source_value": "T1059",
+                    "relationship_source_field": "mitre_attack.resolved.data_sources",
+                },
+            },
+            evidence["records"],
+        )
+        self.assertIn(
+            {
+                "entity_type": "attack_data_component",
+                "value": "Process Creation",
+                "stix_object_type": "x-mitre-data-component",
+                "relationship_type": "detects",
+                "source_key": "alienvault:otx",
+                "source_name": "mitre-attack",
+                "source_field": "mitre_attack.resolved.data_sources",
+                "confidence": 78,
+                "attributes": {
+                    "technique": "T1059",
+                    "relationship_source_stix_object_type": "attack-pattern",
+                    "relationship_source_value": "T1059",
+                    "relationship_source_field": "mitre_attack.resolved.data_sources",
+                    "data_source": "Process",
+                },
             },
             evidence["records"],
         )
@@ -359,6 +395,56 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_preserves_otx_relationship_override(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "observable",
+                            "value": "one.example",
+                            "source_field": "indicators",
+                            "confidence": 65,
+                            "relationship_type": "consists-of",
+                            "attributes": {
+                                "observable_type": "domain-name",
+                                "relationship_source_stix_object_type": "infrastructure",
+                                "relationship_source_value": (
+                                    "APT Example OTX observed infrastructure pulse-1"
+                                ),
+                                "relationship_source_field": "infrastructures",
+                            },
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="OTX pulse",
+        )
+
+        self.assertIn(
+            {
+                "entity_type": "observable",
+                "value": "one.example",
+                "stix_object_type": "observable",
+                "relationship_type": "consists-of",
+                "source_key": "alienvault:otx",
+                "source_name": "otx",
+                "source_field": "indicators",
+                "confidence": 65,
+                "attributes": {
+                    "observable_type": "domain-name",
+                    "relationship_source_stix_object_type": "infrastructure",
+                    "relationship_source_value": (
+                        "APT Example OTX observed infrastructure pulse-1"
+                    ),
+                    "relationship_source_field": "infrastructures",
+                },
+            },
+            evidence["records"],
+        )
+
     def test_builds_misp_provenance_tags_and_marking_evidence(self):
         evidence = build_graph_evidence(
             {
@@ -449,6 +535,12 @@ class GraphEvidenceTests(unittest.TestCase):
         self.assertEqual(1, evidence["counts"]["threat_actor"])
         self.assertEqual(3, evidence["counts"]["target_sector"])
         self.assertEqual(1, evidence["counts"]["target_country"])
+        actor = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "threat_actor"
+        )
+        self.assertEqual("group", actor["attributes"]["threat_actor_class"])
         attack = next(
             record for record in evidence["records"] if record["entity_type"] == "attack_pattern"
         )
@@ -480,6 +572,369 @@ class GraphEvidenceTests(unittest.TestCase):
             if record["entity_type"] == "target_country"
         )
         self.assertEqual("AR", country["value"])
+
+    def test_builds_misp_threat_actor_individual_evidence_only_class(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "threat-actor-individual",
+                        "value": "Example Operator",
+                        "uuid": "cluster-individual",
+                        "galaxy_type": "threat-actor-individual",
+                        "galaxy_name": "Threat Actor Individual",
+                        "source_field": "Galaxy",
+                        "meta": {"threat-actor-type": ["individual"]},
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["threat_actor_individual"])
+        actor = evidence["records"][0]
+        self.assertEqual("threat_actor_individual", actor["entity_type"])
+        self.assertEqual("threat-actor", actor["stix_object_type"])
+        self.assertEqual("Example Operator", actor["value"])
+        self.assertEqual("individual", actor["attributes"]["threat_actor_class"])
+        self.assertEqual(65, actor["confidence"])
+
+    def test_builds_misp_deep_location_meta_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Example",
+                        "uuid": "cluster-actor",
+                        "galaxy_type": "threat-actor",
+                        "galaxy_name": "Threat Actor",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "targeted-state": ["Sao Paulo"],
+                            "targeted-city": ["Sao Paulo"],
+                            "targeted-coordinate": ["-23.5505,-46.6333"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(4, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["threat_actor"])
+        self.assertEqual(1, evidence["counts"]["target_administrative_area"])
+        self.assertEqual(1, evidence["counts"]["target_city"])
+        self.assertEqual(1, evidence["counts"]["target_position"])
+        city = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_city"
+        )
+        self.assertEqual("Sao Paulo", city["value"])
+        self.assertEqual("location", city["stix_object_type"])
+        self.assertEqual("targets", city["relationship_type"])
+        self.assertEqual("Galaxy.meta.targeted-city", city["source_field"])
+        self.assertEqual(62, city["confidence"])
+        self.assertEqual("APT Example", city["attributes"]["parent_cluster_value"])
+
+    def test_builds_misp_campaign_galaxy_graph_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "campaign",
+                        "value": "Operation Example",
+                        "uuid": "cluster-campaign",
+                        "galaxy_type": "campaign",
+                        "galaxy_name": "Campaign",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "refs": ["https://example.test/campaign"],
+                            "targeted-sector": ["Energy"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(2, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["campaign"])
+        self.assertEqual(1, evidence["counts"]["target_sector"])
+        campaign = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "campaign"
+        )
+        self.assertEqual("Operation Example", campaign["value"])
+        self.assertEqual("campaign", campaign["stix_object_type"])
+        self.assertEqual("related-to", campaign["relationship_type"])
+        self.assertEqual("cluster-campaign", campaign["attributes"]["cluster_uuid"])
+        sector = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_sector"
+        )
+        self.assertEqual("Energy", sector["value"])
+        self.assertEqual("Galaxy.meta.targeted-sector", sector["source_field"])
+        self.assertEqual(
+            "Operation Example",
+            sector["attributes"]["parent_cluster_value"],
+        )
+
+    def test_builds_misp_target_organization_meta_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "campaign",
+                        "value": "Operation Example",
+                        "uuid": "cluster-campaign",
+                        "galaxy_type": "campaign",
+                        "galaxy_name": "Campaign",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "victim-organization": ["Example Energy Co"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(2, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["campaign"])
+        self.assertEqual(1, evidence["counts"]["target_organization"])
+        organization = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_organization"
+        )
+        self.assertEqual("Example Energy Co", organization["value"])
+        self.assertEqual("identity", organization["stix_object_type"])
+        self.assertEqual("targets", organization["relationship_type"])
+        self.assertEqual("Galaxy.meta.victim-organization", organization["source_field"])
+        self.assertEqual(
+            "Operation Example",
+            organization["attributes"]["parent_cluster_value"],
+        )
+
+    def test_builds_misp_target_organization_from_expanded_victimology_fields(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "intrusion-set",
+                        "value": "Example Intrusion Set",
+                        "uuid": "cluster-intrusion-set",
+                        "galaxy_type": "mitre-intrusion-set",
+                        "galaxy_name": "Intrusion Set",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "targeted-company": ["Example Bank"],
+                            "affected-organization": ["Example Hospital"],
+                            "impacted_company": ["Example Energy Operator"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(4, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["intrusion_set"])
+        self.assertEqual(3, evidence["counts"]["target_organization"])
+        organizations = {
+            record["value"]: record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_organization"
+        }
+        self.assertEqual(
+            {
+                "Example Bank",
+                "Example Energy Operator",
+                "Example Hospital",
+            },
+            set(organizations),
+        )
+        self.assertEqual(
+            "Galaxy.meta.targeted-company",
+            organizations["Example Bank"]["source_field"],
+        )
+        self.assertEqual(
+            "Example Intrusion Set",
+            organizations["Example Hospital"]["attributes"]["parent_cluster_value"],
+        )
+
+    def test_skips_misp_target_organization_provenance_and_observable_values(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "campaign",
+                        "value": "Operation Example",
+                        "uuid": "cluster-campaign",
+                        "galaxy_type": "campaign",
+                        "galaxy_name": "Campaign",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "victim": [
+                                "OTX",
+                                "MISP",
+                                "example.org",
+                                "analyst@example.org",
+                                "https://example.org/report",
+                                "Real Target Org",
+                            ],
+                            "source-organization": ["Should Not Promote"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        organizations = [
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_organization"
+        ]
+        self.assertEqual(1, len(organizations))
+        self.assertEqual("Real Target Org", organizations[0]["value"])
+        self.assertNotIn("source-organization", organizations[0]["source_field"])
+
+    def test_builds_misp_target_individual_from_explicit_victimology_fields(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "campaign",
+                        "value": "Operation Example",
+                        "uuid": "cluster-campaign",
+                        "galaxy_type": "campaign",
+                        "galaxy_name": "Campaign",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "targeted-person": ["Incident Responder"],
+                            "victim-individual": ["Executive Sponsor"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(3, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["campaign"])
+        self.assertEqual(2, evidence["counts"]["target_individual"])
+        individuals = {
+            record["value"]: record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_individual"
+        }
+        self.assertEqual({"Executive Sponsor", "Incident Responder"}, set(individuals))
+        self.assertEqual(
+            "Galaxy.meta.targeted-person",
+            individuals["Incident Responder"]["source_field"],
+        )
+        self.assertEqual("identity", individuals["Executive Sponsor"]["stix_object_type"])
+        self.assertEqual("targets", individuals["Executive Sponsor"]["relationship_type"])
+        self.assertEqual(
+            "Operation Example",
+            individuals["Executive Sponsor"]["attributes"]["parent_cluster_value"],
+        )
+
+    def test_skips_misp_target_individual_unsafe_and_ambiguous_values(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "campaign",
+                        "value": "Operation Example",
+                        "uuid": "cluster-campaign",
+                        "galaxy_type": "campaign",
+                        "galaxy_name": "Campaign",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "targeted-person": [
+                                "OTX",
+                                "analyst@example.org",
+                                "https://example.org/report",
+                                "12345",
+                                "Named Target",
+                            ],
+                            "victim": ["Ambiguous Victim"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        individuals = [
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_individual"
+        ]
+        organizations = [
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_organization"
+        ]
+        self.assertEqual(1, len(individuals))
+        self.assertEqual("Named Target", individuals[0]["value"])
+        self.assertEqual(1, len(organizations))
+        self.assertEqual("Ambiguous Victim", organizations[0]["value"])
+
+    def test_builds_misp_course_of_action_galaxy_graph_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "mitre-course-of-action",
+                        "value": "Disable or Remove Feature or Program",
+                        "uuid": "cluster-coa",
+                        "galaxy_type": "mitre-course-of-action",
+                        "galaxy_name": "MITRE Course of Action",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "external_id": ["M1042"],
+                            "refs": ["https://attack.mitre.org/mitigations/M1042/"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["course_of_action"])
+        course = evidence["records"][0]
+        self.assertEqual("course_of_action", course["entity_type"])
+        self.assertEqual("Disable or Remove Feature or Program", course["value"])
+        self.assertEqual("course-of-action", course["stix_object_type"])
+        self.assertEqual("related-to", course["relationship_type"])
+        self.assertEqual("cluster-coa", course["attributes"]["cluster_uuid"])
 
     def test_builds_misp_vulnerability_graph_evidence(self):
         evidence = build_graph_evidence(
@@ -670,6 +1125,70 @@ class GraphEvidenceTests(unittest.TestCase):
                 },
             },
             evidence["records"],
+        )
+
+    def test_builds_misp_infrastructure_graph_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_infrastructure": [
+                    {
+                        "entity_type": "infrastructure",
+                        "value": "MISP netblock 203.0.113.0/24",
+                        "stix_object_type": "infrastructure",
+                        "relationship_type": "uses",
+                        "source_field": "Object[0]",
+                        "confidence": 72,
+                        "attributes": {
+                            "object_name": "netblock",
+                            "object_uuid": "object-netblock",
+                        },
+                    },
+                    {
+                        "entity_type": "observable",
+                        "value": "203.0.113.0/24",
+                        "stix_object_type": "observable",
+                        "relationship_type": "consists-of",
+                        "source_field": "Attribute[0]",
+                        "confidence": 70,
+                        "attributes": {
+                            "observable_type": "ipv4-addr",
+                            "relationship_source_stix_object_type": "infrastructure",
+                            "relationship_source_value": "MISP netblock 203.0.113.0/24",
+                        },
+                    },
+                    {
+                        "entity_type": "autonomous_system",
+                        "value": "AS64512 NarrowCTI Validation ASN",
+                        "stix_object_type": "autonomous-system",
+                        "relationship_type": "belongs-to",
+                        "source_field": "Attribute[1]",
+                        "confidence": 72,
+                        "attributes": {
+                            "asn": 64512,
+                            "asn_name": "NarrowCTI Validation ASN",
+                            "relationship_source_stix_object_type": "observable",
+                            "relationship_source_value": "203.0.113.0/24",
+                        },
+                    },
+                ]
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(3, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["infrastructure"])
+        self.assertEqual(1, evidence["counts"]["observable"])
+        self.assertEqual(1, evidence["counts"]["autonomous_system"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "autonomous_system"
+                and record["relationship_type"] == "belongs-to"
+                and record["attributes"]["relationship_source_value"]
+                == "203.0.113.0/24"
+                for record in evidence["records"]
+            )
         )
 
     def test_builds_misp_detection_rule_evidence(self):

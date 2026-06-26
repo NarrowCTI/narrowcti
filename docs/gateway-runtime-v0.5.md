@@ -366,7 +366,7 @@ The v0.5 runtime must preserve the safety posture established in v0.4:
 - Removing the MISP validation/backfill runtime.
 - Building a customer-facing admin UI.
 - Running broad MISP historical backfill by default.
-- Adding technical license enforcement.
+- Adding commercial activation or feature blocking to the open source core.
 - Replacing MISP or OpenCTI.
 
 ## Implementation Plan

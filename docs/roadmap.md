@@ -28,8 +28,8 @@ Status: released.
 
 Purpose:
 
-- Define product positioning and commercial direction.
-- Add initial proprietary licensing foundation.
+- Define product positioning and open source direction.
+- Add Apache-2.0 licensing foundation.
 - Track third-party dependency notices.
 - Introduce a shared feed contract for multi-feed development.
 - Add an OTX feed adapter as the reference contract implementation.
@@ -41,7 +41,7 @@ Purpose:
 Expected outcomes:
 
 - The project reads as NarrowCTI Gateway, not an OTX custom connector.
-- Licensing and distribution boundaries are explicit.
+- Open source distribution boundaries are explicit.
 - Future feed adapters have a stable contract to follow.
 - The OTX feed can be normalized through the shared feed contract.
 - Ingest, drop, quarantine and skip outcomes can be audited.
@@ -203,6 +203,7 @@ Detailed design and validation:
 - `docs/curation-reporting-v0.8.md`
 - `docs/support-diagnostics-v0.8.md`
 - `docs/infrastructure-correlation-v0.8.md`
+- `docs/opencti-coverage-matrix-v0.8.md`
 
 Purpose:
 
@@ -227,24 +228,28 @@ Purpose:
   OpenCTI duplicate review and local resource posture.
 - Harden configuration defaults.
 - Document customer installation procedures.
-- Add technical license enforcement and feature gates by feed, environment or
-  capability. v0.8 starts with preflight-visible edition/capability inventory;
-  runtime entitlement blocking remains a later hardening step.
+- Add preflight-visible capability inventory by feed, environment or capability
+  declaration. v0.8 keeps the core open source and does not add runtime
+  commercial activation blocking.
+- Maintain a tab-level OpenCTI coverage matrix so export support, validation
+  status, held-by-design objects and backlog gaps remain visible as graph
+  promotion expands.
 
 Expected outcomes:
 
 - The product can be deployed repeatably outside the lab.
 - Upgrade steps are clear.
 - Customer onboarding becomes predictable.
-- Product use can be controlled without requiring internet access.
-- Support teams can identify customer and entitlement state.
+- Product use can be validated without requiring internet access.
+- Operators and support teams can identify capability posture and configuration
+  drift.
 
-## v1.0.0 - Commercial-Ready Release
+## v1.0.0 - Open Source Production-Ready Release
 
 Purpose:
 
 - Ship a stable, documented and installable product.
-- Finalize commercial license and support terms.
+- Finalize open source release posture and optional services/support guidance.
 - Ship the enterprise curation engine with quarantine release, graph enrichment,
   contextual scoring, explainable policy and measurable graph-quality outcomes.
 - Provide enterprise CTI reporting that explains what was ingested, what was
@@ -257,8 +262,9 @@ Purpose:
 
 Expected outcomes:
 
-- NarrowCTI is ready for controlled commercial delivery.
-- Product, engineering, licensing and operations are aligned.
+- NarrowCTI is ready for controlled open source production adoption.
+- Product, engineering, licensing and operations are aligned around the
+  Apache-2.0 core.
 - Operators and CTI teams can produce an enterprise-grade report from gateway
   evidence, decision audit, quarantine/release history and graph hygiene
   metrics.

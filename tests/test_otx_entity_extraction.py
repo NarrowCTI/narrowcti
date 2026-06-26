@@ -67,7 +67,7 @@ class OTXEntityExtractionTests(unittest.TestCase):
         self.assertEqual(["AlienVault Research"], entities["authors"])
         self.assertFalse(
             any(
-                record["entity_type"] == "source_identity" and record["value"] == "2"
+                record["entity_type"] == "source_identity"
                 for record in entities["records"]
             )
         )
@@ -85,6 +85,10 @@ class OTXEntityExtractionTests(unittest.TestCase):
         self.assertEqual(2, len(entities["observables"]))
         self.assertEqual("domain-name", entities["observables"][0]["observable_type"])
         self.assertEqual("url", entities["observables"][1]["observable_type"])
+        self.assertEqual(
+            ["APT Example OTX observed infrastructure pulse-1"],
+            entities["infrastructures"],
+        )
         self.assertEqual(1, len(entities["detection_rules"]))
         self.assertEqual("yara", entities["detection_rules"][0]["rule_type"])
         self.assertEqual(
@@ -101,12 +105,14 @@ class OTXEntityExtractionTests(unittest.TestCase):
             for record in entities["records"]
             if record["entity_type"] == "attack_pattern"
             and record["value"] == "T1059.001"
+            and record["attributes"]["relationship_source_stix_object_type"]
+            == "intrusion-set"
         )
         self.assertEqual("attack_ids", attack_pattern["source_field"])
         self.assertEqual(70, attack_pattern["confidence"])
         self.assertEqual(
             {
-                "relationship_source_stix_object_type": "threat-actor",
+                "relationship_source_stix_object_type": "intrusion-set",
                 "relationship_source_value": "APT Example",
                 "relationship_source_field": "adversary",
             },
@@ -125,13 +131,29 @@ class OTXEntityExtractionTests(unittest.TestCase):
         self.assertEqual(3, entities["counts"]["attack_ids"])
         self.assertEqual(2, entities["counts"]["vulnerabilities"])
         self.assertEqual(2, entities["counts"]["observables"])
+        self.assertEqual(1, entities["counts"]["infrastructures"])
         self.assertEqual(1, entities["counts"]["detection_rules"])
+        self.assertIn(
+            {
+                "entity_type": "infrastructure",
+                "value": "APT Example OTX observed infrastructure pulse-1",
+                "source_field": "infrastructures",
+                "confidence": 65,
+                "attributes": {
+                    "relationship_source_stix_object_type": "intrusion-set",
+                    "relationship_source_value": "APT Example",
+                    "relationship_source_field": "adversary",
+                },
+            },
+            entities["records"],
+        )
         self.assertIn(
             {
                 "entity_type": "observable",
                 "value": "one.example",
                 "source_field": "indicators",
                 "confidence": 65,
+                "relationship_type": "consists-of",
                 "attributes": {
                     "observable_type": "domain-name",
                     "indicator_type": "domain",
@@ -140,6 +162,34 @@ class OTXEntityExtractionTests(unittest.TestCase):
                     "created": None,
                     "first_seen": "2026-04-01T10:00:00Z",
                     "last_seen": "2026-04-02T10:00:00Z",
+                    "relationship_source_stix_object_type": "infrastructure",
+                    "relationship_source_value": (
+                        "APT Example OTX observed infrastructure pulse-1"
+                    ),
+                    "relationship_source_field": "infrastructures",
+                    "relationship_inference": (
+                        "otx-single-adversary-network-observable"
+                    ),
+                },
+            },
+            entities["records"],
+        )
+        self.assertIn(
+            {
+                "entity_type": "attack_pattern",
+                "value": "T1059",
+                "source_field": "attack_ids",
+                "confidence": 70,
+                "relationship_type": "related-to",
+                "attributes": {
+                    "relationship_source_stix_object_type": "infrastructure",
+                    "relationship_source_value": (
+                        "APT Example OTX observed infrastructure pulse-1"
+                    ),
+                    "relationship_source_field": "infrastructures",
+                    "relationship_inference": (
+                        "otx-single-adversary-infrastructure-ttp"
+                    ),
                 },
             },
             entities["records"],
@@ -187,9 +237,11 @@ class OTXEntityExtractionTests(unittest.TestCase):
                 "adversary": ["APT One", "APT Two"],
                 "industries": ["Finance"],
                 "attack_ids": ["T1059"],
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )
 
+        self.assertEqual([], entities["infrastructures"])
         sector = next(
             record
             for record in entities["records"]
@@ -202,6 +254,127 @@ class OTXEntityExtractionTests(unittest.TestCase):
         )
         self.assertNotIn("attributes", sector)
         self.assertNotIn("attributes", attack_pattern)
+
+    def test_does_not_promote_adversary_name_as_malware_family(self):
+        entities = extract_otx_entities(
+            {
+                "adversary": "Lazarus",
+                "malware_families": ["Lazarus", "DTrack"],
+            }
+        )
+
+        self.assertEqual(["DTrack"], entities["malware_families"])
+        self.assertFalse(
+            any(
+                record["entity_type"] == "malware" and record["value"] == "Lazarus"
+                for record in entities["records"]
+            )
+        )
+
+    def test_extracts_otx_asn_and_netblock_as_infrastructure_evidence(self):
+        entities = extract_otx_entities(
+            {
+                "id": "pulse-asn-1",
+                "adversary": "APT Example",
+                "indicators": [
+                    {
+                        "id": "indicator-cidr-1",
+                        "type": "CIDR",
+                        "indicator": "203.0.113.0/24",
+                        "first_seen": "2026-06-01T00:00:00Z",
+                    },
+                    {
+                        "id": "indicator-asn-1",
+                        "type": "ASN",
+                        "indicator": "AS64512",
+                        "title": "NarrowCTI Validation ASN",
+                        "last_seen": "2026-06-03T00:00:00Z",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(
+            ["APT Example OTX observed infrastructure pulse-as"],
+            entities["infrastructures"],
+        )
+        self.assertEqual(1, entities["counts"]["autonomous_systems"])
+        self.assertEqual("ipv4-addr", entities["observables"][0]["observable_type"])
+        self.assertEqual("203.0.113.0/24", entities["observables"][0]["value"])
+        self.assertEqual(
+            "AS64512 NarrowCTI Validation ASN",
+            entities["autonomous_systems"][0]["value"],
+        )
+
+        cidr_record = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "observable"
+            and record["value"] == "203.0.113.0/24"
+        )
+        self.assertEqual("consists-of", cidr_record["relationship_type"])
+        self.assertEqual(
+            "APT Example OTX observed infrastructure pulse-as",
+            cidr_record["attributes"]["relationship_source_value"],
+        )
+
+        asn_record = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "autonomous_system"
+        )
+        self.assertEqual("consists-of", asn_record["relationship_type"])
+        self.assertEqual(64512, asn_record["attributes"]["asn"])
+        self.assertEqual(
+            "APT Example OTX observed infrastructure pulse-as",
+            asn_record["attributes"]["relationship_source_value"],
+        )
+
+    def test_otx_asn_without_single_adversary_is_not_attributed_to_infrastructure(self):
+        entities = extract_otx_entities(
+            {
+                "adversary": ["APT One", "APT Two"],
+                "indicators": [
+                    {
+                        "type": "ASN",
+                        "indicator": "AS64512",
+                        "title": "NarrowCTI Validation ASN",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual([], entities["infrastructures"])
+        asn_record = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "autonomous_system"
+        )
+        self.assertEqual("related-to", asn_record["relationship_type"])
+        self.assertNotIn(
+            "relationship_source_value",
+            asn_record["attributes"],
+        )
+
+    def test_otx_asn_dedup_keeps_richer_name(self):
+        entities = extract_otx_entities(
+            {
+                "indicators": [
+                    {"type": "ASN", "indicator": "AS64512"},
+                    {
+                        "type": "ASN",
+                        "indicator": "AS64512",
+                        "title": "NarrowCTI Validation ASN",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(1, len(entities["autonomous_systems"]))
+        self.assertEqual(
+            "AS64512 NarrowCTI Validation ASN",
+            entities["autonomous_systems"][0]["value"],
+        )
 
     def test_normalizes_cve_ids_from_nested_values(self):
         self.assertEqual(

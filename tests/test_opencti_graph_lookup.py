@@ -326,16 +326,63 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
         self.assertIn("intrusionSets", calls[0][0])
         self.assertEqual("Palmerworm", calls[0][1]["search"])
 
+    def test_known_keys_for_plan_resolves_lazarus_intrusion_set_alias(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "intrusionSets": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--lazarus",
+                                    "standard_id": (
+                                        "intrusion-set--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Intrusion-Set",
+                                    "name": "Lazarus Group",
+                                    "aliases": ["HIDDEN COBRA"],
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="intrusion-set",
+                entity_type="intrusion_set",
+                value="Lazarus",
+                name="Lazarus",
+                relationship_type="attributed-to",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Lazarus Group", known["matches"][0]["match"]["name"])
+        self.assertEqual("alias", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("intrusionSets", calls[0][0])
+        self.assertEqual("Lazarus", calls[0][1]["search"])
+
     def test_known_keys_for_plan_resolves_threat_actor_by_name(self):
         calls = []
 
         def query(query_text, variables):
             calls.append((query_text, variables))
-            if "ThreatActorGraphSearch" in query_text:
-                return {"data": {"threatActors": {"edges": []}}}
+            if "ThreatActorGroupGraphSearch" in query_text:
+                return {"data": {"threatActorsGroup": {"edges": []}}}
             return {
                 "data": {
-                    "threatActors": {
+                    "threatActorsGroup": {
                         "edges": [
                             {
                                 "node": {
@@ -344,7 +391,7 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
                                         "threat-actor--11111111-1111-4111-8111-"
                                         "111111111111"
                                     ),
-                                    "entity_type": "Threat-Actor",
+                                    "entity_type": "Threat-Actor-Group",
                                     "name": "Example Actor",
                                 }
                             }
@@ -368,11 +415,363 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
 
         self.assertEqual("", error)
         self.assertEqual(1, len(known["entity_keys"]))
-        self.assertEqual("Threat-Actor", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual(
+            "Threat-Actor-Group",
+            known["matches"][0]["match"]["entity_type"],
+        )
         self.assertEqual("name", known["matches"][0]["match"]["match_type"])
         self.assertEqual(1, plan["deduplicated_entity_count"])
-        self.assertIn("threatActors", calls[-1][0])
+        self.assertIn("threatActorsGroup", calls[-1][0])
         self.assertEqual("name", calls[-1][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_threat_actor_group_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            if "ThreatActorGroupGraphSearch" in query_text:
+                return {"data": {"threatActorsGroup": {"edges": []}}}
+            return {
+                "data": {
+                    "threatActorsGroup": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--actor-group",
+                                    "standard_id": (
+                                        "threat-actor--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Threat-Actor-Group",
+                                    "name": "Example Group",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="threat-actor",
+                entity_type="threat_actor",
+                value="Example Group",
+                name="Example Group",
+                relationship_type="attributed-to",
+                attributes={"threat_actor_class": "group"},
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(
+            "Threat-Actor-Group",
+            known["matches"][0]["match"]["entity_type"],
+        )
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("threatActorsGroup", calls[-1][0])
+        self.assertEqual("name", calls[-1][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_threat_actor_individual_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            if "ThreatActorIndividualGraphSearch" in query_text:
+                return {"data": {"threatActorsIndividuals": {"edges": []}}}
+            return {
+                "data": {
+                    "threatActorsIndividuals": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--actor-individual",
+                                    "standard_id": (
+                                        "threat-actor--22222222-2222-4222-8222-"
+                                        "222222222222"
+                                    ),
+                                    "entity_type": "Threat-Actor-Individual",
+                                    "name": "Example Operator",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="threat-actor",
+                entity_type="threat_actor_individual",
+                value="Example Operator",
+                name="Example Operator",
+                relationship_type="attributed-to",
+                attributes={"threat_actor_class": "individual"},
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(
+            "Threat-Actor-Individual",
+            known["matches"][0]["match"]["entity_type"],
+        )
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("threatActorsIndividuals", calls[-1][0])
+        self.assertEqual("name", calls[-1][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_campaign_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "campaigns": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--campaign",
+                                    "standard_id": (
+                                        "campaign--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Campaign",
+                                    "name": "Operation Example",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="campaign",
+                entity_type="campaign",
+                value="Operation Example",
+                name="Operation Example",
+                relationship_type="related-to",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Campaign", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("campaigns", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_course_of_action_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "coursesOfAction": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--course",
+                                    "standard_id": (
+                                        "course-of-action--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Course-Of-Action",
+                                    "name": "Boot Integrity",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="course-of-action",
+                entity_type="course_of_action",
+                value="Boot Integrity",
+                name="Boot Integrity",
+                relationship_type="related-to",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(
+            "Course-Of-Action",
+            known["matches"][0]["match"]["entity_type"],
+        )
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("coursesOfAction", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_data_component_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "dataComponents": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--data-component",
+                                    "standard_id": (
+                                        "data-component--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Data-Component",
+                                    "name": "Process Creation",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="x-mitre-data-component",
+                entity_type="attack_data_component",
+                value="Process Creation",
+                name="Process Creation",
+                relationship_type="detects",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(
+            "Data-Component",
+            known["matches"][0]["match"]["entity_type"],
+        )
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("dataComponents", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_data_source_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "dataSources": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--data-source",
+                                    "standard_id": (
+                                        "data-source--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Data-Source",
+                                    "name": "Process: Process Creation",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="x-mitre-data-source",
+                entity_type="attack_data_source",
+                value="Process: Process Creation",
+                name="Process: Process Creation",
+                relationship_type="detects",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(
+            "Data-Source",
+            known["matches"][0]["match"]["entity_type"],
+        )
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("dataSources", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_data_component_lookup_accepts_opencti_canonical_standard_id(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {"data": {"dataComponents": {"edges": []}}}
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        lookup.find_candidate(
+            {
+                "stix_object_type": "x-mitre-data-component",
+                "value": "Process Creation",
+                "attributes": {
+                    "stix_id": (
+                        "data-component--11111111-1111-4111-8111-111111111111"
+                    )
+                },
+            }
+        )
+
+        self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertEqual(
+            ["data-component--11111111-1111-4111-8111-111111111111"],
+            calls[0][1]["filters"]["filters"][0]["values"],
+        )
+
+    def test_data_source_lookup_accepts_opencti_canonical_standard_id(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {"data": {"dataSources": {"edges": []}}}
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        lookup.find_candidate(
+            {
+                "stix_object_type": "x-mitre-data-source",
+                "value": "Process",
+                "attributes": {
+                    "stix_id": (
+                        "data-source--11111111-1111-4111-8111-111111111111"
+                    )
+                },
+            }
+        )
+
+        self.assertEqual("standard_id", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertEqual(
+            ["data-source--11111111-1111-4111-8111-111111111111"],
+            calls[0][1]["filters"]["filters"][0]["values"],
+        )
 
     def test_intrusion_set_lookup_prefers_standard_id_before_alias(self):
         calls = []
@@ -527,6 +926,258 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
             ["Argentina"],
             calls[0][1]["filters"]["filters"][0]["values"],
         )
+
+    def test_known_keys_for_plan_resolves_target_organization_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "organizations": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--organization",
+                                    "standard_id": (
+                                        "identity--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Organization",
+                                    "name": "Example Energy Co",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="identity",
+                entity_type="target_organization",
+                value="Example Energy Co",
+                name="Example Energy Co",
+                relationship_type="targets",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Organization", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("organizations", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_target_sector_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "sectors": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--sector",
+                                    "standard_id": (
+                                        "identity--22222222-2222-4222-8222-"
+                                        "222222222222"
+                                    ),
+                                    "entity_type": "Sector",
+                                    "name": "Energy",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="identity",
+                entity_type="target_sector",
+                value="Energy",
+                name="Energy",
+                relationship_type="targets",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Sector", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("sectors", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_target_system_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "systems": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--system",
+                                    "standard_id": (
+                                        "identity--33333333-3333-4333-8333-"
+                                        "333333333333"
+                                    ),
+                                    "entity_type": "System",
+                                    "name": "SAP ERP",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="identity",
+                entity_type="target_system",
+                value="SAP ERP",
+                name="SAP ERP",
+                relationship_type="targets",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("System", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("systems", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_target_individual_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "individuals": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--individual",
+                                    "standard_id": (
+                                        "identity--44444444-4444-4444-8444-"
+                                        "444444444444"
+                                    ),
+                                    "entity_type": "Individual",
+                                    "name": "Incident Responder",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="identity",
+                entity_type="target_individual",
+                value="Incident Responder",
+                name="Incident Responder",
+                relationship_type="targets",
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Individual", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("individuals", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_known_keys_for_plan_resolves_security_platform_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            return {
+                "data": {
+                    "securityPlatforms": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--security-platform",
+                                    "standard_id": (
+                                        "identity--44444444-4444-4444-8444-"
+                                        "444444444444"
+                                    ),
+                                    "entity_type": "SecurityPlatform",
+                                    "name": "Example SIEM",
+                                    "security_platform_type": "SIEM",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="security-platform",
+                entity_type="security_platform",
+                value="Example SIEM",
+                name="Example SIEM",
+                relationship_type="related-to",
+                attributes={"security_platform_type": "SIEM"},
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual(
+            "SecurityPlatform",
+            known["matches"][0]["match"]["entity_type"],
+        )
+        self.assertEqual("name", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("securityPlatforms", calls[0][0])
+        self.assertEqual("name", calls[0][1]["filters"]["filters"][0]["key"])
+
+    def test_source_identity_does_not_query_organization_lookup(self):
+        calls = []
+        lookup = OpenCTIGraphLookup(
+            SimpleNamespace(query=lambda *args: calls.append(args))
+        )
+
+        self.assertIsNone(
+            lookup.find_candidate(
+                {
+                    "stix_object_type": "identity",
+                    "entity_type": "source_identity",
+                    "value": "OTX AlienVault",
+                }
+            )
+        )
+        self.assertEqual([], calls)
 
     def test_known_keys_for_plan_resolves_infrastructure_by_name(self):
         calls = []
@@ -699,6 +1350,66 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
             calls[0][1]["filters"]["filters"][0]["values"],
         )
 
+    def test_known_keys_for_plan_resolves_artifact_observable_by_hash(self):
+        calls = []
+        artifact_hash = (
+            "0123456789abcdef0123456789abcdef"
+            "0123456789abcdef0123456789abcdef"
+        )
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            if "GraphLookup" in query_text:
+                return {"data": {"stixCyberObservables": {"edges": []}}}
+            return {
+                "data": {
+                    "stixCyberObservables": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "internal--artifact",
+                                    "standard_id": (
+                                        "artifact--11111111-1111-4111-8111-"
+                                        "111111111111"
+                                    ),
+                                    "entity_type": "Artifact",
+                                    "observable_value": artifact_hash,
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+        plan, known, error = build_graph_export_plan_with_known_keys(
+            accepted_named_object_policy(
+                stix_object_type="observable",
+                entity_type="artifact",
+                value=artifact_hash,
+                name="NarrowCTI sample artifact",
+                relationship_type="related-to",
+                attributes={
+                    "observable_type": "artifact",
+                    "hash_algorithm": "SHA-256",
+                    "artifact_url": "https://narrowcti.local/artifacts/sample.bin",
+                },
+            ),
+            mode="dry-run",
+            graph_deduplication_index=lookup,
+        )
+
+        self.assertEqual("", error)
+        self.assertEqual(1, len(known["entity_keys"]))
+        self.assertEqual("Artifact", known["matches"][0]["match"]["entity_type"])
+        self.assertEqual(artifact_hash, known["matches"][0]["match"]["observable_value"])
+        self.assertEqual("value", known["matches"][0]["match"]["match_type"])
+        self.assertEqual(1, plan["deduplicated_entity_count"])
+        self.assertIn("stixCyberObservables", calls[0][0])
+        self.assertEqual("value", calls[0][1]["filters"]["filters"][0]["key"])
+        self.assertIn("stixCyberObservables", calls[1][0])
+        self.assertEqual(artifact_hash, calls[1][1]["search"])
+
     def test_vulnerability_lookup_prefers_standard_id_before_cve_name(self):
         calls = []
 
@@ -824,6 +1535,62 @@ class OpenCTIGraphLookupTests(unittest.TestCase):
                 }
             ),
         )
+
+    def test_lookup_resolves_opencti_custom_sdos_by_name(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            if "channels" in query_text:
+                collection_name = "channels"
+                standard_id = "channel--11111111-1111-4111-8111-111111111111"
+                entity_type = "Channel"
+            elif "narratives" in query_text:
+                collection_name = "narratives"
+                standard_id = "narrative--11111111-1111-4111-8111-111111111111"
+                entity_type = "Narrative"
+            else:
+                collection_name = "events"
+                standard_id = "event--11111111-1111-4111-8111-111111111111"
+                entity_type = "Event"
+            name = variables["filters"]["filters"][0]["values"][0]
+            return {
+                "data": {
+                    collection_name: {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": f"internal--{collection_name}",
+                                    "standard_id": standard_id,
+                                    "entity_type": entity_type,
+                                    "name": name,
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+
+        for stix_object_type, value in (
+            ("channel", "Telegram C2"),
+            ("narrative", "Credential theft objective"),
+            ("event", "Observed phishing wave"),
+        ):
+            match = lookup.find_candidate(
+                {
+                    "stix_object_type": stix_object_type,
+                    "value": value,
+                }
+            )
+            self.assertEqual(value, match["name"])
+            self.assertEqual("name", match["match_type"])
+
+        queried_collections = [call[0] for call in calls]
+        self.assertTrue(any("channels" in query_text for query_text in queried_collections))
+        self.assertTrue(any("narratives" in query_text for query_text in queried_collections))
+        self.assertTrue(any("events" in query_text for query_text in queried_collections))
 
     def test_unsupported_candidate_does_not_query_opencti(self):
         calls = []

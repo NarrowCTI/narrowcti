@@ -14,7 +14,6 @@ services:
     restart: ${NARROWCTI_GATEWAY_RESTART:-no}
     volumes:
       - narrowcti-state:/app/state
-      - narrowcti-licenses:/licenses:ro
     networks:
       - opencti
 
@@ -34,7 +33,6 @@ services:
       - ops
     volumes:
       - narrowcti-state:/app/state
-      - narrowcti-licenses:/licenses:ro
     networks:
       - opencti
 
@@ -63,7 +61,6 @@ services:
       - ops
     volumes:
       - narrowcti-state:/app/state
-      - narrowcti-licenses:/licenses:ro
     networks:
       - opencti
 
@@ -92,7 +89,6 @@ services:
       - ops
     volumes:
       - narrowcti-state:/app/state
-      - narrowcti-licenses:/licenses:ro
     networks:
       - opencti
 
@@ -119,7 +115,6 @@ services:
       - ops
     volumes:
       - narrowcti-state:/app/state
-      - narrowcti-licenses:/licenses:ro
     networks:
       - opencti
 
@@ -146,7 +141,6 @@ services:
       - ops
     volumes:
       - narrowcti-state:/app/state
-      - narrowcti-licenses:/licenses:ro
     networks:
       - opencti
 
@@ -179,7 +173,6 @@ services:
       - ops
     volumes:
       - narrowcti-state:/app/state
-      - narrowcti-licenses:/licenses:ro
     networks:
       - opencti
 
@@ -210,7 +203,6 @@ services:
       - ops
     volumes:
       - narrowcti-state:/app/state
-      - narrowcti-licenses:/licenses:ro
     networks:
       - opencti
 
@@ -221,4 +213,3 @@ networks:
 
 volumes:
   narrowcti-state:
-  narrowcti-licenses:

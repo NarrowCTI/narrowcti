@@ -35,11 +35,7 @@ def make_settings(**overrides):
         "graph_export_mode": "audit",
         "graph_dedup_state_file": "",
         "opencti_graph_lookup": False,
-        "license_edition": "evaluation",
-        "license_customer_id": "",
-        "license_file": "",
-        "licensed_capabilities": [],
-        "feature_gates_enforced": False,
+        "declared_capabilities": [],
         "release_audit_file": "/app/state/audit/releases.jsonl",
         "enable_mitre_attack_resolution": True,
         "mitre_cache_file": "",
@@ -68,12 +64,15 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertEqual("hybrid", report.settings["dedup_mode"])
         self.assertEqual("audit", report.settings["graph_export_mode"])
         self.assertFalse(report.settings["opencti_graph_lookup"])
-        self.assertEqual("evaluation", report.settings["license_edition"])
-        self.assertFalse(report.settings["license_file_configured"])
-        self.assertFalse(report.settings["feature_gates_enforced"])
+        self.assertEqual("open_source", report.settings["distribution_model"])
+        self.assertTrue(report.settings["open_source"])
         self.assertIn(
             "source.otx",
-            report.settings["feature_gates"]["enabled_capabilities"],
+            report.settings["capability_inventory"]["enabled_capabilities"],
+        )
+        self.assertIn(
+            "graph.export.controlled",
+            report.settings["capability_inventory"]["enabled_capabilities"],
         )
         self.assertEqual(60, report.settings["min_score_to_ingest"])
         self.assertTrue(report.settings["enable_quarantine"])
@@ -306,11 +305,10 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("graph_export_mode=audit", text)
         self.assertIn("graph_dedup_state_file=(disabled)", text)
         self.assertIn("opencti_graph_lookup=false", text)
-        self.assertIn("license_edition=evaluation", text)
-        self.assertIn("license_file_configured=false", text)
-        self.assertIn("feature_gates_enforced=false", text)
+        self.assertIn("distribution_model=open_source", text)
+        self.assertIn("open_source=true", text)
         self.assertIn("enabled_capabilities=source.otx", text)
-        self.assertIn("disabled_capabilities=graph.lookup.opencti", text)
+        self.assertIn("disabled_capabilities=(none)", text)
         self.assertIn("otx.state_file=/app/state/otx_state.json", text)
         self.assertIn(
             "otx.decision_audit_file=/app/state/audit/otx_decisions.jsonl",
@@ -350,52 +348,32 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("graph_dedup_state_file=/app/state/graph_dedup.json", text)
         self.assertIn("opencti_graph_lookup=true", text)
 
-    def test_preflight_reports_feature_gate_controls(self):
+    def test_preflight_reports_open_source_capability_inventory(self):
         settings = make_settings(
-            license_edition="enterprise",
-            license_customer_id="customer-a",
-            license_file="/licenses/customer-a.lic",
-            licensed_capabilities=["source.otx", "graph.lookup.opencti"],
-            feature_gates_enforced=True,
+            declared_capabilities=["source.otx", "graph.lookup.opencti"],
         )
 
         report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
         text = format_text_report(report)
 
         self.assertTrue(report.ok)
-        self.assertEqual("enterprise", report.settings["license_edition"])
-        self.assertEqual("customer-a", report.settings["license_customer_id"])
-        self.assertTrue(report.settings["license_file_configured"])
-        self.assertTrue(report.settings["feature_gates_enforced"])
+        self.assertEqual("open_source", report.settings["distribution_model"])
+        self.assertTrue(report.settings["open_source"])
         self.assertEqual(
             ["source.otx", "graph.lookup.opencti"],
-            report.settings["feature_gates"]["enabled_capabilities"],
+            report.settings["capability_inventory"]["requested_capabilities"],
         )
         self.assertIn(
             "source.misp",
-            report.settings["feature_gates"]["disabled_capabilities"],
+            report.settings["capability_inventory"]["enabled_capabilities"],
         )
-        self.assertIn("license_edition=enterprise", text)
-        self.assertIn("license_customer_id=customer-a", text)
-        self.assertIn("license_file_configured=true", text)
-        self.assertIn("feature_gates_enforced=true", text)
-        self.assertIn("enabled_capabilities=source.otx,graph.lookup.opencti", text)
-        self.assertIn("disabled_capabilities=source.misp", text)
+        self.assertIn("distribution_model=open_source", text)
+        self.assertIn("enabled_capabilities=source.otx,source.misp", text)
+        self.assertIn("disabled_capabilities=(none)", text)
 
-    def test_preflight_blocks_enforced_feature_gates_without_license_file(self):
-        settings = make_settings(feature_gates_enforced=True)
-
-        report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
-
-        self.assertFalse(report.ok)
-        self.assertIn(
-            "feature-gates-enforced-without-license",
-            [issue.code for issue in report.issues],
-        )
-
-    def test_preflight_warns_about_unknown_license_capabilities(self):
+    def test_preflight_warns_about_unknown_capabilities(self):
         settings = make_settings(
-            licensed_capabilities=["source.otx", "unknown.capability"]
+            declared_capabilities=["source.otx", "unknown.capability"]
         )
 
         report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
@@ -403,10 +381,10 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertTrue(report.ok)
         self.assertEqual(
             ["source.otx"],
-            report.settings["feature_gates"]["enabled_capabilities"],
+            report.settings["capability_inventory"]["requested_capabilities"],
         )
         self.assertIn(
-            "unknown-licensed-capability",
+            "unknown-capability",
             [issue.code for issue in report.issues],
         )
 

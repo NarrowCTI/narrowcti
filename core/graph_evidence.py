@@ -8,7 +8,10 @@ from core.tlp import extract_tlp_values, normalize_tlp
 GRAPH_EVIDENCE_VERSION = "v0.7.0-dev"
 
 ENTITY_TARGETS = {
+    "campaign": ("campaign", "related-to"),
+    "course_of_action": ("course-of-action", "related-to"),
     "threat_actor": ("threat-actor", "attributed-to"),
+    "threat_actor_individual": ("threat-actor", "attributed-to"),
     "intrusion_set": ("intrusion-set", "attributed-to"),
     "infrastructure": ("infrastructure", "uses"),
     "autonomous_system": ("autonomous-system", "related-to"),
@@ -19,7 +22,12 @@ ENTITY_TARGETS = {
     "attack_pattern": ("attack-pattern", "uses"),
     "attack_tactic": ("x-mitre-tactic", "uses"),
     "target_sector": ("identity", "targets"),
+    "target_organization": ("identity", "targets"),
+    "target_individual": ("identity", "targets"),
+    "target_administrative_area": ("location", "targets"),
+    "target_city": ("location", "targets"),
     "target_country": ("location", "targets"),
+    "target_position": ("location", "targets"),
     "target_region": ("location", "targets"),
     "source_identity": ("identity", "originated-from"),
     "collector": ("identity", "collected-by"),
@@ -29,6 +37,7 @@ ENTITY_TARGETS = {
     "detection_rule": ("indicator", "detects"),
     "attack_platform": ("x-narrowcti-attack-platform", "applies-to"),
     "attack_data_source": ("x-mitre-data-source", "detects"),
+    "attack_data_component": ("x-mitre-data-component", "detects"),
     "detection_guidance": ("note", "documents"),
     "event_report": ("note", "documents"),
     "sighting": ("sighting", "sighting-of"),
@@ -58,6 +67,9 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
             metadata.get("misp_object_references"),
             source_key,
         )
+    )
+    records.extend(
+        misp_infrastructure_evidence(metadata.get("misp_infrastructure"), source_key)
     )
     records.extend(
         misp_detection_rule_evidence(metadata.get("misp_detection_rules"), source_key)
@@ -92,6 +104,8 @@ def otx_entity_evidence(entities, source_key=""):
             confidence=item.get("confidence"),
             display_name=item.get("display_name"),
             attributes=item.get("attributes"),
+            stix_object_type=item.get("stix_object_type"),
+            relationship_type=item.get("relationship_type"),
         )
         if record:
             records.append(record)
@@ -174,7 +188,10 @@ def mitre_attack_evidence(mitre_attack, source_key=""):
                 source_name="mitre-attack",
                 source_field="mitre_attack.resolved.tactics",
                 confidence=85,
-                attributes={"technique": attack_id},
+                attributes=mitre_context_attributes(
+                    attack_id,
+                    "mitre_attack.resolved.tactics",
+                ),
             )
             if tactic_record:
                 records.append(tactic_record)
@@ -186,11 +203,15 @@ def mitre_attack_evidence(mitre_attack, source_key=""):
                 source_name="mitre-attack",
                 source_field="mitre_attack.resolved.platforms",
                 confidence=75,
-                attributes={"technique": attack_id},
+                attributes=mitre_context_attributes(
+                    attack_id,
+                    "mitre_attack.resolved.platforms",
+                ),
             )
             if platform_record:
                 records.append(platform_record)
         for data_source in data_sources:
+            data_component = mitre_data_component_from_data_source(data_source)
             data_source_record = evidence_record(
                 entity_type="attack_data_source",
                 value=data_source,
@@ -198,10 +219,30 @@ def mitre_attack_evidence(mitre_attack, source_key=""):
                 source_name="mitre-attack",
                 source_field="mitre_attack.resolved.data_sources",
                 confidence=80,
-                attributes={"technique": attack_id},
+                attributes=mitre_context_attributes(
+                    attack_id,
+                    "mitre_attack.resolved.data_sources",
+                ),
             )
             if data_source_record:
                 records.append(data_source_record)
+            if data_component:
+                component_attributes = mitre_context_attributes(
+                    attack_id,
+                    "mitre_attack.resolved.data_sources",
+                )
+                component_attributes["data_source"] = data_component["data_source"]
+                component_record = evidence_record(
+                    entity_type="attack_data_component",
+                    value=data_component["data_component"],
+                    source_key=source_key,
+                    source_name="mitre-attack",
+                    source_field="mitre_attack.resolved.data_sources",
+                    confidence=78,
+                    attributes=component_attributes,
+                )
+                if component_record:
+                    records.append(component_record)
         if detection:
             records.append(
                 evidence_record(
@@ -212,7 +253,10 @@ def mitre_attack_evidence(mitre_attack, source_key=""):
                     source_field="mitre_attack.resolved.detection",
                     confidence=70,
                     display_name=f"Detection guidance for {attack_id}",
-                    attributes={"technique": attack_id},
+                    attributes=mitre_context_attributes(
+                        attack_id,
+                        "mitre_attack.resolved.detection",
+                    ),
                 )
             )
     return records
@@ -286,7 +330,7 @@ def misp_galaxy_evidence(clusters, source_key=""):
         if not entity_type:
             continue
         value = misp_galaxy_value(entity_type, cluster)
-        attributes = misp_galaxy_attributes(cluster)
+        attributes = misp_galaxy_attributes(cluster, entity_type)
         record = evidence_record(
             entity_type=entity_type,
             value=value,
@@ -318,6 +362,14 @@ def misp_galaxy_meta_evidence(cluster, source_key=""):
                 normalized = clean_string(value)
                 key = normalized.casefold()
                 if not normalized or key in seen:
+                    continue
+                if entity_type == "target_organization" and not is_target_organization_value(
+                    normalized
+                ):
+                    continue
+                if entity_type == "target_individual" and not is_target_individual_value(
+                    normalized
+                ):
                     continue
                 seen.add(key)
                 record = evidence_record(
@@ -364,6 +416,128 @@ MISP_GALAXY_META_ENTITY_FIELDS = (
         70,
     ),
     (
+        "target_organization",
+        (
+            "targeted-organization",
+            "targeted-organizations",
+            "targeted_organization",
+            "targeted_organizations",
+            "targeted-org",
+            "targeted-orgs",
+            "target_org",
+            "target_orgs",
+            "targeted-company",
+            "targeted-companies",
+            "targeted_company",
+            "targeted_companies",
+            "targeted-entity",
+            "targeted-entities",
+            "targeted_entity",
+            "targeted_entities",
+            "target-organization",
+            "target-organizations",
+            "target_organization",
+            "target_organizations",
+            "target-company",
+            "target-companies",
+            "target_company",
+            "target_companies",
+            "target-entity",
+            "target-entities",
+            "target_entity",
+            "target_entities",
+            "victim-organization",
+            "victim-organizations",
+            "victim_organization",
+            "victim_organizations",
+            "victim-organization-name",
+            "victim-organization-names",
+            "victim_organization_name",
+            "victim_organization_names",
+            "victim-org",
+            "victim-orgs",
+            "victim_org",
+            "victim_orgs",
+            "victim-company",
+            "victim-companies",
+            "victim_company",
+            "victim_companies",
+            "victim-entity",
+            "victim-entities",
+            "victim_entity",
+            "victim_entities",
+            "victim",
+            "victims",
+            "victim-name",
+            "victim-names",
+            "victim_name",
+            "victim_names",
+            "affected-organization",
+            "affected-organizations",
+            "affected_organization",
+            "affected_organizations",
+            "affected-company",
+            "affected-companies",
+            "affected_company",
+            "affected_companies",
+            "impacted-organization",
+            "impacted-organizations",
+            "impacted_organization",
+            "impacted_organizations",
+            "impacted-company",
+            "impacted-companies",
+            "impacted_company",
+            "impacted_companies",
+        ),
+        70,
+    ),
+    (
+        "target_individual",
+        (
+            "targeted-individual",
+            "targeted-individuals",
+            "targeted_individual",
+            "targeted_individuals",
+            "target-individual",
+            "target-individuals",
+            "target_individual",
+            "target_individuals",
+            "targeted-person",
+            "targeted-persons",
+            "targeted_person",
+            "targeted_persons",
+            "target-person",
+            "target-persons",
+            "target_person",
+            "target_persons",
+            "victim-individual",
+            "victim-individuals",
+            "victim_individual",
+            "victim_individuals",
+            "victim-person",
+            "victim-persons",
+            "victim_person",
+            "victim_persons",
+            "affected-individual",
+            "affected-individuals",
+            "affected_individual",
+            "affected_individuals",
+            "affected-person",
+            "affected-persons",
+            "affected_person",
+            "affected_persons",
+            "impacted-individual",
+            "impacted-individuals",
+            "impacted_individual",
+            "impacted_individuals",
+            "impacted-person",
+            "impacted-persons",
+            "impacted_person",
+            "impacted_persons",
+        ),
+        65,
+    ),
+    (
         "target_region",
         (
             "targeted-region",
@@ -377,7 +551,124 @@ MISP_GALAXY_META_ENTITY_FIELDS = (
         ),
         65,
     ),
+    (
+        "target_administrative_area",
+        (
+            "targeted-administrative-area",
+            "targeted-administrative-areas",
+            "targeted_administrative_area",
+            "targeted_administrative_areas",
+            "target-administrative-area",
+            "target-administrative-areas",
+            "target_administrative_area",
+            "target_administrative_areas",
+            "targeted-state",
+            "targeted-states",
+            "targeted_state",
+            "targeted_states",
+            "target-state",
+            "target-states",
+            "target_state",
+            "target_states",
+            "targeted-province",
+            "targeted-provinces",
+            "targeted_province",
+            "targeted_provinces",
+            "target-province",
+            "target-provinces",
+            "target_province",
+            "target_provinces",
+        ),
+        62,
+    ),
+    (
+        "target_city",
+        (
+            "targeted-city",
+            "targeted-cities",
+            "targeted_city",
+            "targeted_cities",
+            "target-city",
+            "target-cities",
+            "target_city",
+            "target_cities",
+        ),
+        62,
+    ),
+    (
+        "target_position",
+        (
+            "targeted-position",
+            "targeted-positions",
+            "targeted_position",
+            "targeted_positions",
+            "target-position",
+            "target-positions",
+            "target_position",
+            "target_positions",
+            "targeted-coordinate",
+            "targeted-coordinates",
+            "targeted_coordinate",
+            "targeted_coordinates",
+            "target-coordinate",
+            "target-coordinates",
+            "target_coordinate",
+            "target_coordinates",
+        ),
+        60,
+    ),
 )
+
+
+TARGET_ORGANIZATION_VALUE_DENYLIST = {
+    "alienvault",
+    "alienvault otx",
+    "misp",
+    "narrowcti",
+    "narrowcti gateway",
+    "opencti",
+    "otx",
+    "the mitre corporation",
+}
+
+TARGET_INDIVIDUAL_VALUE_DENYLIST = TARGET_ORGANIZATION_VALUE_DENYLIST | {
+    "admin",
+    "administrator",
+    "analyst",
+    "author",
+    "root",
+    "user",
+}
+
+
+def is_target_organization_value(value):
+    value = clean_string(value)
+    lowered = value.casefold()
+    if not value:
+        return False
+    if lowered in TARGET_ORGANIZATION_VALUE_DENYLIST:
+        return False
+    if lowered.startswith(("http://", "https://", "ftp://", "tlp:")):
+        return False
+    if "@" in value and not any(char.isspace() for char in value):
+        return False
+    if ATTACK_ID_PATTERN.fullmatch(value) or CVE_ID_PATTERN.fullmatch(value):
+        return False
+    if re.fullmatch(r"(?:[a-z0-9-]+\.)+[a-z]{2,}", lowered):
+        return False
+    return True
+
+
+def is_target_individual_value(value):
+    value = clean_string(value)
+    lowered = value.casefold()
+    if not is_target_organization_value(value):
+        return False
+    if lowered in TARGET_INDIVIDUAL_VALUE_DENYLIST:
+        return False
+    if re.fullmatch(r"\d+", value):
+        return False
+    return True
 
 
 def meta_source_field(cluster, field_name):
@@ -413,6 +704,12 @@ def classify_misp_galaxy(cluster):
         return "intrusion_set", 80
     if "vulnerability" in kind or "cve" in kind:
         return "vulnerability", 80
+    if "campaign" in kind:
+        return "campaign", 75
+    if "course-of-action" in kind or "course of action" in kind:
+        return "course_of_action", 75
+    if misp_galaxy_is_threat_actor_individual(cluster, kind):
+        return "threat_actor_individual", 65
     if "threat-actor" in kind or "threat actor" in kind:
         return "threat_actor", 80
     if "malpedia" in kind or "ransomware" in kind or "malware" in kind:
@@ -438,6 +735,37 @@ def misp_galaxy_value(entity_type, cluster):
         if cve_id:
             return cve_id
     return clean_string(cluster.get("value"))
+
+
+def misp_galaxy_is_threat_actor_individual(cluster, kind=""):
+    kind = kind or " ".join(
+        clean_string(cluster.get(field)).casefold()
+        for field in ("type", "galaxy_type", "galaxy_name", "tag_name")
+        if clean_string(cluster.get(field))
+    )
+    normalized_kind = kind.replace("-", "").replace("_", "").replace(" ", "")
+    explicit_values = []
+    meta = compact_mapping(cluster.get("meta"))
+    for key in (
+        "actor-type",
+        "actor_type",
+        "threat-actor-type",
+        "threat_actor_type",
+        "threat-actor-class",
+        "threat_actor_class",
+        "type",
+    ):
+        explicit_values.extend(flatten_values(meta.get(key)))
+    explicit = {
+        clean_string(value).casefold()
+        for value in explicit_values
+        if clean_string(value)
+    }
+    return (
+        "threatactorindividual" in normalized_kind
+        or "threatactorsindividual" in normalized_kind
+        or bool(explicit.intersection({"individual", "person", "human"}))
+    )
 
 
 def first_attack_id_from_cluster(cluster):
@@ -472,7 +800,7 @@ def first_cve_id_from_cluster(cluster):
     return ""
 
 
-def misp_galaxy_attributes(cluster):
+def misp_galaxy_attributes(cluster, entity_type=""):
     meta = compact_mapping(cluster.get("meta"))
     attributes = {
         "galaxy_type": clean_string(cluster.get("galaxy_type")),
@@ -483,6 +811,10 @@ def misp_galaxy_attributes(cluster):
         "description": clean_string(cluster.get("description")),
         "meta": meta,
     }
+    if entity_type == "threat_actor":
+        attributes["threat_actor_class"] = "group"
+    elif entity_type == "threat_actor_individual":
+        attributes["threat_actor_class"] = "individual"
     attack_id = first_attack_id_from_cluster(cluster)
     if attack_id:
         attributes["external_id"] = attack_id
@@ -625,6 +957,28 @@ def misp_object_reference_evidence(object_references, source_key=""):
     return records
 
 
+def misp_infrastructure_evidence(infrastructure_records, source_key=""):
+    records = []
+    for infrastructure_record in infrastructure_records or []:
+        infrastructure_record = compact_mapping(infrastructure_record)
+        if not infrastructure_record:
+            continue
+        record = evidence_record(
+            entity_type=infrastructure_record.get("entity_type"),
+            value=infrastructure_record.get("value"),
+            source_key=source_key,
+            source_name="misp-object",
+            source_field=infrastructure_record.get("source_field") or "Object",
+            confidence=infrastructure_record.get("confidence", 70),
+            attributes=infrastructure_record.get("attributes"),
+            stix_object_type=infrastructure_record.get("stix_object_type"),
+            relationship_type=infrastructure_record.get("relationship_type"),
+        )
+        if record:
+            records.append(record)
+    return records
+
+
 def misp_detection_rule_evidence(detection_rules, source_key=""):
     records = []
     for detection_rule in detection_rules or []:
@@ -740,6 +1094,32 @@ def mitre_external_references(attack_id, url):
     if url:
         reference["url"] = url
     return [reference]
+
+
+def mitre_context_attributes(attack_id, source_field):
+    return compact_mapping(
+        {
+            "technique": attack_id,
+            "relationship_source_stix_object_type": "attack-pattern",
+            "relationship_source_value": attack_id,
+            "relationship_source_field": source_field,
+        }
+    )
+
+
+def mitre_data_component_from_data_source(value):
+    text = clean_string(value)
+    if ":" not in text:
+        return {}
+    data_source, data_component = text.split(":", 1)
+    data_source = clean_string(data_source)
+    data_component = clean_string(data_component)
+    if not data_source or not data_component:
+        return {}
+    return {
+        "data_source": data_source,
+        "data_component": data_component,
+    }
 
 
 def mitre_kill_chain_phases(tactics):

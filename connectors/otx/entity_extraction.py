@@ -1,3 +1,4 @@
+import ipaddress
 import re
 from urllib.parse import urlparse
 
@@ -11,6 +12,11 @@ OBSERVABLE_TYPE_MAP = {
     "ip": "ipv4-addr",
     "ipv6": "ipv6-addr",
     "ipv6-addr": "ipv6-addr",
+    "cidr": "ipv4-addr",
+    "ipv4-cidr": "ipv4-addr",
+    "ipv6-cidr": "ipv6-addr",
+    "netblock": "ipv4-addr",
+    "network": "ipv4-addr",
     "domain": "domain-name",
     "hostname": "domain-name",
     "url": "url",
@@ -35,28 +41,45 @@ FILE_HASH_ALGORITHMS = {
 
 
 ENTITY_SPECS = (
-    ("adversaries", "adversary", "threat_actor", 60),
+    ("adversaries", "adversary", "intrusion_set", 60),
+    ("infrastructures", "infrastructures", "infrastructure", 65),
     ("malware_families", "malware_families", "malware", 55),
     ("attack_ids", "attack_ids", "attack_pattern", 70),
     ("vulnerabilities", "vulnerabilities", "vulnerability", 75),
     ("industries", "industries", "target_sector", 50),
     ("targeted_countries", "targeted_countries", "target_country", 50),
-    ("authors", "author", "source_identity", 60),
     ("tags", "tags", "tag", 35),
 )
 ACTOR_ANCHORED_ENTITY_TYPES = {
     "attack_pattern",
+    "infrastructure",
     "malware",
     "target_country",
     "target_sector",
+}
+ASN_INDICATOR_TYPES = {
+    "as",
+    "asn",
+    "autonomous-system",
+    "autonomous_system",
+}
+NETWORK_INFRASTRUCTURE_OBSERVABLE_TYPES = {
+    "domain-name",
+    "ipv4-addr",
+    "ipv6-addr",
+    "url",
 }
 
 
 def extract_otx_entities(pulse):
     pulse = pulse or {}
+    adversaries = normalize_values(pulse.get("adversary"))
     entities = {
-        "adversaries": normalize_values(pulse.get("adversary")),
-        "malware_families": normalize_values(pulse.get("malware_families")),
+        "adversaries": adversaries,
+        "malware_families": exclude_conflicting_entity_values(
+            normalize_values(pulse.get("malware_families")),
+            adversaries,
+        ),
         "attack_ids": normalize_attack_ids(pulse.get("attack_ids")),
         "vulnerabilities": normalize_cve_ids(cve_sources(pulse)),
         "industries": normalize_values(pulse.get("industries")),
@@ -70,11 +93,13 @@ def extract_otx_entities(pulse):
             pulse.get("indicators")
         ),
         "observables": otx_observables(pulse),
+        "autonomous_systems": otx_autonomous_systems(pulse),
         "detection_rules": otx_detection_rules(pulse),
         "tlp": normalize_tlp(pulse),
         "references": normalize_references(pulse.get("references")),
         "tags": normalize_values(pulse.get("tags")),
     }
+    entities["infrastructures"] = inferred_network_infrastructures(entities)
     entities["records"] = extraction_records(entities)
     entities["counts"] = {
         key: len(value)
@@ -126,6 +151,19 @@ def normalize_attack_ids(value):
             if normalized not in attack_ids:
                 attack_ids.append(normalized)
     return attack_ids
+
+
+def exclude_conflicting_entity_values(values, conflicting_values):
+    conflicts = {semantic_value_key(value) for value in conflicting_values}
+    return [
+        value
+        for value in values
+        if semantic_value_key(value) and semantic_value_key(value) not in conflicts
+    ]
+
+
+def semantic_value_key(value):
+    return re.sub(r"[^a-z0-9]+", "", normalize_value(value).casefold())
 
 
 def normalize_cve_ids(value):
@@ -316,6 +354,9 @@ def otx_observables(pulse):
         )
         if not observable_type or not value:
             continue
+        value, observable_type = normalize_observable_value(value, observable_type)
+        if not value:
+            continue
         observables.append(
             compact_mapping(
                 {
@@ -332,6 +373,109 @@ def otx_observables(pulse):
             )
         )
     return deduplicate_observables(observables)
+
+
+def normalize_observable_value(value, observable_type):
+    value = normalize_value(value)
+    observable_type = normalize_value(observable_type)
+    if observable_type not in {"ipv4-addr", "ipv6-addr"}:
+        return value, observable_type
+    parsed = parse_ip_or_network(value)
+    if not parsed:
+        return value, observable_type
+    return parsed["value"], parsed["observable_type"]
+
+
+def parse_ip_or_network(value):
+    value = normalize_value(value)
+    try:
+        if "/" in value:
+            network = ipaddress.ip_network(value, strict=False)
+            observable_type = "ipv4-addr" if network.version == 4 else "ipv6-addr"
+            return {"value": str(network), "observable_type": observable_type}
+        address = ipaddress.ip_address(value)
+        observable_type = "ipv4-addr" if address.version == 4 else "ipv6-addr"
+        return {"value": str(address), "observable_type": observable_type}
+    except ValueError:
+        return {}
+
+
+def otx_autonomous_systems(pulse):
+    autonomous_systems = []
+    for indicator in flatten(pulse.get("indicators")):
+        if not isinstance(indicator, dict):
+            continue
+        indicator_type = normalize_value(indicator.get("type"))
+        normalized_type = indicator_type.lower()
+        value = normalize_value(
+            indicator.get("indicator")
+            or indicator.get("value")
+            or indicator.get("content")
+        )
+        if normalized_type not in ASN_INDICATOR_TYPES and not value.upper().startswith(
+            "AS"
+        ):
+            continue
+        asn_number = parse_asn_number(value)
+        if asn_number is None:
+            continue
+        as_name = normalize_value(
+            indicator.get("as_name")
+            or indicator.get("asn_name")
+            or indicator.get("name")
+            or indicator.get("title")
+            or indicator.get("description")
+        )
+        autonomous_systems.append(
+            compact_mapping(
+                {
+                    "value": autonomous_system_value(asn_number, as_name),
+                    "number": asn_number,
+                    "as_name": as_name,
+                    "indicator_type": indicator_type,
+                    "indicator_id": indicator.get("id"),
+                    "created": indicator.get("created") or indicator.get("created_at"),
+                    "first_seen": indicator.get("first_seen"),
+                    "last_seen": indicator.get("last_seen"),
+                    "source_field": "indicators",
+                }
+            )
+        )
+    return deduplicate_autonomous_systems(autonomous_systems)
+
+
+def parse_asn_number(value):
+    text = normalize_value(value)
+    if not text:
+        return None
+    match = re.search(r"\bAS\s*([0-9]{1,10})\b", text, re.IGNORECASE)
+    if not match and text.isdigit():
+        match = re.match(r"^([0-9]{1,10})$", text)
+    if not match:
+        return None
+    number = int(match.group(1))
+    if number < 0 or number > 4294967295:
+        return None
+    return number
+
+
+def autonomous_system_value(number, name=""):
+    name = normalize_value(name)
+    if name and semantic_value_key(name) != f"as{number}":
+        return f"AS{number} {name}"
+    return f"AS{number}"
+
+
+def deduplicate_autonomous_systems(autonomous_systems):
+    best_by_number = {}
+    for autonomous_system in autonomous_systems:
+        key = autonomous_system.get("number")
+        current = best_by_number.get(key)
+        if not current or len(autonomous_system.get("value", "")) > len(
+            current.get("value", "")
+        ):
+            best_by_number[key] = autonomous_system
+    return list(best_by_number.values())
 
 
 def deduplicate_observables(observables):
@@ -388,6 +532,7 @@ def normalize_reference(value):
 
 def extraction_records(entities):
     records = []
+    infrastructure_value = first_inferred_infrastructure(entities)
     for key, source_field, entity_type, confidence in ENTITY_SPECS:
         for value in entities.get(key) or []:
             attributes = relationship_anchor_attributes(entities, entity_type)
@@ -397,11 +542,11 @@ def extraction_records(entities):
                 "source_field": source_field,
                 "confidence": confidence,
             }
-            if entity_type == "source_identity":
-                attributes["role"] = "otx-author"
             if attributes:
                 record["attributes"] = attributes
             records.append(record)
+    records.extend(infrastructure_attack_pattern_records(entities, infrastructure_value))
+    records.extend(autonomous_system_records(entities, infrastructure_value))
     for value in entities.get("tlp") or []:
         records.append(
             {
@@ -421,23 +566,35 @@ def extraction_records(entities):
             }
         )
     for observable in entities.get("observables") or []:
-        records.append(
-            {
-                "entity_type": "observable",
-                "value": observable.get("value"),
-                "source_field": observable.get("source_field") or "indicators",
-                "confidence": 65,
-                "attributes": {
-                    "observable_type": observable.get("observable_type"),
-                    "indicator_type": observable.get("indicator_type"),
-                    "indicator_id": observable.get("indicator_id"),
-                    "hash_algorithm": observable.get("hash_algorithm"),
-                    "created": observable.get("created"),
-                    "first_seen": observable.get("first_seen"),
-                    "last_seen": observable.get("last_seen"),
-                },
-            }
-        )
+        attributes = {
+            "observable_type": observable.get("observable_type"),
+            "indicator_type": observable.get("indicator_type"),
+            "indicator_id": observable.get("indicator_id"),
+            "hash_algorithm": observable.get("hash_algorithm"),
+            "created": observable.get("created"),
+            "first_seen": observable.get("first_seen"),
+            "last_seen": observable.get("last_seen"),
+        }
+        record = {
+            "entity_type": "observable",
+            "value": observable.get("value"),
+            "source_field": observable.get("source_field") or "indicators",
+            "confidence": 65,
+            "attributes": attributes,
+        }
+        if infrastructure_value and is_network_infrastructure_observable(observable):
+            record["relationship_type"] = "consists-of"
+            attributes.update(
+                {
+                    "relationship_source_stix_object_type": "infrastructure",
+                    "relationship_source_value": infrastructure_value,
+                    "relationship_source_field": "infrastructures",
+                    "relationship_inference": (
+                        "otx-single-adversary-network-observable"
+                    ),
+                }
+            )
+        records.append(record)
     for rule in entities.get("detection_rules") or []:
         records.append(
             {
@@ -467,10 +624,98 @@ def relationship_anchor_attributes(entities, entity_type):
     if len(adversaries) != 1:
         return {}
     return {
-        "relationship_source_stix_object_type": "threat-actor",
+        "relationship_source_stix_object_type": "intrusion-set",
         "relationship_source_value": adversaries[0],
         "relationship_source_field": "adversary",
     }
+
+
+def infrastructure_attack_pattern_records(entities, infrastructure_value):
+    if not infrastructure_value:
+        return []
+    records = []
+    for attack_id in entities.get("attack_ids") or []:
+        records.append(
+            {
+                "entity_type": "attack_pattern",
+                "value": attack_id,
+                "source_field": "attack_ids",
+                "confidence": 70,
+                "relationship_type": "related-to",
+                "attributes": {
+                    "relationship_source_stix_object_type": "infrastructure",
+                    "relationship_source_value": infrastructure_value,
+                    "relationship_source_field": "infrastructures",
+                    "relationship_inference": (
+                        "otx-single-adversary-infrastructure-ttp"
+                    ),
+                },
+            }
+        )
+    return records
+
+
+def autonomous_system_records(entities, infrastructure_value):
+    records = []
+    for autonomous_system in entities.get("autonomous_systems") or []:
+        attributes = {
+            "asn": autonomous_system.get("number"),
+            "asn_name": autonomous_system.get("as_name"),
+            "indicator_type": autonomous_system.get("indicator_type"),
+            "indicator_id": autonomous_system.get("indicator_id"),
+            "created": autonomous_system.get("created"),
+            "first_seen": autonomous_system.get("first_seen"),
+            "last_seen": autonomous_system.get("last_seen"),
+        }
+        relationship_type = "related-to"
+        if infrastructure_value:
+            relationship_type = "consists-of"
+            attributes.update(
+                {
+                    "relationship_source_stix_object_type": "infrastructure",
+                    "relationship_source_value": infrastructure_value,
+                    "relationship_source_field": "infrastructures",
+                    "relationship_inference": "otx-single-adversary-asn",
+                }
+            )
+        records.append(
+            {
+                "entity_type": "autonomous_system",
+                "value": autonomous_system.get("value"),
+                "source_field": autonomous_system.get("source_field") or "indicators",
+                "confidence": 70,
+                "relationship_type": relationship_type,
+                "attributes": compact_mapping(attributes),
+            }
+        )
+    return records
+
+
+def inferred_network_infrastructures(entities):
+    adversaries = entities.get("adversaries") or []
+    if len(adversaries) != 1:
+        return []
+    has_network_observable = any(
+        is_network_infrastructure_observable(observable)
+        for observable in entities.get("observables") or []
+    )
+    if not has_network_observable and not entities.get("autonomous_systems"):
+        return []
+    pulse_id = normalize_value((entities.get("lifecycle") or {}).get("pulse_id"))
+    suffix = f" {pulse_id[:8]}" if pulse_id else ""
+    return [f"{adversaries[0]} OTX observed infrastructure{suffix}"]
+
+
+def first_inferred_infrastructure(entities):
+    infrastructures = entities.get("infrastructures") or []
+    return infrastructures[0] if len(infrastructures) == 1 else ""
+
+
+def is_network_infrastructure_observable(observable):
+    return (
+        normalize_value(observable.get("observable_type")).lower()
+        in NETWORK_INFRASTRUCTURE_OBSERVABLE_TYPES
+    )
 
 
 def flatten(value):

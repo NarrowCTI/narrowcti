@@ -18,57 +18,10 @@ AVAILABLE_CAPABILITIES = (
     "mssp.multi_environment",
 )
 
-EDITION_CAPABILITIES = {
-    "evaluation": (
-        "source.otx",
-        "source.misp",
-        "enrichment.otx_entities",
-        "enrichment.mitre_attack",
-        "quarantine.review",
-        "reports.operational",
-        "reports.operational_validation",
-        "reports.support_diagnostics",
-        "graph.export.audit",
-        "graph.export.dry_run",
-    ),
-    "professional": (
-        "source.otx",
-        "source.misp",
-        "enrichment.otx_entities",
-        "enrichment.mitre_attack",
-        "quarantine.review",
-        "reports.operational",
-        "reports.operational_validation",
-        "reports.support_diagnostics",
-        "graph.export.audit",
-        "graph.export.dry_run",
-        "graph.lookup.opencti",
-        "deployment.templates",
-    ),
-    "enterprise": (
-        "source.otx",
-        "source.misp",
-        "enrichment.otx_entities",
-        "enrichment.mitre_attack",
-        "quarantine.review",
-        "reports.operational",
-        "reports.operational_validation",
-        "reports.support_diagnostics",
-        "graph.export.audit",
-        "graph.export.dry_run",
-        "graph.lookup.opencti",
-        "graph.export.controlled",
-        "deployment.templates",
-    ),
-    "mssp": AVAILABLE_CAPABILITIES,
-}
-
-
 @dataclass(frozen=True)
 class FeatureGateState:
-    edition: str
-    known_edition: bool
-    license_configured: bool
+    distribution_model: str
+    open_source: bool
     enforcement_enabled: bool
     available_capabilities: tuple[str, ...]
     enabled_capabilities: tuple[str, ...]
@@ -78,9 +31,8 @@ class FeatureGateState:
 
     def to_dict(self):
         return {
-            "edition": self.edition,
-            "known_edition": self.known_edition,
-            "license_configured": self.license_configured,
+            "distribution_model": self.distribution_model,
+            "open_source": self.open_source,
             "enforcement_enabled": self.enforcement_enabled,
             "available_capabilities": list(self.available_capabilities),
             "enabled_capabilities": list(self.enabled_capabilities),
@@ -90,14 +42,7 @@ class FeatureGateState:
         }
 
 
-def build_feature_gate_state(
-    edition,
-    license_file="",
-    enforcement_enabled=False,
-    requested_capabilities=None,
-):
-    normalized_edition = normalize_name(edition) or "evaluation"
-    known_edition = normalized_edition in EDITION_CAPABILITIES
+def build_feature_gate_state(requested_capabilities=None):
     requested = normalize_names(requested_capabilities or [])
     unknown = tuple(
         capability for capability in requested if capability not in AVAILABLE_CAPABILITIES
@@ -105,23 +50,15 @@ def build_feature_gate_state(
     valid_requested = tuple(
         capability for capability in requested if capability in AVAILABLE_CAPABILITIES
     )
-    default_capabilities = EDITION_CAPABILITIES.get(normalized_edition, ())
-    enabled = valid_requested or default_capabilities
-    disabled = tuple(
-        capability
-        for capability in AVAILABLE_CAPABILITIES
-        if capability not in enabled
-    )
 
     return FeatureGateState(
-        edition=normalized_edition,
-        known_edition=known_edition,
-        license_configured=bool(str(license_file or "").strip()),
-        enforcement_enabled=bool(enforcement_enabled),
+        distribution_model="open_source",
+        open_source=True,
+        enforcement_enabled=False,
         available_capabilities=AVAILABLE_CAPABILITIES,
-        enabled_capabilities=tuple(enabled),
-        disabled_capabilities=disabled,
-        requested_capabilities=requested,
+        enabled_capabilities=AVAILABLE_CAPABILITIES,
+        disabled_capabilities=(),
+        requested_capabilities=valid_requested,
         unknown_capabilities=unknown,
     )
 

@@ -199,7 +199,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertIn("NarrowCTI support diagnostics", text)
         self.assertIn("evidence_inventory:", text)
 
-    def test_support_redaction_masks_paths_and_customer_context(self):
+    def test_support_redaction_masks_paths_and_preserves_open_source_context(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             audit_dir = os.path.join(tmpdir, "audit")
             os.makedirs(audit_dir)
@@ -233,7 +233,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                 run_summary_file=summary_file,
                 quarantine_repository_file=os.path.join(tmpdir, "quarantine.jsonl"),
                 release_audit_file=os.path.join(audit_dir, "releases.jsonl"),
-                license_customer_id="customer-a",
+                declared_capabilities=["source.otx", "graph.lookup.opencti"],
                 graph_export_mode="dry-run",
                 graph_dedup_state_file=os.path.join(tmpdir, "graph_dedup.json"),
                 opencti_graph_lookup=True,
@@ -254,7 +254,12 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertFalse(
             data["curation_report"]["redaction_policy"]["raw_evidence_included"]
         )
-        self.assertEqual("[redacted]", data["preflight"]["settings"]["license_customer_id"])
+        self.assertEqual("open_source", data["preflight"]["settings"]["distribution_model"])
+        self.assertTrue(data["preflight"]["settings"]["open_source"])
+        self.assertEqual(
+            ["source.otx", "graph.lookup.opencti"],
+            data["preflight"]["settings"]["capability_inventory"]["requested_capabilities"],
+        )
         self.assertNotIn(tmpdir, serialized)
         self.assertIn("[redacted-path]", serialized)
         self.assertEqual([], data["curation_report"]["decisions"]["quarantined"])
@@ -265,7 +270,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertIn("curation_report_profile=support", format_text_snapshot(snapshot))
         self.assertIn("NarrowCTI support diagnostics", format_html_snapshot(snapshot))
 
-    def test_external_redaction_masks_paths_and_customer_context(self):
+    def test_external_redaction_masks_paths_and_preserves_open_source_context(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             audit_dir = os.path.join(tmpdir, "audit")
             os.makedirs(audit_dir)
@@ -299,7 +304,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                 run_summary_file=summary_file,
                 quarantine_repository_file=os.path.join(tmpdir, "quarantine.jsonl"),
                 release_audit_file=os.path.join(audit_dir, "releases.jsonl"),
-                license_customer_id="customer-a",
+                declared_capabilities=["source.otx"],
             )
 
             snapshot = build_support_diagnostics(
@@ -318,7 +323,12 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             "external-recipient",
             data["curation_report"]["redaction_policy"]["audience"],
         )
-        self.assertEqual("[redacted]", data["preflight"]["settings"]["license_customer_id"])
+        self.assertEqual("open_source", data["preflight"]["settings"]["distribution_model"])
+        self.assertTrue(data["preflight"]["settings"]["open_source"])
+        self.assertEqual(
+            ["source.otx"],
+            data["preflight"]["settings"]["capability_inventory"]["requested_capabilities"],
+        )
         self.assertNotIn(tmpdir, serialized)
         self.assertIn("[redacted-path]", serialized)
         self.assertEqual([], data["curation_report"]["decisions"]["quarantined"])

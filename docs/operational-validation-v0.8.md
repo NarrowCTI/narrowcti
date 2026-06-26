@@ -34,6 +34,9 @@ Expected safety result:
 - Canonical graph matches are recorded in
   `graph_export_plan_lookup_matches`.
 - The decision audit report aggregates lookup match counts in `graph_export`.
+- OpenCTI Rules Engine validation is separate from NarrowCTI graph export
+  validation. Inference rules should remain disabled until direct NarrowCTI
+  graph relationships are clean and deterministic.
 
 ## Controlled Export Evidence
 
@@ -59,6 +62,15 @@ When ATT&CK candidates are included in a bounded export, validation should also
 confirm whether `existing_reference_count` is greater than zero. That shows
 NarrowCTI referenced canonical OpenCTI ATT&CK objects by `standard_id` instead
 of creating duplicate `attack-pattern` objects.
+
+OpenCTI Rules Engine should be tested only after the direct export result is
+understood. The local OpenCTI 6.9.4 lab currently has the rule manager active,
+no rule manager errors and all inference rules disabled. The recommended
+validation sequence is to activate one rule at a time, validate inferred
+relationships in OpenCTI Knowledge and graph views, then deactivate the rule if
+the generated relationship volume or attribution quality is not acceptable.
+The rule matrix and NarrowCTI boundary are tracked in
+`docs/opencti-rules-engine-v0.8.md`.
 
 When Arsenal candidates are included, validation should prefer a bounded
 `malware` or `tool` allow-list and confirm whether the lookup matched an
@@ -105,6 +117,26 @@ with `standard_id=report--d6555acf-74d4-5841-948b-4dde4c06cbe8`; a second
 forced run with a fresh state file kept the count at 6 instead of creating a
 seventh Report. The newest Report references `Malware` `Lumma Stealer` with
 `standard_id=malware--961a6bc2-1b2e-5f56-ba42-4655b23fd730`.
+
+Observed rich export activation validation on June 25, 2026 confirmed the next
+bounded export set against local OpenCTI 6.9.4. The controlled report
+`NarrowCTI clean export activation validation 20260625` imported one Indicator,
+one Attack Pattern, one MITRE Data Source, one Note, one Sighting, one Report
+and three relationships. The STIX preview summary had
+`skipped_candidate_count=0`, object counts for `attack-pattern`, `note` and
+`x-mitre-data-source`, and relationship counts for `detects`, `related-to` and
+`sighting-of`.
+
+The local import materialized `x-mitre-data-source` as an OpenCTI Data Source.
+MITRE tactic/platform custom objects were intentionally held out of the default
+export gate after lab validation showed they were not materialized as useful
+first-class OpenCTI objects.
+
+Observed MISP `ObjectReference` export validation used
+`NarrowCTI object reference export validation 20260625`. OpenCTI imported one
+Malware, one Infrastructure, one Report and three relationships. The semantic
+`uses` relationship was exported only because both source and target UUIDs
+resolved to graph objects in the bundle.
 
 Observed Vulnerability export validation confirmed the same guarded promotion
 model for CVEs. The lab used existing OpenCTI Vulnerability `CVE-2019-13939`
@@ -156,6 +188,310 @@ validation returned `known_entity_count=1`, `match_type=name`,
 authored by `OTX AlienVault`, and the repeated exact Report count for
 `NarrowCTI infrastructure export live validation 20260625` remained `1`.
 
+Observed matrix coverage validation on June 26, 2026 confirmed the newest
+OpenCTI tab targets from `docs/opencti-coverage-matrix-v0.8.md`. The controlled
+bundle `NarrowCTI Matrix Live 20260626 report` imported:
+
+- `Campaign` `NarrowCTI Matrix Live 20260626 campaign`.
+- `Sector` `NarrowCTI Matrix Live 20260626 energy sector`.
+- `Organization` `NarrowCTI Matrix Live 20260626 target organization`.
+- `Data-Source` `Process: Process Creation`.
+- `Data-Component` `Process Creation`.
+- `Course-Of-Action` `NarrowCTI Matrix Live 20260626 course of action`.
+
+The bundle referenced existing canonical ATT&CK `T1059` through
+`standard_id=attack-pattern--bab942ff-7c9c-5062-9e92-3392bfb2fd74` instead of
+creating another Attack Pattern. The import summary recorded
+`accepted_candidate_count=7`, `graph_object_count=6`,
+`existing_reference_count=1`, `graph_relationship_count=7`,
+`skipped_candidate_count=0`, relationship counts of `detects=2`,
+`targets=2`, `related-to=3`, and object counts for `campaign`,
+`course-of-action`, `identity`, `x-mitre-data-component` and
+`x-mitre-data-source`.
+
+Post-import GraphQL validation confirmed:
+
+- `Campaign -> targets -> Organization`.
+- `Campaign -> targets -> Sector`.
+- `Data-Component -> detects -> Attack-Pattern T1059`.
+
+This validates controlled population of Threats / Campaigns, Entities /
+Organizations, Techniques / Courses of action and Techniques / Data components.
+
+Follow-up OpenCTI API validation on June 26, 2026 confirmed the lookup surface
+for the newly promoted Technique objects. Local OpenCTI 6.9.4 resolves
+`Course-Of-Action` objects through `coursesOfAction`, `Data-Component` objects
+through `dataComponents` and `Data-Source` objects through `dataSources`. The
+same validation confirmed the canonical `standard_id` prefixes
+`course-of-action--`, `data-component--` and `data-source--`; NarrowCTI accepts
+those canonical OpenCTI references when export planning deduplicates existing
+matrix objects.
+
+The same API validation confirmed exact lookup surfaces for victimology
+identities. Local OpenCTI 6.9.4 resolves target Organizations through
+`organizations` and target Sectors through `sectors`, both using canonical
+`identity--` ids. NarrowCTI uses these lookups only for target organization and
+target sector candidates. Source identity, collector, author and feed
+provenance identities remain outside automatic Organization lookup and graph
+promotion.
+
+Threat Actor taxonomy validation confirmed the OpenCTI lookup surfaces for the
+two UI tabs: `threatActorsGroup` for group actors and
+`threatActorsIndividuals` for individual actors. NarrowCTI uses the group lookup
+for normal `threat_actor` candidates, records explicit individual evidence as
+`threat_actor_individual`, and uses native export for individual actors so they
+materialize in the correct OpenCTI Threat Actor Individual tab.
+
+Controlled native Threat Actor Individual validation on June 26, 2026 used
+`NarrowCTI Matrix Threat Actor Individual Native Validation 20260626B`. The
+full `send_bundle` export path was executed twice for the same explicit
+`threat_actor_individual` candidate. NarrowCTI imported the Report bundle,
+skipped generic STIX `threat-actor` object creation for that candidate, queried
+`threatActorsIndividuals`, created the missing native object with
+`threatActorIndividualAdd(update=true)`, and linked it back to the imported
+Report through OpenCTI `reportEdit.relationAdd` with relationship type
+`object`. OpenCTI returned exactly one `Threat-Actor-Individual` named
+`NarrowCTI Matrix Threat Actor Individual Native Validation 20260626B Actor`,
+standard id `threat-actor--a4f6eca4-b097-5d33-83d2-cb33e22afdae`, alias
+`NarrowCTI individual actor alias`, type `crime-syndicate`, confidence `66`,
+one linked Report `report--58911a16-85f5-5f10-b03a-8f2d59d4fb25`, and lookup
+evidence with `deduplicated_entity_count=1`, `would_create_object_count=0` and
+no lookup error.
+
+Real MISP ingestion validation on June 26, 2026 imported local MISP event
+`1525` (`Trickbot to Ryuk in Two Hours`) as
+`NarrowCTI real MISP ingestion validation 20260626`. The bounded bundle was
+authored as `MISP via NarrowCTI`, exported 25 IoC indicators, accepted 24 graph
+candidates, referenced seven existing ATT&CK objects through OpenCTI lookup and
+created 23 report-to-ATT&CK relationships. The report was queryable in
+OpenCTI and had 23 `related-to` relationships to `Attack-Pattern` objects.
+Normal IoC indicator lookup was validated with `206.81.5.253`.
+
+The same validation exposed a final-polish item: MISP detection-rule evidence
+currently modeled as a graph `detection_rule` candidate with STIX `indicator`
+output did not appear reliably when queried by detection-rule name or expected
+STIX id. This does not block normal IoC or ATT&CK export, but detection-rule
+promotion needs a dedicated OpenCTI placement review before production-ready
+enablement. The polish pass should decide whether YARA, Sigma, Snort,
+Suricata, PCRE and similar rules should remain Indicators with stricter
+pattern typing or be represented through a more suitable OpenCTI object and
+relationship model.
+
+The same real MISP ingestion also confirmed an important Infrastructure
+boundary: the IP `206.81.5.253` was ingested and queryable as a normal
+Indicator, but it was not related to an Infrastructure object because the
+selected source event did not provide infrastructure object context. This is
+expected graph hygiene. The next Infrastructure validation must use a
+source-backed payload that carries infrastructure evidence and then confirm
+that IP/domain/CIDR/ASN evidence is attached to that Infrastructure instead of
+remaining disconnected.
+
+Real MISP export validation on June 26, 2026 used local MISP event `1`
+(`URLHaus Malware URLs feed`) through the rebuilt `narrowcti-gateway` container
+with `NARROWCTI_GRAPH_EXPORT_MODE=export`, `MISP_DRY_RUN=false`,
+`MISP_MAX_ATTRIBUTES_PER_EVENT=500` and `MISP_MAX_IOCS_PER_EVENT=10`. The event
+had 22,732 attributes, so the attribute guardrail truncated processing to 500
+attributes and the IoC guardrail exported 10 indicators. The candidate scored
+70, was ingested, and OpenCTI created/updated the Report
+`URLHaus Malware URLs feed` authored by `MISP via NarrowCTI`.
+
+The same run accepted six source-backed Vulnerability candidates:
+`CVE-2026-24061`, `CVE-2025-55182`, `CVE-2025-14847`, `CVE-2025-54424`,
+`CVE-2026-20841` and `CVE-2025-66398`. OpenCTI lookup found existing
+Vulnerability objects for all six CVEs, so the graph export did not create
+duplicate vulnerability SDOs; it emitted report-context relationships to the
+existing objects. Provenance-only candidates (`collector`, `source_identity`
+and feed tag) were correctly held by the safe export gate.
+
+This URLHaus validation is useful for volume controls, author naming,
+Vulnerability lookup and report relationship hygiene. It is not sufficient for
+actor, sector, infrastructure, location or Diamond/Kill Chain validation because
+the selected event did not carry that source context.
+
+For the next richer MISP validation, enable and fetch one MISP-format OSINT feed
+that carries report-style events instead of only IOC blocklists. Preferred next
+targets:
+
+- CIRCL OSINT Feed: `https://www.circl.lu/doc/misp/feed-osint`
+- Botvrij.eu OSINT feed: `https://www.botvrij.eu/data/feed-osint`
+
+After import, pick one event that contains Galaxy clusters, malware/tool names,
+attack-pattern tags, infrastructure objects or victimology metadata, then run
+NarrowCTI against `MISP_QUERIES=event:<id>` with bounded IoC and attribute
+limits.
+
+After enabling MISP OSINT feeds, two richer real MISP validations were executed
+on June 26, 2026:
+
+- `event:14` (`OSINT - Packrat: Seven Years of a South American Threat Actor`)
+  carried MISP Galaxy Threat Actor evidence for `Packrat` and targeted-sector
+  metadata for `Activists`, `Journalist` and `Political party`. Because the
+  event is historical, the validation used bounded historical-test overrides:
+  `NARROWCTI_MIN_SCORE_TO_INGEST=50`, `NARROWCTI_MAX_DAYS_OLD=9999` and
+  `MIN_SCORE_FOR_OLD_EVENT=50`. OpenCTI created the Report authored by
+  `MISP via NarrowCTI`, materialized `Packrat` as a `Threat-Actor-Group`,
+  materialized the three Sectors and created three semantic
+  `Packrat -> targets -> Sector` relationships.
+- `event:152` (`OSINT - APT Case RUAG Technical Report`) carried MISP Galaxy
+  Tool evidence for `Turla` and `Wipbot`. The same bounded historical-test
+  overrides were used. OpenCTI created the Report authored by
+  `MISP via NarrowCTI`, materialized both Tools and created report-context
+  `Report -> related-to -> Tool` relationships for `Turla` and `Wipbot`.
+
+These validations prove that MISP Galaxy metadata can feed multiple OpenCTI
+areas through NarrowCTI: Threats / Threat actors, Entities / Sectors, Arsenal /
+Tools, Reports and Knowledge relationships. They also show the expected
+historical-intelligence policy behavior: old OSINT reports are dropped by the
+default score threshold unless the operator deliberately lowers the threshold
+for a bounded replay.
+
+Controlled custom SDO validation on June 26, 2026 confirmed the next matrix
+targets for OpenCTI-native custom entities. Local OpenCTI accepted STIX `channel`,
+`narrative` and `event` objects only when the bundle included the OpenCTI
+`extension-definition` and each object carried the `new-sdo` extension marker.
+Follow-up NarrowCTI unit validation confirmed that the graph builder now emits
+that extension automatically when one of those SDOs is present.
+
+The controlled builder validation covers:
+
+- `Channel` with aliases and `channel_types`, for source-backed C2,
+  marketplace, communication or delivery channel evidence.
+- `Narrative` with aliases and `narrative_types`, for precise source-backed
+  objective, motivation or campaign-story evidence.
+- `Event` with aliases, `event_types`, `start_time` and `stop_time`, for true
+  CTI events.
+
+The matching OpenCTI lookup surface was also validated in tests: Channels use
+`channels`, Narratives use `narratives` and Events use `events`. NarrowCTI
+queries those collections before export planning creates a new object, so
+repeated exports can reuse existing OpenCTI objects where a `standard_id` or
+name match is available.
+
+This does not change the MISP EventReport default. EventReports remain Reports
+and Notes unless a source-specific mapper can prove that the upstream object is
+a real CTI Event rather than feed/report bookkeeping. Real OTX/MISP payload
+validation for these three object families remains pending.
+
+Container-backed live validation then imported
+`NarrowCTI Matrix Custom SDO Builder Validation 20260626C` through the local
+OpenCTI API. OpenCTI created the Report plus three report-context
+relationships and materialized:
+
+- `NarrowCTI Matrix Channel Builder Validation 20260626C` as `Channel`, with
+  alias `NarrowCTI validation channel` and channel types `c2` and `delivery`.
+- `NarrowCTI Matrix Narrative Builder Validation 20260626C` as `Narrative`,
+  with alias `NarrowCTI validation narrative` and narrative type `objective`.
+- `NarrowCTI Matrix Event Builder Validation 20260626C` as `Event`, with alias
+  `NarrowCTI validation event`, event type `cti-validation`, `start_time`
+  `2026-06-26T12:30:00.000Z` and `stop_time`
+  `2026-06-26T12:45:00.000Z`.
+
+The saved evidence file is
+`state/validation/custom-sdo-validation-20260626.json`. It contains no secrets
+and records `accepted_candidate_count=3`, `graph_object_count=3`,
+`graph_relationship_count=3`, `skipped_candidate_count=0` and OpenCTI
+`standard_id` values for the three objects. A repeated validation with the same
+deterministic names found exactly one matching Channel, one matching Narrative
+and one matching Event in OpenCTI, confirming that the controlled import did
+not leave duplicate same-name objects in the local lab.
+
+Controlled identity-subtype validation on June 26, 2026 then checked the
+remaining Entity matrix items for Systems and Security Platforms:
+
+- STIX Identity with `identity_class=system` materialized correctly as OpenCTI
+  `System`. The validation object was
+  `NarrowCTI Matrix System Validation 20260626`, with standard id
+  `identity--c4b52b57-ec9f-545c-950d-0538533d75c5`.
+- STIX Identity with `identity_class=securityplatform` did not materialize as
+  OpenCTI `SecurityPlatform`; it was imported as an `Organization`. A separate
+  GraphQL mutation `securityPlatformAdd` did create
+  `NarrowCTI Matrix Security Platform Mutation Validation 20260626` as
+  `SecurityPlatform` with `security_platform_type=SIEM`, proving that the
+  OpenCTI entity exists but should not be enabled through the normal STIX
+  bundle path until a dedicated native export design or the correct STIX import
+  marker is validated. The incorrectly materialized validation Organization was
+  removed from the lab after the negative result was captured.
+
+Based on that evidence, NarrowCTI enables controlled `target_system` export via
+STIX Identity `system` and keeps Security Platform out of the STIX bundle path
+to avoid polluting Organizations with platform objects.
+
+Follow-up builder validation imported
+`NarrowCTI Matrix System Builder Validation 20260626B` through the NarrowCTI
+graph builder. OpenCTI returned exactly one System with standard id
+`identity--388d5744-3ed2-525c-8737-bdcfc3dfb71f`, preserved the description
+`Controlled source-backed target system validation.`, and created one
+report-context relationship from the validation Report.
+
+Controlled Individual validation on June 26, 2026 confirmed the Entities /
+Individuals path. NarrowCTI exported an explicit `target_individual` candidate
+as STIX Identity with `identity_class=individual`, using the validation report
+`NarrowCTI Matrix Individual Builder Validation 20260626B`. The same export was
+run twice. OpenCTI returned exactly one `Individual` named
+`NarrowCTI Matrix Individual Builder Validation 20260626B Person`, standard id
+`identity--d1d7c509-4854-5f51-8069-2eafb2c704e0`, confidence `65` and the
+expected source-backed target individual description. The Individual retained one linked
+Report, `report--9c22e42c-17a0-571e-91f5-b1371341c6e9`. Follow-up OpenCTI
+graph lookup returned `deduplicated_entity_count=1`,
+`would_create_object_count=0` and no lookup error, proving the `individuals`
+lookup path can protect repeated exports from duplication.
+
+Follow-up native export validation on June 26, 2026 enabled Security Platform
+promotion through a dedicated OpenCTI GraphQL path. The controlled validation
+used `NarrowCTI Matrix Security Platform Native Validation 20260626B` with
+`stix_object_type=security-platform`, `entity_type=security_platform`,
+description, confidence `72` and `security_platform_type=SIEM`. NarrowCTI
+imported the normal Report bundle, skipped STIX Identity creation for this
+candidate and then called `securityPlatformAdd(update=true)` only after
+`securityPlatforms` lookup found no existing exact-name object.
+
+The live OpenCTI query returned exactly one `SecurityPlatform` named
+`NarrowCTI Matrix Security Platform Native Validation 20260626B`, with standard
+id `identity--e8412cd2-f396-50bb-8d9a-63d7f805e6b5`, type `SIEM`,
+description `Controlled native SecurityPlatform export validation for the
+OpenCTI coverage matrix.` and confidence `72`. A repeated export plus lookup
+validation returned `deduplicated_entity_count=1` and
+`would_create_object_count=0`, confirming the native path does not duplicate
+the same platform in the lab.
+
+Additional native report-context validation on June 26, 2026 used
+`NarrowCTI Matrix Security Platform Report Link Validation 20260626C`. The
+validation called the full NarrowCTI `send_bundle` export path twice with the
+same explicit Security Platform candidate. OpenCTI returned
+`platform_exact_count=1`, `report_exact_count=1` and
+`platform_report_link_count=1`. The resulting `SecurityPlatform` kept
+`security_platform_type=SIEM`, confidence `72`, the expected
+source-backed report-container description and standard id
+`identity--b2adc1ce-93bd-5069-b1a7-183685e5f1ca`. The linked Report was
+`report--daeda486-722c-567a-95bc-ef95aec5655a`, proving that native
+Security Platform objects can retain Report/container context through
+OpenCTI `reportEdit.relationAdd` with relationship type `object` without
+creating a fake semantic edge.
+
+Controlled Artifact validation on June 26, 2026 confirmed the Observations
+matrix behavior for binary/package artifact metadata. NarrowCTI built a STIX
+Artifact only from an explicit source-backed observable candidate with
+`observable_type=artifact`, a SHA-256 hash, `artifact_url` and `mime_type`.
+The local OpenCTI STIX importer requires Artifact hash material when a URL is
+present, and OpenCTI exposes Artifacts through the generic
+`stixCyberObservables` query surface instead of a root `artifacts` collection.
+
+The live import used
+`NarrowCTI Matrix Artifact Builder Validation 20260626B`. OpenCTI created one
+`Artifact` with standard id
+`artifact--ce5e8ca1-37ca-57e5-bc7a-6f0f1542b2ab` and `observable_value`
+`0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0`.
+The post-import query returned `exact_artifact_count=1`,
+`graph_object_count=1`, `graph_relationship_count=1` and
+`skipped_candidate_count=0`. Generic file hashes remain file observables or
+Indicators unless source metadata explicitly supports Artifact promotion.
+Follow-up OpenCTI lookup validation confirmed the graph plan can deduplicate
+that same Artifact: the local OpenCTI value filter did not return Artifact
+matches, so NarrowCTI uses an Artifact-only exact search fallback and accepts a
+match only when `entity_type=Artifact` and `observable_value` equals the source
+hash. The validation returned `deduplicated_entity_count=1` and
+`would_create_object_count=0`.
+
 ## Required Lab Posture
 
 Before live validation, confirm:
@@ -167,6 +503,52 @@ Before live validation, confirm:
 - Source limits are bounded for the local machine.
 - Dry-run is enabled for OTX and MISP unless a specific non-dry-run test is
   approved.
+- The current NarrowCTI gateway image has been rebuilt from the working tree
+  and a container is running on the same Docker network as OpenCTI before
+  starting fidelity-sensitive ingestion tests.
+
+## Container-Backed Fidelity Validation
+
+The June 26, 2026 lab posture was validated with the rebuilt
+`narrowcti/gateway:local` image and the `narrowcti-gateway` container attached
+to the same Docker network as OpenCTI and MISP (`threat-net`). The local
+container env was generated under `state/validation/gateway-fidelity.env`, which
+is intentionally ignored by Git because it contains runtime secrets.
+
+The container preflight returned `ok=true` with:
+
+```text
+ingestion_mode=misp-collector
+enabled_sources=misp
+dedup_mode=hybrid
+opencti_dedup_lookup=true
+graph_export_mode=audit
+opencti_graph_lookup=true
+distribution_model=open_source
+open_source=true
+```
+
+The preflight emitted one non-blocking warning:
+`mitre-cache-disabled`. This means ATT&CK cache enrichment records
+missing-cache evidence unless `NARROWCTI_MITRE_CACHE_FILE` is configured.
+
+A controlled container execution against `MISP_QUERIES=event:1525` confirmed
+the full runtime path:
+
+```text
+MISP HTTP status: 200
+MISP event exceeds IOC guardrail: event=1525 iocs=61 limit=25 action=truncate
+MISP candidate: Trickbot to Ryuk in Two Hours age=2286d iocs=61 score=50
+MISP drop: Trickbot to Ryuk in Two Hours score=50 reason=below minimum score
+Gateway summary: sources=1 succeeded=1 failed=0 reviewed=1 ingested=0 dropped=1 errors=0
+Gateway sleeping 3600s
+```
+
+This validates container DNS, OpenCTI API reachability, MISP API reachability,
+guardrails and policy enforcement without creating another live ingestion.
+Future fidelity-sensitive tests should use this container-backed path instead
+of one-off helper scripts unless the test objective is explicitly unit-level or
+offline bundle generation.
 
 ## Preflight
 
@@ -180,8 +562,8 @@ python -m gateway.preflight --json
 The output must show:
 
 ```text
-graph_export_mode=dry-run
-graph_dedup_state_file=/app/state/graph_dedup.json
+graph_export_mode=audit|dry-run|export
+graph_dedup_state_file=(configured or disabled)
 opencti_graph_lookup=true
 ```
 
@@ -361,8 +743,109 @@ Stop validation and keep graph promotion blocked if:
 
 ## Remaining Evidence To Capture
 
-- Real OTX ATT&CK-rich dry-run with OpenCTI canonical match.
-- Real MISP ATT&CK/galaxy dry-run with OpenCTI canonical match.
-- Decision audit report excerpt showing lookup counters.
-- OpenCTI UI check proving no duplicate ATT&CK object was created.
 - Resource posture after bounded runs on the local lab.
+
+Resource posture still needs a clean numeric capture. On June 25, 2026, after
+the bounded export validations, `docker stats --no-stream`, `docker system df`
+and `docker inspect` did not return through Docker Desktop in this shell and
+the CLI processes had to be stopped without touching running containers. This
+does not invalidate the graph export evidence, but the release checklist should
+capture CPU, memory, disk and container health from a responsive Docker CLI or
+Docker Desktop view before final v0.8 closure.
+
+## Captured ATT&CK Lookup Evidence
+
+Real OTX ATT&CK-rich dry-run evidence was captured from
+`state/real-feed-validation-otx-lazarus-infra-20260625/otx_lazarus_decisions_dryrun.jsonl`.
+The Lazarus validation record carried 10 ATT&CK attack-pattern candidates, one
+Intrusion Set candidate, one Infrastructure candidate, 12 observable candidates
+and one target-sector candidate. OpenCTI lookup returned 11 canonical matches:
+the existing `Intrusion-Set` `Lazarus Group` by alias plus 10 existing
+ATT&CK `Attack-Pattern` objects by `mitre_attack_id`. The STIX preview showed
+`existing_reference_counts.attack-pattern=10`,
+`existing_reference_counts.intrusion-set=1`, `graph_relationship_count=26` and
+`relationship_counts` including `uses`, `targets`, `consists-of` and
+`related-to`.
+
+Real MISP ATT&CK/Galaxy evidence was captured from
+`state/real-feed-validation-misp-redbanc-20260625/direct_misp_decisions.jsonl`.
+The REDBANC validation record carried eight ATT&CK attack-pattern candidates,
+one detection-rule candidate and source metadata. OpenCTI lookup returned
+seven to eight canonical ATT&CK matches by `mitre_attack_id`, including
+`T1199`, `T1064` and `T1053`. The final observed plan reported
+`deduplicated_entity_count=8`, `existing_reference_counts.attack-pattern=8`
+and a preview with 11 graph relationships.
+
+These records satisfy the v0.8 evidence requirement for source-backed
+ATT&CK-rich dry-runs with canonical OpenCTI matches and decision-audit lookup
+counters. Duplicate ATT&CK object prevention is evidenced by the lookup-backed
+preview referencing existing canonical `standard_id` values instead of
+creating new ATT&CK objects.
+
+## Captured Object Description Hydration Evidence
+
+On June 26, 2026, a controlled replay of MISP `event:14`
+(`OSINT - Packrat: Seven Years of a South American Threat Actor`) validated the
+object-description polish path against the local OpenCTI lab.
+
+Before the replay, OpenCTI returned `description=null` for `Packrat` and for the
+Sector objects `Activists`, `Journalist` and `Political party`. A bounded replay
+was then executed with graph export enabled, OpenCTI graph lookup enabled,
+local artifact deduplication disabled only for the replay, and
+`MISP_MAX_IOCS_PER_EVENT=5`.
+
+The replay ingested successfully with `reviewed=1`, `ingested=1`,
+`skipped=0`, `errors=0`. Post-run OpenCTI API validation confirmed:
+
+- `Packrat` now has the source-provided MISP Galaxy description.
+- `Activists` has `Source-backed target sector observed by misp-galaxy:
+  Packrat targets Activists.`
+- `Journalist` has `Source-backed target sector observed by misp-galaxy:
+  Packrat targets Journalist.`
+- `Political party` has `Source-backed target sector observed by misp-galaxy:
+  Packrat targets Political party.`
+- The three Sector objects remain authored by `MISP via NarrowCTI`.
+
+The implementation does not rely on STIX import update behavior for existing
+objects. After bundle import, NarrowCTI uses OpenCTI `fieldPatch` only when the
+current description is empty and the matched object is NarrowCTI-owned, either
+by deterministic STIX id or by an OpenCTI author containing `NarrowCTI`. This
+protects canonical third-party objects and analyst-maintained descriptions.
+
+## Captured Deep Location Export Evidence
+
+On June 26, 2026, controlled matrix validation was executed against the local
+OpenCTI lab for deeper Location objects. The first import proved that generic
+STIX Location fields alone can be accepted by OpenCTI but may be classified by
+heuristic: administrative-area evidence was materialized as `Country`, and
+coordinate evidence with city context was materialized as `City`.
+
+NarrowCTI was then updated to emit OpenCTI's `x_opencti_location_type` hint for
+source-backed location candidates:
+
+- `target_region` -> `Region`
+- `target_country` -> `Country`
+- `target_administrative_area` -> `Administrative-Area`
+- `target_city` -> `City`
+- `target_position` -> `Position`
+
+A second controlled import used
+`NarrowCTI Matrix Location Type Validation 20260626B`. The STIX preview had
+`accepted_candidate_count=5`, `graph_object_count=5`,
+`graph_relationship_count=5`, `semantic_relationship_count=4` and object counts
+of four `location` objects plus one `threat-actor`.
+
+Post-import OpenCTI API validation confirmed:
+
+- `NarrowCTI Matrix Region 20260626B` materialized as `Region`.
+- `NarrowCTI Matrix Admin Area 20260626B` materialized as
+  `Administrative-Area`.
+- `NarrowCTI Matrix City 20260626B` materialized as `City`.
+- `NarrowCTI Matrix Position 20260626B` materialized as `Position` with
+  `latitude=-23.5505`, `longitude=-46.6333` and `precision=10`.
+- The validation actor had four semantic `targets` relationships, one to each
+  Location subtype above.
+
+This closes controlled OpenCTI import behavior for the deeper Location tabs.
+The remaining evidence gap is real source-payload validation from OTX/MISP or
+future feeds carrying administrative-area, city or coordinate victimology.

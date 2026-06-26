@@ -18,7 +18,8 @@ v0.8 introduces `gateway.diagnostics`.
 
 The module composes:
 
-- `gateway.preflight` for runtime configuration, feature gates and issues.
+- `gateway.preflight` for runtime configuration, capability inventory and
+  issues.
 - `gateway.curation_report` for curation, review and graph-readiness evidence.
 - A local evidence inventory for configured state, audit, quarantine, release
   audit, deduplication and MITRE cache paths.

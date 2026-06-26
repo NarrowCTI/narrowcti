@@ -115,6 +115,143 @@ query NarrowCTIThreatActorGraphSearch($search: String) {
 }
 """
 
+THREAT_ACTOR_GROUP_LOOKUP_QUERY = """
+query NarrowCTIThreatActorGroupGraphLookup($filters: FilterGroup) {
+  threatActorsGroup(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+THREAT_ACTOR_GROUP_SEARCH_QUERY = """
+query NarrowCTIThreatActorGroupGraphSearch($search: String) {
+  threatActorsGroup(search: $search, first: 10) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        aliases
+      }
+    }
+  }
+}
+"""
+
+THREAT_ACTOR_INDIVIDUAL_LOOKUP_QUERY = """
+query NarrowCTIThreatActorIndividualGraphLookup($filters: FilterGroup) {
+  threatActorsIndividuals(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+THREAT_ACTOR_INDIVIDUAL_SEARCH_QUERY = """
+query NarrowCTIThreatActorIndividualGraphSearch($search: String) {
+  threatActorsIndividuals(search: $search, first: 10) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        aliases
+      }
+    }
+  }
+}
+"""
+
+CAMPAIGN_LOOKUP_QUERY = """
+query NarrowCTICampaignGraphLookup($filters: FilterGroup) {
+  campaigns(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+CHANNEL_LOOKUP_QUERY = """
+query NarrowCTIChannelGraphLookup($filters: FilterGroup) {
+  channels(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+COURSE_OF_ACTION_LOOKUP_QUERY = """
+query NarrowCTICourseOfActionGraphLookup($filters: FilterGroup) {
+  coursesOfAction(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+DATA_COMPONENT_LOOKUP_QUERY = """
+query NarrowCTIDataComponentGraphLookup($filters: FilterGroup) {
+  dataComponents(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+DATA_SOURCE_LOOKUP_QUERY = """
+query NarrowCTIDataSourceGraphLookup($filters: FilterGroup) {
+  dataSources(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
 INTRUSION_SET_LOOKUP_QUERY = """
 query NarrowCTIIntrusionSetGraphLookup($filters: FilterGroup) {
   intrusionSets(first: 1, filters: $filters) {
@@ -140,6 +277,21 @@ query NarrowCTIIntrusionSetGraphSearch($search: String) {
         entity_type
         name
         aliases
+      }
+    }
+  }
+}
+"""
+
+EVENT_LOOKUP_QUERY = """
+query NarrowCTIEventGraphLookup($filters: FilterGroup) {
+  events(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
       }
     }
   }
@@ -177,6 +329,21 @@ query NarrowCTIInfrastructureGraphSearch($search: String) {
 }
 """
 
+NARRATIVE_LOOKUP_QUERY = """
+query NarrowCTINarrativeGraphLookup($filters: FilterGroup) {
+  narratives(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
 VULNERABILITY_LOOKUP_QUERY = """
 query NarrowCTIVulnerabilityGraphLookup($filters: FilterGroup) {
   vulnerabilities(first: 1, filters: $filters) {
@@ -207,9 +374,100 @@ query NarrowCTILocationGraphLookup($filters: FilterGroup) {
 }
 """
 
+ORGANIZATION_LOOKUP_QUERY = """
+query NarrowCTIOrganizationGraphLookup($filters: FilterGroup) {
+  organizations(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+SECTOR_LOOKUP_QUERY = """
+query NarrowCTISectorGraphLookup($filters: FilterGroup) {
+  sectors(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+SYSTEM_LOOKUP_QUERY = """
+query NarrowCTISystemGraphLookup($filters: FilterGroup) {
+  systems(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+INDIVIDUAL_LOOKUP_QUERY = """
+query NarrowCTIIndividualGraphLookup($filters: FilterGroup) {
+  individuals(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+SECURITY_PLATFORM_LOOKUP_QUERY = """
+query NarrowCTISecurityPlatformGraphLookup($filters: FilterGroup) {
+  securityPlatforms(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        security_platform_type
+      }
+    }
+  }
+}
+"""
+
 STIX_CYBER_OBSERVABLE_LOOKUP_QUERY = """
 query NarrowCTIStixCyberObservableGraphLookup($filters: FilterGroup) {
   stixCyberObservables(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        observable_value
+      }
+    }
+  }
+}
+"""
+
+STIX_CYBER_OBSERVABLE_SEARCH_QUERY = """
+query NarrowCTIStixCyberObservableGraphSearch($search: String) {
+  stixCyberObservables(search: $search, first: 20) {
     edges {
       node {
         id
@@ -226,6 +484,22 @@ ATTACK_ID_RE = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 VULNERABILITY_ID_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 AUTONOMOUS_SYSTEM_RE = re.compile(r"\bAS\s*(\d{1,10})\b", re.IGNORECASE)
 CURATED_ALIAS_GROUPS = {
+    "intrusion-set": [
+        {
+            "preferred": "Lazarus Group",
+            "aliases": (
+                "Lazarus",
+                "Lazarus Group",
+                "HIDDEN COBRA",
+                "Guardians of Peace",
+                "ZINC",
+                "Labyrinth Chollima",
+                "NICKEL ACADEMY",
+                "Diamond Sleet",
+            ),
+            "search": "Lazarus",
+        }
+    ],
     "malware": [
         {
             "preferred": "Lumma Stealer",
@@ -304,13 +578,41 @@ class OpenCTIGraphLookup:
                 search_query_text=TOOL_SEARCH_QUERY,
             )
         if stix_object_type == "threat-actor":
+            return self.find_threat_actor(candidate)
+        if stix_object_type == "campaign":
             return self.find_named_graph_object(
                 candidate,
-                stix_object_type="threat-actor",
-                collection_name="threatActors",
-                query_text=THREAT_ACTOR_LOOKUP_QUERY,
-                search_query_text=THREAT_ACTOR_SEARCH_QUERY,
-                enable_alias_search_by_default=True,
+                stix_object_type="campaign",
+                collection_name="campaigns",
+                query_text=CAMPAIGN_LOOKUP_QUERY,
+            )
+        if stix_object_type == "channel":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="channel",
+                collection_name="channels",
+                query_text=CHANNEL_LOOKUP_QUERY,
+            )
+        if stix_object_type == "course-of-action":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="course-of-action",
+                collection_name="coursesOfAction",
+                query_text=COURSE_OF_ACTION_LOOKUP_QUERY,
+            )
+        if stix_object_type == "x-mitre-data-component":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="x-mitre-data-component",
+                collection_name="dataComponents",
+                query_text=DATA_COMPONENT_LOOKUP_QUERY,
+            )
+        if stix_object_type == "x-mitre-data-source":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="x-mitre-data-source",
+                collection_name="dataSources",
+                query_text=DATA_SOURCE_LOOKUP_QUERY,
             )
         if stix_object_type == "intrusion-set":
             return self.find_named_graph_object(
@@ -329,6 +631,20 @@ class OpenCTIGraphLookup:
                 query_text=INFRASTRUCTURE_LOOKUP_QUERY,
                 search_query_text=INFRASTRUCTURE_SEARCH_QUERY,
             )
+        if stix_object_type == "event":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="event",
+                collection_name="events",
+                query_text=EVENT_LOOKUP_QUERY,
+            )
+        if stix_object_type == "narrative":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="narrative",
+                collection_name="narratives",
+                query_text=NARRATIVE_LOOKUP_QUERY,
+            )
         if stix_object_type == "vulnerability":
             return self.find_vulnerability(candidate)
         if stix_object_type == "location":
@@ -337,6 +653,15 @@ class OpenCTIGraphLookup:
                 stix_object_type="location",
                 collection_name="locations",
                 query_text=LOCATION_LOOKUP_QUERY,
+            )
+        if stix_object_type == "identity":
+            return self.find_identity(candidate)
+        if stix_object_type == "security-platform":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="security-platform",
+                collection_name="securityPlatforms",
+                query_text=SECURITY_PLATFORM_LOOKUP_QUERY,
             )
         if stix_object_type == "autonomous-system":
             return self.find_autonomous_system(candidate)
@@ -410,8 +735,78 @@ class OpenCTIGraphLookup:
 
         value = observable_value(candidate)
         if value:
-            return self.query_cyber_observable("value", value, "value")
+            match = self.query_cyber_observable("value", value, "value")
+            if match:
+                return match
+            if observable_type == "artifact":
+                return self.query_cyber_observable_search(
+                    value,
+                    "value",
+                    expected_entity_type="Artifact",
+                    expected_observable_value=value,
+                )
 
+        return None
+
+    def find_threat_actor(self, candidate):
+        actor_class = threat_actor_class(candidate)
+        if actor_class == "group":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="threat-actor",
+                collection_name="threatActorsGroup",
+                query_text=THREAT_ACTOR_GROUP_LOOKUP_QUERY,
+                search_query_text=THREAT_ACTOR_GROUP_SEARCH_QUERY,
+                enable_alias_search_by_default=True,
+            )
+        if actor_class == "individual":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="threat-actor",
+                collection_name="threatActorsIndividuals",
+                query_text=THREAT_ACTOR_INDIVIDUAL_LOOKUP_QUERY,
+                search_query_text=THREAT_ACTOR_INDIVIDUAL_SEARCH_QUERY,
+                enable_alias_search_by_default=True,
+            )
+        return self.find_named_graph_object(
+            candidate,
+            stix_object_type="threat-actor",
+            collection_name="threatActors",
+            query_text=THREAT_ACTOR_LOOKUP_QUERY,
+            search_query_text=THREAT_ACTOR_SEARCH_QUERY,
+            enable_alias_search_by_default=True,
+        )
+
+    def find_identity(self, candidate):
+        entity_type = clean_string(candidate.get("entity_type")).lower()
+        if entity_type == "target_organization":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="identity",
+                collection_name="organizations",
+                query_text=ORGANIZATION_LOOKUP_QUERY,
+            )
+        if entity_type == "target_sector":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="identity",
+                collection_name="sectors",
+                query_text=SECTOR_LOOKUP_QUERY,
+            )
+        if entity_type == "target_system":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="identity",
+                collection_name="systems",
+                query_text=SYSTEM_LOOKUP_QUERY,
+            )
+        if entity_type == "target_individual":
+            return self.find_named_graph_object(
+                candidate,
+                stix_object_type="identity",
+                collection_name="individuals",
+                query_text=INDIVIDUAL_LOOKUP_QUERY,
+            )
         return None
 
     def find_named_graph_object(
@@ -590,6 +985,46 @@ class OpenCTIGraphLookup:
             "match_type": match_type,
             "match_value": value,
         }
+
+    def query_cyber_observable_search(
+        self,
+        value,
+        match_type,
+        expected_entity_type="",
+        expected_observable_value="",
+    ):
+        try:
+            result = self.api_client.query(
+                STIX_CYBER_OBSERVABLE_SEARCH_QUERY,
+                {"search": value},
+            )
+        except Exception as exc:
+            self.logger(
+                "OpenCTI graph lookup failed: "
+                f"type=stix-cyber-observable search={value} error={exc}"
+            )
+            return None
+
+        expected_entity_type = clean_string(expected_entity_type).lower()
+        expected_observable_value = clean_string(expected_observable_value)
+        for node in nodes_from(result, "stixCyberObservables"):
+            entity_type = clean_string(node.get("entity_type"))
+            observable_value = clean_string(node.get("observable_value"))
+            if expected_entity_type and entity_type.lower() != expected_entity_type:
+                continue
+            if expected_observable_value and observable_value != expected_observable_value:
+                continue
+            return {
+                "opencti_id": clean_string(node.get("id")),
+                "standard_id": clean_string(node.get("standard_id")),
+                "entity_type": entity_type,
+                "name": observable_value,
+                "observable_value": observable_value,
+                "match_type": match_type,
+                "match_value": value,
+            }
+
+        return None
 
 
 class CompositeGraphLookup:
@@ -795,7 +1230,9 @@ def observable_stix_object_type(candidate):
     candidate = mapping_from(candidate)
     attributes = mapping_from(candidate.get("attributes"))
     observable_type = clean_string(attributes.get("observable_type")).lower()
+    entity_type = clean_string(candidate.get("entity_type")).lower()
     supported = {
+        "artifact",
         "domain-name",
         "url",
         "ipv4-addr",
@@ -805,6 +1242,8 @@ def observable_stix_object_type(candidate):
     }
     if observable_type in supported:
         return observable_type
+    if entity_type in supported:
+        return entity_type
     return infer_observable_stix_object_type(observable_value(candidate))
 
 
@@ -864,19 +1303,67 @@ def attack_pattern_standard_id(candidate):
 
 def graph_object_standard_id(candidate, stix_object_type):
     candidate = mapping_from(candidate)
-    prefix = f"{clean_string(stix_object_type).lower()}--"
     for value in (candidate.get("standard_id"), candidate.get("stix_id")):
-        standard_id = normalize_stix_id(value, prefix)
+        standard_id = normalize_graph_object_stix_id(value, stix_object_type)
         if standard_id:
             return standard_id
 
     attributes = mapping_from(candidate.get("attributes"))
     for key in ("standard_id", "stix_id"):
-        standard_id = normalize_stix_id(attributes.get(key), prefix)
+        standard_id = normalize_graph_object_stix_id(
+            attributes.get(key),
+            stix_object_type,
+        )
         if standard_id:
             return standard_id
 
     return ""
+
+
+def threat_actor_class(candidate):
+    candidate = mapping_from(candidate)
+    attributes = mapping_from(candidate.get("attributes"))
+    for value in (
+        attributes.get("threat_actor_class"),
+        attributes.get("actor_class"),
+        attributes.get("actor_type"),
+        candidate.get("entity_type"),
+    ):
+        normalized = clean_string(value).casefold().replace("-", "_")
+        if normalized in {
+            "group",
+            "threat_actor",
+            "threat_actor_group",
+            "threatactorgroup",
+        }:
+            return "group"
+        if normalized in {
+            "individual",
+            "person",
+            "human",
+            "threat_actor_individual",
+            "threatactorindividual",
+        }:
+            return "individual"
+    return ""
+
+
+def normalize_graph_object_stix_id(value, stix_object_type):
+    for prefix in graph_object_standard_id_prefixes(stix_object_type):
+        standard_id = normalize_stix_id(value, f"{prefix}--")
+        if standard_id:
+            return standard_id
+    return ""
+
+
+def graph_object_standard_id_prefixes(stix_object_type):
+    stix_object_type = clean_string(stix_object_type).lower()
+    canonical_prefixes = {
+        "security-platform": ["identity", "security-platform"],
+        "x-mitre-data-component": ["data-component", "x-mitre-data-component"],
+        "x-mitre-data-source": ["data-source", "x-mitre-data-source"],
+    }
+    return canonical_prefixes.get(stix_object_type, [stix_object_type])
 
 
 def graph_object_name(candidate):

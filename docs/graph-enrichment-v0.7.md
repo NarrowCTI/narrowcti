@@ -156,9 +156,9 @@ graph, while NarrowCTI remains responsible for curation before graph promotion.
 | Sector/geography tags | sector `identity`, `location` | Victimology context. |
 | CVE attributes/tags | `vulnerability` | CVEs from tags, event text, attributes and object attributes become audit-only vulnerability candidates before future NVD enrichment and relationship export. |
 | EventReport / analyst notes | `note` | EventReport content becomes note evidence, candidates and safe in-memory STIX preview objects before controlled OpenCTI export. |
-| Attribute sightings | `sighting` | Attribute sightings become audit-only sighting evidence and candidates before future STIX sighting relationship export. |
-| Object references | `relationship` | MISP object references become audit-only relationship evidence and candidates before future STIX relationship export. |
-| Detection rule attributes | `indicator` | YARA, Sigma, Snort, Suricata and PCRE attributes become audit-only detection-rule candidates before future pattern-aware STIX indicator export. |
+| Attribute sightings | `sighting` | Attribute sightings become sighting evidence and can export as STIX sightings in v0.8 when the sighted Indicator target is resolvable. |
+| Object references | `relationship` | MISP object references become relationship evidence and can export as STIX relationships in v0.8 when both MISP UUID endpoints resolve to promoted graph objects. |
+| Detection rule attributes | `indicator` | YARA, Sigma, Snort, Suricata and PCRE attributes become detection-rule candidates and can export as pattern-aware STIX Indicators. |
 | Organization/sharing/TLP | markings and provenance | Do not lose handling constraints. |
 
 The code-level baseline from `opencti/connector-misp:6.9.4` shows that direct
@@ -202,25 +202,26 @@ validation.
 MISP attribute sighting audit extraction is implemented for event attributes
 and object attributes. NarrowCTI normalizes observed value, sighting id/type,
 date, source, organization and attribute/object context into `misp_sightings`,
-then emits audit-only `sighting` graph evidence and candidates. This preserves
-corroboration evidence for future OpenCTI sighting relationships without
-creating graph edges before relationship policy and validation are complete.
+then emits `sighting` graph evidence and candidates. In v0.8 the STIX builder
+can export a STIX Sighting when the sighted value resolves to an Indicator in
+the curated bundle. Sightings that only resolve to raw SCO observables remain
+held/skipped by the builder because STIX sighting targets must be SDOs.
 
 MISP object-reference audit extraction is implemented for object-level
 `ObjectReference` entries. NarrowCTI normalizes source object UUID, target UUID,
 MISP relationship type, reference UUID, comment and object context into
-`misp_object_references`, then emits audit-only `object_reference` /
-`relationship` graph evidence and candidates. This records relationship intent
-for future graph-aware STIX export without creating OpenCTI edges before
-relationship validation is complete.
+`misp_object_references`, then emits `object_reference` / `relationship` graph
+evidence and candidates. In v0.8 the STIX builder can export the relationship
+when both UUID endpoints resolve to graph objects promoted in the same bundle or
+to canonical existing objects.
 
 MISP detection-rule audit extraction is implemented for `yara`, `sigma`,
 `snort`, `suricata` and `pcre` attributes. NarrowCTI normalizes rule type,
 pattern type, raw pattern content, attribute UUID, tags and object context into
-`misp_detection_rules`, then emits audit-only `detection_rule` / `indicator`
-graph evidence and candidates. This preserves detection engineering content
-for future pattern-aware STIX indicator export without mixing it with normal
-IoC indicators too early.
+`misp_detection_rules`, then emits `detection_rule` / `indicator` graph
+evidence and candidates. Accepted candidates export as pattern-aware STIX
+Indicators, preserving detection engineering content separately from normal IoC
+Indicators.
 
 ### MITRE ATT&CK
 

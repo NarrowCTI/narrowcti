@@ -2,6 +2,7 @@ import json
 import unittest
 
 from exporters.opencti import send_bundle
+from exporters.stix_builder import deterministic_graph_object_id
 
 
 class OpenCTIExporterTests(unittest.TestCase):
@@ -41,6 +42,172 @@ class OpenCTIExporterTests(unittest.TestCase):
         self.assertTrue(has_sector_identity(objects, "Crypto"))
         self.assertIn("relationship", object_types(objects))
 
+    def test_audit_mode_does_not_create_native_security_platform(self):
+        api_client = FakeOpenCTIClient()
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [security_platform_candidate()]},
+            graph_export_mode="audit",
+        )
+
+        self.assertEqual([], api_client.security_platform_adds)
+        self.assertEqual([], api_client.report_object_refs)
+
+    def test_audit_mode_does_not_create_native_threat_actor_individual(self):
+        api_client = FakeOpenCTIClient()
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [threat_actor_individual_candidate()]},
+            graph_export_mode="audit",
+        )
+
+        self.assertEqual([], api_client.threat_actor_individual_adds)
+        self.assertEqual([], api_client.report_object_refs)
+
+    def test_export_mode_creates_native_security_platform(self):
+        api_client = FakeOpenCTIClient()
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [security_platform_candidate()]},
+            graph_export_mode="export",
+        )
+
+        objects = imported_objects(api_client)
+        self.assertNotIn("security-platform", object_types(objects))
+        self.assertEqual(
+            [
+                {
+                    "name": "NarrowCTI SIEM Validation",
+                    "update": True,
+                    "description": "Source-backed detection platform validation.",
+                    "security_platform_type": "SIEM",
+                    "confidence": 70,
+                }
+            ],
+            api_client.security_platform_adds,
+        )
+        self.assertEqual(
+            [
+                {
+                    "id": "report--internal",
+                    "input": {
+                        "toId": "security-platform--internal",
+                        "relationship_type": "object",
+                        "update": True,
+                    },
+                }
+            ],
+            api_client.report_object_refs,
+        )
+
+    def test_export_mode_creates_native_threat_actor_individual(self):
+        api_client = FakeOpenCTIClient()
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [threat_actor_individual_candidate()]},
+            graph_export_mode="export",
+        )
+
+        objects = imported_objects(api_client)
+        self.assertNotIn("threat-actor", object_types(objects))
+        self.assertEqual(
+            [
+                {
+                    "name": "NarrowCTI Individual Actor Validation",
+                    "update": True,
+                    "description": "Source-backed individual actor validation.",
+                    "confidence": 65,
+                    "aliases": ["Individual Actor Alias"],
+                    "threat_actor_types": ["crime-syndicate"],
+                    "primary_motivation": "financial-gain",
+                }
+            ],
+            api_client.threat_actor_individual_adds,
+        )
+        self.assertEqual(
+            [
+                {
+                    "id": "report--internal",
+                    "input": {
+                        "toId": "threat-actor-individual--internal",
+                        "relationship_type": "object",
+                        "update": True,
+                    },
+                }
+            ],
+            api_client.report_object_refs,
+        )
+
+    def test_export_mode_reuses_existing_native_security_platform(self):
+        api_client = FakeOpenCTIClient(existing_security_platform=True)
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [security_platform_candidate()]},
+            graph_export_mode="export",
+        )
+
+        self.assertEqual([], api_client.security_platform_adds)
+        self.assertEqual(
+            [
+                {
+                    "id": "report--internal",
+                    "input": {
+                        "toId": "security-platform--internal",
+                        "relationship_type": "object",
+                        "update": True,
+                    },
+                }
+            ],
+            api_client.report_object_refs,
+        )
+
+    def test_export_mode_reuses_existing_native_threat_actor_individual(self):
+        api_client = FakeOpenCTIClient(existing_threat_actor_individual=True)
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [threat_actor_individual_candidate()]},
+            graph_export_mode="export",
+        )
+
+        self.assertEqual([], api_client.threat_actor_individual_adds)
+        self.assertEqual(
+            [
+                {
+                    "id": "report--internal",
+                    "input": {
+                        "toId": "threat-actor-individual--internal",
+                        "relationship_type": "object",
+                        "update": True,
+                    },
+                }
+            ],
+            api_client.report_object_refs,
+        )
+
     def test_export_mode_references_existing_opencti_graph_objects(self):
         api_client = FakeOpenCTIClient()
         existing_attack_pattern_ref = (
@@ -69,6 +236,121 @@ class OpenCTIExporterTests(unittest.TestCase):
         self.assertIn(existing_attack_pattern_ref, report["object_refs"])
         self.assertEqual(existing_attack_pattern_ref, relationship["target_ref"])
 
+    def test_export_mode_hydrates_empty_existing_graph_description(self):
+        api_client = FakeOpenCTIClient(existing_description="")
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={
+                "accepted": [
+                    existing_target_sector_candidate(
+                        deterministic_graph_object_id(
+                            "identity",
+                            "Crypto",
+                            "Crypto",
+                            {"identity_class": "class"},
+                        ),
+                        "opencti-sector-id",
+                    )
+                ]
+            },
+            graph_export_mode="export",
+        )
+
+        self.assertEqual(
+            [
+                {
+                    "id": "opencti-sector-id",
+                    "input": [
+                        {
+                            "key": "description",
+                            "value": [
+                                "Source-backed target sector observed by otx: Crypto."
+                            ],
+                        }
+                    ],
+                }
+            ],
+            api_client.patches,
+        )
+
+    def test_export_mode_keeps_non_empty_existing_graph_description(self):
+        api_client = FakeOpenCTIClient(existing_description="Analyst maintained text.")
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={
+                "accepted": [
+                    existing_target_sector_candidate(
+                        deterministic_graph_object_id(
+                            "identity",
+                            "Crypto",
+                            "Crypto",
+                            {"identity_class": "class"},
+                        ),
+                        "opencti-sector-id",
+                    )
+                ]
+            },
+            graph_export_mode="export",
+        )
+
+        self.assertEqual([], api_client.patches)
+
+    def test_export_mode_hydrates_legacy_narrow_authored_graph_description(self):
+        api_client = FakeOpenCTIClient(
+            existing_description="",
+            existing_author="MISP via NarrowCTI",
+        )
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={
+                "accepted": [
+                    existing_target_sector_candidate(
+                        "identity--11111111-1111-4111-8111-111111111111",
+                        "opencti-sector-id",
+                    )
+                ]
+            },
+            graph_export_mode="export",
+        )
+
+        self.assertEqual(1, len(api_client.patches))
+
+    def test_export_mode_does_not_hydrate_external_graph_description(self):
+        api_client = FakeOpenCTIClient(
+            existing_description="",
+            existing_author="The MITRE Corporation",
+        )
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={
+                "accepted": [
+                    existing_target_sector_candidate(
+                        "identity--11111111-1111-4111-8111-111111111111",
+                        "opencti-sector-id",
+                    )
+                ]
+            },
+            graph_export_mode="export",
+        )
+
+        self.assertEqual([], api_client.patches)
+
     def test_repeated_report_exports_use_stable_report_id(self):
         api_client = FakeOpenCTIClient()
 
@@ -96,8 +378,158 @@ class OpenCTIExporterTests(unittest.TestCase):
 
 
 class FakeOpenCTIClient:
-    def __init__(self):
+    def __init__(
+        self,
+        existing_description=None,
+        existing_author="",
+        existing_security_platform=False,
+        existing_threat_actor_individual=False,
+    ):
         self.stix2 = FakeStix2()
+        self.existing_description = existing_description
+        self.existing_author = existing_author
+        self.existing_security_platform = existing_security_platform
+        self.existing_threat_actor_individual = existing_threat_actor_individual
+        self.patches = []
+        self.security_platform_adds = []
+        self.threat_actor_individual_adds = []
+        self.report_object_refs = []
+
+    def query(self, query, variables=None):
+        variables = variables or {}
+        if "threatActorsIndividuals" in query:
+            edges = []
+            if self.existing_threat_actor_individual:
+                edges.append(
+                    {
+                        "node": {
+                            "id": "threat-actor-individual--internal",
+                            "standard_id": (
+                                "threat-actor--55555555-5555-4555-8555-"
+                                "555555555555"
+                            ),
+                            "entity_type": "Threat-Actor-Individual",
+                            "name": variables["filters"]["filters"][0]["values"][0],
+                            "aliases": ["Individual Actor Alias"],
+                            "threat_actor_types": ["crime-syndicate"],
+                        }
+                    }
+                )
+            return {"data": {"threatActorsIndividuals": {"edges": edges}}}
+        if "threatActorIndividualAdd" in query:
+            self.threat_actor_individual_adds.append(
+                dict(variables.get("input") or {})
+            )
+            return {
+                "data": {
+                    "threatActorIndividualAdd": {
+                        "id": "threat-actor-individual--internal",
+                        "standard_id": (
+                            "threat-actor--55555555-5555-4555-8555-"
+                            "555555555555"
+                        ),
+                        "entity_type": "Threat-Actor-Individual",
+                        "name": variables.get("input", {}).get("name"),
+                        "aliases": variables.get("input", {}).get("aliases"),
+                        "threat_actor_types": variables.get("input", {}).get(
+                            "threat_actor_types"
+                        ),
+                    }
+                }
+            }
+        if "securityPlatforms" in query:
+            edges = []
+            if self.existing_security_platform:
+                edges.append(
+                    {
+                        "node": {
+                            "id": "security-platform--internal",
+                            "standard_id": (
+                                "identity--44444444-4444-4444-8444-444444444444"
+                            ),
+                            "entity_type": "SecurityPlatform",
+                            "name": variables["filters"]["filters"][0]["values"][0],
+                            "security_platform_type": "SIEM",
+                        }
+                    }
+                )
+            return {"data": {"securityPlatforms": {"edges": edges}}}
+        if "securityPlatformAdd" in query:
+            self.security_platform_adds.append(dict(variables.get("input") or {}))
+            return {
+                "data": {
+                    "securityPlatformAdd": {
+                        "id": "security-platform--internal",
+                        "standard_id": (
+                            "identity--44444444-4444-4444-8444-444444444444"
+                        ),
+                        "entity_type": "SecurityPlatform",
+                        "name": variables.get("input", {}).get("name"),
+                        "security_platform_type": variables.get("input", {}).get(
+                            "security_platform_type"
+                        ),
+                    }
+                }
+            }
+        if "reports" in query:
+            filter_item = (variables.get("filters", {}).get("filters") or [{}])[0]
+            key = filter_item.get("key")
+            value = (filter_item.get("values") or ["Curated report"])[0]
+            return {
+                "data": {
+                    "reports": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "report--internal",
+                                    "standard_id": value
+                                    if key == "standard_id"
+                                    else "report--fake",
+                                    "entity_type": "Report",
+                                    "name": value if key == "name" else "Curated report",
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        if "reportEdit" in query and "relationAdd" in query:
+            self.report_object_refs.append(
+                {
+                    "id": variables.get("id"),
+                    "input": variables.get("input"),
+                }
+            )
+            return {
+                "data": {
+                    "reportEdit": {
+                        "relationAdd": {
+                            "id": "object--internal",
+                            "entity_type": "object",
+                            "relationship_type": variables.get("input", {}).get(
+                                "relationship_type"
+                            ),
+                        }
+                    }
+                }
+            }
+        if "stixDomainObjectEdit" in query:
+            self.patches.append(
+                {
+                    "id": variables.get("id"),
+                    "input": variables.get("input"),
+                }
+            )
+            return {"data": {"stixDomainObjectEdit": {"fieldPatch": {}}}}
+        return {
+            "data": {
+                "stixDomainObject": {
+                    "id": variables.get("id"),
+                    "createdBy": {"name": self.existing_author},
+                    "description": self.existing_description,
+                }
+            }
+        }
 
 
 class FakeStix2:
@@ -158,6 +590,35 @@ def target_sector_candidate():
     }
 
 
+def security_platform_candidate():
+    return {
+        "fingerprint": "security-platform-siem",
+        "entity_type": "security_platform",
+        "value": "NarrowCTI SIEM Validation",
+        "name": "NarrowCTI SIEM Validation",
+        "stix_object_type": "security-platform",
+        "relationship_type": "related-to",
+        "source_key": "misp:misp",
+        "source_name": "misp",
+        "source_field": "security_platform",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "description": "Source-backed detection platform validation.",
+            "security_platform_type": "SIEM",
+        },
+    }
+
+
+def existing_target_sector_candidate(existing_ref, existing_id):
+    candidate = target_sector_candidate()
+    candidate["attributes"] = {
+        "opencti_existing_ref": existing_ref,
+        "opencti_existing_id": existing_id,
+    }
+    return candidate
+
+
 def threat_actor_candidate():
     return {
         "fingerprint": "actor-example",
@@ -171,6 +632,29 @@ def threat_actor_candidate():
         "source_field": "adversary",
         "confidence": 80,
         "relationship_confidence": 75,
+    }
+
+
+def threat_actor_individual_candidate():
+    return {
+        "fingerprint": "actor-individual-example",
+        "entity_type": "threat_actor_individual",
+        "value": "NarrowCTI Individual Actor Validation",
+        "name": "NarrowCTI Individual Actor Validation",
+        "stix_object_type": "threat-actor",
+        "relationship_type": "attributed-to",
+        "source_key": "misp:misp",
+        "source_name": "misp-galaxy",
+        "source_field": "Galaxy.threat-actor-individual",
+        "confidence": 65,
+        "relationship_confidence": 65,
+        "attributes": {
+            "description": "Source-backed individual actor validation.",
+            "aliases": ["Individual Actor Alias"],
+            "threat_actor_types": ["crime-syndicate"],
+            "primary_motivation": "financial-gain",
+            "threat_actor_class": "individual",
+        },
     }
 
 

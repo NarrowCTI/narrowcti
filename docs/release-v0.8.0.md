@@ -26,6 +26,10 @@ Curation reporting is tracked in `docs/curation-reporting-v0.8.md`.
 Support diagnostics are tracked in `docs/support-diagnostics-v0.8.md`.
 Infrastructure ASN/IP correlation is tracked in
 `docs/infrastructure-correlation-v0.8.md`.
+OpenCTI post-ingestion reasoning alignment is tracked in
+`docs/opencti-rules-engine-v0.8.md`.
+OpenCTI tab/export coverage is tracked in
+`docs/opencti-coverage-matrix-v0.8.md`.
 
 ## Initial Scope
 
@@ -112,9 +116,93 @@ Infrastructure ASN/IP correlation is tracked in
   `Infrastructure -> consists-of -> ASN`, `Infrastructure -> consists-of -> IP`,
   `Infrastructure -> consists-of -> CIDR`, `IP -> belongs-to -> ASN` and
   `CIDR -> belongs-to -> ASN` relationships.
+- Added OTX adversary hygiene for graph promotion. OTX `adversary` now maps to
+  `intrusion_set` so group-style source values can resolve to canonical ATT&CK
+  Intrusion Set objects instead of creating duplicate generic Threat Actor
+  objects.
+- Added a curated Intrusion Set alias group for `Lazarus` so OTX source values
+  resolve to existing OpenCTI `Lazarus Group` when the MITRE connector has
+  already populated that object.
+- Added OTX source hygiene to suppress `malware_families` values that equal the
+  adversary name, preventing noisy source metadata from creating incorrect
+  Arsenal entries such as `Malware Lazarus`.
+- Added OTX inferred infrastructure promotion for bounded, source-backed cases:
+  when an OTX pulse has exactly one adversary and at least one network
+  observable, NarrowCTI creates a curated Infrastructure candidate and links
+  network observables to it with `consists-of`.
+- Added direct OTX inferred-infrastructure TTP relationships: when the same
+  single-adversary pulse provides ATT&CK ids, NarrowCTI now exports
+  `Infrastructure -> related-to -> Attack Pattern` relationships so the OpenCTI
+  Infrastructure view can receive curated ATT&CK context. Local OpenCTI 6.9.4
+  rejects `Infrastructure -> uses -> Attack Pattern`, so `related-to` is used
+  for this object pair.
+- Tightened graph candidate fingerprints so the same ATT&CK technique can keep
+  distinct actor-anchored and infrastructure-anchored relationships without one
+  export action shadowing the other.
+- Stopped promoting OTX author/source provenance as a graph `Organization`
+  object. The provenance remains visible through report author/audit metadata,
+  while Organizations stay reserved for meaningful CTI entities such as
+  victimology or source-backed targets.
+- Validated a real OTX actor-infrastructure export against OpenCTI using pulse
+  `61f9392ac64510da57b9cdf9`. The import referenced the existing
+  `Intrusion-Set Lazarus Group`, created `Infrastructure Lazarus OTX observed
+  infrastructure 61f9392a`, linked it to `markettrendingcenter.com` and
+  `lm-career.com`, linked Lazarus Group to sector `Defense`, and referenced 10
+  canonical ATT&CK techniques with kill-chain phase coverage.
+- Revalidated the same OTX infrastructure object after OpenCTI rejected
+  `Infrastructure -> uses -> Attack Pattern`. The final compatible import
+  created 10 queryable `Infrastructure -> related-to -> Attack Pattern`
+  relationships with kill-chain phase metadata on the canonical ATT&CK
+  targets.
+- Cleaned the prior validation Report association that had promoted OTX pulse
+  author `hitip_forever` as an `Organization` object. The final Report object
+  set contains the expected Sector `Defense` and keeps `OTX AlienVault` only as
+  report author metadata.
 - Documented Report hygiene evidence: deterministic Report ids prevent another
   row when name and description are unchanged; a changed description is treated
   as a distinct report by design.
+- Added OTX source-provided ASN/netblock extraction. OTX indicators with
+  `ASN`/`AS` values now produce `autonomous_system` graph candidates, and
+  `CIDR`/`netblock` style indicators are normalized as IP observables with
+  CIDR values. When the pulse has one adversary, these source-backed network
+  objects attach to the inferred Infrastructure with `consists-of`; without a
+  single adversary they remain related evidence and are not attributed to an
+  Infrastructure object.
+- Added `docs/opencti-rules-engine-v0.8.md` to document the difference between
+  NarrowCTI pre-ingestion curation and OpenCTI post-ingestion inference rules.
+  The local OpenCTI 6.9.4 lab has the rule manager active, no manager errors
+  and all 20 inference rules disabled. The documented posture is to activate
+  rules one at a time after NarrowCTI graph export evidence is clean.
+- Added MISP infrastructure object extraction for `asn`, `netblock`,
+  `domain-ip` and `ip-port` objects. These now produce graph candidates for
+  Infrastructure, Autonomous-System and concrete network Observables with
+  source-backed `Infrastructure -> consists-of -> Observable/ASN` and
+  `IP/CIDR -> belongs-to -> ASN` relationships when the MISP object carries
+  the required metadata.
+- Added direct MISP event lookup for bounded validation through
+  `MISP_QUERIES=event:<id>`, `event-id:<id>`, `id:<id>` or `uuid:<uuid>`.
+  This avoids broad `events/restSearch` scans when an operator needs to
+  validate one curated event or replay a known MISP object payload.
+- Validated controlled MISP infrastructure export against OpenCTI using local
+  MISP event `4390`
+  (`NarrowCTI MISP infrastructure export validation 1782423797`). The local
+  MISP dataset did not contain real feed samples with `asn`, `netblock`,
+  `domain-ip` or `ip-port` objects in the first 250 reviewed events, so the
+  validation event used official MISP object templates for `asn`, `domain-ip`
+  and `ip-port`.
+- The MISP validation imported two Infrastructure objects, one
+  `Autonomous-System`, one domain observable, three IPv4 observables, and
+  queryable `Infrastructure -> consists-of -> Observable/ASN` plus
+  `IP/CIDR -> belongs-to -> ASN` relationships. The Report object refs stayed
+  limited to graph intelligence objects; MISP source provenance remained
+  report author/audit metadata and was not promoted as an Organization object.
+- Added safe graph export defaults for real `export` mode. When no operator
+  allow-list is provided, NarrowCTI now accepts source-backed CTI objects such
+  as infrastructure, ASN, observables, sector/location, arsenal, ATT&CK and
+  reports, while holding feed bookkeeping candidates such as `collector`,
+  `source_identity`, labels and markings out of automatic graph promotion.
+  Audit and dry-run remain broad for visibility, and explicit allow-lists can
+  still override the default.
 - Added decision audit report file output and an `ops` profile service so
   graph lookup and curation decision evidence can be archived from the gateway
   state volume.
@@ -132,13 +220,13 @@ Infrastructure ASN/IP correlation is tracked in
 - Added unit coverage for MITRE attack-pattern lookup, fail-open behavior,
   STIX-id fallback, unsupported candidate handling and composite lookup
   merging.
-- Added the first license and feature gate inventory foundation through
-  edition/capability defaults, `NARROWCTI_LICENSE_*` settings and preflight
-  reporting. This is observable product-operations plumbing only; runtime
-  entitlement blocking remains pending.
-- Added disabled-capability visibility to feature gate state and preflight
-  output so support can see which known product capabilities are outside the
-  declared edition or explicit override.
+- Added the open source capability inventory foundation through
+  `NARROWCTI_CAPABILITIES` and preflight reporting. This is observable
+  product-operations plumbing only; it is not runtime commercial activation
+  blocking.
+- Added distribution posture and capability visibility to preflight output so
+  operators can see `distribution_model=open_source`, enabled capabilities,
+  declared capabilities and unknown capability declarations.
 - Added the first v0.8 deployment operations package:
   `deployment/docker-compose.narrowcti-gateway.yml`,
   `deployment/gateway.env.example` and
@@ -251,14 +339,15 @@ Infrastructure ASN/IP correlation is tracked in
 - Added HTML output for the operational validation checklist so operators and
   support can review v0.8 graph-promotion evidence in a local browser without
   opening raw decision audit files.
-- Added source-aware author identity hygiene for exported STIX bundles. OTX and
-  MISP exports now use upstream source identities such as `OTX AlienVault` and
-  `MISP` as OpenCTI Author values, while NarrowCTI provenance remains in audit
-  metadata and graph custom properties. Author identities are deterministic to
-  avoid creating duplicate OpenCTI identity objects for repeated exports.
+- Added source-aware author identity hygiene for exported STIX bundles. New
+  exports use the `<logical upstream source> via NarrowCTI` convention, such as
+  `OTX AlienVault via NarrowCTI` and `MISP via NarrowCTI`, as OpenCTI Author
+  values. NarrowCTI provenance remains in audit metadata and graph custom
+  properties. Author identities are deterministic to avoid creating duplicate
+  OpenCTI identity objects for repeated exports.
 - Added `reports.operational_validation` to the preflight-visible capability
   inventory so the v0.8 validation checklist is represented in product
-  operations and future licensing controls.
+  operations and support diagnostics.
 - Added operational validation status to support diagnostics text, HTML, JSON
   and bundle output so support can see which v0.8 validation criteria have
   passed, failed or still need lab evidence.
@@ -315,6 +404,200 @@ Infrastructure ASN/IP correlation is tracked in
   Report-id run created one canonical Report for the already-duplicated LummaC2
   title, and the second run kept the OpenCTI Report count unchanged while
   linking the Report to canonical `Malware` `Lumma Stealer`.
+- Finished the next graph export activation layer for accepted rich context:
+  MITRE data-source candidates now materialize as OpenCTI Data Source objects;
+  detection guidance and MISP EventReports materialize as Notes; detection
+  rules materialize as pattern-aware Indicators; MISP `ObjectReference` entries
+  materialize as STIX Relationships when both UUID endpoints resolve to graph
+  objects; and MISP sightings materialize as STIX Sightings when the sighted
+  value resolves to an Indicator. MITRE tactic and platform candidates remain
+  preserved as curated evidence/context but are held out of the default export
+  gate because local OpenCTI import validation did not materialize them as
+  useful first-class objects. Unresolved relationship-only evidence remains
+  skipped rather than creating unsafe graph edges.
+- Validated the rich export activation layer against local OpenCTI 6.9.4 with
+  `NarrowCTI clean export activation validation 20260625` and
+  `NarrowCTI object reference export validation 20260625`. OpenCTI accepted the
+  Data Source, Note, Sighting, Indicator, Malware, Infrastructure, Report and
+  relationship outputs from the controlled bundles.
+- Consolidated real ATT&CK lookup evidence for the v0.8 operational checklist:
+  the OTX Lazarus validation produced canonical matches for `Lazarus Group` and
+  10 ATT&CK techniques, while the MISP REDBANC validation produced canonical
+  ATT&CK matches for seven to eight techniques depending on the replay state.
+  The decision-audit records show lookup-backed `existing_reference_counts`
+  instead of new duplicate ATT&CK objects.
+- Added the OpenCTI coverage matrix for v0.8. The matrix maps Threats,
+  Arsenal, Techniques, Entities, Locations, Observations, Reports, Notes,
+  Relationships, Sightings and knowledge views to current NarrowCTI export
+  status, guardrails and backlog order.
+- Added controlled deep Location export support. Source-backed region,
+  administrative-area, city and coordinate evidence can now become native STIX
+  `Location` fields (`region`, `country`, `administrative_area`, `city`,
+  `latitude`, `longitude`, `precision`). MISP Galaxy meta aliases for
+  state/province, city and coordinates are accepted, but real OpenCTI UI
+  validation is still required before marking those tabs as validated exports.
+- Added source-backed Campaign support from MISP Galaxy evidence. Campaign
+  candidates now enter the safe export allow-list, can be emitted as STIX
+  `campaign` objects, query OpenCTI by name before creation and can anchor
+  relationships such as `Campaign -> targets -> Sector` when the Galaxy meta
+  fields support victimology.
+- Added victimology-grade target Organization support from explicit MISP Galaxy
+  metadata such as `targeted-organization` and `victim-organization`. These
+  values are exported as Organization-class Identity objects only when they are
+  target metadata; feed authors, collectors and source provenance remain held
+  out of graph promotion by default.
+- Added MITRE Data Component support from source-backed ATT&CK data source
+  strings such as `Process: Process Creation`. NarrowCTI now emits
+  `x-mitre-data-component` candidates and `Data Component -> detects -> Attack
+  Pattern` relationships when the source string contains component-level
+  detail; strings without a component remain Data Source-only.
+- Added source-backed Course of Action support for explicit MISP Galaxy
+  `course-of-action` evidence. Free-form detection guidance still exports as
+  Notes instead of being promoted as mitigation objects without source support.
+- Validated the newest matrix export targets against local OpenCTI 6.9.4 with
+  `NarrowCTI Matrix Live 20260626 report`. OpenCTI materialized Campaign,
+  target Sector, target Organization, MITRE Data Source, MITRE Data Component
+  and Course of Action objects, referenced existing canonical ATT&CK `T1059`
+  instead of creating a duplicate Attack Pattern, and exposed queryable
+  `Campaign -> targets -> Organization`, `Campaign -> targets -> Sector` and
+  `Data Component -> detects -> Attack Pattern` relationships.
+- Extended read-only OpenCTI graph lookup to matrix Technique objects:
+  `Course-Of-Action` through `coursesOfAction`, `Data-Component` through
+  `dataComponents` and `Data-Source` through `dataSources`. Export planning now
+  accepts OpenCTI canonical `data-component--` and `data-source--` references
+  for NarrowCTI `x-mitre-*` candidates, reducing duplicate Technique context in
+  repeated graph exports.
+- Expanded controlled Organization victimology mapping for MISP Galaxy metadata.
+  Source-backed fields such as `targeted-company`, `targeted-entity`,
+  `victim-org`, `victim-company`, `victim`, `affected-organization` and
+  `impacted-company` can now promote target Organization candidates. Guardrails
+  reject feed/provenance values, URLs, domains, emails, ATT&CK ids and CVEs as
+  target Organizations.
+- Extended read-only OpenCTI graph lookup to target identities: target
+  Organizations resolve through `organizations`, target Sectors resolve through
+  `sectors`, target Individuals resolve through `individuals`, and source
+  identity or collector provenance remains outside automatic Organization
+  lookup.
+- Added controlled target Individual export for explicit victimology/person
+  evidence such as `targeted-person`, `target-individual`, `victim-individual`,
+  `affected-person` and `impacted-person`. NarrowCTI emits STIX Identity
+  objects with `identity_class=individual`, rejects unsafe provenance,
+  observable-like or numeric-only values, and keeps this separate from Threat
+  Actor Individual taxonomy. Live validation with
+  `NarrowCTI Matrix Individual Builder Validation 20260626B` produced exactly
+  one OpenCTI `Individual`, one Report link and a deduplicated follow-up lookup
+  with `would_create_object_count=0`.
+- Added explicit Threat Actor group/individual taxonomy for MISP Galaxy
+  evidence. Default MISP threat-actor evidence is tagged as
+  `threat_actor_class=group` and uses OpenCTI `threatActorsGroup` lookup.
+  Explicit individual actor evidence is classified as `threat_actor_individual`
+  with `threat_actor_class=individual`, uses `threatActorsIndividuals` lookup,
+  is excluded from generic STIX `threat-actor` bundle import and is exported
+  through native OpenCTI `threatActorIndividualAdd(update=true)`. Live
+  validation with
+  `NarrowCTI Matrix Threat Actor Individual Native Validation 20260626B`
+  produced exactly one OpenCTI `Threat-Actor-Individual`, one Report link and a
+  deduplicated follow-up lookup with `would_create_object_count=0`.
+- Added the first offline IP-to-ASN enrichment provider interface for MISP
+  infrastructure evidence. `NARROWCTI_IP_ASN_ENRICHMENT_FILE` can point to a
+  local CSV, JSON, JSONL or `records`/`prefixes` JSON file with CIDR and ASN
+  metadata. The provider uses longest-prefix matching and emits explicit
+  `IP/CIDR -> belongs-to -> ASN` evidence with enrichment provenance; it is
+  disabled by default and does not invent actor or Infrastructure attribution.
+- Validated a controlled real MISP ingestion against OpenCTI using local MISP
+  event `1525` (`Trickbot to Ryuk in Two Hours`). The import created the report
+  `NarrowCTI real MISP ingestion validation 20260626` authored by
+  `MISP via NarrowCTI`, exported 25 IoC indicators, accepted 24 graph
+  candidates, referenced seven existing ATT&CK objects and created 23
+  report-to-ATT&CK relationships. The validation also identified a final
+  polish item: detection-rule evidence exported as a generic STIX Indicator
+  needs OpenCTI placement review before production-ready enablement.
+- The same real MISP validation confirmed that standalone IP IoCs remain
+  normal Indicators/Observables unless source-backed Infrastructure evidence is
+  present. The IP `206.81.5.253` was queryable as an Indicator and was not
+  attached to Infrastructure because that source event did not provide
+  infrastructure context.
+- Rebuilt and started the `narrowcti/gateway:local` container on the same Docker
+  network as OpenCTI and MISP for fidelity-sensitive validation. A controlled
+  MISP `event:1525` container run confirmed OpenCTI health check, MISP HTTP 200
+  access, IOC guardrail enforcement and policy drop behavior without creating a
+  new live ingestion. The next real export evidence should use an
+  infrastructure-bearing payload where IP/domain/CIDR/ASN evidence attaches to
+  Infrastructure through OpenCTI-compatible relationships.
+- Ran a bounded real MISP export through the rebuilt gateway using local MISP
+  `event:1` (`URLHaus Malware URLs feed`). The event had 22,732 attributes; the
+  run truncated processing to 500 attributes and exported 10 IoC indicators.
+  The candidate scored 70 and ingested successfully. OpenCTI contains the
+  Report `URLHaus Malware URLs feed` authored by `MISP via NarrowCTI`.
+  Vulnerability lookup found existing OpenCTI objects for
+  `CVE-2026-24061`, `CVE-2025-55182`, `CVE-2025-14847`, `CVE-2025-54424`,
+  `CVE-2026-20841` and `CVE-2025-66398`, so NarrowCTI emitted report-context
+  relationships without duplicating those Vulnerability objects. Collector,
+  source identity and feed tag candidates were held by policy as expected.
+- After enabling MISP OSINT feeds, validated richer MISP Galaxy exports with
+  bounded historical replay settings. `event:14` (`OSINT - Packrat: Seven Years
+  of a South American Threat Actor`) materialized `Packrat` as an OpenCTI
+  `Threat-Actor-Group`, created Sectors for `Activists`, `Journalist` and
+  `Political party`, and created three `Packrat -> targets -> Sector`
+  relationships. `event:152` (`OSINT - APT Case RUAG Technical Report`)
+  materialized Arsenal Tools `Turla` and `Wipbot` and linked the Report to both
+  Tools. Both reports were authored as `MISP via NarrowCTI`.
+- Added source-backed description preservation and safe existing-object
+  description hydration for graph exports. Source-provided descriptions are
+  included in promoted STIX objects when feeds provide them. Target-context
+  objects without native descriptions receive short provenance-backed
+  descriptions, for example `Packrat targets Activists`, and existing objects
+  are patched through OpenCTI only when their description is empty and they are
+  NarrowCTI-owned. A controlled MISP `event:14` replay confirmed that `Packrat`
+  received its MISP Galaxy description and that `Activists`, `Journalist` and
+  `Political party` received target-sector provenance descriptions without
+  changing non-empty analyst-maintained descriptions or canonical third-party
+  ownership.
+- Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
+  `x_opencti_location_type` for `target_region`, `target_country`,
+  `target_administrative_area`, `target_city` and `target_position` so OpenCTI
+  materializes source-backed geography as the intended UI object instead of
+  relying on generic STIX Location heuristics. Controlled validation with
+  `NarrowCTI Matrix Location Type Validation 20260626B` confirmed `Region`,
+  `Administrative-Area`, `City` and `Position` objects plus four actor
+  `targets` relationships. `Position` preserved latitude, longitude and
+  precision. The remaining gap is validating the same path with real OTX/MISP
+  payloads that carry deeper victimology geography.
+- Added controlled OpenCTI custom SDO export for matrix Channels, Narratives
+  and Events. NarrowCTI now emits the required OpenCTI `extension-definition`
+  when `channel`, `narrative` or `event` candidates are accepted, preserves
+  aliases and type-specific fields such as `channel_types`, `narrative_types`,
+  `event_types`, `start_time` and `stop_time`, and queries OpenCTI `channels`,
+  `narratives` and `events` before creating new objects. MISP EventReports
+  still remain Reports/Notes by default until a source-specific mapper proves a
+  real CTI Event. Live validation with
+  `NarrowCTI Matrix Custom SDO Builder Validation 20260626C` materialized one
+  Channel, one Narrative and one Event in OpenCTI with the expected aliases,
+  type fields and Event timestamps.
+- Added controlled System export for source-backed `target_system` candidates.
+  NarrowCTI emits STIX Identity objects with `identity_class=system` and
+  resolves existing OpenCTI Systems through `systems` lookup.
+- Added controlled native Security Platform export for explicit
+  `security_platform` candidates. NarrowCTI keeps Security Platform out of the
+  STIX Identity bundle path because `identity_class=securityplatform`
+  materialized as Organization in the local lab. Instead, export mode queries
+  `securityPlatforms` and creates missing objects with
+  `securityPlatformAdd(update=true)`. Live validation with
+  `NarrowCTI Matrix Security Platform Native Validation 20260626B` materialized
+  exactly one OpenCTI `SecurityPlatform` with type `SIEM`, and repeated export
+  deduplicated through OpenCTI lookup. Follow-up validation with
+  `NarrowCTI Matrix Security Platform Report Link Validation 20260626C`
+  confirmed that the full export path links native Security Platforms back to
+  the imported Report through OpenCTI `reportEdit.relationAdd(object)`; two
+  exports produced one platform, one report and one report-context link.
+- Added controlled Artifact export for explicit artifact metadata. NarrowCTI
+  now emits STIX Artifact observables only when the candidate is explicitly
+  typed as `artifact` and provides a hash algorithm/value, preserves optional
+  URL and MIME metadata, and resolves existing OpenCTI Artifacts through
+  `stixCyberObservables` by hash. Live validation with
+  `NarrowCTI Matrix Artifact Builder Validation 20260626B` materialized exactly
+  one OpenCTI `Artifact`; generic file hashes remain file observables or
+  Indicators and are not promoted as Artifacts automatically.
 
 ## Promotion Boundary
 
@@ -343,12 +626,12 @@ bundle and can create report-context or semantic relationships to it.
 
 ## Product Operations Boundary
 
-The v0.8 license and feature gate foundation is intentionally non-invasive.
-`gateway.preflight` reports edition, customer id, license-file configuration,
-active capabilities and strict-gate status so support and deployment teams can
-verify product state before a run. If `NARROWCTI_FEATURE_GATES_ENFORCED=true`
-is configured without `NARROWCTI_LICENSE_FILE`, preflight fails. Source runtime
-blocking by capability is not enabled in this release.
+The v0.8 capability inventory foundation is intentionally non-invasive.
+`gateway.preflight` reports `distribution_model=open_source`,
+`open_source=true`, declared capabilities, unknown declarations and active
+capability inventory so support and deployment teams can verify product state
+before a run. Source runtime blocking by capability is not enabled in this
+release.
 
 The deployment template is also conservative by design. It uses dry-run,
 run-once and audit graph mode defaults, joins an existing OpenCTI Docker network

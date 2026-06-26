@@ -47,6 +47,7 @@ class MISPSettings:
     graph_export_mode: str
     graph_dedup_state_file: str
     opencti_graph_lookup: bool
+    ip_asn_enrichment_file: str
     state_file: str
     decision_audit_file: str
     quarantine_repository_file: str = ""
@@ -190,6 +191,7 @@ def load_settings():
         ),
         graph_dedup_state_file=os.getenv("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
         opencti_graph_lookup=env_bool("NARROWCTI_OPENCTI_GRAPH_LOOKUP", False),
+        ip_asn_enrichment_file=os.getenv("NARROWCTI_IP_ASN_ENRICHMENT_FILE", ""),
         state_file=os.getenv("MISP_STATE_FILE", "/app/state/misp_state.json"),
         decision_audit_file=os.getenv("MISP_DECISION_AUDIT_FILE", ""),
         quarantine_repository_file=os.getenv(

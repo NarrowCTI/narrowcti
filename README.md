@@ -249,6 +249,13 @@ Bounded lab validation for this track is described in
 reporting and support diagnostics are tracked in the dedicated v0.8 documents
 under `docs/`.
 
+The relationship between NarrowCTI curation and OpenCTI post-ingestion
+inference rules is documented in `docs/opencti-rules-engine-v0.8.md`.
+NarrowCTI owns source-backed pre-ingestion decisions; OpenCTI Rules Engine can
+optionally infer additional relationships after the curated graph exists.
+OpenCTI tab coverage, current export status and backlog boundaries are tracked
+in `docs/opencti-coverage-matrix-v0.8.md`.
+
 ## Curation Configuration
 
 Curation controls must be visible in configuration and then applied
@@ -286,18 +293,43 @@ instead of duplicating it. Graph SDOs created by NarrowCTI also use
 deterministic STIX ids so repeated exports of the same curated object converge
 on the same OpenCTI `standard_id`.
 
+When real graph export is enabled without an explicit allow-list, NarrowCTI
+uses a safe default allow-list. It promotes source-backed CTI objects such as
+infrastructure, ASN, observables, sectors, locations, arsenal, ATT&CK,
+vulnerabilities and reports, while keeping feed bookkeeping such as collector,
+source identity, labels and markings in author/audit metadata unless the
+operator explicitly opts into those graph candidate types.
+
+The v0.8 graph bundle also activates richer export targets when they are
+resolvable: MITRE data-source context can travel as a curated Data Source
+anchored to the ATT&CK technique; detection guidance and MISP EventReports
+travel as Notes; YARA/Sigma/Snort/Suricata/PCRE rules travel as pattern-aware
+Indicators; MISP ObjectReferences become STIX Relationships when both UUID
+endpoints resolve to graph objects; and MISP sightings become STIX Sightings
+when the sighted value resolves to an Indicator. MITRE tactic and platform
+values remain preserved as curated context/evidence and are not part of the
+default export gate until OpenCTI import behavior is validated for those as
+first-class objects. Unresolved relationship-only evidence stays out of the
+bundle instead of creating unsafe OpenCTI edges.
+
 Infrastructure promotion is intentionally conservative: raw domains, IPs and
 URLs continue to be handled as Indicators or Observables unless source metadata
 or review policy explicitly supports a STIX `infrastructure` candidate. This
 keeps `Observations / Infrastructures` useful for curated threat infrastructure
 instead of turning it into another raw IOC bucket.
 
-For audit visibility, exported STIX bundles now use the upstream source as the
-OpenCTI Author where NarrowCTI can resolve it. OTX exports appear as
-`OTX AlienVault`, MISP exports appear as `MISP`, and future adapters should
-define their own source identity mapping. NarrowCTI still remains visible as
-the curation gateway through decision audit records, curation reports, export
-plans and `x_narrowcti_*` graph metadata.
+For audit visibility, exported STIX bundles now use a source-aware OpenCTI
+Author naming convention:
+
+```text
+<logical upstream source> via NarrowCTI
+```
+
+OTX exports appear as `OTX AlienVault via NarrowCTI`, MISP exports appear as
+`MISP via NarrowCTI`, and future adapters should define their own source
+identity mapping with the same suffix. NarrowCTI also remains visible through
+decision audit records, curation reports, export plans and `x_narrowcti_*`
+graph metadata.
 
 The full configuration reference is tracked in
 `docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in
@@ -362,6 +394,10 @@ MISP_TAGS=tlp:green
 MISP_PUBLISHED_ONLY=true
 MISP_OVERSIZED_EVENT_ACTION=skip
 ```
+
+For precise replay of a known MISP event during validation, use
+`MISP_QUERIES=event:<id>` or `MISP_QUERIES=uuid:<uuid>` instead of a broad
+search.
 
 
 Initial v0.5 gateway runtime command for development validation:
@@ -522,6 +558,7 @@ docs/deployment-operations-v0.8.md
 docs/analyst-review-v0.8.md
 docs/curation-reporting-v0.8.md
 docs/support-diagnostics-v0.8.md
+docs/opencti-coverage-matrix-v0.8.md
 docs/quarantine-enrichment-v0.6.md
 docs/architecture-v0.7.md
 docs/graph-enrichment-v0.7.md
@@ -539,14 +576,14 @@ docs/product-architecture-validation-v0.5.md
 docs/market-positioning-v1.0.md
 docs/post-v1-ml-roadmap.md
 docs/roadmap.md
-docs/licensing-strategy.md
+docs/open-source-strategy.md
 ```
 
 ## Roadmap
 
-- Product foundation and commercial licensing structure.
-- v0.8 preflight-visible edition and feature gate inventory for offline-first
-  commercial packaging.
+- Open source product foundation with Apache-2.0 core distribution.
+- v0.8 preflight-visible capability inventory for transparent open source
+  operations.
 - Multi-feed support beyond the reference OTX adapter.
 - Advanced correlation scoring and analyst-facing source evidence.
 - Richer scoring model with source-specific weighting.
@@ -569,12 +606,13 @@ docs/licensing-strategy.md
 
 ## License
 
-NarrowCTI is being prepared as proprietary commercial software. See:
+NarrowCTI core is open source under Apache-2.0. See:
 
 ```text
 LICENSE
 THIRD_PARTY_NOTICES.md
+docs/open-source-strategy.md
 ```
 
-The current license notice is an initial product foundation and should be
-reviewed by qualified legal counsel before commercial distribution.
+Future paid services, managed deployments or optional separate modules should
+sit around the open source core rather than restricting the core gateway.

@@ -4,9 +4,9 @@ from core.feed_contract import slugify
 DEFAULT_CURATION_IDENTITY_NAME = "NarrowCTI Gateway"
 
 CANONICAL_SOURCE_IDENTITIES = {
-    "alienvault:otx": "OTX AlienVault",
-    "alienvault:otx-premium": "OTX AlienVault Premium",
-    "misp:misp": "MISP",
+    "alienvault:otx": "OTX AlienVault via NarrowCTI",
+    "alienvault:otx-premium": "OTX AlienVault Premium via NarrowCTI",
+    "misp:misp": "MISP via NarrowCTI",
 }
 
 
@@ -24,12 +24,12 @@ def source_identity_name(
     provider_name = clean_value(provider)
     if name and provider_name:
         if slugify(name) == slugify(provider_name):
-            return provider_name
-        return f"{name} {provider_name}"
+            return source_identity_display_name(provider_name)
+        return source_identity_display_name(f"{name} {provider_name}")
     if name:
-        return name
+        return source_identity_display_name(name)
     if provider_name:
-        return provider_name
+        return source_identity_display_name(provider_name)
     return fallback
 
 
@@ -46,3 +46,12 @@ def feed_source_identity_name(source, fallback=DEFAULT_CURATION_IDENTITY_NAME):
 
 def clean_value(value):
     return str(value or "").strip()
+
+
+def source_identity_display_name(value):
+    name = clean_value(value)
+    if not name:
+        return ""
+    if name.lower().endswith(" via narrowcti"):
+        return name
+    return f"{name} via NarrowCTI"

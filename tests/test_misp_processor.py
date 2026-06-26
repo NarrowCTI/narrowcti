@@ -1,8 +1,14 @@
+import ipaddress
 import unittest
 from types import SimpleNamespace
 
-from connectors.misp.processor import MISPProcessor, decision_metadata
+from connectors.misp.processor import (
+    MISPProcessor,
+    decision_metadata,
+    graph_candidate_policy_from_settings,
+)
 from core.feed_contract import FeedCandidate, FeedRunSummary, FeedSource
+from core.ip_asn_enrichment import IPASNRecord, OfflineIPASNEnricher
 
 
 MISP_TEST_SOURCE = FeedSource(name="MISP", source_type="external_import", provider="MISP")
@@ -71,6 +77,26 @@ class MISPProcessorTests(unittest.TestCase):
             search=lambda query: search_candidates or [],
             enrich=lambda event: enriched,
         )
+
+    def test_export_mode_uses_safe_graph_policy_defaults(self):
+        settings = SimpleNamespace(
+            graph_export_mode="export",
+            graph_min_entity_confidence=0,
+            graph_min_relationship_confidence=0,
+            graph_require_relationship_provenance=False,
+            graph_allowed_entity_types=[],
+            graph_allowed_stix_object_types=[],
+        )
+
+        policy = graph_candidate_policy_from_settings(settings)
+
+        self.assertIn("infrastructure", policy["allowed_entity_types"])
+        self.assertIn("autonomous_system", policy["allowed_entity_types"])
+        self.assertIn("target_sector", policy["allowed_entity_types"])
+        self.assertNotIn("source_identity", policy["allowed_entity_types"])
+        self.assertNotIn("collector", policy["allowed_entity_types"])
+        self.assertIn("identity", policy["allowed_stix_object_types"])
+        self.assertNotIn("marking-definition", policy["allowed_stix_object_types"])
 
     def test_run_once_builds_state_repository_and_processes_queries(self):
         states = []
@@ -624,6 +650,157 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_misp_infrastructure_objects(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Object"] = [
+            {
+                "uuid": "object-domain-ip",
+                "name": "domain-ip",
+                "meta-category": "network",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-domain",
+                        "object_relation": "domain",
+                        "type": "domain",
+                        "value": "c2.example.com",
+                    },
+                    {
+                        "uuid": "attribute-ip",
+                        "object_relation": "ip",
+                        "type": "ip-dst",
+                        "value": "203.0.113.10",
+                    },
+                    {
+                        "uuid": "attribute-port",
+                        "object_relation": "port",
+                        "type": "port",
+                        "value": "443",
+                    },
+                ],
+            },
+            {
+                "uuid": "object-netblock",
+                "name": "netblock",
+                "meta-category": "network",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-cidr",
+                        "object_relation": "subnet-announced",
+                        "type": "ip-src",
+                        "value": "203.0.113.0/24",
+                    },
+                    {
+                        "uuid": "attribute-asn",
+                        "object_relation": "asn",
+                        "type": "AS",
+                        "value": "AS64512",
+                    },
+                    {
+                        "uuid": "attribute-as-name",
+                        "object_relation": "as-name",
+                        "type": "text",
+                        "value": "NarrowCTI Validation ASN",
+                    },
+                    {
+                        "uuid": "attribute-rir",
+                        "object_relation": "rir",
+                        "type": "text",
+                        "value": "PRIVATE",
+                    },
+                ],
+            },
+            {
+                "uuid": "object-asn",
+                "name": "asn",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-asn-only",
+                        "object_relation": "asn",
+                        "type": "AS",
+                        "value": "AS64513",
+                    }
+                ],
+            },
+            {
+                "uuid": "object-ip-port",
+                "name": "ip-port",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-ip-port",
+                        "object_relation": "ip",
+                        "type": "ip-dst|port",
+                        "value": "203.0.113.20|443",
+                    }
+                ],
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertIn("misp_infrastructure", metadata)
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(3, graph_evidence["counts"]["infrastructure"])
+        self.assertEqual(4, graph_evidence["counts"]["observable"])
+        self.assertEqual(3, graph_evidence["counts"]["autonomous_system"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(3, graph_candidates["counts"]["infrastructure"])
+        self.assertEqual(4, graph_candidates["counts"]["observable"])
+        self.assertEqual(3, graph_candidates["counts"]["autonomous_system"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "observable"
+                and candidate["value"] == "203.0.113.0/24"
+                and candidate["relationship_type"] == "consists-of"
+                and candidate["attributes"]["relationship_source_value"]
+                == "MISP netblock 203.0.113.0/24"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512 NarrowCTI Validation ASN"
+                and candidate["relationship_type"] == "belongs-to"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "observable"
+                and candidate["attributes"]["relationship_source_value"]
+                == "203.0.113.0/24"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "observable"
+                and candidate["value"] == "203.0.113.20"
+                and candidate["attributes"]["port"] == "443"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64513"
+                and candidate["relationship_type"] == "related-to"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS443"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_extracts_misp_detection_rules(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         event = enriched_event()
@@ -670,6 +847,61 @@ class MISPProcessorTests(unittest.TestCase):
                 candidate["entity_type"] == "detection_rule"
                 and candidate["relationship_type"] == "detects"
                 and candidate["attributes"]["pattern"] == "title: Suspicious PowerShell"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_enriches_misp_ip_with_offline_asn(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Object"] = [
+            {
+                "uuid": "object-domain-ip",
+                "name": "domain-ip",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-domain",
+                        "object_relation": "domain",
+                        "type": "domain",
+                        "value": "c2.example.com",
+                    },
+                    {
+                        "uuid": "attribute-ip",
+                        "object_relation": "ip",
+                        "type": "ip-dst",
+                        "value": "203.0.113.10",
+                    },
+                ],
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+        enricher = OfflineIPASNEnricher(
+            [
+                IPASNRecord(
+                    network=ipaddress.ip_network("203.0.113.0/24"),
+                    asn=64512,
+                    as_name="Offline Validation ASN",
+                    rir="TEST",
+                    source="unit-test",
+                )
+            ]
+        )
+
+        metadata = decision_metadata(
+            candidate_ref,
+            prepared,
+            ip_asn_enricher=enricher,
+        )
+
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512 Offline Validation ASN"
+                and candidate["relationship_type"] == "belongs-to"
+                and candidate["attributes"]["relationship_source_value"]
+                == "203.0.113.10"
+                and candidate["attributes"]["enrichment_source"] == "unit-test"
                 for candidate in graph_candidates["candidates"]
             )
         )
@@ -949,7 +1181,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(10, records[0].indicator_count)
         self.assertEqual(records[0].score, records[0].metadata["scoring"]["final_score"])
         self.assertEqual("tlp green event", export_calls[0]["name"])
-        self.assertEqual("MISP", export_calls[0]["identity_name"])
+        self.assertEqual("MISP via NarrowCTI", export_calls[0]["identity_name"])
         self.assertEqual(1, len(export_calls[0]["indicators"]))
 
     def test_process_event_does_not_mark_state_when_export_fails(self):

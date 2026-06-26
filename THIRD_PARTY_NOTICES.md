@@ -27,9 +27,10 @@ NarrowCTI is designed to integrate with OpenCTI and external threat
 intelligence feeds. OpenCTI, OTX and any other integrated feed or platform remain
 separate products governed by their own licenses, terms and API policies.
 
-## Commercial Distribution Check
+## Distribution And Service Check
 
-Before commercial distribution, verify and archive:
+Before public releases, packaged distributions, managed services or customer
+deployments, verify and archive:
 
 - License metadata for every pinned dependency.
 - Transitive dependency license metadata.
@@ -38,4 +39,5 @@ Before commercial distribution, verify and archive:
 - Feed provider terms for each supported connector.
 
 This file is not a legal opinion. It is a release engineering control to ensure
-license review is explicit before packaging NarrowCTI for customers.
+license and terms review is explicit before packaging or operating NarrowCTI for
+others.

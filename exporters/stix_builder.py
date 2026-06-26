@@ -4,11 +4,16 @@ import re
 from uuid import NAMESPACE_URL, uuid5
 
 from stix2 import (
+    Artifact,
     AttackPattern,
     AutonomousSystem,
     Bundle,
+    Campaign,
+    CourseOfAction,
+    CustomObject,
     DomainName,
     EmailAddress,
+    ExtensionDefinition,
     File,
     IPv4Address,
     IPv6Address,
@@ -21,13 +26,36 @@ from stix2 import (
     Note,
     Relationship,
     Report,
+    Sighting,
     ThreatActor,
     Tool,
     URL,
     Vulnerability,
 )
+from stix2.properties import StringProperty
+from stix2.registry import class_for_type
 
 
+def registered_custom_object(type_name, properties):
+    existing = class_for_type(type_name, "2.1")
+    if existing is not None:
+        return existing
+
+    @CustomObject(type_name, properties)
+    class NarrowCTICustomObject:
+        pass
+
+    return NarrowCTICustomObject
+
+
+MitreDataSource = registered_custom_object(
+    "x-mitre-data-source",
+    [("name", StringProperty(required=True))],
+)
+MitreDataComponent = registered_custom_object(
+    "x-mitre-data-component",
+    [("name", StringProperty(required=True))],
+)
 SEMANTIC_RELATIONSHIP_TYPES = {
     "attributed-to",
     "based-on",
@@ -35,12 +63,17 @@ SEMANTIC_RELATIONSHIP_TYPES = {
     "consists-of",
     "detects",
     "indicates",
+    "related-to",
     "targets",
     "uses",
 }
 REPORT_ID_NAMESPACE = "https://narrowcti.local/stix/report"
 IDENTITY_ID_NAMESPACE = "https://narrowcti.local/stix/identity"
 GRAPH_OBJECT_ID_NAMESPACE = "https://narrowcti.local/stix/graph-object"
+OPENCTI_EXTENSION_DEFINITION_ID = (
+    f"extension-definition--{uuid5(NAMESPACE_URL, 'opencti-extension-definition')}"
+)
+OPENCTI_CUSTOM_SDO_TYPES = {"channel", "event", "narrative"}
 
 
 def escape_pattern_value(value):
@@ -131,7 +164,13 @@ def build_curated_report_bundle(
     identity = build_identity(identity_name)
     indicator_objects = build_indicators(indicators or [], identity.id, score, now)
     accepted_candidates = graph_accepted_candidates(graph_candidate_policy)
-    graph_content = build_graph_content(accepted_candidates, identity.id, now)
+    external_object_ids = indicator_object_ids(indicator_objects)
+    graph_content = build_graph_content(
+        accepted_candidates,
+        identity.id,
+        now,
+        external_object_ids=external_object_ids,
+    )
 
     object_refs = [
         *[indicator.id for indicator in indicator_objects],
@@ -148,13 +187,22 @@ def build_curated_report_bundle(
     relationship_content = build_graph_relationships(
         accepted_candidates,
         graph_content["object_ids"],
+        graph_content["alias_ids"],
         report.id,
         identity.id,
+        now,
+        external_object_ids=external_object_ids,
+    )
+    extension_objects = opencti_extension_objects(
+        graph_content["objects"],
+        identity.id,
+        now,
     )
 
     bundle = Bundle(
         objects=[
             identity,
+            *extension_objects,
             *indicator_objects,
             *graph_content["objects"],
             *relationship_content["relationships"],
@@ -196,13 +244,21 @@ def build_graph_report_bundle(
     relationship_content = build_graph_relationships(
         accepted_candidates,
         graph_content["object_ids"],
+        graph_content["alias_ids"],
         report.id,
         identity.id,
+        now,
+    )
+    extension_objects = opencti_extension_objects(
+        graph_content["objects"],
+        identity.id,
+        now,
     )
 
     bundle = Bundle(
         objects=[
             identity,
+            *extension_objects,
             *graph_content["objects"],
             *relationship_content["relationships"],
             report,
@@ -230,7 +286,30 @@ def build_stix_report(name, description, score, now, identity_id, object_refs):
         published=now,
         created_by_ref=identity_id,
         object_refs=object_refs,
+        allow_custom=True,
     )
+
+
+def opencti_extension_objects(graph_objects, identity_id, now):
+    if not any(
+        stix_object_field(item, "type").lower() in OPENCTI_CUSTOM_SDO_TYPES
+        for item in graph_objects or []
+    ):
+        return []
+    return [
+        ExtensionDefinition(
+            id=OPENCTI_EXTENSION_DEFINITION_ID,
+            name="OpenCTI",
+            description="OpenCTI native custom SDO extension.",
+            created=now,
+            modified=now,
+            created_by_ref=identity_id,
+            schema="https://www.filigran.io/opencti/schema",
+            version="1.0",
+            extension_types=["new-sdo"],
+            allow_custom=True,
+        )
+    ]
 
 
 def build_identity(identity_name, identity_class="organization"):
@@ -279,38 +358,61 @@ def deterministic_report_id(name, description):
     return f"report--{uuid5(NAMESPACE_URL, material)}"
 
 
-def build_graph_content(accepted_candidates, identity_id, now):
+def indicator_object_ids(indicator_objects):
+    ids = {}
+    for indicator in indicator_objects or []:
+        name = clean_string(getattr(indicator, "name", ""))
+        if name:
+            ids[("indicator", name.lower())] = indicator.id
+            ids[("value", name.lower())] = indicator.id
+    return ids
+
+
+def build_graph_content(accepted_candidates, identity_id, now, external_object_ids=None):
     graph_objects = []
     graph_object_ids = {}
+    graph_alias_ids = dict(external_object_ids or {})
     skipped_candidates = []
     object_counts = Counter()
     existing_reference_counts = Counter()
 
     for candidate in accepted_candidates:
+        if graph_candidate_is_relationship_only(candidate):
+            continue
         object_key = graph_object_key(candidate)
         if object_key in graph_object_ids:
-            continue
-        existing_ref = existing_opencti_ref(candidate)
-        if existing_ref:
-            graph_object_ids[object_key] = existing_ref
-            existing_reference_counts[
-                clean_string(candidate.get("stix_object_type")).lower()
-            ] += 1
             continue
         try:
             stix_object = graph_candidate_to_stix_object(candidate, identity_id, now)
         except Exception:
             stix_object = None
+        existing_ref = existing_opencti_ref(candidate)
+        if existing_ref:
+            graph_object_ids[object_key] = existing_ref
+            register_graph_object_aliases(graph_alias_ids, candidate, existing_ref)
+            existing_reference_counts[
+                clean_string(candidate.get("stix_object_type")).lower()
+            ] += 1
+            if graph_candidate_hydrates_existing_ref(candidate, stix_object, existing_ref):
+                graph_objects.append(stix_object)
+                object_counts[stix_object_field(stix_object, "type")] += 1
+            continue
         if not stix_object:
             skipped_candidates.append(candidate_summary(candidate))
             continue
-        graph_object_ids[object_key] = stix_object.id
+        graph_object_ids[object_key] = stix_object_field(stix_object, "id")
+        register_graph_object_aliases(
+            graph_alias_ids,
+            candidate,
+            stix_object_field(stix_object, "id"),
+        )
         graph_objects.append(stix_object)
-        object_counts[stix_object.type] += 1
+        object_counts[stix_object_field(stix_object, "type")] += 1
 
     return {
         "objects": graph_objects,
         "object_ids": graph_object_ids,
+        "alias_ids": graph_alias_ids,
         "object_refs": list(graph_object_ids.values()),
         "skipped_candidates": skipped_candidates,
         "object_counts": object_counts,
@@ -321,8 +423,11 @@ def build_graph_content(accepted_candidates, identity_id, now):
 def build_graph_relationships(
     accepted_candidates,
     graph_object_ids,
+    graph_alias_ids,
     report_id,
     identity_id,
+    now,
+    external_object_ids=None,
 ):
     graph_relationships = []
     relationship_keys = set()
@@ -330,7 +435,30 @@ def build_graph_relationships(
     proposed_relationship_counts = Counter()
     semantic_relationship_count = 0
     report_relationship_count = 0
+    graph_alias_ids = graph_alias_ids or {}
+    external_object_ids = external_object_ids or {}
     for candidate in accepted_candidates:
+        relationship = graph_special_relationship(
+            candidate,
+            graph_object_ids,
+            graph_alias_ids,
+            identity_id,
+            now,
+            external_object_ids,
+        )
+        if relationship:
+            relationship_type = graph_special_relationship_type(candidate, relationship)
+            relationship_key = graph_special_relationship_key(relationship)
+            if relationship_key in relationship_keys:
+                continue
+            relationship_keys.add(relationship_key)
+            graph_relationships.append(relationship)
+            relationship_counts[relationship_type] += 1
+            proposed_relationship_counts[
+                clean_string(candidate.get("relationship_type")) or relationship_type
+            ] += 1
+            semantic_relationship_count += 1
+            continue
         target_ref = graph_object_ids.get(graph_object_key(candidate))
         if not target_ref:
             continue
@@ -340,14 +468,20 @@ def build_graph_relationships(
             report_id,
             target_ref,
         )
-        relationship_key = (source_ref, relationship_type, target_ref)
+        relationship_target_ref = graph_relationship_target_ref(
+            candidate,
+            source_ref,
+            target_ref,
+        )
+        source_ref = graph_relationship_source_ref(candidate, source_ref, target_ref)
+        relationship_key = (source_ref, relationship_type, relationship_target_ref)
         if relationship_key in relationship_keys:
             continue
         relationship_keys.add(relationship_key)
         relationship = Relationship(
             source_ref=source_ref,
             relationship_type=relationship_type,
-            target_ref=target_ref,
+            target_ref=relationship_target_ref,
             confidence=clamp_stix_confidence(
                 candidate.get("relationship_confidence", candidate.get("confidence"))
             ),
@@ -421,6 +555,46 @@ def graph_accepted_candidates(graph_candidate_policy):
     ]
 
 
+def graph_description_hydration_requests(
+    graph_candidate_policy,
+    identity_name="NarrowCTI Gateway",
+):
+    identity = build_identity(identity_name)
+    now = datetime.now(timezone.utc)
+    requests = []
+    for candidate in graph_accepted_candidates(graph_candidate_policy):
+        attributes = candidate_attributes(candidate)
+        existing_ref = existing_opencti_ref(candidate)
+        existing_id = clean_string(attributes.get("opencti_existing_id"))
+        if not existing_ref or not existing_id:
+            continue
+        try:
+            stix_object = graph_candidate_to_stix_object(candidate, identity.id, now)
+        except Exception:
+            stix_object = None
+        if not stix_object:
+            continue
+        description = stix_object_field(stix_object, "description")
+        if not description:
+            continue
+        requests.append(
+            {
+                "opencti_id": existing_id,
+                "standard_id": existing_ref,
+                "narrow_owned": graph_candidate_hydrates_existing_ref(
+                    candidate,
+                    stix_object,
+                    existing_ref,
+                ),
+                "stix_object_type": clean_string(candidate.get("stix_object_type")),
+                "entity_type": clean_string(candidate.get("entity_type")),
+                "name": clean_string(candidate.get("name") or candidate.get("value")),
+                "description": description,
+            }
+        )
+    return requests
+
+
 def existing_opencti_ref(candidate):
     attributes = (
         candidate.get("attributes")
@@ -436,8 +610,24 @@ def existing_opencti_ref(candidate):
     return ""
 
 
+def graph_candidate_hydrates_existing_ref(candidate, stix_object, existing_ref):
+    if not stix_object or stix_object_field(stix_object, "id") != existing_ref:
+        return False
+    attributes = (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
+    return bool(graph_candidate_description(candidate, attributes))
+
+
 def candidate_existing_ref_prefixes(candidate):
     stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    canonical_prefixes = {
+        "security-platform": ["identity", "security-platform"],
+    }
+    if stix_object_type in canonical_prefixes:
+        return canonical_prefixes[stix_object_type]
     if stix_object_type != "observable":
         return [stix_object_type] if stix_object_type else []
 
@@ -448,6 +638,7 @@ def candidate_existing_ref_prefixes(candidate):
     )
     observable_type = clean_string(attributes.get("observable_type")).lower()
     supported = {
+        "artifact",
         "domain-name",
         "email-addr",
         "file",
@@ -460,6 +651,7 @@ def candidate_existing_ref_prefixes(candidate):
 
 def graph_candidate_to_stix_object(candidate, identity_id, now):
     stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    entity_type = clean_string(candidate.get("entity_type")).lower()
     name = clean_string(candidate.get("name") or candidate.get("value"))
     value = clean_string(candidate.get("value"))
     attributes = (
@@ -467,31 +659,52 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
         if isinstance(candidate.get("attributes"), dict)
         else {}
     )
+    effective_attributes = dict(attributes)
+    if stix_object_type == "identity":
+        effective_attributes["identity_class"] = graph_identity_class(
+            candidate,
+            attributes,
+        )
     confidence = clamp_stix_confidence(candidate.get("confidence"))
     custom_properties = graph_custom_properties(candidate)
 
     if not name or not stix_object_type:
         return None
+    if stix_object_type == "threat-actor" and entity_type == "threat_actor_individual":
+        return None
 
     common = {
-        "id": deterministic_graph_object_id(stix_object_type, name, value, attributes),
+        "id": deterministic_graph_object_id(
+            stix_object_type,
+            name,
+            value,
+            effective_attributes,
+        ),
         "created_by_ref": identity_id,
         "confidence": confidence,
         "custom_properties": custom_properties,
         "allow_custom": True,
     }
+    description = graph_candidate_description(candidate, attributes)
+    described_common = dict(common)
+    if description:
+        described_common["description"] = description
     if stix_object_type == "attack-pattern":
         return AttackPattern(
             name=name,
             external_references=attack_pattern_references(value, attributes),
-            **common,
+            **described_common,
         )
+    if stix_object_type == "campaign":
+        return Campaign(name=name, **described_common)
+    if stix_object_type == "course-of-action":
+        return CourseOfAction(name=name, **described_common)
     if stix_object_type == "threat-actor":
-        return ThreatActor(name=name, **common)
+        return ThreatActor(name=name, **described_common)
     if stix_object_type == "intrusion-set":
-        return IntrusionSet(name=name, **common)
+        return IntrusionSet(name=name, **described_common)
     if stix_object_type == "infrastructure":
-        return Infrastructure(name=name, **common)
+        return Infrastructure(name=name, **described_common)
     if stix_object_type == "autonomous-system":
         return autonomous_system_candidate_to_stix(
             candidate,
@@ -501,24 +714,39 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
         return Malware(
             name=name,
             is_family=bool(attributes.get("is_family", True)),
-            **common,
+            **described_common,
         )
     if stix_object_type == "tool":
-        return Tool(name=name, **common)
+        return Tool(name=name, **described_common)
     if stix_object_type == "vulnerability":
         return Vulnerability(
             name=name,
             external_references=vulnerability_references(value),
-            **common,
+            **described_common,
         )
     if stix_object_type == "identity":
         return Identity(
             name=name,
-            identity_class=clean_string(attributes.get("identity_class")) or "class",
-            **common,
+            identity_class=effective_attributes["identity_class"],
+            **described_common,
         )
     if stix_object_type == "location":
-        return Location(name=name, country=value or name, **common)
+        return location_candidate_to_stix(
+            candidate,
+            effective_attributes,
+            custom_properties,
+            confidence,
+            identity_id,
+            description,
+        )
+    if stix_object_type in OPENCTI_CUSTOM_SDO_TYPES:
+        return opencti_custom_sdo_candidate_to_stix(
+            stix_object_type,
+            name,
+            attributes,
+            described_common,
+            now,
+        )
     if stix_object_type == "indicator":
         pattern = clean_string(attributes.get("pattern")) or value
         pattern_type = clean_string(attributes.get("pattern_type")) or "stix"
@@ -529,6 +757,11 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
             pattern=pattern,
             pattern_type=pattern_type,
             valid_from=now,
+            **described_common,
+        )
+    if stix_object_type in CUSTOM_GRAPH_OBJECTS:
+        return CUSTOM_GRAPH_OBJECTS[stix_object_type](
+            name=name,
             **common,
         )
     if stix_object_type == "note":
@@ -544,6 +777,94 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
     if stix_object_type == "observable":
         return observable_candidate_to_stix(candidate, custom_properties)
     return None
+
+
+CUSTOM_GRAPH_OBJECTS = {
+    "x-mitre-data-component": MitreDataComponent,
+    "x-mitre-data-source": MitreDataSource,
+}
+
+
+def opencti_custom_sdo_candidate_to_stix(stix_object_type, name, attributes, common, now):
+    properties = {
+        "type": stix_object_type,
+        "spec_version": "2.1",
+        "id": common["id"],
+        "created_by_ref": common["created_by_ref"],
+        "created": stix_timestamp(now),
+        "modified": stix_timestamp(now),
+        "name": name,
+        "confidence": common["confidence"],
+        **dict(common.get("custom_properties") or {}),
+    }
+    description = clean_string(common.get("description"))
+    if description:
+        properties["description"] = description
+    properties["extensions"] = {
+        OPENCTI_EXTENSION_DEFINITION_ID: {"extension_type": "new-sdo"}
+    }
+    aliases = clean_list_values(
+        attributes.get("aliases"),
+        attributes.get("alias"),
+        attributes.get("x_opencti_aliases"),
+    )
+    if aliases:
+        properties["aliases"] = aliases
+
+    if stix_object_type == "channel":
+        channel_types = clean_list_values(
+            attributes.get("channel_types"),
+            attributes.get("channel_type"),
+        )
+        if channel_types:
+            properties["channel_types"] = channel_types
+    elif stix_object_type == "narrative":
+        narrative_types = clean_list_values(
+            attributes.get("narrative_types"),
+            attributes.get("narrative_type"),
+        )
+        if narrative_types:
+            properties["narrative_types"] = narrative_types
+    elif stix_object_type == "event":
+        event_types = clean_list_values(
+            attributes.get("event_types"),
+            attributes.get("event_type"),
+        )
+        if event_types:
+            properties["event_types"] = event_types
+        start_time = parse_timestamp(
+            first_clean_value(attributes.get("start_time"), attributes.get("start"))
+        )
+        stop_time = parse_timestamp(
+            first_clean_value(attributes.get("stop_time"), attributes.get("stop"))
+        )
+        if start_time:
+            properties["start_time"] = stix_timestamp(start_time)
+        if stop_time:
+            properties["stop_time"] = stix_timestamp(stop_time)
+
+    return properties
+
+
+def graph_candidate_is_relationship_only(candidate):
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    return stix_object_type in {"relationship", "sighting"}
+
+
+def graph_identity_class(candidate, attributes):
+    explicit_class = clean_string(attributes.get("identity_class"))
+    if explicit_class:
+        return explicit_class
+    entity_type = clean_string(candidate.get("entity_type")).lower()
+    if entity_type in {"collector", "source_identity"}:
+        return "organization"
+    if entity_type == "target_organization":
+        return "organization"
+    if entity_type == "target_individual":
+        return "individual"
+    if entity_type == "target_system":
+        return "system"
+    return "class"
 
 
 def autonomous_system_candidate_to_stix(candidate, custom_properties):
@@ -617,6 +938,176 @@ def deterministic_autonomous_system_id(number):
     return f"autonomous-system--{uuid5(NAMESPACE_URL, material)}"
 
 
+def location_candidate_to_stix(
+    candidate,
+    attributes,
+    custom_properties,
+    confidence,
+    identity_id,
+    description="",
+):
+    entity_type = clean_string(candidate.get("entity_type")).lower()
+    name = clean_string(candidate.get("name") or candidate.get("value"))
+    value = clean_string(candidate.get("value"))
+    custom_properties = dict(custom_properties or {})
+    opencti_location_type = opencti_location_type_for_candidate(entity_type)
+    if opencti_location_type:
+        custom_properties["x_opencti_location_type"] = opencti_location_type
+    location = {
+        "id": deterministic_location_id(candidate, attributes),
+        "created_by_ref": identity_id,
+        "name": name,
+        "confidence": confidence,
+        "custom_properties": custom_properties,
+        "allow_custom": True,
+    }
+    if description:
+        location["description"] = description
+
+    country = first_clean_value(attributes.get("country"), attributes.get("country_code"))
+    region = clean_string(attributes.get("region"))
+    administrative_area = first_clean_value(
+        attributes.get("administrative_area"),
+        attributes.get("state"),
+        attributes.get("province"),
+    )
+    city = clean_string(attributes.get("city"))
+
+    if entity_type == "target_country" and not country:
+        country = value or name
+    elif entity_type == "target_region" and not region:
+        region = value or name
+    elif entity_type == "target_administrative_area" and not administrative_area:
+        administrative_area = value or name
+    elif entity_type == "target_city" and not city:
+        city = value or name
+
+    optional_fields = {
+        "region": region,
+        "country": country,
+        "administrative_area": administrative_area,
+        "city": city,
+        "street_address": clean_string(attributes.get("street_address")),
+        "postal_code": clean_string(attributes.get("postal_code")),
+    }
+    location.update({key: value for key, value in optional_fields.items() if value})
+
+    latitude = parse_float(attributes.get("latitude"))
+    longitude = parse_float(attributes.get("longitude"))
+    precision = parse_float(attributes.get("precision"))
+    if latitude is None or longitude is None:
+        latitude, longitude = parse_position(value)
+    if latitude is not None and longitude is not None:
+        location["latitude"] = latitude
+        location["longitude"] = longitude
+        if precision is not None:
+            location["precision"] = precision
+
+    return Location(**location)
+
+
+def opencti_location_type_for_candidate(entity_type):
+    return {
+        "target_administrative_area": "Administrative-Area",
+        "target_city": "City",
+        "target_country": "Country",
+        "target_position": "Position",
+        "target_region": "Region",
+    }.get(entity_type, "")
+
+
+def graph_candidate_description(candidate, attributes):
+    description = first_clean_value(
+        attributes.get("description"),
+        attributes.get("summary"),
+        attributes.get("details"),
+    )
+    if description:
+        return description
+
+    entity_type = clean_string(candidate.get("entity_type")).lower()
+    if entity_type not in TARGET_CONTEXT_ENTITY_TYPES:
+        return ""
+
+    name = clean_string(candidate.get("name") or candidate.get("value"))
+    source_name = first_clean_value(candidate.get("source_name"), candidate.get("source_key"))
+    source_value = first_clean_value(
+        attributes.get("relationship_source_value"),
+        attributes.get("source_value"),
+        attributes.get("parent_cluster_value"),
+    )
+    relationship_type = clean_string(candidate.get("relationship_type")) or "related-to"
+    label = TARGET_CONTEXT_ENTITY_TYPES[entity_type]
+    if name and source_name and source_value:
+        return (
+            f"Source-backed {label} observed by {source_name}: "
+            f"{source_value} {relationship_type} {name}."
+        )
+    if name and source_name:
+        return f"Source-backed {label} observed by {source_name}: {name}."
+    return ""
+
+
+TARGET_CONTEXT_ENTITY_TYPES = {
+    "target_administrative_area": "target administrative area",
+    "target_city": "target city",
+    "target_country": "target country",
+    "target_organization": "target organization",
+    "target_position": "target position",
+    "target_region": "target region",
+    "target_sector": "target sector",
+    "target_system": "target system",
+}
+
+
+def deterministic_location_id(candidate, attributes):
+    entity_type = clean_string(candidate.get("entity_type")).lower()
+    name = clean_string(candidate.get("name") or candidate.get("value"))
+    value = clean_string(candidate.get("value"))
+    material_parts = [
+        GRAPH_OBJECT_ID_NAMESPACE,
+        "location",
+        entity_type,
+        value.casefold(),
+        name.casefold(),
+    ]
+    for field in (
+        "region",
+        "country",
+        "country_code",
+        "administrative_area",
+        "state",
+        "province",
+        "city",
+        "latitude",
+        "longitude",
+    ):
+        material_parts.append(clean_string(attributes.get(field)).casefold())
+    if entity_type in {"target_country", "target_region"} and not any(
+        material_parts[5:]
+    ):
+        return deterministic_graph_object_id("location", name, value, attributes)
+    material = "|".join(material_parts)
+    return f"location--{uuid5(NAMESPACE_URL, material)}"
+
+
+def parse_position(value):
+    match = re.search(
+        r"(-?\d+(?:\.\d+)?)\s*[,/ ]\s*(-?\d+(?:\.\d+)?)",
+        clean_string(value),
+    )
+    if not match:
+        return None, None
+    return parse_float(match.group(1)), parse_float(match.group(2))
+
+
+def parse_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def observable_candidate_to_stix(candidate, custom_properties):
     attributes = (
         candidate.get("attributes")
@@ -628,6 +1119,30 @@ def observable_candidate_to_stix(candidate, custom_properties):
     hash_algorithm = clean_string(attributes.get("hash_algorithm")).upper()
     if not value:
         return None
+    if observable_type == "artifact" and hash_algorithm:
+        artifact = {
+            "hashes": {normalize_hash_algorithm(hash_algorithm): value},
+            "custom_properties": custom_properties,
+            "allow_custom": True,
+        }
+        artifact_url = clean_string(
+            attributes.get("artifact_url") or attributes.get("url")
+        )
+        mime_type = clean_string(attributes.get("mime_type"))
+        payload_bin = clean_string(attributes.get("payload_bin"))
+        encryption_algorithm = clean_string(attributes.get("encryption_algorithm"))
+        decryption_key = clean_string(attributes.get("decryption_key"))
+        if artifact_url:
+            artifact["url"] = artifact_url
+        if mime_type:
+            artifact["mime_type"] = mime_type
+        if payload_bin:
+            artifact["payload_bin"] = payload_bin
+        if encryption_algorithm:
+            artifact["encryption_algorithm"] = encryption_algorithm
+        if decryption_key:
+            artifact["decryption_key"] = decryption_key
+        return Artifact(**artifact)
     if observable_type == "domain-name":
         return DomainName(
             value=value,
@@ -721,6 +1236,190 @@ def graph_relationship_custom_properties(candidate, relationship_mode):
     return custom
 
 
+def graph_special_relationship(
+    candidate,
+    graph_object_ids,
+    graph_alias_ids,
+    identity_id,
+    now,
+    external_object_ids,
+):
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    if stix_object_type == "relationship":
+        return object_reference_candidate_to_relationship(
+            candidate,
+            graph_alias_ids,
+            identity_id,
+        )
+    if stix_object_type == "sighting":
+        return sighting_candidate_to_stix(
+            candidate,
+            graph_object_ids,
+            graph_alias_ids,
+            identity_id,
+            now,
+            external_object_ids,
+        )
+    return None
+
+
+def object_reference_candidate_to_relationship(candidate, graph_alias_ids, identity_id):
+    attributes = candidate_attributes(candidate)
+    source_ref = graph_alias_ids.get(alias_key(attributes.get("source_uuid")))
+    target_ref = graph_alias_ids.get(alias_key(attributes.get("target_uuid")))
+    relationship_type = clean_string(candidate.get("relationship_type")) or "related-to"
+    if not source_ref or not target_ref or source_ref == target_ref:
+        return None
+    return Relationship(
+        source_ref=source_ref,
+        relationship_type=relationship_type,
+        target_ref=target_ref,
+        confidence=clamp_stix_confidence(
+            candidate.get("relationship_confidence", candidate.get("confidence"))
+        ),
+        created_by_ref=identity_id,
+        custom_properties=graph_relationship_custom_properties(candidate, "semantic"),
+        allow_custom=True,
+    )
+
+
+def sighting_candidate_to_stix(
+    candidate,
+    graph_object_ids,
+    graph_alias_ids,
+    identity_id,
+    now,
+    external_object_ids,
+):
+    attributes = candidate_attributes(candidate)
+    target_ref = first_clean_value(
+        external_object_ids.get(("indicator", clean_string(candidate.get("value")).lower())),
+        external_object_ids.get(("value", clean_string(candidate.get("value")).lower())),
+        graph_object_ids.get(("indicator", clean_string(candidate.get("value")).lower())),
+        graph_alias_ids.get(alias_key(attributes.get("attribute_uuid"))),
+    )
+    if not target_ref or not sighting_target_is_sdo(target_ref):
+        return None
+    first_seen = parse_sighting_time(attributes.get("date_sighting")) or now
+    return Sighting(
+        id=deterministic_sighting_id(candidate, target_ref),
+        sighting_of_ref=target_ref,
+        where_sighted_refs=[identity_id],
+        first_seen=first_seen,
+        last_seen=first_seen,
+        count=1,
+        confidence=clamp_stix_confidence(candidate.get("confidence")),
+        created_by_ref=identity_id,
+        custom_properties=graph_relationship_custom_properties(candidate, "semantic"),
+        allow_custom=True,
+    )
+
+
+def graph_special_relationship_type(candidate, relationship):
+    if getattr(relationship, "type", "") == "sighting":
+        return clean_string(candidate.get("relationship_type")) or "sighting-of"
+    return clean_string(getattr(relationship, "relationship_type", "")) or "related-to"
+
+
+def graph_special_relationship_key(relationship):
+    if getattr(relationship, "type", "") == "sighting":
+        return (
+            getattr(relationship, "type", ""),
+            getattr(relationship, "sighting_of_ref", ""),
+            getattr(relationship, "first_seen", ""),
+            getattr(relationship, "id", ""),
+        )
+    return (
+        getattr(relationship, "source_ref", ""),
+        getattr(relationship, "relationship_type", ""),
+        getattr(relationship, "target_ref", ""),
+    )
+
+
+def sighting_target_is_sdo(ref):
+    prefix = clean_string(ref).split("--", 1)[0]
+    return prefix in {
+        "attack-pattern",
+        "campaign",
+        "course-of-action",
+        "grouping",
+        "identity",
+        "indicator",
+        "infrastructure",
+        "intrusion-set",
+        "malware",
+        "malware-analysis",
+        "note",
+        "observed-data",
+        "opinion",
+        "report",
+        "threat-actor",
+        "tool",
+        "vulnerability",
+    }
+
+
+def deterministic_sighting_id(candidate, target_ref):
+    attributes = candidate_attributes(candidate)
+    material = "|".join(
+        (
+            "narrowcti-sighting",
+            clean_string(candidate.get("source_key")).casefold(),
+            clean_string(candidate.get("external_id")).casefold(),
+            clean_string(target_ref).casefold(),
+            first_clean_value(
+                attributes.get("sighting_uuid"),
+                attributes.get("sighting_id"),
+                attributes.get("date_sighting"),
+            ).casefold(),
+        )
+    )
+    return f"sighting--{uuid5(NAMESPACE_URL, material)}"
+
+
+def parse_sighting_time(value):
+    text = clean_string(value)
+    if not text:
+        return None
+    try:
+        if text.isdigit():
+            return datetime.fromtimestamp(int(text), timezone.utc)
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except (OverflowError, ValueError):
+        return None
+
+
+def parse_timestamp(value):
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+    text = clean_string(value)
+    if not text:
+        return None
+    try:
+        if text.isdigit():
+            return datetime.fromtimestamp(int(text), timezone.utc)
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except (OverflowError, ValueError):
+        return None
+
+
+def stix_timestamp(value):
+    if isinstance(value, datetime):
+        normalized = value
+        if normalized.tzinfo is None:
+            normalized = normalized.replace(tzinfo=timezone.utc)
+        return normalized.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return clean_string(value)
+
+
 def graph_relationship_endpoint(candidate, graph_object_ids, report_id, target_ref):
     relationship_type = clean_string(candidate.get("relationship_type")) or "related-to"
     source_key = graph_relationship_source_key(candidate)
@@ -734,12 +1433,31 @@ def graph_relationship_endpoint(candidate, graph_object_ids, report_id, target_r
     return report_id, "related-to", "report-context"
 
 
-def graph_relationship_source_key(candidate):
-    attributes = (
-        candidate.get("attributes")
-        if isinstance(candidate.get("attributes"), dict)
-        else {}
+def graph_relationship_source_ref(candidate, source_ref, target_ref):
+    if graph_relationship_is_candidate_to_anchor(candidate, source_ref, target_ref):
+        return target_ref
+    return source_ref
+
+
+def graph_relationship_target_ref(candidate, source_ref, target_ref):
+    if graph_relationship_is_candidate_to_anchor(candidate, source_ref, target_ref):
+        return source_ref
+    return target_ref
+
+
+def graph_relationship_is_candidate_to_anchor(candidate, source_ref, target_ref):
+    return (
+        clean_string(candidate.get("entity_type"))
+        in {"attack_data_source", "attack_data_component"}
+        and clean_string(candidate.get("relationship_type")) == "detects"
+        and source_ref
+        and target_ref
+        and source_ref != target_ref
     )
+
+
+def graph_relationship_source_key(candidate):
+    attributes = candidate_attributes(candidate)
     source_type = first_clean_value(
         attributes.get("relationship_source_stix_object_type"),
         attributes.get("source_stix_object_type"),
@@ -755,6 +1473,42 @@ def graph_relationship_source_key(candidate):
     return (source_type.lower(), source_value.lower())
 
 
+def register_graph_object_aliases(graph_alias_ids, candidate, object_id):
+    for key in candidate_alias_keys(candidate):
+        graph_alias_ids.setdefault(key, object_id)
+
+
+def candidate_alias_keys(candidate):
+    attributes = candidate_attributes(candidate)
+    keys = []
+    for field in (
+        "object_uuid",
+        "attribute_uuid",
+        "event_report_uuid",
+        "cluster_uuid",
+        "indicator_id",
+    ):
+        key = alias_key(attributes.get(field))
+        if key:
+            keys.append(key)
+    return keys
+
+
+def alias_key(value):
+    cleaned = clean_string(value).lower()
+    if not cleaned:
+        return None
+    return ("uuid", cleaned)
+
+
+def candidate_attributes(candidate):
+    return (
+        candidate.get("attributes")
+        if isinstance(candidate.get("attributes"), dict)
+        else {}
+    )
+
+
 def parent_cluster_stix_object_type(attributes):
     kind = " ".join(
         clean_string(attributes.get(field)).casefold()
@@ -767,6 +1521,8 @@ def parent_cluster_stix_object_type(attributes):
     )
     if "attack-pattern" in kind or "mitre-attack-pattern" in kind:
         return "attack-pattern"
+    if "campaign" in kind:
+        return "campaign"
     if "intrusion-set" in kind:
         return "intrusion-set"
     if "threat-actor" in kind or "threat actor" in kind:
@@ -788,6 +1544,31 @@ def first_clean_value(*values):
         if cleaned:
             return cleaned
     return ""
+
+
+def clean_list_values(*values):
+    cleaned = []
+    seen = set()
+    for value in values:
+        if value in ("", None):
+            continue
+        if isinstance(value, (list, tuple, set)):
+            items = value
+        else:
+            items = str(value).split(",")
+        for item in items:
+            text = clean_string(item)
+            key = text.casefold()
+            if text and key not in seen:
+                cleaned.append(text)
+                seen.add(key)
+    return cleaned
+
+
+def stix_object_field(stix_object, field):
+    if isinstance(stix_object, dict):
+        return clean_string(stix_object.get(field))
+    return clean_string(getattr(stix_object, field, ""))
 
 
 def graph_object_key(candidate):

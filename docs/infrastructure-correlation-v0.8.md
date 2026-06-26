@@ -91,8 +91,7 @@ environments may require offline operation.
 Future configuration should follow the existing visible-policy pattern:
 
 ```text
-NARROWCTI_INFRA_ASN_ENRICHMENT_ENABLED=false
-NARROWCTI_INFRA_ASN_PROVIDER=disabled
+NARROWCTI_IP_ASN_ENRICHMENT_FILE=
 NARROWCTI_INFRA_PROMOTE_ASN=false
 NARROWCTI_INFRA_PROMOTE_CIDR=false
 NARROWCTI_INFRA_MIN_SHARED_THREAT_COUNT=2
@@ -187,6 +186,24 @@ Already validated:
 - `T1059` has `kill_chain_name=mitre-attack` and `phase_name=execution`.
 - NarrowCTI can reference canonical ATT&CK objects instead of creating
   duplicate attack-patterns.
+- For OTX single-adversary infrastructure inference, NarrowCTI emits
+  source-backed `Infrastructure -> related-to -> Attack Pattern` relationships
+  in addition to actor-to-technique relationships. This is required because the
+  OpenCTI Infrastructure view should not be expected to inherit ATT&CK context
+  through an indirect actor relationship. Local OpenCTI 6.9.4 validation showed
+  that `Infrastructure -> uses -> Attack Pattern` is rejected by relationship
+  consistency checks, while `related-to` is the compatible direct edge for this
+  object pair.
+- OTX author/source provenance is retained as report author and audit
+  metadata, but the OTX extractor no longer promotes that provenance as a
+  graph `Organization` object. Organizations should represent victimology,
+  source-backed targets or meaningful CTI entities, not feed bookkeeping.
+- OTX source-provided `ASN`/`AS` indicators are normalized into
+  `autonomous_system` candidates. Source-provided `CIDR`/`netblock` style
+  indicators are normalized as IP observables with CIDR values. When the same
+  pulse has exactly one adversary, those objects are attached to the inferred
+  Infrastructure through `consists-of`; when attribution is ambiguous, the ASN
+  remains related evidence and is not anchored to Infrastructure.
 
 Implementation gap:
 
@@ -267,14 +284,81 @@ The final lookup-backed export produced:
 | OpenCTI object counts after import | 1 Infrastructure, 1 ASN, 1 IP, 1 CIDR, 1 Report |
 | Queryable semantic relationships | `Infrastructure -> ASN`, `Infrastructure -> IP`, `Infrastructure -> CIDR`, `IP -> ASN`, `CIDR -> ASN` |
 
+Real OTX actor-infrastructure validation on June 25, 2026 used pulse
+`61f9392ac64510da57b9cdf9`.
+
+Source-backed curation decisions:
+
+- OTX `adversary=Lazarus` was treated as an Intrusion Set and resolved to the
+  existing OpenCTI `Lazarus Group` object through curated alias lookup.
+- OTX `malware_families=Lazarus` was not promoted as Malware because it
+  duplicated the adversary value.
+- The pulse contained exactly one adversary and two network observables, so
+  NarrowCTI created one inferred Infrastructure object for that pulse.
+
+Imported OpenCTI graph evidence:
+
+| Evidence | Result |
+| --- | --- |
+| Report | `Lazarus APT ... Windows update service and Github C2`, confidence `65`, author `OTX AlienVault` |
+| Canonical Intrusion Set | Existing `Lazarus Group`, not duplicated |
+| Infrastructure | `Lazarus OTX observed infrastructure 61f9392a` |
+| Infrastructure members | `markettrendingcenter.com`, `lm-career.com` |
+| Victimology | `Lazarus Group -> targets -> Defense` |
+| Actor infrastructure | `Lazarus Group -> uses -> Lazarus OTX observed infrastructure 61f9392a` |
+| Infrastructure membership | Infrastructure `consists-of` both domain observables |
+| ATT&CK context | 10 canonical Attack Patterns referenced from OpenCTI |
+| Kill-chain coverage | `initial-access`, `execution`, `command-and-control`, `persistence`, `privilege-escalation`, `defense-evasion`, `stealth` |
+| Infrastructure ATT&CK context | 10 direct `Infrastructure -> related-to -> Attack Pattern` relationships imported and queryable from the Infrastructure object |
+| Organization hygiene | OTX pulse author `hitip_forever` is no longer promoted as a Report object; only `OTX AlienVault` remains as report author metadata |
+
+Controlled MISP infrastructure validation on June 25, 2026 used local MISP
+event `4390`
+(`NarrowCTI MISP infrastructure export validation 1782423797`).
+
+The local MISP lab contained events with objects, but the first 250 reviewed
+events only exposed `file` and `virustotal-report` object types. No real local
+feed sample carried `asn`, `netblock`, `domain-ip` or `ip-port` objects, so
+the validation event was created with official MISP object templates for
+`asn`, `domain-ip` and `ip-port`. The local MISP instance did not expose a
+`netblock` template by that exact name; CIDR behavior was validated through the
+ASN template `subnet-announced` attribute.
+
+Imported MISP graph evidence:
+
+| Evidence | Result |
+| --- | --- |
+| Report | `NarrowCTI MISP infrastructure export validation 1782423797`, author `MISP` |
+| Infrastructure | `MISP domain-ip narrow-validation.example.com` |
+| Infrastructure | `MISP ip-port 203.0.113.20` |
+| ASN | `AS64512 NarrowCTI Validation ASN`, one canonical Autonomous-System observable |
+| Domain observable | `narrow-validation.example.com`, one canonical Domain-Name observable |
+| IP observables | `203.0.113.10`, `203.0.113.20`, `203.0.113.0/24` |
+| Infrastructure membership | Both Infrastructure objects expose queryable `consists-of` relationships to their observables and ASN where source-backed |
+| ASN membership | `203.0.113.20 -> belongs-to -> AS64512` and `203.0.113.0/24 -> belongs-to -> AS64512` imported and queried successfully |
+| Report hygiene | Report object refs contain Infrastructure, Autonomous-System, Domain-Name and IPv4 objects only; MISP provenance remains author/audit metadata |
+
+The MISP extraction also canonicalizes `AS64512` variants inside one event and
+prevents port values such as `443` or `8443` from being misclassified as ASNs.
+For bounded validation and replay, operators can use `MISP_QUERIES=event:<id>`
+or `MISP_QUERIES=uuid:<uuid>` to load one event directly instead of running a
+broad `events/restSearch` query.
+
 Open questions before broad activation:
 
 - Confirm the same relationships visually in OpenCTI's graph and knowledge UI,
   not only via GraphQL.
 - Validate `IPv6-Addr -> belongs-to -> Autonomous-System`.
 - Validate how noisy broad ASN searches become in larger OpenCTI datasets.
-- Validate real MISP/OTX payloads that carry ASN/netblock metadata before
-  enabling source-driven ASN promotion.
+- Validate true external MISP feed samples that carry ASN/netblock metadata;
+  controlled MISP object-template validation is complete, but real feed shape
+  coverage still needs evidence.
+- Validate true OTX feed payloads that carry ASN/netblock metadata; unit-level
+  source-provided ASN/CIDR extraction is implemented, but live feed shape
+  coverage still needs evidence.
+- Validate optional offline IP-to-ASN enrichment against broader external
+  datasets and graph noise. The initial v0.8 implementation is opt-in for MISP
+  through `NARROWCTI_IP_ASN_ENRICHMENT_FILE`.
 - Validate whether source payloads provide enough actor, malware, sector,
   location and campaign context to populate Diamond, Timeline and Knowledge
   views from the same curated bundle.
@@ -289,14 +373,23 @@ Safe implementation sequence:
    through `stixCyberObservables`.
 3. Done: add controlled native graph export for ASN/IP/CIDR relationships when
    candidates are explicitly accepted by policy.
-4. Add MISP metadata extraction for ASN/netblock/domain-ip/ip-port objects.
-5. Add OTX metadata extraction for ASN/netblock evidence when OTX payloads or
-   enrichment responses provide it.
-6. Add optional IP-to-ASN enrichment provider interface with offline-first
-   behavior.
-7. Add relationship evidence for IP belongs-to ASN and infrastructure
+4. Done: add OTX single-adversary network observable infrastructure inference
+   for bounded actor infrastructure validation.
+5. Done: add MISP metadata extraction for ASN/netblock/domain-ip/ip-port
+   objects.
+6. Done: validate controlled MISP `asn`, `domain-ip` and `ip-port` object
+   export against OpenCTI, including Report hygiene and direct event replay.
+7. Done: add OTX source-provided ASN/CIDR metadata extraction when OTX payloads
+   include `ASN`, `AS`, `CIDR` or netblock-style indicators.
+8. Validate true OTX feed samples that carry ASN/netblock evidence and confirm
+   OpenCTI import/UI behavior.
+9. Done: add optional IP-to-ASN enrichment provider interface with
+   offline-first behavior. The initial MISP integration supports CSV, JSON,
+   JSONL, longest-prefix matching and strict provenance, and is disabled unless
+   `NARROWCTI_IP_ASN_ENRICHMENT_FILE` is set.
+10. Add relationship evidence for IP belongs-to ASN and infrastructure
    consists-of ASN/IP when the source supports it.
-8. Add curation report sections for ASN concentration, shared infrastructure
+11. Add curation report sections for ASN concentration, shared infrastructure
    and actor/malware/infrastructure overlaps.
 
 This backlog is intentionally staged. The product value is very high, but the

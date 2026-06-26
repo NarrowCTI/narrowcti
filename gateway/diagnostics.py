@@ -391,8 +391,6 @@ def collect_paths(value, paths):
 
 def redact_preflight(preflight, known_paths):
     settings = preflight.get("settings") or {}
-    if settings.get("license_customer_id"):
-        settings["license_customer_id"] = "[redacted]"
     redact_paths(settings, known_paths)
     redact_text_fields(settings, known_paths)
     redact_paths(preflight.get("evidence_paths") or {}, known_paths)
@@ -505,10 +503,10 @@ def format_text_snapshot(snapshot):
         f"preflight_ok={str(preflight.get('ok', False)).lower()}",
         f"ingestion_mode={preflight.get('ingestion_mode', '')}",
         "enabled_sources=" + ",".join(preflight.get("enabled_sources") or []),
-        "license_edition="
-        f"{preflight.get('settings', {}).get('license_edition', 'evaluation')}",
-        "feature_gates_enforced="
-        f"{str(preflight.get('settings', {}).get('feature_gates_enforced', False)).lower()}",
+        "distribution_model="
+        f"{preflight.get('settings', {}).get('distribution_model', 'open_source')}",
+        "open_source="
+        f"{str(preflight.get('settings', {}).get('open_source', True)).lower()}",
         "curation_summary:",
         "- "
         f"runs={summary.get('run_count', 0)} "
@@ -689,7 +687,8 @@ def format_html_snapshot(snapshot):
     <p><strong>preflight_ok:</strong> <code>{preflight_ok}</code></p>
     <p><strong>ingestion_mode:</strong> <code>{ingestion_mode}</code></p>
     <p><strong>enabled_sources:</strong> <code>{enabled_sources}</code></p>
-    <p><strong>license_edition:</strong> <code>{license_edition}</code></p>
+    <p><strong>distribution_model:</strong> <code>{distribution_model}</code></p>
+    <p><strong>open_source:</strong> <code>{open_source}</code></p>
   </section>
   <section>
     <h2>Curation Summary</h2>
@@ -752,7 +751,8 @@ def format_html_snapshot(snapshot):
         preflight_ok=escape(str(preflight.get("ok", False)).lower()),
         ingestion_mode=escape(preflight.get("ingestion_mode")),
         enabled_sources=escape(",".join(preflight.get("enabled_sources") or [])),
-        license_edition=escape(settings.get("license_edition", "evaluation")),
+        distribution_model=escape(settings.get("distribution_model", "open_source")),
+        open_source=escape(str(settings.get("open_source", True)).lower()),
         runs=escape(summary.get("run_count", 0)),
         decision_records=escape(summary.get("decision_record_count", 0)),
         reviewed=escape(summary.get("reviewed_count", 0)),

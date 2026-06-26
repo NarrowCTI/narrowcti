@@ -118,35 +118,15 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
         )
 
     feature_gate_state = build_feature_gate_state(
-        getattr(settings, "license_edition", "evaluation"),
-        license_file=getattr(settings, "license_file", ""),
-        enforcement_enabled=getattr(settings, "feature_gates_enforced", False),
-        requested_capabilities=getattr(settings, "licensed_capabilities", []),
+        requested_capabilities=getattr(settings, "declared_capabilities", []),
     )
-    if not feature_gate_state.known_edition:
-        issues.append(
-            PreflightIssue(
-                "warning",
-                "unknown-license-edition",
-                f"NARROWCTI_LICENSE_EDITION is not recognized: {feature_gate_state.edition}",
-            )
-        )
     if feature_gate_state.unknown_capabilities:
         issues.append(
             PreflightIssue(
                 "warning",
-                "unknown-licensed-capability",
-                "NARROWCTI_LICENSED_CAPABILITIES contains unknown capabilities: "
+                "unknown-capability",
+                "NARROWCTI_CAPABILITIES contains unknown capabilities: "
                 + ",".join(feature_gate_state.unknown_capabilities),
-            )
-        )
-    if feature_gate_state.enforcement_enabled and not feature_gate_state.license_configured:
-        issues.append(
-            PreflightIssue(
-                "error",
-                "feature-gates-enforced-without-license",
-                "NARROWCTI_FEATURE_GATES_ENFORCED=true requires "
-                "NARROWCTI_LICENSE_FILE to be configured.",
             )
         )
 
@@ -259,20 +239,12 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             "graph_export_mode": getattr(settings, "graph_export_mode", "audit"),
             "graph_dedup_state_file": getattr(settings, "graph_dedup_state_file", ""),
             "opencti_graph_lookup": getattr(settings, "opencti_graph_lookup", False),
-            "license_edition": feature_gate_state.edition,
-            "license_customer_id": getattr(settings, "license_customer_id", ""),
-            "license_file_configured": bool(
-                str(getattr(settings, "license_file", "") or "").strip()
+            "distribution_model": feature_gate_state.distribution_model,
+            "open_source": feature_gate_state.open_source,
+            "declared_capabilities": list(
+                getattr(settings, "declared_capabilities", [])
             ),
-            "feature_gates_enforced": getattr(
-                settings,
-                "feature_gates_enforced",
-                False,
-            ),
-            "licensed_capabilities": list(
-                getattr(settings, "licensed_capabilities", [])
-            ),
-            "feature_gates": feature_gate_state.to_dict(),
+            "capability_inventory": feature_gate_state.to_dict(),
         },
         evidence_paths=evidence_paths,
         source_controls=source_controls,
@@ -449,17 +421,12 @@ def format_text_report(report):
         f"{report.evidence_paths.get('graph_dedup_state_file') or '(disabled)'}",
         "opencti_graph_lookup="
         f"{str(report.settings.get('opencti_graph_lookup', False)).lower()}",
-        f"license_edition={report.settings.get('license_edition', 'evaluation')}",
-        "license_customer_id="
-        f"{report.settings.get('license_customer_id') or '(unset)'}",
-        "license_file_configured="
-        f"{str(report.settings.get('license_file_configured', False)).lower()}",
-        "feature_gates_enforced="
-        f"{str(report.settings.get('feature_gates_enforced', False)).lower()}",
+        f"distribution_model={report.settings.get('distribution_model', 'open_source')}",
+        f"open_source={str(report.settings.get('open_source', True)).lower()}",
         "enabled_capabilities="
-        f"{','.join(report.settings.get('feature_gates', {}).get('enabled_capabilities', [])) or '(none)'}",
+        f"{','.join(report.settings.get('capability_inventory', {}).get('enabled_capabilities', [])) or '(none)'}",
         "disabled_capabilities="
-        f"{','.join(report.settings.get('feature_gates', {}).get('disabled_capabilities', [])) or '(none)'}",
+        f"{','.join(report.settings.get('capability_inventory', {}).get('disabled_capabilities', [])) or '(none)'}",
         f"state_dir={report.evidence_paths.get('state_dir') or '(disabled)'}",
         "decision_audit_dir="
         f"{report.evidence_paths.get('decision_audit_dir') or '(disabled)'}",

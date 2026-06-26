@@ -300,6 +300,46 @@ class GraphExportPlanTests(unittest.TestCase):
             attributes["opencti_existing_observable_value"],
         )
 
+    def test_exportable_policy_accepts_canonical_data_component_ref(self):
+        policy = {"accepted": [accepted_data_component_candidate()]}
+        plan = build_graph_export_plan(policy, mode="export")
+        known_entity_key = plan["actions"][0]["deduplication"]["entity_key"]
+
+        exportable = exportable_graph_candidate_policy(
+            policy,
+            plan,
+            {
+                "entity_keys": [known_entity_key],
+                "relationship_keys": [],
+                "matches": [
+                    {
+                        "entity_key": known_entity_key,
+                        "stix_object_type": "x-mitre-data-component",
+                        "value": "Process Creation",
+                        "match": {
+                            "standard_id": (
+                                "data-component--11111111-1111-4111-8111-"
+                                "111111111111"
+                            ),
+                            "opencti_id": "internal--data-component",
+                            "entity_type": "Data-Component",
+                            "name": "Process Creation",
+                            "match_type": "name",
+                            "match_value": "Process Creation",
+                        },
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(1, exportable["accepted_count"])
+        attributes = exportable["accepted"][0]["attributes"]
+        self.assertEqual(
+            "data-component--11111111-1111-4111-8111-111111111111",
+            attributes["opencti_existing_ref"],
+        )
+        self.assertEqual("Data-Component", attributes["opencti_existing_entity_type"])
+
     def test_exportable_policy_skips_known_graph_keys_without_standard_id(self):
         policy = self.graph_policy().to_dict()
         plan = build_graph_export_plan(policy, mode="export")
@@ -396,6 +436,23 @@ def accepted_ipv4_observable_candidate():
         "confidence": 70,
         "relationship_confidence": 70,
         "attributes": {"observable_type": "ipv4-addr"},
+    }
+
+
+def accepted_data_component_candidate():
+    return {
+        "fingerprint": "data-component-process-creation",
+        "entity_type": "attack_data_component",
+        "value": "Process Creation",
+        "name": "Process Creation",
+        "stix_object_type": "x-mitre-data-component",
+        "relationship_type": "detects",
+        "source_key": "validation:narrowcti",
+        "source_name": "validation",
+        "source_field": "mitre.data_components",
+        "confidence": 80,
+        "relationship_confidence": 75,
+        "attributes": {"data_source": "Process"},
     }
 
 

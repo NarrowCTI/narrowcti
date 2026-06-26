@@ -380,9 +380,9 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(1, graph_evidence["counts"]["detection_rule"])
         self.assertTrue(
             any(
-                record["entity_type"] == "threat_actor"
+                record["entity_type"] == "intrusion_set"
                 and record["value"] == "APT Example"
-                and record["stix_object_type"] == "threat-actor"
+                and record["stix_object_type"] == "intrusion-set"
                 for record in graph_evidence["records"]
             )
         )
@@ -421,7 +421,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(1, graph_candidates["counts"]["detection_rule"])
         self.assertTrue(
             any(
-                candidate["entity_type"] == "threat_actor"
+                candidate["entity_type"] == "intrusion_set"
                 and candidate["value"] == "APT Example"
                 and candidate["relationship_type"] == "attributed-to"
                 for candidate in graph_candidates["candidates"]
@@ -828,7 +828,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertTrue(processed)
         self.assertEqual(["pulse-1"], marked)
         self.assertEqual("LummaC2 fresh", export_calls[0]["name"])
-        self.assertEqual("OTX AlienVault", export_calls[0]["identity_name"])
+        self.assertEqual("OTX AlienVault via NarrowCTI", export_calls[0]["identity_name"])
         self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)
 
     def test_process_pulse_does_not_mark_state_when_export_fails(self):

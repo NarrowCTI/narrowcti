@@ -8,6 +8,68 @@ from core.graph_evidence import GRAPH_EVIDENCE_VERSION, clamp_confidence
 
 GRAPH_CANDIDATE_VERSION = GRAPH_EVIDENCE_VERSION
 
+SAFE_GRAPH_EXPORT_ENTITY_TYPES = (
+    "attack_data_component",
+    "attack_data_source",
+    "attack_pattern",
+    "artifact",
+    "autonomous_system",
+    "campaign",
+    "channel",
+    "course_of_action",
+    "detection_guidance",
+    "detection_rule",
+    "event",
+    "event_report",
+    "infrastructure",
+    "intrusion_set",
+    "malware",
+    "object_reference",
+    "observable",
+    "sighting",
+    "security_platform",
+    "target_administrative_area",
+    "target_city",
+    "target_country",
+    "target_individual",
+    "target_organization",
+    "target_position",
+    "target_region",
+    "target_sector",
+    "target_system",
+    "threat_actor",
+    "threat_actor_individual",
+    "tool",
+    "narrative",
+    "vulnerability",
+)
+
+SAFE_GRAPH_EXPORT_STIX_OBJECT_TYPES = (
+    "attack-pattern",
+    "autonomous-system",
+    "campaign",
+    "channel",
+    "course-of-action",
+    "event",
+    "identity",
+    "indicator",
+    "infrastructure",
+    "intrusion-set",
+    "location",
+    "malware",
+    "narrative",
+    "note",
+    "observable",
+    "relationship",
+    "sighting",
+    "security-platform",
+    "threat-actor",
+    "tool",
+    "vulnerability",
+    "x-mitre-data-component",
+    "x-mitre-data-source",
+)
+
 
 @dataclass(frozen=True)
 class GraphCandidate:
@@ -38,6 +100,8 @@ class GraphCandidate:
             self.entity_type,
             self.stix_object_type,
             self.value,
+            relationship_type=self.relationship_type,
+            attributes=self.attributes,
         )
 
     def to_dict(self):
@@ -280,7 +344,10 @@ def candidate_fingerprint(
     entity_type,
     stix_object_type,
     value,
+    relationship_type="",
+    attributes=None,
 ):
+    source_type, source_value = relationship_source_anchor(attributes)
     material = "|".join(
         [
             clean_string(source_key).lower(),
@@ -288,9 +355,29 @@ def candidate_fingerprint(
             clean_string(entity_type).lower(),
             clean_string(stix_object_type).lower(),
             clean_string(value).lower(),
+            clean_string(relationship_type).lower(),
+            source_type,
+            source_value,
         ]
     )
     return sha256(material.encode("utf-8")).hexdigest()
+
+
+def relationship_source_anchor(attributes):
+    attributes = compact_mapping(attributes)
+    return (
+        first_clean_value(
+            attributes.get("relationship_source_stix_object_type"),
+            attributes.get("source_stix_object_type"),
+            attributes.get("parent_cluster_type"),
+            attributes.get("parent_galaxy_type"),
+        ).lower(),
+        first_clean_value(
+            attributes.get("relationship_source_value"),
+            attributes.get("source_value"),
+            attributes.get("parent_cluster_value"),
+        ).lower(),
+    )
 
 
 def compact_mapping(value):
@@ -304,7 +391,27 @@ def compact_mapping(value):
 
 
 def normalize_exclusions(values):
+    if isinstance(values, str):
+        values = values.split(",")
     return {clean_string(value) for value in values or [] if clean_string(value)}
+
+
+def safe_graph_export_allowed_entity_types(export_mode, configured_values=None):
+    configured = normalize_exclusions(configured_values)
+    if configured:
+        return sorted(configured)
+    if clean_string(export_mode).lower() == "export":
+        return list(SAFE_GRAPH_EXPORT_ENTITY_TYPES)
+    return []
+
+
+def safe_graph_export_allowed_stix_object_types(export_mode, configured_values=None):
+    configured = normalize_exclusions(configured_values)
+    if configured:
+        return sorted(configured)
+    if clean_string(export_mode).lower() == "export":
+        return list(SAFE_GRAPH_EXPORT_STIX_OBJECT_TYPES)
+    return []
 
 
 def candidate_provenance(record, default_source_key=""):
@@ -323,3 +430,11 @@ def candidate_provenance(record, default_source_key=""):
 
 def clean_string(value):
     return " ".join(str(value or "").strip().split())
+
+
+def first_clean_value(*values):
+    for value in values:
+        cleaned = clean_string(value)
+        if cleaned:
+            return cleaned
+    return ""

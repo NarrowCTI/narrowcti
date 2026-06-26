@@ -331,6 +331,19 @@ class MISPFeedAdapter:
         self.last_search_skipped = 0
 
     def search(self, query):
+        direct_event_id = direct_event_query(query)
+        if direct_event_id:
+            event = self.misp_client.get_event(direct_event_id)
+            self.last_search_available = 1 if event else 0
+            self.last_search_skipped = 0
+            if not event:
+                return []
+            candidate = self.normalize_event(event, external_id=direct_event_id)
+            if candidate:
+                return [candidate]
+            self.last_search_skipped = 1
+            return []
+
         events = self.misp_client.search_events(
             query,
             limit=self.limits.max_events_per_run,
@@ -393,3 +406,12 @@ class MISPFeedAdapter:
             external_id,
             guardrail=guardrail,
         )
+
+
+def direct_event_query(query):
+    text = str(query or "").strip()
+    for prefix in ("event:", "event-id:", "id:", "uuid:"):
+        if text.lower().startswith(prefix):
+            value = text[len(prefix) :].strip()
+            return value
+    return ""

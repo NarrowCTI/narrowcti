@@ -116,15 +116,24 @@ aliases.
 
 ## Source Identity And Author Hygiene
 
-OpenCTI Author should represent the logical upstream intelligence source, not
-only the NarrowCTI runtime that curated the bundle. In v0.8, OTX and MISP
-exports use source-aware STIX identities:
+OpenCTI Author should represent the logical upstream intelligence source and
+make the NarrowCTI curation path explicit. The product naming convention for
+new exported bundles is:
+
+```text
+<logical upstream source> via NarrowCTI
+```
+
+This gives analysts both signals at once: which feed/collector supplied the
+intelligence and that NarrowCTI curated the payload before OpenCTI ingestion.
+In v0.8, OTX and MISP exports use these source-aware STIX identities:
 
 | Source key | OpenCTI Author / STIX Identity |
 | --- | --- |
-| `alienvault:otx` | `OTX AlienVault` |
-| `alienvault:otx-premium` | `OTX AlienVault Premium` |
-| `misp:misp` | `MISP` |
+| `alienvault:otx` | `OTX AlienVault via NarrowCTI` |
+| `alienvault:otx-premium` | `OTX AlienVault Premium via NarrowCTI` |
+| `misp:misp` | `MISP via NarrowCTI` |
+| Future source adapters | `<Source display name> via NarrowCTI` |
 
 NarrowCTI remains the curation layer. Its decisions stay visible through the
 decision audit, graph export plan, curation reports and `x_narrowcti_*` custom
@@ -146,7 +155,7 @@ metadata supports them and the candidate passes policy:
 | --- | --- | --- |
 | Observations / Indicators | IOC indicators and detection-rule candidates as STIX `indicator` objects | Existing behavior remains active in every mode. |
 | Observations / Observables | Domain, URL, IPv4, IPv6, email and file-hash observables from graph candidates | Artifact-specific promotion is still pending. |
-| Threats / Threat actors | STIX `threat-actor` | Created only from explicit supported metadata such as OTX adversary or MISP galaxy evidence. |
+| Threats / Threat actors | STIX `threat-actor` for group actors; native OpenCTI `ThreatActorIndividual` for individual actors | Created only from explicit supported metadata such as OTX adversary or MISP galaxy evidence. Individual actors use native GraphQL export so they materialize in the correct OpenCTI tab. |
 | Threats / Intrusion sets | STIX `intrusion-set` | Depends on source metadata or galaxy mapping. |
 | Arsenal / Malware | STIX `malware` | Useful for malware families and actor arsenal enrichment. |
 | Arsenal / Tools | STIX `tool` | Depends on source metadata or galaxy mapping. |
@@ -155,7 +164,8 @@ metadata supports them and the candidate passes policy:
 | Techniques / Attack patterns | STIX `attack-pattern` with MITRE external id when available | Canonical MITRE lookup should be enabled before broad export. |
 | Techniques / Narratives | STIX `note` for supported event report or narrative evidence | OpenCTI placement depends on its note/report rendering. |
 | Entities / Sectors | STIX `identity` with `identity_class=class` for `target_sector` | This is the mapping expected to feed OpenCTI Sectors. |
-| Locations / Countries | STIX `location` with country value | Region, administrative area, city and position enrichment are backlog items. |
+| Entities / Individuals | STIX `identity` with `identity_class=individual` for `target_individual` | Created only from explicit victimology/person fields such as `targeted-person` or `victim-individual`; threat-actor individuals remain separate Threat objects. |
+| Locations / Countries and deeper geography | STIX `location` with country, region, administrative area, city, latitude, longitude and precision when source-backed | Country export is validated; region, administrative-area, city and coordinate support is implemented but still needs real OpenCTI UI validation with source payloads carrying those fields. |
 
 OpenCTI tabs not listed above are not guaranteed by this version. They remain
 part of the graph enrichment backlog and require broader source metadata
@@ -194,6 +204,13 @@ For Threat Actor and Intrusion Set objects, lookup is intentionally limited to
 `standard_id`, exact name and exact alias matching returned by OpenCTI search.
 This supports canonical actor naming without broad fuzzy matching.
 
+Threat Actor lookup is split by OpenCTI UI taxonomy. Normal `threat_actor`
+candidates are treated as group-style actors and use `threatActorsGroup`.
+Explicit `threat_actor_individual` evidence uses `threatActorsIndividuals` and
+native `threatActorIndividualAdd(update=true)` export. NarrowCTI deliberately
+keeps these candidates out of the generic STIX `threat-actor` bundle path so an
+individual actor does not become a group-style actor in OpenCTI.
+
 For Infrastructure objects, lookup is intentionally limited to `standard_id`,
 exact name and exact alias matching returned by OpenCTI search. NarrowCTI does
 not infer Infrastructure from every observable because that would pollute the
@@ -214,6 +231,20 @@ policy controls.
 For Location objects, lookup is intentionally limited to `standard_id` and
 exact OpenCTI name. This is enough to protect controlled country export, such
 as `Argentina`, without guessing ambiguous geography from weak source text.
+
+For target identity objects, lookup is intentionally scoped to victimology.
+Target Organizations use `organizations`, target Sectors use `sectors`, target
+Systems use `systems` and target Individuals use `individuals`.
+Source identities, collectors, feed authors and provenance identities do not use
+the Organization lookup path and remain outside automatic graph promotion.
+
+For Technique context objects, lookup is intentionally exact. Courses of Action
+use `coursesOfAction`, Data Components use `dataComponents` and Data Sources
+use `dataSources`. NarrowCTI matches `standard_id` first and exact `name`
+second. Local OpenCTI 6.9.4 materializes MITRE custom exports with canonical
+`data-component--` and `data-source--` ids, so export planning accepts those
+canonical references for NarrowCTI `x-mitre-data-component` and
+`x-mitre-data-source` candidates.
 
 When matches exist, decision metadata can include
 `graph_export_plan_lookup_matches` with the NarrowCTI candidate key, candidate
@@ -255,8 +286,8 @@ The current v0.8 cut still does not:
 
 ## Expansion Path
 
-After ATT&CK, malware and tool lookup are validated, the same pattern should
-expand to:
+After ATT&CK, malware, tool and Technique-context lookup are validated, the
+same pattern should expand to:
 
 - Malware and tool lookup beyond exact `standard_id` or name, including aliases
   and source references.
