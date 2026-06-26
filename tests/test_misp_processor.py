@@ -434,6 +434,65 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_misp_operational_meta_candidates(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Galaxy"] = {
+            "type": "campaign",
+            "name": "Campaign",
+            "GalaxyCluster": {
+                "type": "campaign",
+                "value": "Operation Example",
+                "uuid": "cluster-campaign",
+                "meta": {
+                    "c2-channel": ["Telegram"],
+                    "objective": ["Credential theft"],
+                    "incident-name": ["Observed phishing wave"],
+                    "security-platform": ["Microsoft Defender for Endpoint"],
+                    "targeted-system": ["Windows Workstations"],
+                },
+            },
+        }
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["campaign"])
+        self.assertEqual(1, graph_evidence["counts"]["channel"])
+        self.assertEqual(1, graph_evidence["counts"]["event"])
+        self.assertEqual(1, graph_evidence["counts"]["narrative"])
+        self.assertEqual(1, graph_evidence["counts"]["security_platform"])
+        self.assertEqual(1, graph_evidence["counts"]["target_system"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "channel"
+                and candidate["value"] == "Telegram"
+                and candidate["stix_object_type"] == "channel"
+                and candidate["attributes"]["channel_types"] == ["c2"]
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "security_platform"
+                and candidate["value"] == "Microsoft Defender for Endpoint"
+                and candidate["stix_object_type"] == "security-platform"
+                and candidate["attributes"]["security_platform_type"]
+                == "Detection Platform"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "target_system"
+                and candidate["value"] == "Windows Workstations"
+                and candidate["stix_object_type"] == "identity"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_extracts_misp_vulnerabilities(self):
         candidate_ref = candidate(
             external_id="event-1",

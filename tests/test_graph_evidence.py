@@ -778,6 +778,93 @@ class GraphEvidenceTests(unittest.TestCase):
             organizations["Example Hospital"]["attributes"]["parent_cluster_value"],
         )
 
+    def test_builds_misp_operational_meta_evidence_for_opencti_tabs(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "campaign",
+                        "value": "Operation Example",
+                        "uuid": "cluster-campaign",
+                        "galaxy_type": "campaign",
+                        "galaxy_name": "Campaign",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "c2-channel": ["Telegram"],
+                            "objective": ["Credential theft"],
+                            "incident-name": ["Observed phishing wave"],
+                            "security-platform": ["Microsoft Defender for Endpoint"],
+                            "targeted-system": ["Windows Workstations"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(6, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["campaign"])
+        self.assertEqual(1, evidence["counts"]["channel"])
+        self.assertEqual(1, evidence["counts"]["event"])
+        self.assertEqual(1, evidence["counts"]["narrative"])
+        self.assertEqual(1, evidence["counts"]["security_platform"])
+        self.assertEqual(1, evidence["counts"]["target_system"])
+        records = {record["entity_type"]: record for record in evidence["records"]}
+        self.assertEqual("Telegram", records["channel"]["value"])
+        self.assertEqual("channel", records["channel"]["stix_object_type"])
+        self.assertEqual(["c2"], records["channel"]["attributes"]["channel_types"])
+        self.assertEqual("Credential theft", records["narrative"]["value"])
+        self.assertEqual(
+            ["objective"],
+            records["narrative"]["attributes"]["narrative_types"],
+        )
+        self.assertEqual("Observed phishing wave", records["event"]["value"])
+        self.assertEqual(["incident"], records["event"]["attributes"]["event_types"])
+        self.assertEqual(
+            "Microsoft Defender for Endpoint",
+            records["security_platform"]["value"],
+        )
+        self.assertEqual(
+            "security-platform",
+            records["security_platform"]["stix_object_type"],
+        )
+        self.assertEqual(
+            "Detection Platform",
+            records["security_platform"]["attributes"]["security_platform_type"],
+        )
+        self.assertEqual("Windows Workstations", records["target_system"]["value"])
+        self.assertEqual("identity", records["target_system"]["stix_object_type"])
+
+    def test_misp_operational_meta_rejects_ioc_like_values(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "campaign",
+                        "value": "Operation Example",
+                        "uuid": "cluster-campaign",
+                        "galaxy_type": "campaign",
+                        "galaxy_name": "Campaign",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "targeted-system": ["CVE-2026-12345"],
+                            "security-platform": ["https://example.test"],
+                            "channel": ["c2.example.test"],
+                            "objective": ["T1059"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual({"campaign": 1}, evidence["counts"])
+
     def test_skips_misp_target_organization_provenance_and_observable_values(self):
         evidence = build_graph_evidence(
             {

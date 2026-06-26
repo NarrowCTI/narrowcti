@@ -15,7 +15,11 @@ ENTITY_TARGETS = {
     "intrusion_set": ("intrusion-set", "attributed-to"),
     "infrastructure": ("infrastructure", "uses"),
     "autonomous_system": ("autonomous-system", "related-to"),
+    "channel": ("channel", "uses"),
+    "event": ("event", "related-to"),
     "malware": ("malware", "uses"),
+    "narrative": ("narrative", "related-to"),
+    "security_platform": ("security-platform", "related-to"),
     "tool": ("tool", "uses"),
     "vulnerability": ("vulnerability", "related-to"),
     "observable": ("observable", "based-on"),
@@ -24,6 +28,7 @@ ENTITY_TARGETS = {
     "target_sector": ("identity", "targets"),
     "target_organization": ("identity", "targets"),
     "target_individual": ("identity", "targets"),
+    "target_system": ("identity", "targets"),
     "target_administrative_area": ("location", "targets"),
     "target_city": ("location", "targets"),
     "target_country": ("location", "targets"),
@@ -363,13 +368,7 @@ def misp_galaxy_meta_evidence(cluster, source_key=""):
                 key = normalized.casefold()
                 if not normalized or key in seen:
                     continue
-                if entity_type == "target_organization" and not is_target_organization_value(
-                    normalized
-                ):
-                    continue
-                if entity_type == "target_individual" and not is_target_individual_value(
-                    normalized
-                ):
+                if not is_safe_misp_meta_graph_value(entity_type, normalized):
                     continue
                 seen.add(key)
                 record = evidence_record(
@@ -379,7 +378,11 @@ def misp_galaxy_meta_evidence(cluster, source_key=""):
                     source_name="misp-galaxy",
                     source_field=meta_source_field(cluster, field_name),
                     confidence=confidence,
-                    attributes=misp_galaxy_meta_attributes(cluster, field_name),
+                    attributes=misp_galaxy_meta_attributes(
+                        cluster,
+                        field_name,
+                        entity_type,
+                    ),
                 )
                 if record:
                     records.append(record)
@@ -538,6 +541,160 @@ MISP_GALAXY_META_ENTITY_FIELDS = (
         65,
     ),
     (
+        "target_system",
+        (
+            "targeted-system",
+            "targeted-systems",
+            "targeted_system",
+            "targeted_systems",
+            "target-system",
+            "target-systems",
+            "target_system",
+            "target_systems",
+            "victim-system",
+            "victim-systems",
+            "victim_system",
+            "victim_systems",
+            "affected-system",
+            "affected-systems",
+            "affected_system",
+            "affected_systems",
+            "impacted-system",
+            "impacted-systems",
+            "impacted_system",
+            "impacted_systems",
+            "targeted-platform",
+            "targeted-platforms",
+            "targeted_platform",
+            "targeted_platforms",
+            "target-platform",
+            "target-platforms",
+            "target_platform",
+            "target_platforms",
+            "affected-platform",
+            "affected-platforms",
+            "affected_platform",
+            "affected_platforms",
+            "operating-system",
+            "operating-systems",
+            "operating_system",
+            "operating_systems",
+            "targeted-asset",
+            "targeted-assets",
+            "targeted_asset",
+            "targeted_assets",
+        ),
+        65,
+    ),
+    (
+        "security_platform",
+        (
+            "security-platform",
+            "security-platforms",
+            "security_platform",
+            "security_platforms",
+            "security-product",
+            "security-products",
+            "security_product",
+            "security_products",
+            "detection-platform",
+            "detection-platforms",
+            "detection_platform",
+            "detection_platforms",
+            "siem",
+            "edr",
+            "ndr",
+            "xdr",
+            "sensor",
+            "sensors",
+            "scanner",
+            "scanners",
+        ),
+        65,
+    ),
+    (
+        "channel",
+        (
+            "channel",
+            "channels",
+            "c2-channel",
+            "c2-channels",
+            "c2_channel",
+            "c2_channels",
+            "command-and-control-channel",
+            "command-and-control-channels",
+            "command_and_control_channel",
+            "command_and_control_channels",
+            "communication-channel",
+            "communication-channels",
+            "communication_channel",
+            "communication_channels",
+            "delivery-channel",
+            "delivery-channels",
+            "delivery_channel",
+            "delivery_channels",
+            "distribution-channel",
+            "distribution-channels",
+            "distribution_channel",
+            "distribution_channels",
+            "marketplace",
+            "marketplaces",
+        ),
+        65,
+    ),
+    (
+        "narrative",
+        (
+            "narrative",
+            "narratives",
+            "objective",
+            "objectives",
+            "campaign-objective",
+            "campaign-objectives",
+            "campaign_objective",
+            "campaign_objectives",
+            "operation-objective",
+            "operation-objectives",
+            "operation_objective",
+            "operation_objectives",
+            "motivation",
+            "motivations",
+            "theme",
+            "themes",
+            "goal",
+            "goals",
+            "intent",
+            "intents",
+        ),
+        62,
+    ),
+    (
+        "event",
+        (
+            "event",
+            "events",
+            "event-name",
+            "event-names",
+            "event_name",
+            "event_names",
+            "incident",
+            "incidents",
+            "incident-name",
+            "incident-names",
+            "incident_name",
+            "incident_names",
+            "observed-event",
+            "observed-events",
+            "observed_event",
+            "observed_events",
+            "activity-event",
+            "activity-events",
+            "activity_event",
+            "activity_events",
+        ),
+        62,
+    ),
+    (
         "target_region",
         (
             "targeted-region",
@@ -671,13 +828,33 @@ def is_target_individual_value(value):
     return True
 
 
+def is_safe_misp_meta_graph_value(entity_type, value):
+    if entity_type == "target_individual":
+        return is_target_individual_value(value)
+    if entity_type in {
+        "channel",
+        "event",
+        "narrative",
+        "security_platform",
+        "target_organization",
+        "target_system",
+    }:
+        value = clean_string(value)
+        if not is_target_organization_value(value):
+            return False
+        if re.fullmatch(r"\d+", value):
+            return False
+        return True
+    return bool(clean_string(value))
+
+
 def meta_source_field(cluster, field_name):
     source_field = clean_string(cluster.get("source_field")) or "Galaxy"
     return f"{source_field}.meta.{field_name}"
 
 
-def misp_galaxy_meta_attributes(cluster, field_name):
-    return compact_mapping(
+def misp_galaxy_meta_attributes(cluster, field_name, entity_type=""):
+    attributes = compact_mapping(
         {
             "meta_key": field_name,
             "parent_galaxy_type": cluster.get("galaxy_type"),
@@ -688,6 +865,61 @@ def misp_galaxy_meta_attributes(cluster, field_name):
             "parent_tag_name": cluster.get("tag_name"),
         }
     )
+    entity_type = clean_string(entity_type)
+    normalized_field = field_name.replace("_", "-").casefold()
+    if entity_type == "channel":
+        attributes["channel_types"] = misp_meta_context_types(
+            normalized_field,
+            {
+                "c2": ("c2", "command-and-control"),
+                "delivery": ("delivery", "distribution"),
+                "communication": ("communication",),
+                "marketplace": ("marketplace",),
+            },
+        )
+    elif entity_type == "narrative":
+        attributes["narrative_types"] = misp_meta_context_types(
+            normalized_field,
+            {
+                "objective": ("objective", "goal", "intent"),
+                "motivation": ("motivation",),
+                "theme": ("theme", "narrative"),
+            },
+        )
+    elif entity_type == "event":
+        attributes["event_types"] = misp_meta_context_types(
+            normalized_field,
+            {
+                "incident": ("incident",),
+                "activity": ("activity", "observed"),
+                "cti-event": ("event",),
+            },
+        )
+    elif entity_type == "security_platform":
+        platform_types = misp_meta_context_types(
+            normalized_field,
+            {
+                "SIEM": ("siem",),
+                "EDR": ("edr",),
+                "NDR": ("ndr",),
+                "XDR": ("xdr",),
+                "Scanner": ("scanner",),
+                "Sensor": ("sensor",),
+                "Detection Platform": ("detection-platform", "security-platform"),
+                "Security Product": ("security-product",),
+            },
+        )
+        if platform_types:
+            attributes["security_platform_type"] = platform_types[0]
+    return compact_mapping(attributes)
+
+
+def misp_meta_context_types(field_name, mapping):
+    values = []
+    for output, tokens in mapping.items():
+        if any(token in field_name for token in tokens):
+            values.append(output)
+    return values
 
 
 def classify_misp_galaxy(cluster):

@@ -158,12 +158,16 @@ metadata supports them and the candidate passes policy:
 | Threats / Threat actors | STIX `threat-actor` for group actors; native OpenCTI `ThreatActorIndividual` for individual actors | Created only from explicit supported metadata such as OTX adversary or MISP galaxy evidence. Individual actors use native GraphQL export so they materialize in the correct OpenCTI tab. |
 | Threats / Intrusion sets | STIX `intrusion-set` | Depends on source metadata or galaxy mapping. |
 | Arsenal / Malware | STIX `malware` | Useful for malware families and actor arsenal enrichment. |
+| Arsenal / Channels | OpenCTI custom SDO `channel` | Created only from explicit source-backed channel fields, including MISP Galaxy meta such as `c2-channel`, `communication-channel`, `delivery-channel` or `marketplace`. |
 | Arsenal / Tools | STIX `tool` | Depends on source metadata or galaxy mapping. |
 | Arsenal / Vulnerabilities | STIX `vulnerability` with CVE external references when available | CVE evidence can come from MISP attributes, tags or OTX indicators. |
 | Observations / Infrastructures | STIX `infrastructure` | Requires explicit infrastructure evidence; raw indicators alone are not automatically promoted as infrastructure. |
 | Techniques / Attack patterns | STIX `attack-pattern` with MITRE external id when available | Canonical MITRE lookup should be enabled before broad export. |
-| Techniques / Narratives | STIX `note` for supported event report or narrative evidence | OpenCTI placement depends on its note/report rendering. |
+| Techniques / Narratives | OpenCTI custom SDO `narrative`; STIX `note` for supported report text | First-class Narrative promotion is limited to explicit objective, motivation, theme, goal or intent fields. Free-form report text remains a Report/Note. |
 | Entities / Sectors | STIX `identity` with `identity_class=class` for `target_sector` | This is the mapping expected to feed OpenCTI Sectors. |
+| Entities / Events | OpenCTI custom SDO `event` | Created only from explicit event-level fields such as `incident-name` or `observed-event`; MISP EventReports remain Reports/Notes by default. |
+| Entities / Security platforms | Native OpenCTI `SecurityPlatform` export plus report linking | Created from explicit security platform, SIEM, EDR, NDR, XDR, scanner or sensor fields; not exported as Organization. |
+| Entities / Systems | STIX `identity` with `identity_class=system` for `target_system` | Created from explicit affected system, platform, operating-system or target asset fields. |
 | Entities / Individuals | STIX `identity` with `identity_class=individual` for `target_individual` | Created only from explicit victimology/person fields such as `targeted-person` or `victim-individual`; threat-actor individuals remain separate Threat objects. |
 | Locations / Countries and deeper geography | STIX `location` with country, region, administrative area, city, latitude, longitude and precision when source-backed | Country export is validated; region, administrative-area, city and coordinate support is implemented but still needs real OpenCTI UI validation with source payloads carrying those fields. |
 

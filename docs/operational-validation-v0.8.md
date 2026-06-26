@@ -849,3 +849,37 @@ Post-import OpenCTI API validation confirmed:
 This closes controlled OpenCTI import behavior for the deeper Location tabs.
 The remaining evidence gap is real source-payload validation from OTX/MISP or
 future feeds carrying administrative-area, city or coordinate victimology.
+
+## Captured MISP Operational Meta Mapping Evidence
+
+On June 26, 2026, controlled unit validation expanded the v0.8 matrix backlog
+for source-backed MISP Galaxy metadata. The tested path covers:
+
+- `MISP event -> decision_metadata -> graph_evidence -> graph_candidates`.
+- Channel promotion from explicit fields such as `c2-channel`.
+- Narrative promotion from explicit fields such as `objective`.
+- Event promotion from explicit fields such as `incident-name`.
+- Security Platform promotion from explicit fields such as `security-platform`.
+- System promotion from explicit fields such as `targeted-system`.
+
+The validation used a campaign Galaxy cluster carrying:
+
+- `c2-channel=Telegram`
+- `objective=Credential theft`
+- `incident-name=Observed phishing wave`
+- `security-platform=Microsoft Defender for Endpoint`
+- `targeted-system=Windows Workstations`
+
+The graph pipeline produced one Campaign candidate plus one candidate each for
+Channel, Narrative, Event, Security Platform and System. It preserved contextual
+type metadata such as `channel_types=c2`, `narrative_types=objective`,
+`event_types=incident` and `security_platform_type=Detection Platform`.
+
+Guardrail validation also confirmed that IOC-like values are rejected for these
+operational meta fields. Values shaped as URLs, domains, CVEs or ATT&CK ids do
+not become Channel, Narrative, Security Platform or System graph entities.
+
+This is not yet live OpenCTI ingestion evidence. The next operational step is a
+controlled real MISP or OTX payload carrying these explicit fields, followed by
+OpenCTI UI/API verification that the objects land in the expected tabs and keep
+their Report context.
