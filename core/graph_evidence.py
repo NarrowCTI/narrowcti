@@ -59,26 +59,69 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     records.extend(otx_entity_evidence(metadata.get("otx_entities"), source_key))
     records.extend(mitre_attack_evidence(metadata.get("mitre_attack"), source_key))
     records.extend(misp_metadata_evidence(metadata, source_key))
-    records.extend(misp_galaxy_evidence(metadata.get("misp_galaxies"), source_key))
+    misp_timeline = misp_timeline_attributes(metadata)
     records.extend(
-        misp_vulnerability_evidence(metadata.get("misp_vulnerabilities"), source_key)
-    )
-    records.extend(misp_campaign_evidence(metadata.get("misp_campaigns"), source_key))
-    records.extend(
-        misp_event_report_evidence(metadata.get("misp_event_reports"), source_key)
-    )
-    records.extend(misp_sighting_evidence(metadata.get("misp_sightings"), source_key))
-    records.extend(
-        misp_object_reference_evidence(
-            metadata.get("misp_object_references"),
-            source_key,
+        with_default_timeline(
+            misp_galaxy_evidence(metadata.get("misp_galaxies"), source_key),
+            misp_timeline,
         )
     )
     records.extend(
-        misp_infrastructure_evidence(metadata.get("misp_infrastructure"), source_key)
+        with_default_timeline(
+            misp_vulnerability_evidence(
+                metadata.get("misp_vulnerabilities"),
+                source_key,
+            ),
+            misp_timeline,
+        )
     )
     records.extend(
-        misp_detection_rule_evidence(metadata.get("misp_detection_rules"), source_key)
+        with_default_timeline(
+            misp_campaign_evidence(metadata.get("misp_campaigns"), source_key),
+            misp_timeline,
+        )
+    )
+    records.extend(
+        with_default_timeline(
+            misp_event_report_evidence(
+                metadata.get("misp_event_reports"),
+                source_key,
+            ),
+            misp_timeline,
+        )
+    )
+    records.extend(
+        with_default_timeline(
+            misp_sighting_evidence(metadata.get("misp_sightings"), source_key),
+            misp_timeline,
+        )
+    )
+    records.extend(
+        with_default_timeline(
+            misp_object_reference_evidence(
+                metadata.get("misp_object_references"),
+                source_key,
+            ),
+            misp_timeline,
+        )
+    )
+    records.extend(
+        with_default_timeline(
+            misp_infrastructure_evidence(
+                metadata.get("misp_infrastructure"),
+                source_key,
+            ),
+            misp_timeline,
+        )
+    )
+    records.extend(
+        with_default_timeline(
+            misp_detection_rule_evidence(
+                metadata.get("misp_detection_rules"),
+                source_key,
+            ),
+            misp_timeline,
+        )
     )
 
     return {
@@ -92,6 +135,35 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
         ),
         "records": records,
     }
+
+
+def with_default_timeline(records, timeline_attributes):
+    timeline_attributes = compact_mapping(timeline_attributes)
+    if not timeline_attributes:
+        return list(records or [])
+    enriched = []
+    for record in records or []:
+        if not isinstance(record, Mapping):
+            continue
+        merged = dict(record)
+        attributes = {
+            **timeline_attributes,
+            **compact_mapping(record.get("attributes")),
+        }
+        if attributes:
+            merged["attributes"] = attributes
+        enriched.append(merged)
+    return enriched
+
+
+def misp_timeline_attributes(metadata):
+    return compact_mapping(
+        {
+            "source_created": metadata.get("misp_event_created"),
+            "source_timestamp": metadata.get("misp_event_timestamp"),
+            "source_date": metadata.get("misp_event_date"),
+        }
+    )
 
 
 def otx_entity_evidence(entities, source_key=""):

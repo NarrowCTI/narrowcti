@@ -528,6 +528,9 @@ class GraphEvidenceTests(unittest.TestCase):
         evidence = build_graph_evidence(
             {
                 "collector": "misp",
+                "misp_event_created": "2026-06-20T00:00:00Z",
+                "misp_event_timestamp": "1782004900",
+                "misp_event_date": "2026-06-20",
                 "misp_galaxies": [
                     {
                         "type": "mitre-attack-pattern",
@@ -584,6 +587,12 @@ class GraphEvidenceTests(unittest.TestCase):
         )
         self.assertEqual("T1059", attack["value"])
         self.assertEqual("attack-pattern", attack["stix_object_type"])
+        self.assertEqual(
+            "2026-06-20T00:00:00Z",
+            attack["attributes"]["source_created"],
+        )
+        self.assertEqual("1782004900", attack["attributes"]["source_timestamp"])
+        self.assertEqual("2026-06-20", attack["attributes"]["source_date"])
         self.assertEqual(
             "Command and Scripting Interpreter - T1059",
             attack["display_name"],

@@ -135,7 +135,7 @@ NarrowCTI flag.
 | --- | --- | --- |
 | Knowledge | Reports, indicators, observables, infrastructure, ASN/IP relationships, actor, arsenal, ATT&CK, sector and location links can feed Knowledge when source evidence supports them. | Broader source payload validation and object-specific relationship tests. |
 | Diamond | Infrastructure and victimology facets are partially validated. Actor, capability, infrastructure and victimology relationships can be emitted when they are source-backed. | Campaign, organization, deeper location and richer capability relationships need expansion. |
-| Timeline | Source created, modified, timestamp, first_seen, last_seen, valid_from and valid_until evidence can be preserved as `x_narrowcti_*` custom properties on promoted objects and relationships when the source candidate carries those fields. Event objects also preserve explicit `start_time` and `stop_time`. | Native OpenCTI Timeline rendering still needs live UI/API validation per object type and source. |
+| Timeline | Source created, modified, timestamp, date, first_seen, last_seen, valid_from and valid_until evidence can be preserved as `x_narrowcti_*` custom properties on promoted objects and relationships when the source candidate carries those fields. Event objects also preserve explicit `start_time` and `stop_time`. | Native OpenCTI Timeline rendering still needs live UI/API validation per object type and source. |
 | Kill Chain | Canonical ATT&CK Attack Pattern objects carry kill-chain phases. NarrowCTI can link actors and infrastructure to those techniques. | More direct source-backed relationships are needed so each object view exposes ATT&CK context without relying on indirect traversal. |
 
 ## Backlog Order

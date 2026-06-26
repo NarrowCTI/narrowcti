@@ -616,6 +616,8 @@ class MISPProcessorTests(unittest.TestCase):
     def test_decision_metadata_extracts_misp_event_reports(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         event = enriched_event()
+        event["timestamp"] = "1782004900"
+        event["date"] = "2026-06-20"
         event["EventReport"] = [
             {
                 "uuid": "event-report-1",
@@ -647,6 +649,8 @@ class MISPProcessorTests(unittest.TestCase):
                 and record["stix_object_type"] == "note"
                 and record["attributes"]["content"]
                 == "The event describes exploitation activity."
+                and record["attributes"]["source_created"] == "2099-01-01T00:00:00Z"
+                and record["attributes"]["source_date"] == "2026-06-20"
                 for record in graph_evidence["records"]
             )
         )

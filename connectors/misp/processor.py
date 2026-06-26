@@ -73,6 +73,11 @@ def decision_metadata(
         "original_source": provenance.get("original_source", ""),
         "misp_event_id": provenance.get("misp_event_id") or source.get("id", ""),
         "misp_event_uuid": provenance.get("misp_event_uuid") or candidate_ref.external_id,
+        "misp_event_created": source.get("created", ""),
+        "misp_event_timestamp": source.get("timestamp")
+        or source.get("publish_timestamp")
+        or "",
+        "misp_event_date": source.get("date", ""),
         "tags": list(tags),
     }
     misp_galaxies = extract_misp_galaxies(source)

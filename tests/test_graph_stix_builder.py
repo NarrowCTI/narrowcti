@@ -548,6 +548,7 @@ class GraphStixBuilderTests(unittest.TestCase):
             "2026-06-22T10:00:00Z",
             infrastructure["x_narrowcti_source_modified"],
         )
+        self.assertEqual("2026-06-20", infrastructure["x_narrowcti_source_date"])
         self.assertEqual(
             "2026-06-20T10:05:00Z",
             infrastructure["x_narrowcti_first_seen"],
@@ -1258,6 +1259,7 @@ def infrastructure_candidate():
             "relationship_source_field": "threat-actor",
             "created": "2026-06-20T10:00:00Z",
             "modified": "2026-06-22T10:00:00Z",
+            "source_date": "2026-06-20",
             "first_seen": "2026-06-20T10:05:00Z",
             "last_seen": "2026-06-22T10:05:00Z",
         },

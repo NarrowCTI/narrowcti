@@ -885,6 +885,7 @@ promoted objects and semantic relationships:
 - `x_narrowcti_source_created`
 - `x_narrowcti_source_modified`
 - `x_narrowcti_source_timestamp`
+- `x_narrowcti_source_date`
 - `x_narrowcti_first_seen`
 - `x_narrowcti_last_seen`
 - `x_narrowcti_valid_from`
@@ -904,6 +905,14 @@ record as source-backed attributes. Pulse `created` and `modified` become
 and `last_seen_max` remain available unless a specific record carries a more
 precise timestamp. The STIX builder then emits these values as the
 `x_narrowcti_*` timeline properties above.
+
+Additional controlled unit validation confirmed the same event-level timeline
+propagation for MISP. `decision_metadata` now preserves MISP event `created`,
+`timestamp`/`publish_timestamp` and `date` values as graph metadata, and
+source-backed graph records such as Galaxy, Campaign, Vulnerability,
+Infrastructure, EventReport, Sighting and detection-rule evidence receive those
+defaults unless the record has a more specific timestamp. This gives MISP
+imports the same audit trail for future Timeline/reporting work.
 
 ## Captured Deep Location Export Evidence
 

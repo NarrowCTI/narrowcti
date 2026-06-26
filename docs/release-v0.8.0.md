@@ -559,12 +559,14 @@ OpenCTI tab/export coverage is tracked in
   source and relationship context even when feeds do not provide native
   descriptions. The same graph promotion path now preserves source-backed
   temporal evidence as `x_narrowcti_*` custom properties on objects and
-  relationships, covering source created/modified/timestamp, first_seen,
+  relationships, covering source created/modified/timestamp/date, first_seen,
   last_seen, valid_from and valid_until values when candidates provide them.
   OTX graph evidence now carries pulse lifecycle and aggregate indicator
   observation-window timestamps into promoted records so source-created,
   source-modified, first-seen and last-seen values survive the full graph
-  promotion path.
+  promotion path. MISP graph evidence now carries event created, event
+  timestamp or publish timestamp, and event date into source-backed graph
+  records when available.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

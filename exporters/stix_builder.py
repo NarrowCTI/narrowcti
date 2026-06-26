@@ -1358,6 +1358,10 @@ def graph_timeline_custom_properties(attributes):
             attributes.get("timestamp"),
             attributes.get("date_sighting"),
         ),
+        "x_narrowcti_source_date": first_clean_value(
+            attributes.get("source_date"),
+            attributes.get("date"),
+        ),
         "x_narrowcti_first_seen": first_clean_value(
             attributes.get("first_seen"),
             attributes.get("first_seen_min"),
