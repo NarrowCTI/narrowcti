@@ -353,6 +353,11 @@ class GraphStixBuilderTests(unittest.TestCase):
         ]
 
         self.assertEqual("Operation Example", campaign["name"])
+        self.assertEqual(
+            "Source-backed campaign observed by misp-galaxy at Galaxy: "
+            "Operation Example.",
+            campaign["description"],
+        )
         self.assertEqual("class", sector["identity_class"])
         self.assertEqual("organization", organization["identity_class"])
         self.assertEqual(
@@ -404,6 +409,11 @@ class GraphStixBuilderTests(unittest.TestCase):
 
         course = objects_by_type["course-of-action"][0]
         self.assertEqual("Disable or Remove Feature or Program", course["name"])
+        self.assertEqual(
+            "Source-backed course of action observed by misp-galaxy at Galaxy: "
+            "Disable or Remove Feature or Program.",
+            course["description"],
+        )
         self.assertEqual(1, summary["graph_object_count"])
         self.assertEqual(
             {"course-of-action": 1},
@@ -908,6 +918,11 @@ class GraphStixBuilderTests(unittest.TestCase):
         self.assertEqual(["c2", "delivery"], channel["channel_types"])
         self.assertEqual(["Telegram"], channel["aliases"])
         self.assertEqual(
+            "Source-backed channel observed by MISP via NarrowCTI at "
+            "Galaxy.meta.channel: Telegram C2.",
+            channel["description"],
+        )
+        self.assertEqual(
             {"extension_type": "new-sdo"},
             channel["extensions"][extension_id],
         )
@@ -927,6 +942,11 @@ class GraphStixBuilderTests(unittest.TestCase):
         event = objects_by_type["event"][0]
         self.assertEqual("Observed phishing wave", event["name"])
         self.assertEqual(["phishing"], event["event_types"])
+        self.assertEqual(
+            "Source-backed event observed by MISP via NarrowCTI at Event.info: "
+            "Observed phishing wave.",
+            event["description"],
+        )
         self.assertTrue(event["start_time"].startswith("2026-06-25T10:00:00"))
         self.assertTrue(event["stop_time"].startswith("2026-06-25T12:00:00"))
         self.assertEqual(

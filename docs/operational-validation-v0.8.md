@@ -844,6 +844,30 @@ current description is empty and the matched object is NarrowCTI-owned, either
 by deterministic STIX id or by an OpenCTI author containing `NarrowCTI`. This
 protects canonical third-party objects and analyst-maintained descriptions.
 
+On June 26, 2026, controlled unit validation expanded description polish for
+newly promoted operational graph objects. When a promoted object has no explicit
+source description, NarrowCTI now emits a provenance-backed description using
+the logical source and source field. Validated examples include:
+
+- Campaign:
+  `Source-backed campaign observed by misp-galaxy at Galaxy: Operation Example.`
+- Channel:
+  `Source-backed channel observed by MISP via NarrowCTI at Galaxy.meta.channel:
+  Telegram C2.`
+- Event:
+  `Source-backed event observed by MISP via NarrowCTI at Event.info: Observed
+  phishing wave.`
+- Course of Action:
+  `Source-backed course of action observed by misp-galaxy at Galaxy: Disable or
+  Remove Feature or Program.`
+- Native Security Platform:
+  `Source-backed security platform observed by misp at security_platform:
+  NarrowCTI SIEM Validation.`
+
+This polish keeps OpenCTI object Overview pages useful for analysts without
+fabricating feed content. Explicit feed descriptions still take precedence, and
+existing non-empty OpenCTI descriptions remain protected.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

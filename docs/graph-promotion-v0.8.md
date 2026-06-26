@@ -176,6 +176,14 @@ OpenCTI tabs not listed above are not guaranteed by this version. They remain
 part of the graph enrichment backlog and require broader source metadata
 validation before NarrowCTI should promote them automatically.
 
+For analyst usability, promoted objects should not be empty shells when
+NarrowCTI has source provenance. If the source provides an explicit
+description, summary or details field, that text is preserved. If it does not,
+NarrowCTI can generate a conservative provenance description such as
+`Source-backed channel observed by MISP via NarrowCTI at Galaxy.meta.channel:
+Telegram C2.` This description is intentionally audit-focused: it explains why
+the object exists without claiming context the source did not provide.
+
 ## Runtime Configuration
 
 `NARROWCTI_OPENCTI_GRAPH_LOOKUP` controls the v0.8 OpenCTI graph lookup gate.

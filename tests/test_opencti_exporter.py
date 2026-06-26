@@ -112,6 +112,26 @@ class OpenCTIExporterTests(unittest.TestCase):
             api_client.report_object_refs,
         )
 
+    def test_export_mode_describes_native_security_platform_from_source_context(self):
+        api_client = FakeOpenCTIClient()
+        candidate = security_platform_candidate()
+        candidate["attributes"] = {"security_platform_type": "SIEM"}
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [candidate]},
+            graph_export_mode="export",
+        )
+
+        self.assertEqual(
+            "Source-backed security platform observed by misp at security_platform: "
+            "NarrowCTI SIEM Validation.",
+            api_client.security_platform_adds[0]["description"],
+        )
+
     def test_export_mode_creates_native_threat_actor_individual(self):
         api_client = FakeOpenCTIClient()
 
@@ -265,13 +285,14 @@ class OpenCTIExporterTests(unittest.TestCase):
                 {
                     "id": "opencti-sector-id",
                     "input": [
-                        {
-                            "key": "description",
-                            "value": [
-                                "Source-backed target sector observed by otx: Crypto."
-                            ],
-                        }
-                    ],
+                            {
+                                "key": "description",
+                                "value": [
+                                    "Source-backed target sector observed by otx at "
+                                    "industries: Crypto."
+                                ],
+                            }
+                        ],
                 }
             ],
             api_client.patches,

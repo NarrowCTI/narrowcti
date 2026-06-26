@@ -1048,9 +1048,23 @@ def graph_candidate_description(candidate, attributes):
         if source_name:
             return f"Source-backed {label} observed by {source_name}."
         return f"Source-backed {label}."
+    if entity_type in OPERATIONAL_CONTEXT_ENTITY_TYPES:
+        return source_backed_context_description(
+            candidate,
+            attributes,
+            OPERATIONAL_CONTEXT_ENTITY_TYPES[entity_type],
+        )
     if entity_type not in TARGET_CONTEXT_ENTITY_TYPES:
         return ""
 
+    return source_backed_context_description(
+        candidate,
+        attributes,
+        TARGET_CONTEXT_ENTITY_TYPES[entity_type],
+    )
+
+
+def source_backed_context_description(candidate, attributes, label):
     name = clean_string(candidate.get("name") or candidate.get("value"))
     source_name = first_clean_value(candidate.get("source_name"), candidate.get("source_key"))
     source_value = first_clean_value(
@@ -1058,22 +1072,40 @@ def graph_candidate_description(candidate, attributes):
         attributes.get("source_value"),
         attributes.get("parent_cluster_value"),
     )
+    source_field = clean_string(candidate.get("source_field"))
     relationship_type = clean_string(candidate.get("relationship_type")) or "related-to"
-    label = TARGET_CONTEXT_ENTITY_TYPES[entity_type]
     if name and source_name and source_value:
         return (
             f"Source-backed {label} observed by {source_name}: "
             f"{source_value} {relationship_type} {name}."
         )
+    if name and source_name and source_field:
+        return f"Source-backed {label} observed by {source_name} at {source_field}: {name}."
     if name and source_name:
         return f"Source-backed {label} observed by {source_name}: {name}."
     return ""
+
+
+OPERATIONAL_CONTEXT_ENTITY_TYPES = {
+    "campaign": "campaign",
+    "channel": "channel",
+    "course_of_action": "course of action",
+    "event": "event",
+    "infrastructure": "infrastructure",
+    "intrusion_set": "intrusion set",
+    "malware": "malware",
+    "narrative": "narrative",
+    "security_platform": "security platform",
+    "tool": "tool",
+    "vulnerability": "vulnerability",
+}
 
 
 TARGET_CONTEXT_ENTITY_TYPES = {
     "target_administrative_area": "target administrative area",
     "target_city": "target city",
     "target_country": "target country",
+    "target_individual": "target individual",
     "target_organization": "target organization",
     "target_position": "target position",
     "target_region": "target region",

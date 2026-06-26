@@ -118,6 +118,13 @@ The v0.8 export gate is intentionally conservative:
 | Knowledge | Semantic relationships | `relationship` | Validated export where endpoints resolve | ObjectReference and curated graph relationships export only when both endpoints are resolvable. | Continue strict endpoint resolution and relationship type validation. |
 | Knowledge | Sightings | `sighting` | Validated export where target resolves | MISP sightings export only when the sighted value resolves to an Indicator SDO. | Add source-specific sighting time and confidence mapping. |
 
+Promoted graph objects now receive source-backed descriptions when the source
+does not provide an explicit description but the NarrowCTI candidate has enough
+provenance to explain the object. The fallback description records the logical
+source and source field, for example `MISP via NarrowCTI at Galaxy.meta.channel`,
+without inventing threat-intelligence content beyond the observed value and
+relationship context.
+
 ## Knowledge Views
 
 OpenCTI views such as Knowledge, Diamond, Timeline and Kill Chain are populated
@@ -169,6 +176,9 @@ NarrowCTI flag.
   Existing-object description hydration is limited to NarrowCTI-owned objects,
   either by deterministic STIX id or by an OpenCTI author containing
   `NarrowCTI`.
+- Do not fabricate object descriptions. If the feed has no description,
+  NarrowCTI may add only a provenance-backed description that explains which
+  source and field produced the promoted object.
 - Do not treat raw IOCs as Infrastructure unless source metadata or review
   policy supports an infrastructure-level object.
 - When a source-backed Infrastructure object exists, relate supported network

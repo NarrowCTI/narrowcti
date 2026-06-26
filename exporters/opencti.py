@@ -6,6 +6,7 @@ from exporters.stix_builder import (
     build_curated_report_bundle,
     build_report_bundle,
     graph_accepted_candidates,
+    graph_candidate_description,
     graph_description_hydration_requests,
 )
 
@@ -249,7 +250,10 @@ def export_native_security_platforms(api_client, graph_candidate_policy):
             "name": name,
             "update": True,
         }
-        description = clean_string(attributes.get("description"))
+        description = clean_string(
+            attributes.get("description")
+            or graph_candidate_description(candidate, attributes)
+        )
         platform_type = clean_string(
             attributes.get("security_platform_type")
             or attributes.get("platform_type")
