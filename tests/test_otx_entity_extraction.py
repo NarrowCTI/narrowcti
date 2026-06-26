@@ -271,6 +271,87 @@ class OTXEntityExtractionTests(unittest.TestCase):
             )
         )
 
+    def test_extracts_explicit_otx_operational_graph_fields(self):
+        entities = extract_otx_entities(
+            {
+                "adversary": "APT Example",
+                "c2_channels": ["Telegram"],
+                "objective": "Credential theft",
+                "incident_name": "Observed phishing wave",
+                "security_platform": "Microsoft Defender for Endpoint",
+                "siem": "Splunk Enterprise Security",
+                "targeted_system": "Windows Workstations",
+            }
+        )
+
+        self.assertEqual(["Telegram"], entities["c2_channels"])
+        self.assertEqual(["Credential theft"], entities["objectives"])
+        self.assertEqual(["Observed phishing wave"], entities["incidents"])
+        self.assertEqual(
+            ["Microsoft Defender for Endpoint"],
+            entities["security_platforms"],
+        )
+        self.assertEqual(["Splunk Enterprise Security"], entities["siems"])
+        self.assertEqual(["Windows Workstations"], entities["targeted_systems"])
+        records = {
+            (record["entity_type"], record["value"]): record
+            for record in entities["records"]
+        }
+        self.assertEqual(
+            ["c2"],
+            records[("channel", "Telegram")]["attributes"]["channel_types"],
+        )
+        self.assertEqual(
+            ["objective"],
+            records[("narrative", "Credential theft")]["attributes"][
+                "narrative_types"
+            ],
+        )
+        self.assertEqual(
+            ["incident"],
+            records[("event", "Observed phishing wave")]["attributes"]["event_types"],
+        )
+        self.assertNotIn(
+            "security_platform_type",
+            records[("security_platform", "Microsoft Defender for Endpoint")][
+                "attributes"
+            ],
+        )
+        self.assertEqual(
+            "SIEM",
+            records[("security_platform", "Splunk Enterprise Security")][
+                "attributes"
+            ]["security_platform_type"],
+        )
+        self.assertEqual(
+            "APT Example",
+            records[("target_system", "Windows Workstations")]["attributes"][
+                "relationship_source_value"
+            ],
+        )
+
+    def test_ignores_ioc_like_otx_operational_graph_fields(self):
+        entities = extract_otx_entities(
+            {
+                "c2_channels": ["c2.example.test"],
+                "objective": ["T1059"],
+                "security_platform": ["https://example.test/platform"],
+                "targeted_system": ["CVE-2026-12345"],
+            }
+        )
+
+        self.assertEqual([], entities["c2_channels"])
+        self.assertEqual([], entities["objectives"])
+        self.assertEqual([], entities["security_platforms"])
+        self.assertEqual([], entities["targeted_systems"])
+        self.assertFalse(
+            any(
+                record["entity_type"]
+                in {"channel", "narrative", "security_platform", "target_system"}
+                for record in entities["records"]
+            )
+        )
+
     def test_extracts_otx_asn_and_netblock_as_infrastructure_evidence(self):
         entities = extract_otx_entities(
             {

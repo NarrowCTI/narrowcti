@@ -883,3 +883,35 @@ This is not yet live OpenCTI ingestion evidence. The next operational step is a
 controlled real MISP or OTX payload carrying these explicit fields, followed by
 OpenCTI UI/API verification that the objects land in the expected tabs and keep
 their Report context.
+
+## Captured OTX Operational Field Mapping Evidence
+
+On June 26, 2026, controlled unit validation added the same operational graph
+coverage for explicit OTX pulse fields. The tested path covers:
+
+- Channel promotion from explicit OTX fields such as `c2_channels`.
+- Narrative promotion from explicit fields such as `objective`.
+- Event promotion from explicit fields such as `incident_name`.
+- Security Platform promotion from explicit fields such as `security_platform`
+  and typed fields such as `siem`.
+- System promotion from explicit fields such as `targeted_system`.
+
+The validation used an OTX-shaped pulse carrying:
+
+- `adversary=APT Example`
+- `c2_channels=Telegram`
+- `objective=Credential theft`
+- `incident_name=Observed phishing wave`
+- `security_platform=Microsoft Defender for Endpoint`
+- `siem=Splunk Enterprise Security`
+- `targeted_system=Windows Workstations`
+
+The OTX extraction layer produced Channel, Narrative, Event, Security Platform
+and System records. It preserved type hints where the source field was
+specific, including `channel_types=c2`, `narrative_types=objective`,
+`event_types=incident` and `security_platform_type=SIEM`, and anchored the
+records to the single source adversary when available.
+
+Guardrail validation confirmed that IOC-like values in these OTX operational
+fields are ignored. Domains, URLs, CVEs, ATT&CK ids, numeric-only values and
+known provenance names are not promoted as operational graph entities.

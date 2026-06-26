@@ -43,19 +43,55 @@ FILE_HASH_ALGORITHMS = {
 ENTITY_SPECS = (
     ("adversaries", "adversary", "intrusion_set", 60),
     ("infrastructures", "infrastructures", "infrastructure", 65),
+    ("channels", "channels", "channel", 60),
+    ("c2_channels", "c2_channels", "channel", 65),
+    ("communication_channels", "communication_channels", "channel", 60),
+    ("delivery_channels", "delivery_channels", "channel", 60),
+    ("marketplaces", "marketplaces", "channel", 60),
     ("malware_families", "malware_families", "malware", 55),
+    ("narratives", "narratives", "narrative", 55),
+    ("objectives", "objectives", "narrative", 62),
+    ("motivations", "motivations", "narrative", 60),
+    ("events", "events", "event", 55),
+    ("incidents", "incidents", "event", 62),
+    ("security_platforms", "security_platforms", "security_platform", 62),
+    ("siems", "siems", "security_platform", 65),
+    ("edrs", "edrs", "security_platform", 65),
+    ("ndrs", "ndrs", "security_platform", 65),
+    ("xdrs", "xdrs", "security_platform", 65),
+    ("scanners", "scanners", "security_platform", 60),
     ("attack_ids", "attack_ids", "attack_pattern", 70),
     ("vulnerabilities", "vulnerabilities", "vulnerability", 75),
     ("industries", "industries", "target_sector", 50),
     ("targeted_countries", "targeted_countries", "target_country", 50),
+    ("targeted_systems", "targeted_systems", "target_system", 60),
     ("tags", "tags", "tag", 35),
 )
 ACTOR_ANCHORED_ENTITY_TYPES = {
     "attack_pattern",
+    "channel",
+    "event",
     "infrastructure",
     "malware",
+    "narrative",
+    "security_platform",
     "target_country",
     "target_sector",
+    "target_system",
+}
+ENTITY_ATTRIBUTE_HINTS_BY_KEY = {
+    "c2_channels": {"channel_types": ["c2"]},
+    "communication_channels": {"channel_types": ["communication"]},
+    "delivery_channels": {"channel_types": ["delivery"]},
+    "marketplaces": {"channel_types": ["marketplace"]},
+    "objectives": {"narrative_types": ["objective"]},
+    "motivations": {"narrative_types": ["motivation"]},
+    "incidents": {"event_types": ["incident"]},
+    "siems": {"security_platform_type": "SIEM"},
+    "edrs": {"security_platform_type": "EDR"},
+    "ndrs": {"security_platform_type": "NDR"},
+    "xdrs": {"security_platform_type": "XDR"},
+    "scanners": {"security_platform_type": "Scanner"},
 }
 ASN_INDICATOR_TYPES = {
     "as",
@@ -80,11 +116,76 @@ def extract_otx_entities(pulse):
             normalize_values(pulse.get("malware_families")),
             adversaries,
         ),
+        "channels": normalize_safe_graph_values(pulse.get("channels")),
+        "c2_channels": normalize_safe_graph_values(
+            first_present(
+                pulse,
+                "c2_channels",
+                "c2_channel",
+                "command_and_control_channels",
+                "command_and_control_channel",
+            )
+        ),
+        "communication_channels": normalize_safe_graph_values(
+            first_present(pulse, "communication_channels", "communication_channel")
+        ),
+        "delivery_channels": normalize_safe_graph_values(
+            first_present(pulse, "delivery_channels", "delivery_channel")
+        ),
+        "marketplaces": normalize_safe_graph_values(
+            first_present(pulse, "marketplaces", "marketplace")
+        ),
+        "narratives": normalize_safe_graph_values(pulse.get("narratives")),
+        "objectives": normalize_safe_graph_values(
+            first_present(pulse, "objectives", "objective", "goals", "goal")
+        ),
+        "motivations": normalize_safe_graph_values(
+            first_present(pulse, "motivations", "motivation")
+        ),
+        "events": normalize_safe_graph_values(
+            first_present(pulse, "events", "event_names", "event_name")
+        ),
+        "incidents": normalize_safe_graph_values(
+            first_present(pulse, "incidents", "incident_names", "incident_name")
+        ),
+        "security_platforms": normalize_safe_graph_values(
+            first_present(
+                pulse,
+                "security_platforms",
+                "security_platform",
+                "detection_platforms",
+                "detection_platform",
+            )
+        ),
+        "siems": normalize_safe_graph_values(first_present(pulse, "siems", "siem")),
+        "edrs": normalize_safe_graph_values(first_present(pulse, "edrs", "edr")),
+        "ndrs": normalize_safe_graph_values(first_present(pulse, "ndrs", "ndr")),
+        "xdrs": normalize_safe_graph_values(first_present(pulse, "xdrs", "xdr")),
+        "scanners": normalize_safe_graph_values(
+            first_present(pulse, "scanners", "scanner")
+        ),
         "attack_ids": normalize_attack_ids(pulse.get("attack_ids")),
         "vulnerabilities": normalize_cve_ids(cve_sources(pulse)),
         "industries": normalize_values(pulse.get("industries")),
         "targeted_countries": normalize_values(
             pulse.get("targeted_countries") or pulse.get("target_countries")
+        ),
+        "targeted_systems": normalize_safe_graph_values(
+            first_present(
+                pulse,
+                "targeted_systems",
+                "targeted_system",
+                "target_systems",
+                "target_system",
+                "affected_systems",
+                "affected_system",
+                "targeted_platforms",
+                "targeted_platform",
+                "affected_platforms",
+                "affected_platform",
+                "operating_systems",
+                "operating_system",
+            )
         ),
         "authors": normalize_authors(author_sources(pulse)),
         "lifecycle": pulse_lifecycle(pulse),
@@ -116,6 +217,43 @@ def normalize_values(value):
         if normalized and normalized not in values:
             values.append(normalized)
     return values
+
+
+def normalize_safe_graph_values(value):
+    values = []
+    for item in normalize_values(value):
+        if is_safe_graph_context_value(item):
+            values.append(item)
+    return values
+
+
+def is_safe_graph_context_value(value):
+    value = normalize_value(value)
+    lowered = value.casefold()
+    if not value:
+        return False
+    if lowered in {
+        "alienvault",
+        "alienvault otx",
+        "misp",
+        "narrowcti",
+        "narrowcti gateway",
+        "opencti",
+        "otx",
+        "the mitre corporation",
+    }:
+        return False
+    if lowered.startswith(("http://", "https://", "ftp://", "tlp:")):
+        return False
+    if "@" in value and not any(char.isspace() for char in value):
+        return False
+    if ATTACK_ID_PATTERN.fullmatch(value) or CVE_ID_PATTERN.fullmatch(value):
+        return False
+    if re.fullmatch(r"(?:[a-z0-9-]+\.)+[a-z]{2,}", lowered):
+        return False
+    if re.fullmatch(r"\d+", value):
+        return False
+    return True
 
 
 def normalize_authors(value):
@@ -535,7 +673,8 @@ def extraction_records(entities):
     infrastructure_value = first_inferred_infrastructure(entities)
     for key, source_field, entity_type, confidence in ENTITY_SPECS:
         for value in entities.get(key) or []:
-            attributes = relationship_anchor_attributes(entities, entity_type)
+            attributes = entity_specific_attributes(key)
+            attributes.update(relationship_anchor_attributes(entities, entity_type))
             record = {
                 "entity_type": entity_type,
                 "value": value,
@@ -615,6 +754,10 @@ def extraction_records(entities):
             }
         )
     return records
+
+
+def entity_specific_attributes(key):
+    return dict(ENTITY_ATTRIBUTE_HINTS_BY_KEY.get(key, {}))
 
 
 def relationship_anchor_attributes(entities, entity_type):
