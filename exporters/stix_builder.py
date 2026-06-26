@@ -768,7 +768,7 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
     if stix_object_type in CUSTOM_GRAPH_OBJECTS:
         return CUSTOM_GRAPH_OBJECTS[stix_object_type](
             name=name,
-            **common,
+            **described_common,
         )
     if stix_object_type == "note":
         content = clean_string(attributes.get("content")) or value
@@ -1090,6 +1090,8 @@ OPERATIONAL_CONTEXT_ENTITY_TYPES = {
     "campaign": "campaign",
     "channel": "channel",
     "course_of_action": "course of action",
+    "attack_data_component": "MITRE data component",
+    "attack_data_source": "MITRE data source",
     "event": "event",
     "infrastructure": "infrastructure",
     "intrusion_set": "intrusion set",

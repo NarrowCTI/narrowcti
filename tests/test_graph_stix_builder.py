@@ -659,6 +659,16 @@ class GraphStixBuilderTests(unittest.TestCase):
         self.assertEqual(1, len(objects_by_type["x-mitre-data-component"]))
         self.assertEqual(1, len(objects_by_type["note"]))
         self.assertEqual(
+            "Source-backed MITRE data source observed by mitre-attack: "
+            "T1059 detects Process: Process Creation.",
+            data_source["description"],
+        )
+        self.assertEqual(
+            "Source-backed MITRE data component observed by mitre-attack: "
+            "T1059 detects Process Creation.",
+            data_component["description"],
+        )
+        self.assertEqual(
             {
                 "attack-pattern": 1,
                 "note": 1,

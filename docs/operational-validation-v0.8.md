@@ -866,6 +866,12 @@ the logical source and source field. Validated examples include:
 - Native Threat Actor Individual:
   `Source-backed threat actor individual observed by misp-galaxy at
   Galaxy.threat-actor-individual: NarrowCTI Individual Actor Validation.`
+- MITRE Data Source:
+  `Source-backed MITRE data source observed by mitre-attack: T1059 detects
+  Process: Process Creation.`
+- MITRE Data Component:
+  `Source-backed MITRE data component observed by mitre-attack: T1059 detects
+  Process Creation.`
 
 This polish keeps OpenCTI object Overview pages useful for analysts without
 fabricating feed content. Explicit feed descriptions still take precedence, and
