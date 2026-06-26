@@ -94,11 +94,11 @@ The v0.8 export gate is intentionally conservative:
 
 | OpenCTI area | OpenCTI entry | NarrowCTI target | Current status | Current behavior | Next action |
 | --- | --- | --- | --- | --- | --- |
-| Locations | Regions | `location` | Validated export | Region candidates are allowed, exported with OpenCTI `x_opencti_location_type=Region`, and validated in the local OpenCTI lab as `Region` objects with actor `targets` relationships. | Validate the same path with a real source payload carrying region-level victimology. |
+| Locations | Regions | `location` | Validated export | Region candidates are allowed, exported with OpenCTI `x_opencti_location_type=Region`, and validated in the local OpenCTI lab as `Region` objects with actor `targets` relationships. MISP Galaxy meta and explicit OTX fields such as `targeted_region`, `target_region`, `targeted_regions` and `target_regions` can create Region candidates. | Validate the same path with a real source payload carrying region-level victimology. |
 | Locations | Countries | `location` | Validated export | Country lookup and deterministic export were validated with `Argentina`; repeat exports referenced the existing object. | Expand country normalization, aliases and source-specific victimology rules. |
-| Locations | Administrative areas | `location` | Validated export | Source-backed state/province evidence exports with OpenCTI `x_opencti_location_type=Administrative-Area`; local OpenCTI validation materialized it as `Administrative-Area` instead of the generic country/city heuristic. MISP Galaxy meta aliases such as `targeted-state`, `target-state`, `targeted-province` and `target-province` are accepted. | Validate real source payloads carrying administrative-area victimology and parent country/region context. |
-| Locations | Cities | `location` | Validated export | Source-backed city evidence exports with OpenCTI `x_opencti_location_type=City`; local OpenCTI validation materialized it as `City` and created actor `targets` relationships. MISP Galaxy meta aliases such as `targeted-city` and `target-city` are accepted. | Validate real source payloads carrying city-level victimology. |
-| Locations | Positions | `location` with coordinates | Validated export | Source-backed coordinates export with OpenCTI `x_opencti_location_type=Position`, `latitude`, `longitude` and optional `precision`; local OpenCTI validation materialized coordinates as `Position` and created actor `targets` relationships. MISP Galaxy meta aliases such as `targeted-coordinate` and `target-position` are accepted. | Validate real coordinate-bearing payloads and keep disabled for inferred positions. |
+| Locations | Administrative areas | `location` | Validated export | Source-backed state/province evidence exports with OpenCTI `x_opencti_location_type=Administrative-Area`; local OpenCTI validation materialized it as `Administrative-Area` instead of the generic country/city heuristic. MISP Galaxy meta aliases such as `targeted-state`, `target-state`, `targeted-province` and `target-province`, plus explicit OTX fields such as `targeted_state`, `target_state`, `targeted_province` and `target_province`, are accepted. | Validate real source payloads carrying administrative-area victimology and parent country/region context. |
+| Locations | Cities | `location` | Validated export | Source-backed city evidence exports with OpenCTI `x_opencti_location_type=City`; local OpenCTI validation materialized it as `City` and created actor `targets` relationships. MISP Galaxy meta aliases such as `targeted-city` and `target-city`, plus explicit OTX fields such as `targeted_city`, `target_city`, `targeted_cities` and `target_cities`, are accepted. | Validate real source payloads carrying city-level victimology. |
+| Locations | Positions | `location` with coordinates | Validated export | Source-backed coordinates export with OpenCTI `x_opencti_location_type=Position`, `latitude`, `longitude` and optional `precision`; local OpenCTI validation materialized coordinates as `Position` and created actor `targets` relationships. MISP Galaxy meta aliases such as `targeted-coordinate` and `target-position`, plus explicit OTX fields such as `targeted_coordinate`, `target_coordinate`, `targeted_position` and `target_position`, are accepted. | Validate real coordinate-bearing payloads and keep disabled for inferred positions. |
 
 ## Observations
 
@@ -141,8 +141,9 @@ NarrowCTI flag.
    fields are implemented with IOC/provenance guardrails; the remaining work is
    live source-payload evidence.
 3. Validate deeper Locations with real administrative-area, city and coordinate
-   payloads in OpenCTI. Controlled OpenCTI import behavior is now validated;
-   the remaining gap is source-payload evidence from OTX/MISP or future feeds.
+   payloads in OpenCTI. Controlled OpenCTI import behavior is now validated,
+   and MISP Galaxy plus explicit OTX location fields are implemented; the
+   remaining gap is source-payload evidence from OTX/MISP or future feeds.
 4. Expand real source mapping for Channels, Narratives, Events, Security
    Platforms and Systems. MISP Galaxy meta aliases and explicit OTX fields are
    now implemented with IOC/provenance guardrails and covered by unit tests;

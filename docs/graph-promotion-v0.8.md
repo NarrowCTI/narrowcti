@@ -170,7 +170,7 @@ metadata supports them and the candidate passes policy:
 | Entities / Security platforms | Native OpenCTI `SecurityPlatform` export plus report linking | Created from explicit security platform, SIEM, EDR, NDR, XDR, scanner or sensor fields in MISP or OTX; not exported as Organization. |
 | Entities / Systems | STIX `identity` with `identity_class=system` for `target_system` | Created from explicit affected system, platform, operating-system or target asset fields in MISP or OTX. |
 | Entities / Individuals | STIX `identity` with `identity_class=individual` for `target_individual` | Created only from explicit victimology/person fields such as `targeted-person` or `victim-individual`; threat-actor individuals remain separate Threat objects. |
-| Locations / Countries and deeper geography | STIX `location` with country, region, administrative area, city, latitude, longitude and precision when source-backed | Country export is validated; region, administrative-area, city and coordinate support is implemented but still needs real OpenCTI UI validation with source payloads carrying those fields. |
+| Locations / Countries and deeper geography | STIX `location` with country, region, administrative area, city, latitude, longitude and precision when source-backed | Country export is validated. Region, administrative-area, city and coordinate support is implemented for MISP Galaxy meta and explicit OTX victimology fields, but still needs real OpenCTI UI validation with source payloads carrying those fields. |
 
 OpenCTI tabs not listed above are not guaranteed by this version. They remain
 part of the graph enrichment backlog and require broader source metadata

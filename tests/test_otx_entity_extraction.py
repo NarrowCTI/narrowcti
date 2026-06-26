@@ -21,7 +21,11 @@ class OTXEntityExtractionTests(unittest.TestCase):
                 "attack_ids": ["T1059", "Uses T1105 and T1059.001"],
                 "cves": ["CVE-2024-12345", "reference to cve-2023-9999"],
                 "industries": "Finance, Healthcare",
+                "targeted_regions": "South America",
+                "targeted_state": "Sao Paulo",
+                "targeted_city": "Sao Paulo",
                 "target_countries": ["BR", "US"],
+                "targeted_coordinate": "-23.5505,-46.6333",
                 "author_name": "AlienVault Research",
                 "author": "2",
                 "id": "pulse-1",
@@ -63,7 +67,11 @@ class OTXEntityExtractionTests(unittest.TestCase):
         self.assertEqual(["T1059", "T1105", "T1059.001"], entities["attack_ids"])
         self.assertEqual(["CVE-2024-12345", "CVE-2023-9999"], entities["vulnerabilities"])
         self.assertEqual(["Finance", "Healthcare"], entities["industries"])
+        self.assertEqual(["South America"], entities["targeted_regions"])
+        self.assertEqual(["Sao Paulo"], entities["targeted_administrative_areas"])
+        self.assertEqual(["Sao Paulo"], entities["targeted_cities"])
         self.assertEqual(["BR", "US"], entities["targeted_countries"])
+        self.assertEqual(["-23.5505,-46.6333"], entities["targeted_positions"])
         self.assertEqual(["AlienVault Research"], entities["authors"])
         self.assertFalse(
             any(
@@ -128,6 +136,21 @@ class OTXEntityExtractionTests(unittest.TestCase):
             "APT Example",
             sector["attributes"]["relationship_source_value"],
         )
+        city = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "target_city"
+        )
+        self.assertEqual(
+            "APT Example",
+            city["attributes"]["relationship_source_value"],
+        )
+        position = next(
+            record
+            for record in entities["records"]
+            if record["entity_type"] == "target_position"
+        )
+        self.assertEqual("-23.5505,-46.6333", position["value"])
         self.assertEqual(3, entities["counts"]["attack_ids"])
         self.assertEqual(2, entities["counts"]["vulnerabilities"])
         self.assertEqual(2, entities["counts"]["observables"])
@@ -352,6 +375,7 @@ class OTXEntityExtractionTests(unittest.TestCase):
                 "objective": ["T1059"],
                 "security_platform": ["https://example.test/platform"],
                 "targeted_system": ["CVE-2026-12345"],
+                "targeted_coordinate": ["not coordinates"],
             }
         )
 
@@ -360,6 +384,7 @@ class OTXEntityExtractionTests(unittest.TestCase):
         self.assertEqual([], entities["objectives"])
         self.assertEqual([], entities["security_platforms"])
         self.assertEqual([], entities["targeted_systems"])
+        self.assertEqual([], entities["targeted_positions"])
         self.assertFalse(
             any(
                 record["entity_type"]

@@ -65,7 +65,16 @@ ENTITY_SPECS = (
     ("attack_ids", "attack_ids", "attack_pattern", 70),
     ("vulnerabilities", "vulnerabilities", "vulnerability", 75),
     ("industries", "industries", "target_sector", 50),
+    ("targeted_regions", "targeted_regions", "target_region", 50),
+    (
+        "targeted_administrative_areas",
+        "targeted_administrative_areas",
+        "target_administrative_area",
+        50,
+    ),
+    ("targeted_cities", "targeted_cities", "target_city", 50),
     ("targeted_countries", "targeted_countries", "target_country", 50),
+    ("targeted_positions", "targeted_positions", "target_position", 50),
     ("targeted_systems", "targeted_systems", "target_system", 60),
     ("tags", "tags", "tag", 35),
 )
@@ -79,6 +88,10 @@ ACTOR_ANCHORED_ENTITY_TYPES = {
     "narrative",
     "security_platform",
     "target_country",
+    "target_region",
+    "target_administrative_area",
+    "target_city",
+    "target_position",
     "target_sector",
     "target_system",
 }
@@ -188,8 +201,56 @@ def extract_otx_entities(pulse):
         "attack_ids": normalize_attack_ids(pulse.get("attack_ids")),
         "vulnerabilities": normalize_cve_ids(cve_sources(pulse)),
         "industries": normalize_values(pulse.get("industries")),
+        "targeted_regions": normalize_safe_graph_values(
+            first_present(
+                pulse,
+                "targeted_regions",
+                "targeted_region",
+                "target_regions",
+                "target_region",
+            )
+        ),
+        "targeted_administrative_areas": normalize_safe_graph_values(
+            first_present(
+                pulse,
+                "targeted_administrative_areas",
+                "targeted_administrative_area",
+                "target_administrative_areas",
+                "target_administrative_area",
+                "targeted_states",
+                "targeted_state",
+                "target_states",
+                "target_state",
+                "targeted_provinces",
+                "targeted_province",
+                "target_provinces",
+                "target_province",
+            )
+        ),
+        "targeted_cities": normalize_safe_graph_values(
+            first_present(
+                pulse,
+                "targeted_cities",
+                "targeted_city",
+                "target_cities",
+                "target_city",
+            )
+        ),
         "targeted_countries": normalize_values(
             pulse.get("targeted_countries") or pulse.get("target_countries")
+        ),
+        "targeted_positions": normalize_position_values(
+            first_present(
+                pulse,
+                "targeted_positions",
+                "targeted_position",
+                "target_positions",
+                "target_position",
+                "targeted_coordinates",
+                "targeted_coordinate",
+                "target_coordinates",
+                "target_coordinate",
+            )
         ),
         "targeted_systems": normalize_safe_graph_values(
             first_present(
@@ -246,6 +307,24 @@ def normalize_safe_graph_values(value):
         if is_safe_graph_context_value(item):
             values.append(item)
     return values
+
+
+def normalize_position_values(value):
+    values = []
+    for item in flatten_preserving_strings(value):
+        normalized = normalize_value(item)
+        if normalized and is_position_value(normalized) and normalized not in values:
+            values.append(normalized)
+    return values
+
+
+def is_position_value(value):
+    return bool(
+        re.search(
+            r"^-?\d+(?:\.\d+)?\s*[,/ ]\s*-?\d+(?:\.\d+)?$",
+            normalize_value(value),
+        )
+    )
 
 
 def is_safe_graph_context_value(value):
@@ -909,6 +988,19 @@ def flatten_text(value):
         values = []
         for item in value:
             values.extend(flatten_text(item))
+        return values
+    return [value]
+
+
+def flatten_preserving_strings(value):
+    if value is None:
+        return []
+    if isinstance(value, dict):
+        return [value]
+    if isinstance(value, (list, tuple, set)):
+        values = []
+        for item in value:
+            values.extend(flatten_preserving_strings(item))
         return values
     return [value]
 

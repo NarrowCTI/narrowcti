@@ -882,6 +882,21 @@ This closes controlled OpenCTI import behavior for the deeper Location tabs.
 The remaining evidence gap is real source-payload validation from OTX/MISP or
 future feeds carrying administrative-area, city or coordinate victimology.
 
+On June 26, 2026, controlled unit validation expanded OTX location extraction
+to explicit deeper victimology fields. The tested OTX-shaped pulse carried:
+
+- `targeted_regions=South America`
+- `targeted_state=Sao Paulo`
+- `targeted_city=Sao Paulo`
+- `targeted_coordinate=-23.5505,-46.6333`
+
+The OTX extraction layer produced Region, Administrative Area, City and
+Position graph records and anchored them to the single source adversary when
+available. Coordinate parsing preserves comma-separated latitude/longitude as a
+single value so the STIX builder can materialize it as an OpenCTI Position. A
+negative guardrail test confirmed that non-coordinate text is ignored for
+Position promotion.
+
 ## Captured MISP Operational Meta Mapping Evidence
 
 On June 26, 2026, controlled unit validation expanded the v0.8 matrix backlog
