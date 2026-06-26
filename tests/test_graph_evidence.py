@@ -690,6 +690,36 @@ class GraphEvidenceTests(unittest.TestCase):
             sector["attributes"]["parent_cluster_value"],
         )
 
+    def test_builds_misp_explicit_campaign_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_campaigns": [
+                    {
+                        "value": "Operation Example",
+                        "source_type": "attribute",
+                        "source_field": "Attribute[0]",
+                        "attribute_type": "campaign-name",
+                        "attribute_category": "Attribution",
+                        "attribute_uuid": "attribute-campaign-1",
+                        "tags": ["tlp:green"],
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["record_count"])
+        self.assertEqual(1, evidence["counts"]["campaign"])
+        campaign = evidence["records"][0]
+        self.assertEqual("campaign", campaign["entity_type"])
+        self.assertEqual("campaign", campaign["stix_object_type"])
+        self.assertEqual("Operation Example", campaign["value"])
+        self.assertEqual("Attribute[0]", campaign["source_field"])
+        self.assertEqual("attribute-campaign-1", campaign["attributes"]["attribute_uuid"])
+        self.assertEqual("campaign-name", campaign["attributes"]["attribute_type"])
+
     def test_builds_misp_target_organization_meta_evidence(self):
         evidence = build_graph_evidence(
             {

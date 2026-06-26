@@ -58,7 +58,7 @@ The v0.8 export gate is intentionally conservative:
 | Threats | Threat actors (group) | `threat-actor` | Validated export | The safe export gate can export `threat_actor` candidates as group-style actors by default. MISP threat-actor Galaxy evidence records `threat_actor_class=group`, and OpenCTI lookup uses `threatActorsGroup` before creation. Real MISP validation materialized `Packrat` as a `Threat-Actor-Group` and created `targets` relationships to Sectors. | Expand real feed validation for actor aliases, intrusion-set boundaries and ATT&CK/arsenal relationships. |
 | Threats | Threat actors (individual) | OpenCTI Threat Actor Individual entity | Validated export | Explicit individual actor evidence can be classified as `threat_actor_individual` with `threat_actor_class=individual`. NarrowCTI now keeps this out of the generic STIX `threat-actor` bundle path and exports it through the OpenCTI-native `threatActorIndividualAdd(update=true)` mutation after lookup through `threatActorsIndividuals`. It preserves description, aliases, `threat_actor_types`, motivation fields and confidence, then links the native object back to the imported Report with relationship type `object`. Live validation imported `NarrowCTI Matrix Threat Actor Individual Native Validation 20260626B` twice and returned one `Threat-Actor-Individual`, one Report, one Report link and `would_create_object_count=0`. | Expand real source validation for individual actor payloads and keep these separate from target Individuals. |
 | Threats | Intrusion sets | `intrusion-set` | Validated export | OTX adversary evidence can promote Intrusion Set candidates. Alias lookup validated with existing OpenCTI objects such as `BlackTech` from `Palmerworm` and `Lazarus Group` from `Lazarus`. | Expand alias dictionaries and source-specific confidence rules. |
-| Threats | Campaigns | `campaign` | Validated export | MISP Galaxy campaign evidence can become source-backed Campaign candidates, participate in safe graph export, query OpenCTI by name before creation and anchor relationships such as `Campaign -> targets -> Sector`. Live validation imported `NarrowCTI Matrix Live 20260626 campaign`. | Extend OTX/future feed campaign mapping without deriving campaigns from report titles alone. |
+| Threats | Campaigns | `campaign` | Validated export | MISP Galaxy campaign evidence can become source-backed Campaign candidates, participate in safe graph export, query OpenCTI by name before creation and anchor relationships such as `Campaign -> targets -> Sector`. Live validation imported `NarrowCTI Matrix Live 20260626 campaign`. Explicit MISP Attribute/Object evidence such as `campaign-name`, `operation-name`, campaign objects and operation objects can now promote Campaign candidates when the value is not IOC-like. Explicit OTX fields such as `campaign`, `campaign_name`, `campaigns`, `operation`, `operation_name` and `operations` are also supported. | Validate the expanded MISP/OTX campaign mappings with real payloads. Do not derive campaigns from report titles alone. |
 
 ## Arsenal
 
@@ -136,7 +136,10 @@ NarrowCTI flag.
 1. Expand real feed validation for OTX and MISP payloads that carry actor,
    arsenal, ATT&CK, sector, location, infrastructure, ASN and victimology in the
    same source context.
-2. Expand source-backed campaign mapping beyond MISP Galaxy.
+2. Validate expanded source-backed Campaign mapping. MISP Galaxy, explicit MISP
+   Attribute/Object campaign evidence and explicit OTX campaign/operation
+   fields are implemented with IOC/provenance guardrails; the remaining work is
+   live source-payload evidence.
 3. Validate deeper Locations with real administrative-area, city and coordinate
    payloads in OpenCTI. Controlled OpenCTI import behavior is now validated;
    the remaining gap is source-payload evidence from OTX/MISP or future feeds.

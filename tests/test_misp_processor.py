@@ -549,6 +549,70 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_explicit_misp_campaigns(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-campaign-1",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "Operation Example",
+                "Tag": [{"name": "tlp:green"}],
+            },
+            {
+                "uuid": "attribute-campaign-ioc",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "c2.example.test",
+            },
+        ]
+        event["Object"] = [
+            {
+                "uuid": "object-campaign-1",
+                "name": "campaign",
+                "meta-category": "attribution",
+                "Attribute": [
+                    {
+                        "uuid": "object-attribute-campaign-1",
+                        "object_relation": "operation-name",
+                        "type": "text",
+                        "category": "Attribution",
+                        "value": "Operation Backup",
+                    }
+                ],
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(2, len(metadata["misp_campaigns"]))
+        self.assertEqual(
+            {"Operation Backup", "Operation Example"},
+            {campaign["value"] for campaign in metadata["misp_campaigns"]},
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(2, graph_evidence["counts"]["campaign"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(2, graph_candidates["counts"]["campaign"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "campaign"
+                and candidate["value"] == "Operation Example"
+                and candidate["attributes"]["attribute_uuid"]
+                == "attribute-campaign-1"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "campaign"
+                and candidate["value"] == "c2.example.test"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_extracts_misp_event_reports(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         event = enriched_event()

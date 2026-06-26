@@ -42,6 +42,8 @@ FILE_HASH_ALGORITHMS = {
 
 ENTITY_SPECS = (
     ("adversaries", "adversary", "intrusion_set", 60),
+    ("campaigns", "campaigns", "campaign", 65),
+    ("operations", "operations", "campaign", 65),
     ("infrastructures", "infrastructures", "infrastructure", 65),
     ("channels", "channels", "channel", 60),
     ("c2_channels", "c2_channels", "channel", 65),
@@ -69,6 +71,7 @@ ENTITY_SPECS = (
 )
 ACTOR_ANCHORED_ENTITY_TYPES = {
     "attack_pattern",
+    "campaign",
     "channel",
     "event",
     "infrastructure",
@@ -115,6 +118,24 @@ def extract_otx_entities(pulse):
         "malware_families": exclude_conflicting_entity_values(
             normalize_values(pulse.get("malware_families")),
             adversaries,
+        ),
+        "campaigns": normalize_safe_graph_values(
+            first_present(
+                pulse,
+                "campaigns",
+                "campaign",
+                "campaign_names",
+                "campaign_name",
+            )
+        ),
+        "operations": normalize_safe_graph_values(
+            first_present(
+                pulse,
+                "operations",
+                "operation",
+                "operation_names",
+                "operation_name",
+            )
         ),
         "channels": normalize_safe_graph_values(pulse.get("channels")),
         "c2_channels": normalize_safe_graph_values(

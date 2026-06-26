@@ -275,6 +275,8 @@ class OTXEntityExtractionTests(unittest.TestCase):
         entities = extract_otx_entities(
             {
                 "adversary": "APT Example",
+                "campaign": "Operation Example",
+                "operation_name": "Operation Backup",
                 "c2_channels": ["Telegram"],
                 "objective": "Credential theft",
                 "incident_name": "Observed phishing wave",
@@ -284,6 +286,8 @@ class OTXEntityExtractionTests(unittest.TestCase):
             }
         )
 
+        self.assertEqual(["Operation Example"], entities["campaigns"])
+        self.assertEqual(["Operation Backup"], entities["operations"])
         self.assertEqual(["Telegram"], entities["c2_channels"])
         self.assertEqual(["Credential theft"], entities["objectives"])
         self.assertEqual(["Observed phishing wave"], entities["incidents"])
@@ -297,6 +301,16 @@ class OTXEntityExtractionTests(unittest.TestCase):
             (record["entity_type"], record["value"]): record
             for record in entities["records"]
         }
+        self.assertEqual(
+            "APT Example",
+            records[("campaign", "Operation Example")]["attributes"][
+                "relationship_source_value"
+            ],
+        )
+        self.assertEqual(
+            "operations",
+            records[("campaign", "Operation Backup")]["source_field"],
+        )
         self.assertEqual(
             ["c2"],
             records[("channel", "Telegram")]["attributes"]["channel_types"],
@@ -334,6 +348,7 @@ class OTXEntityExtractionTests(unittest.TestCase):
         entities = extract_otx_entities(
             {
                 "c2_channels": ["c2.example.test"],
+                "campaign": ["https://example.test/campaign"],
                 "objective": ["T1059"],
                 "security_platform": ["https://example.test/platform"],
                 "targeted_system": ["CVE-2026-12345"],
@@ -341,13 +356,20 @@ class OTXEntityExtractionTests(unittest.TestCase):
         )
 
         self.assertEqual([], entities["c2_channels"])
+        self.assertEqual([], entities["campaigns"])
         self.assertEqual([], entities["objectives"])
         self.assertEqual([], entities["security_platforms"])
         self.assertEqual([], entities["targeted_systems"])
         self.assertFalse(
             any(
                 record["entity_type"]
-                in {"channel", "narrative", "security_platform", "target_system"}
+                in {
+                    "campaign",
+                    "channel",
+                    "narrative",
+                    "security_platform",
+                    "target_system",
+                }
                 for record in entities["records"]
             )
         )

@@ -81,6 +81,9 @@ def decision_metadata(
     misp_vulnerabilities = extract_misp_vulnerabilities(source, tags)
     if misp_vulnerabilities:
         metadata["misp_vulnerabilities"] = misp_vulnerabilities
+    misp_campaigns = extract_misp_campaigns(source)
+    if misp_campaigns:
+        metadata["misp_campaigns"] = misp_campaigns
     misp_event_reports = extract_misp_event_reports(source)
     if misp_event_reports:
         metadata["misp_event_reports"] = misp_event_reports
@@ -322,6 +325,147 @@ def extract_misp_vulnerabilities(event, tags=None):
                 )
             )
     return deduplicate_misp_vulnerabilities(findings)
+
+
+def extract_misp_campaigns(event):
+    event = compact_mapping(event)
+    campaigns = []
+    for source in misp_campaign_sources(event):
+        normalized = normalize_misp_campaign(source)
+        if normalized:
+            campaigns.append(normalized)
+    return deduplicate_misp_campaigns(campaigns)
+
+
+def misp_campaign_sources(event):
+    event = compact_mapping(event)
+    sources = []
+    for index, attribute in enumerate(list_values(event.get("Attribute"))):
+        attribute = compact_mapping(attribute)
+        if not attribute:
+            continue
+        sources.append(
+            {
+                "source_field": f"Attribute[{index}]",
+                "attribute": attribute,
+                "object": {},
+                "source_type": "attribute",
+            }
+        )
+    for object_index, misp_object in enumerate(list_values(event.get("Object"))):
+        misp_object = compact_mapping(misp_object)
+        if not misp_object:
+            continue
+        for attribute_index, attribute in enumerate(
+            list_values(misp_object.get("Attribute"))
+        ):
+            attribute = compact_mapping(attribute)
+            if not attribute:
+                continue
+            sources.append(
+                {
+                    "source_field": (
+                        f"Object[{object_index}].Attribute[{attribute_index}]"
+                    ),
+                    "attribute": attribute,
+                    "object": misp_object,
+                    "source_type": "object-attribute",
+                }
+            )
+    return sources
+
+
+def normalize_misp_campaign(source):
+    source = compact_mapping(source)
+    attribute = compact_mapping(source.get("attribute"))
+    misp_object = compact_mapping(source.get("object"))
+    if not is_explicit_misp_campaign_source(attribute, misp_object):
+        return {}
+    value = clean_text(
+        attribute.get("value")
+        or attribute.get("comment")
+        or attribute.get("uuid")
+    )
+    if not is_safe_misp_campaign_value(value):
+        return {}
+    return compact_mapping(
+        {
+            "value": value,
+            "source_type": source.get("source_type"),
+            "source_field": source.get("source_field"),
+            "attribute_type": attribute.get("type"),
+            "attribute_category": attribute.get("category"),
+            "attribute_uuid": attribute.get("uuid"),
+            "attribute_relation": attribute.get("object_relation"),
+            "object_name": misp_object.get("name"),
+            "object_uuid": misp_object.get("uuid"),
+            "object_meta_category": misp_object.get("meta-category"),
+            "tags": [tag_name for tag_name in attribute_tags(attribute) if tag_name],
+        }
+    )
+
+
+def is_explicit_misp_campaign_source(attribute, misp_object):
+    attribute = compact_mapping(attribute)
+    misp_object = compact_mapping(misp_object)
+    object_name = clean_text(misp_object.get("name")).casefold()
+    relation = clean_text(attribute.get("object_relation")).casefold()
+    attribute_type = clean_text(attribute.get("type")).casefold()
+    category = clean_text(attribute.get("category")).casefold()
+    explicit_terms = {
+        "campaign",
+        "campaign-name",
+        "operation",
+        "operation-name",
+        "threat-campaign",
+    }
+    object_is_campaign = object_name in explicit_terms or object_name.endswith(
+        "-campaign"
+    )
+    relation_is_campaign = relation in explicit_terms or relation.endswith(
+        "-campaign"
+    )
+    type_is_campaign = attribute_type in explicit_terms
+    category_is_campaign = category in {"attribution", "external analysis"}
+    return type_is_campaign or relation_is_campaign or (
+        object_is_campaign and category_is_campaign
+    )
+
+
+def is_safe_misp_campaign_value(value):
+    value = clean_text(value)
+    lowered = value.casefold()
+    if not value:
+        return False
+    if lowered.startswith(("http://", "https://", "ftp://", "tlp:")):
+        return False
+    if "@" in value and not any(char.isspace() for char in value):
+        return False
+    if CVE_ID_PATTERN.fullmatch(value):
+        return False
+    if re.fullmatch(r"\bT\d{4}(?:\.\d{3})?\b", value, re.IGNORECASE):
+        return False
+    if re.fullmatch(r"(?:[a-z0-9-]+\.)+[a-z]{2,}", lowered):
+        return False
+    if re.fullmatch(r"\d+", value):
+        return False
+    return True
+
+
+def deduplicate_misp_campaigns(campaigns):
+    seen = set()
+    deduplicated = []
+    for campaign in campaigns:
+        key = (
+            str(campaign.get("value", "")).casefold(),
+            str(campaign.get("attribute_uuid", "")).casefold(),
+            str(campaign.get("object_uuid", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(campaign)
+    return deduplicated
 
 
 def misp_vulnerability_sources(event, tags):

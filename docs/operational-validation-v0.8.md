@@ -947,3 +947,27 @@ records to the single source adversary when available.
 Guardrail validation confirmed that IOC-like values in these OTX operational
 fields are ignored. Domains, URLs, CVEs, ATT&CK ids, numeric-only values and
 known provenance names are not promoted as operational graph entities.
+
+## Captured Campaign Mapping Expansion Evidence
+
+On June 26, 2026, controlled unit validation expanded Campaign mapping beyond
+MISP Galaxy. The tested path covers:
+
+- Explicit MISP Attribute evidence such as `type=campaign-name` with
+  `value=Operation Example`.
+- Explicit MISP Object evidence such as `Object.name=campaign` with
+  `object_relation=operation-name`.
+- Explicit OTX fields such as `campaign`, `campaign_name`, `operation` and
+  `operation_name`.
+
+The MISP validation produced Campaign candidates for `Operation Example` and
+`Operation Backup`, preserved source metadata such as attribute UUID, object
+UUID, attribute type, category and tags, and rejected IOC-like campaign values
+such as domains. The OTX validation produced Campaign records from explicit
+campaign and operation fields and anchored them to the single source adversary
+when present.
+
+This intentionally does not infer Campaign objects from MISP event titles, OTX
+pulse names, report titles or feed names. The remaining evidence step is live
+OpenCTI validation using a real MISP or OTX payload that carries explicit
+campaign or operation fields.

@@ -63,6 +63,7 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     records.extend(
         misp_vulnerability_evidence(metadata.get("misp_vulnerabilities"), source_key)
     )
+    records.extend(misp_campaign_evidence(metadata.get("misp_campaigns"), source_key))
     records.extend(
         misp_event_report_evidence(metadata.get("misp_event_reports"), source_key)
     )
@@ -1080,6 +1081,39 @@ def misp_vulnerability_evidence(vulnerabilities, source_key=""):
             source_name="misp",
             source_field=vulnerability.get("source_field"),
             confidence=75,
+            attributes=attributes,
+        )
+        if record:
+            records.append(record)
+    return records
+
+
+def misp_campaign_evidence(campaigns, source_key=""):
+    records = []
+    for campaign in campaigns or []:
+        campaign = compact_mapping(campaign)
+        if not campaign:
+            continue
+        attributes = compact_mapping(
+            {
+                "source_type": campaign.get("source_type"),
+                "attribute_type": campaign.get("attribute_type"),
+                "attribute_category": campaign.get("attribute_category"),
+                "attribute_uuid": campaign.get("attribute_uuid"),
+                "attribute_relation": campaign.get("attribute_relation"),
+                "object_name": campaign.get("object_name"),
+                "object_uuid": campaign.get("object_uuid"),
+                "object_meta_category": campaign.get("object_meta_category"),
+                "tags": campaign.get("tags"),
+            }
+        )
+        record = evidence_record(
+            entity_type="campaign",
+            value=campaign.get("value"),
+            source_key=source_key,
+            source_name="misp",
+            source_field=campaign.get("source_field"),
+            confidence=70,
             attributes=attributes,
         )
         if record:
