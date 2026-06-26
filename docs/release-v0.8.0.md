@@ -552,7 +552,12 @@ OpenCTI tab/export coverage is tracked in
   received its MISP Galaxy description and that `Activists`, `Journalist` and
   `Political party` received target-sector provenance descriptions without
   changing non-empty analyst-maintained descriptions or canonical third-party
-  ownership.
+  ownership. Follow-up controlled validation expanded the same provenance
+  description fallback to Campaign, Channel, Event, Course of Action, native
+  Security Platform, native Threat Actor Individual, MITRE Data Source and
+  MITRE Data Component objects so their OpenCTI Overview pages explain the
+  source and relationship context even when feeds do not provide native
+  descriptions.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI
