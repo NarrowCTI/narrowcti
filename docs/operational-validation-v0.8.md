@@ -914,6 +914,12 @@ Infrastructure, EventReport, Sighting and detection-rule evidence receive those
 defaults unless the record has a more specific timestamp. This gives MISP
 imports the same audit trail for future Timeline/reporting work.
 
+Follow-up unit validation tightened MISP attribute-level precision. When MISP
+attributes carry `first_seen` or `last_seen`, NarrowCTI now propagates those
+values through Vulnerability, Campaign, Detection Rule, Infrastructure,
+Observable and ASN graph evidence, overriding event-level defaults only for the
+specific record that supplied the more precise observation window.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

@@ -566,7 +566,9 @@ OpenCTI tab/export coverage is tracked in
   source-modified, first-seen and last-seen values survive the full graph
   promotion path. MISP graph evidence now carries event created, event
   timestamp or publish timestamp, and event date into source-backed graph
-  records when available.
+  records when available. Attribute-level MISP `first_seen` and `last_seen`
+  values now override those event defaults for precise Vulnerability, Campaign,
+  Detection Rule, Infrastructure, Observable and ASN evidence.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

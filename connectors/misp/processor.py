@@ -323,6 +323,8 @@ def extract_misp_vulnerabilities(event, tags=None):
                         "attribute_type": source.get("attribute_type"),
                         "attribute_category": source.get("attribute_category"),
                         "attribute_uuid": source.get("attribute_uuid"),
+                        "first_seen": source.get("first_seen"),
+                        "last_seen": source.get("last_seen"),
                         "object_name": source.get("object_name"),
                         "object_uuid": source.get("object_uuid"),
                         "tags": source.get("tags"),
@@ -402,6 +404,8 @@ def normalize_misp_campaign(source):
             "attribute_category": attribute.get("category"),
             "attribute_uuid": attribute.get("uuid"),
             "attribute_relation": attribute.get("object_relation"),
+            "first_seen": attribute.get("first_seen"),
+            "last_seen": attribute.get("last_seen"),
             "object_name": misp_object.get("name"),
             "object_uuid": misp_object.get("uuid"),
             "object_meta_category": misp_object.get("meta-category"),
@@ -528,6 +532,8 @@ def misp_attribute_vulnerability_source(attribute, source_field, misp_object=Non
             "attribute_type": attribute.get("type"),
             "attribute_category": attribute.get("category"),
             "attribute_uuid": attribute.get("uuid"),
+            "first_seen": attribute.get("first_seen"),
+            "last_seen": attribute.get("last_seen"),
             "object_name": misp_object.get("name"),
             "object_uuid": misp_object.get("uuid"),
             "tags": [tag_name for tag_name in attribute_tags(attribute) if tag_name],
@@ -910,6 +916,8 @@ def normalize_misp_infrastructure_object(
                 "attribute_type": observable.get("attribute_type"),
                 "attribute_relation": observable.get("relation"),
                 "attribute_uuid": observable.get("attribute_uuid"),
+                "first_seen": observable.get("first_seen"),
+                "last_seen": observable.get("last_seen"),
                 "port": observable.get("port"),
             }
         )
@@ -947,6 +955,8 @@ def normalize_misp_infrastructure_object(
                 "attribute_type": asn.get("attribute_type"),
                 "attribute_relation": asn.get("relation"),
                 "attribute_uuid": asn.get("attribute_uuid"),
+                "first_seen": asn.get("first_seen"),
+                "last_seen": asn.get("last_seen"),
             }
         )
         if infrastructure_name:
@@ -1087,6 +1097,8 @@ def misp_object_attribute_facts(misp_object, object_source_field):
                 "value": value,
                 "uuid": attribute.get("uuid"),
                 "comment": attribute.get("comment"),
+                "first_seen": attribute.get("first_seen"),
+                "last_seen": attribute.get("last_seen"),
                 "source_field": source_field,
             }
         )
@@ -1104,6 +1116,8 @@ def infrastructure_observables(attributes):
             observable["relation"] = relation
             observable["attribute_type"] = attribute_type
             observable["attribute_uuid"] = fact.get("uuid")
+            observable["first_seen"] = fact.get("first_seen")
+            observable["last_seen"] = fact.get("last_seen")
             observable["source_field"] = fact["source_field"]
             observables.append(observable)
     return deduplicate_observables(observables)
@@ -1270,6 +1284,8 @@ def infrastructure_asn(attributes):
         "relation": asn_fact.get("relation"),
         "attribute_type": asn_fact.get("attribute_type"),
         "attribute_uuid": asn_fact.get("uuid"),
+        "first_seen": asn_fact.get("first_seen"),
+        "last_seen": asn_fact.get("last_seen"),
         "source_field": asn_fact.get("source_field", "Attribute"),
     }
 
@@ -1476,6 +1492,8 @@ def normalize_misp_detection_rule(source):
             "attribute_uuid": attribute.get("uuid"),
             "object_name": misp_object.get("name"),
             "object_uuid": misp_object.get("uuid"),
+            "first_seen": attribute.get("first_seen"),
+            "last_seen": attribute.get("last_seen"),
             "tags": [tag_name for tag_name in attribute_tags(attribute) if tag_name],
             "source_field": source.get("source_field"),
         }

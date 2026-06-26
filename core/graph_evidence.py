@@ -1159,6 +1159,8 @@ def misp_vulnerability_evidence(vulnerabilities, source_key=""):
                 "attribute_type": vulnerability.get("attribute_type"),
                 "attribute_category": vulnerability.get("attribute_category"),
                 "attribute_uuid": vulnerability.get("attribute_uuid"),
+                "first_seen": vulnerability.get("first_seen"),
+                "last_seen": vulnerability.get("last_seen"),
                 "object_name": vulnerability.get("object_name"),
                 "object_uuid": vulnerability.get("object_uuid"),
                 "tags": vulnerability.get("tags"),
@@ -1191,6 +1193,8 @@ def misp_campaign_evidence(campaigns, source_key=""):
                 "attribute_category": campaign.get("attribute_category"),
                 "attribute_uuid": campaign.get("attribute_uuid"),
                 "attribute_relation": campaign.get("attribute_relation"),
+                "first_seen": campaign.get("first_seen"),
+                "last_seen": campaign.get("last_seen"),
                 "object_name": campaign.get("object_name"),
                 "object_uuid": campaign.get("object_uuid"),
                 "object_meta_category": campaign.get("object_meta_category"),
@@ -1350,6 +1354,8 @@ def misp_detection_rule_evidence(detection_rules, source_key=""):
                 "attribute_uuid": detection_rule.get("attribute_uuid"),
                 "object_name": detection_rule.get("object_name"),
                 "object_uuid": detection_rule.get("object_uuid"),
+                "first_seen": detection_rule.get("first_seen"),
+                "last_seen": detection_rule.get("last_seen"),
                 "tags": detection_rule.get("tags"),
             }
         )

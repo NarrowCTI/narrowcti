@@ -816,12 +816,16 @@ class MISPProcessorTests(unittest.TestCase):
                         "object_relation": "subnet-announced",
                         "type": "ip-src",
                         "value": "203.0.113.0/24",
+                        "first_seen": "2026-06-20T10:00:00Z",
+                        "last_seen": "2026-06-21T10:00:00Z",
                     },
                     {
                         "uuid": "attribute-asn",
                         "object_relation": "asn",
                         "type": "AS",
                         "value": "AS64512",
+                        "first_seen": "2026-06-20T11:00:00Z",
+                        "last_seen": "2026-06-22T11:00:00Z",
                     },
                     {
                         "uuid": "attribute-as-name",
@@ -882,6 +886,8 @@ class MISPProcessorTests(unittest.TestCase):
                 and candidate["relationship_type"] == "consists-of"
                 and candidate["attributes"]["relationship_source_value"]
                 == "MISP netblock 203.0.113.0/24"
+                and candidate["attributes"]["first_seen"] == "2026-06-20T10:00:00Z"
+                and candidate["attributes"]["last_seen"] == "2026-06-21T10:00:00Z"
                 for candidate in graph_candidates["candidates"]
             )
         )
@@ -894,6 +900,8 @@ class MISPProcessorTests(unittest.TestCase):
                 == "observable"
                 and candidate["attributes"]["relationship_source_value"]
                 == "203.0.113.0/24"
+                and candidate["attributes"]["first_seen"] == "2026-06-20T11:00:00Z"
+                and candidate["attributes"]["last_seen"] == "2026-06-22T11:00:00Z"
                 for candidate in graph_candidates["candidates"]
             )
         )

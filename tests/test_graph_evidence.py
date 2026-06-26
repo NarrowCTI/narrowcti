@@ -748,6 +748,8 @@ class GraphEvidenceTests(unittest.TestCase):
                         "attribute_type": "campaign-name",
                         "attribute_category": "Attribution",
                         "attribute_uuid": "attribute-campaign-1",
+                        "first_seen": "2026-06-20T10:00:00Z",
+                        "last_seen": "2026-06-22T10:00:00Z",
                         "tags": ["tlp:green"],
                     }
                 ],
@@ -766,6 +768,8 @@ class GraphEvidenceTests(unittest.TestCase):
         self.assertEqual("Attribute[0]", campaign["source_field"])
         self.assertEqual("attribute-campaign-1", campaign["attributes"]["attribute_uuid"])
         self.assertEqual("campaign-name", campaign["attributes"]["attribute_type"])
+        self.assertEqual("2026-06-20T10:00:00Z", campaign["attributes"]["first_seen"])
+        self.assertEqual("2026-06-22T10:00:00Z", campaign["attributes"]["last_seen"])
 
     def test_builds_misp_target_organization_meta_evidence(self):
         evidence = build_graph_evidence(
@@ -1111,6 +1115,8 @@ class GraphEvidenceTests(unittest.TestCase):
                         "attribute_type": "vulnerability",
                         "attribute_category": "External analysis",
                         "attribute_uuid": "attr-cve",
+                        "first_seen": "2026-06-20T10:00:00Z",
+                        "last_seen": "2026-06-21T10:00:00Z",
                         "tags": ["exploit:known"],
                     }
                 ],
@@ -1148,6 +1154,8 @@ class GraphEvidenceTests(unittest.TestCase):
                     "attribute_type": "vulnerability",
                     "attribute_category": "External analysis",
                     "attribute_uuid": "attr-cve",
+                    "first_seen": "2026-06-20T10:00:00Z",
+                    "last_seen": "2026-06-21T10:00:00Z",
                     "tags": ["exploit:known"],
                 },
             },
@@ -1366,6 +1374,8 @@ class GraphEvidenceTests(unittest.TestCase):
                         "pattern": "title: Suspicious PowerShell",
                         "attribute_category": "Payload delivery",
                         "attribute_uuid": "attribute-rule-1",
+                        "first_seen": "2026-06-20T10:00:00Z",
+                        "last_seen": "2026-06-22T10:00:00Z",
                         "tags": ["tlp:green"],
                         "source_field": "Attribute[0]",
                     }
@@ -1394,6 +1404,8 @@ class GraphEvidenceTests(unittest.TestCase):
                     "pattern": "title: Suspicious PowerShell",
                     "attribute_category": "Payload delivery",
                     "attribute_uuid": "attribute-rule-1",
+                    "first_seen": "2026-06-20T10:00:00Z",
+                    "last_seen": "2026-06-22T10:00:00Z",
                     "tags": ["tlp:green"],
                 },
             },
