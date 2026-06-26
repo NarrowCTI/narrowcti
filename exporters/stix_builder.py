@@ -1096,6 +1096,8 @@ OPERATIONAL_CONTEXT_ENTITY_TYPES = {
     "malware": "malware",
     "narrative": "narrative",
     "security_platform": "security platform",
+    "threat_actor": "threat actor",
+    "threat_actor_individual": "threat actor individual",
     "tool": "tool",
     "vulnerability": "vulnerability",
 }

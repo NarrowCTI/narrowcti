@@ -174,6 +174,26 @@ class OpenCTIExporterTests(unittest.TestCase):
             api_client.report_object_refs,
         )
 
+    def test_export_mode_describes_native_threat_actor_individual_from_source_context(self):
+        api_client = FakeOpenCTIClient()
+        candidate = threat_actor_individual_candidate()
+        candidate["attributes"] = {"threat_actor_class": "individual"}
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [candidate]},
+            graph_export_mode="export",
+        )
+
+        self.assertEqual(
+            "Source-backed threat actor individual observed by misp-galaxy at "
+            "Galaxy.threat-actor-individual: NarrowCTI Individual Actor Validation.",
+            api_client.threat_actor_individual_adds[0]["description"],
+        )
+
     def test_export_mode_reuses_existing_native_security_platform(self):
         api_client = FakeOpenCTIClient(existing_security_platform=True)
 

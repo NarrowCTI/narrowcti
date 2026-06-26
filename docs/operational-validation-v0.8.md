@@ -863,6 +863,9 @@ the logical source and source field. Validated examples include:
 - Native Security Platform:
   `Source-backed security platform observed by misp at security_platform:
   NarrowCTI SIEM Validation.`
+- Native Threat Actor Individual:
+  `Source-backed threat actor individual observed by misp-galaxy at
+  Galaxy.threat-actor-individual: NarrowCTI Individual Actor Validation.`
 
 This polish keeps OpenCTI object Overview pages useful for analysts without
 fabricating feed content. Explicit feed descriptions still take precedence, and

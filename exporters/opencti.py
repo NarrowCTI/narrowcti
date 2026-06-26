@@ -307,7 +307,10 @@ def export_native_threat_actor_individuals(api_client, graph_candidate_policy):
             "name": name,
             "update": True,
         }
-        description = clean_string(attributes.get("description"))
+        description = clean_string(
+            attributes.get("description")
+            or graph_candidate_description(candidate, attributes)
+        )
         confidence = graph_candidate_confidence(candidate)
         aliases = clean_list_values(
             attributes.get("aliases"),
