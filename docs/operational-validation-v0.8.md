@@ -947,6 +947,11 @@ forms now become canonical OpenCTI-friendly country names such as `Argentina`,
 `Brazil` and `United States`, while `source_value`, `normalized_value` and
 `normalization_scope` preserve the original feed wording for audit.
 
+Follow-up unit validation added source-specific confidence weighting for
+explicit victimology geography. MISP Galaxy `targeted-*` location metadata now
+has a stronger minimum confidence than generic location evidence, and structured
+OTX `targeted_*` geography is lifted above the neutral threshold.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

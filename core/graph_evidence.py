@@ -1493,7 +1493,18 @@ def evidence_confidence(entity_type, confidence, source_name="", source_field=""
     confidence = clamp_confidence(confidence)
     if entity_type == "target_sector":
         return target_sector_confidence(confidence, source_name, source_field, attributes)
+    if entity_type in TARGET_LOCATION_ENTITY_TYPES:
+        return target_location_confidence(confidence, source_name, source_field)
     return confidence
+
+
+TARGET_LOCATION_ENTITY_TYPES = {
+    "target_administrative_area",
+    "target_city",
+    "target_country",
+    "target_position",
+    "target_region",
+}
 
 
 def target_sector_confidence(confidence, source_name="", source_field="", attributes=None):
@@ -1505,6 +1516,16 @@ def target_sector_confidence(confidence, source_name="", source_field="", attrib
     if source_name == "otx" and source_field == "industries":
         return max(confidence, 60)
     if attributes.get("normalized_value"):
+        return max(confidence, 60)
+    return confidence
+
+
+def target_location_confidence(confidence, source_name="", source_field=""):
+    source_name = clean_string(source_name).casefold()
+    source_field = clean_string(source_field).casefold()
+    if source_name == "misp-galaxy" and "targeted-" in source_field:
+        return max(confidence, 70)
+    if source_name == "otx" and source_field.startswith("targeted_"):
         return max(confidence, 60)
     return confidence
 

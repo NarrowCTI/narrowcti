@@ -121,6 +121,7 @@ class GraphEvidenceTests(unittest.TestCase):
 
         country = evidence["records"][0]
         self.assertEqual("Brazil", country["value"])
+        self.assertEqual(60, country["confidence"])
         self.assertEqual("BR", country["attributes"]["source_value"])
         self.assertTrue(country["attributes"]["normalized_value"])
         self.assertEqual("target_country", country["attributes"]["normalization_scope"])
@@ -772,7 +773,7 @@ class GraphEvidenceTests(unittest.TestCase):
         self.assertEqual("location", city["stix_object_type"])
         self.assertEqual("targets", city["relationship_type"])
         self.assertEqual("Galaxy.meta.targeted-city", city["source_field"])
-        self.assertEqual(62, city["confidence"])
+        self.assertEqual(70, city["confidence"])
         self.assertEqual("APT Example", city["attributes"]["parent_cluster_value"])
 
     def test_builds_misp_campaign_galaxy_graph_evidence(self):
