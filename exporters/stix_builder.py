@@ -63,6 +63,7 @@ SEMANTIC_RELATIONSHIP_TYPES = {
     "consists-of",
     "detects",
     "indicates",
+    "mitigates",
     "related-to",
     "targets",
     "uses",
@@ -1605,10 +1606,15 @@ def graph_relationship_target_ref(candidate, source_ref, target_ref):
 
 
 def graph_relationship_is_candidate_to_anchor(candidate, source_ref, target_ref):
+    entity_type = clean_string(candidate.get("entity_type"))
+    relationship_type = clean_string(candidate.get("relationship_type"))
+    candidate_to_anchor_relationships = {
+        ("attack_data_source", "detects"),
+        ("attack_data_component", "detects"),
+        ("course_of_action", "mitigates"),
+    }
     return (
-        clean_string(candidate.get("entity_type"))
-        in {"attack_data_source", "attack_data_component"}
-        and clean_string(candidate.get("relationship_type")) == "detects"
+        (entity_type, relationship_type) in candidate_to_anchor_relationships
         and source_ref
         and target_ref
         and source_ref != target_ref

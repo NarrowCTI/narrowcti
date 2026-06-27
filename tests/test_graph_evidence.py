@@ -1256,6 +1256,41 @@ class GraphEvidenceTests(unittest.TestCase):
         self.assertEqual("related-to", course["relationship_type"])
         self.assertEqual("cluster-coa", course["attributes"]["cluster_uuid"])
 
+    def test_builds_misp_course_of_action_mitigation_relationship_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "mitre-course-of-action",
+                        "value": "Disable or Remove Feature or Program",
+                        "uuid": "cluster-coa",
+                        "galaxy_type": "mitre-course-of-action",
+                        "galaxy_name": "MITRE Course of Action",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "external_id": ["M1042"],
+                            "mitigates": ["T1059"],
+                            "refs": ["https://attack.mitre.org/mitigations/M1042/"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertEqual(1, evidence["counts"]["course_of_action"])
+        course = evidence["records"][0]
+        self.assertEqual("course_of_action", course["entity_type"])
+        self.assertEqual("mitigates", course["relationship_type"])
+        self.assertEqual(
+            "attack-pattern",
+            course["attributes"]["relationship_source_stix_object_type"],
+        )
+        self.assertEqual("T1059", course["attributes"]["relationship_source_value"])
+        self.assertEqual("meta.mitigates", course["attributes"]["relationship_source_field"])
+
     def test_builds_misp_vulnerability_graph_evidence(self):
         evidence = build_graph_evidence(
             {

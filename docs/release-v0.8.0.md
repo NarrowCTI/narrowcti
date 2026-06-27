@@ -592,6 +592,11 @@ OpenCTI tab/export coverage is tracked in
 - Added conservative Malware alias normalization for validated duplicate-prone
   family names, including `LummaC2` -> `Lumma Stealer`, with source-value
   provenance and confidence boost limited to curated alias matches.
+- Added source-backed MITRE mitigation relationships for Courses of Action.
+  When a MISP Galaxy course-of-action cluster explicitly carries a mitigated
+  ATT&CK technique such as `T1059`, NarrowCTI now emits
+  `Course of Action -> mitigates -> Attack Pattern` with relationship
+  provenance instead of relying only on Report context.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

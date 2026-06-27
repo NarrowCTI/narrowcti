@@ -969,6 +969,14 @@ families already observed as duplicate-prone in the lab. `LummaC2`,
 deduplication and OpenCTI lookup, while the source spelling remains available in
 candidate provenance. The confidence boost is limited to curated alias matches.
 
+Controlled unit validation added MITRE mitigation relationship support for
+source-backed Courses of Action. When a MISP Galaxy course-of-action cluster
+explicitly carries a mitigated ATT&CK technique such as `T1059`, NarrowCTI now
+emits `Course of Action -> mitigates -> Attack Pattern` instead of leaving the
+object as Report-only context. The relationship is not inferred from free-form
+detection guidance; it requires an explicit source field and keeps that field in
+relationship provenance.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

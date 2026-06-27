@@ -420,6 +420,40 @@ class GraphStixBuilderTests(unittest.TestCase):
             summary["object_counts"],
         )
 
+    def test_builds_course_of_action_mitigates_attack_pattern_relationship(self):
+        bundle, summary = build_graph_report_bundle(
+            "Curated mitigation report",
+            "Course of action context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    attack_pattern_candidate(),
+                    mitigating_course_of_action_candidate(),
+                ]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        course = objects_by_type["course-of-action"][0]
+        attack_pattern = objects_by_type["attack-pattern"][0]
+        semantic_relationships = [
+            item
+            for item in data["objects"]
+            if item["type"] == "relationship"
+            and item["relationship_type"] == "mitigates"
+        ]
+
+        self.assertEqual(1, len(semantic_relationships))
+        self.assertEqual(course["id"], semantic_relationships[0]["source_ref"])
+        self.assertEqual(attack_pattern["id"], semantic_relationships[0]["target_ref"])
+        self.assertEqual(1, summary["semantic_relationship_count"])
+        self.assertEqual(1, summary["relationship_counts"]["mitigates"])
+        self.assertEqual(1, summary["proposed_relationship_counts"]["mitigates"])
+
     def test_builds_source_and_collector_identities_as_organizations(self):
         bundle, _summary = build_graph_report_bundle(
             "Curated graph report",
@@ -1583,6 +1617,18 @@ def course_of_action_candidate():
             "galaxy_name": "MITRE Course of Action",
         },
     }
+
+
+def mitigating_course_of_action_candidate():
+    candidate = course_of_action_candidate()
+    candidate["relationship_type"] = "mitigates"
+    candidate["attributes"] = {
+        **candidate["attributes"],
+        "relationship_source_stix_object_type": "attack-pattern",
+        "relationship_source_value": "T1059",
+        "relationship_source_field": "meta.mitigates",
+    }
+    return candidate
 
 
 def source_identity_candidate():

@@ -512,6 +512,7 @@ def misp_galaxy_evidence(clusters, source_key=""):
             source_field=cluster.get("source_field") or "misp_galaxies",
             confidence=confidence,
             display_name=cluster.get("value"),
+            relationship_type=misp_galaxy_relationship_type(entity_type, attributes),
             attributes=attributes,
         )
         if record:
@@ -1227,7 +1228,56 @@ def misp_galaxy_attributes(cluster, entity_type=""):
     cve_id = first_cve_id_from_cluster(cluster)
     if cve_id:
         attributes["external_id"] = cve_id
+    if entity_type == "course_of_action":
+        attack_id, attack_source_field = first_mitigated_attack_id_from_cluster(cluster)
+        if attack_id:
+            attributes.update(
+                {
+                    "relationship_source_stix_object_type": "attack-pattern",
+                    "relationship_source_value": attack_id,
+                    "relationship_source_field": attack_source_field,
+                }
+            )
     return compact_mapping(attributes)
+
+
+def misp_galaxy_relationship_type(entity_type, attributes):
+    if (
+        entity_type == "course_of_action"
+        and clean_string(attributes.get("relationship_source_stix_object_type")).lower()
+        == "attack-pattern"
+        and clean_string(attributes.get("relationship_source_value"))
+    ):
+        return "mitigates"
+    return ""
+
+
+def first_mitigated_attack_id_from_cluster(cluster):
+    meta = compact_mapping(cluster.get("meta"))
+    for key in (
+        "mitigates",
+        "mitigated",
+        "attack_pattern",
+        "attack-pattern",
+        "attack_patterns",
+        "attack-patterns",
+        "technique",
+        "techniques",
+        "related_attack_pattern",
+        "related-attack-pattern",
+        "related_technique",
+        "related-technique",
+        "mitre_attack_id",
+        "mitre-attack-id",
+        "mitre_technique_id",
+        "mitre-technique-id",
+        "refs",
+    ):
+        for value in flatten_values(meta.get(key)):
+            match = ATTACK_ID_PATTERN.search(clean_string(value))
+            if match:
+                return match.group(0).upper(), f"meta.{key}"
+    return "", ""
 
 
 def misp_vulnerability_evidence(vulnerabilities, source_key=""):
