@@ -633,6 +633,45 @@ class GraphStixBuilderTests(unittest.TestCase):
             )
         )
 
+    def test_builds_ipv6_belongs_to_autonomous_system_relationship(self):
+        bundle, summary = build_graph_report_bundle(
+            "Curated IPv6 infrastructure report",
+            "IPv6 ASN context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    infrastructure_candidate(),
+                    infrastructure_ipv6_candidate(),
+                    infrastructure_asn_candidate(
+                        "belongs-to",
+                        source_type="observable",
+                        source_value="2001:db8::10",
+                    ),
+                ]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        ipv6 = objects_by_type["ipv6-addr"][0]
+        autonomous_system = objects_by_type["autonomous-system"][0]
+        relationships = objects_by_type["relationship"]
+
+        self.assertEqual("2001:db8::10", ipv6["value"])
+        self.assertEqual(1, summary["object_counts"]["ipv6-addr"])
+        self.assertEqual(1, summary["relationship_counts"]["belongs-to"])
+        self.assertTrue(
+            any(
+                relationship["source_ref"] == ipv6["id"]
+                and relationship["relationship_type"] == "belongs-to"
+                and relationship["target_ref"] == autonomous_system["id"]
+                for relationship in relationships
+            )
+        )
+
     def test_builds_infrastructure_attack_pattern_related_relationship(self):
         bundle, summary = build_graph_report_bundle(
             "Curated infrastructure TTP report",
@@ -1371,6 +1410,18 @@ def infrastructure_ip_candidate():
             "relationship_source_field": "ip-enrichment",
         },
     }
+
+
+def infrastructure_ipv6_candidate():
+    candidate = infrastructure_ip_candidate()
+    candidate["fingerprint"] = "infra-ipv6-1"
+    candidate["value"] = "2001:db8::10"
+    candidate["name"] = "2001:db8::10"
+    candidate["attributes"] = {
+        **candidate["attributes"],
+        "observable_type": "ipv6-addr",
+    }
+    return candidate
 
 
 def infrastructure_attack_pattern_candidate():

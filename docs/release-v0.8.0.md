@@ -597,6 +597,10 @@ OpenCTI tab/export coverage is tracked in
   ATT&CK technique such as `T1059`, NarrowCTI now emits
   `Course of Action -> mitigates -> Attack Pattern` with relationship
   provenance instead of relying only on Report context.
+- Added unit-level IPv6 infrastructure relationship coverage. The STIX builder
+  now has regression coverage for `IPv6-Addr -> belongs-to -> Autonomous-System`
+  so future clean OpenCTI validation can focus on UI/API rendering rather than
+  relationship direction.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

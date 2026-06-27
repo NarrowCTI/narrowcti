@@ -348,7 +348,9 @@ Open questions before broad activation:
 
 - Confirm the same relationships visually in OpenCTI's graph and knowledge UI,
   not only via GraphQL.
-- Validate `IPv6-Addr -> belongs-to -> Autonomous-System`.
+- Validate `IPv6-Addr -> belongs-to -> Autonomous-System` visually in OpenCTI.
+  Unit-level STIX builder coverage confirms the relationship direction and
+  object materialization contract.
 - Validate how noisy broad ASN searches become in larger OpenCTI datasets.
 - Validate true external MISP feed samples that carry ASN/netblock metadata;
   controlled MISP object-template validation is complete, but real feed shape
