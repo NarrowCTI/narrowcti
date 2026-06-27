@@ -957,6 +957,12 @@ common operational aliases. Values such as `APAC`, `LATAM` and `EMEA` are
 converted to canonical OpenCTI-friendly region names while keeping the original
 feed value in provenance.
 
+Controlled unit validation added conservative Intrusion Set alias
+normalization for aliases already validated in the OpenCTI lab. `Lazarus` and
+`HIDDEN COBRA` normalize to `Lazarus Group`, while `Palmerworm` normalizes to
+`BlackTech`; the original source value remains in provenance and the confidence
+boost is limited to curated alias matches.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

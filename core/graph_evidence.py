@@ -112,6 +112,13 @@ TARGET_REGION_ALIASES = {
     "south america": "South America",
 }
 
+INTRUSION_SET_ALIASES = {
+    "hidden cobra": "Lazarus Group",
+    "lazarus": "Lazarus Group",
+    "lazarus group": "Lazarus Group",
+    "palmerworm": "BlackTech",
+}
+
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 
@@ -1511,6 +1518,8 @@ def evidence_confidence(entity_type, confidence, source_name="", source_field=""
         return target_sector_confidence(confidence, source_name, source_field, attributes)
     if entity_type in TARGET_LOCATION_ENTITY_TYPES:
         return target_location_confidence(confidence, source_name, source_field)
+    if entity_type == "intrusion_set":
+        return intrusion_set_confidence(confidence, attributes)
     return confidence
 
 
@@ -1546,7 +1555,21 @@ def target_location_confidence(confidence, source_name="", source_field=""):
     return confidence
 
 
+def intrusion_set_confidence(confidence, attributes=None):
+    attributes = compact_mapping(attributes)
+    if attributes.get("normalized_value"):
+        return max(confidence, 70)
+    return confidence
+
+
 def normalize_evidence_value(entity_type, value, attributes):
+    if entity_type == "intrusion_set":
+        return normalize_alias_value(
+            value,
+            attributes,
+            INTRUSION_SET_ALIASES,
+            "intrusion_set",
+        )
     if entity_type == "target_sector":
         return normalize_alias_value(
             value,

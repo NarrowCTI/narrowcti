@@ -74,6 +74,35 @@ class GraphEvidenceTests(unittest.TestCase):
             evidence["records"],
         )
 
+    def test_normalizes_intrusion_set_aliases(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "intrusion_set",
+                            "value": "Lazarus",
+                            "source_field": "adversary",
+                            "confidence": 60,
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Actor pulse",
+        )
+
+        intrusion_set = evidence["records"][0]
+        self.assertEqual("Lazarus Group", intrusion_set["value"])
+        self.assertEqual(70, intrusion_set["confidence"])
+        self.assertEqual("Lazarus", intrusion_set["attributes"]["source_value"])
+        self.assertTrue(intrusion_set["attributes"]["normalized_value"])
+        self.assertEqual(
+            "intrusion_set",
+            intrusion_set["attributes"]["normalization_scope"],
+        )
+
     def test_normalizes_otx_target_sector_aliases(self):
         evidence = build_graph_evidence(
             {
