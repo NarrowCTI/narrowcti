@@ -941,6 +941,12 @@ than generic sector evidence, and structured OTX `industries` evidence is lifted
 above the neutral threshold without overriding stricter source-provided
 confidence.
 
+Controlled unit validation also added conservative target-country normalization
+for common source aliases and ISO-style values. `AR`, `BR`, `US` and related
+forms now become canonical OpenCTI-friendly country names such as `Argentina`,
+`Brazil` and `United States`, while `source_value`, `normalized_value` and
+`normalization_scope` preserve the original feed wording for audit.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

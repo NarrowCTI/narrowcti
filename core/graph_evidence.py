@@ -73,6 +73,29 @@ TARGET_SECTOR_ALIASES = {
     "transport": "Transportation",
 }
 
+TARGET_COUNTRY_ALIASES = {
+    "ar": "Argentina",
+    "arg": "Argentina",
+    "br": "Brazil",
+    "bra": "Brazil",
+    "cn": "China",
+    "de": "Germany",
+    "fr": "France",
+    "gb": "United Kingdom",
+    "ir": "Iran",
+    "iran, islamic republic of": "Iran",
+    "kp": "North Korea",
+    "kr": "South Korea",
+    "ru": "Russia",
+    "russian federation": "Russia",
+    "uk": "United Kingdom",
+    "us": "United States",
+    "usa": "United States",
+    "u.s.": "United States",
+    "u.s.a.": "United States",
+    "united states of america": "United States",
+}
+
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 
@@ -1488,18 +1511,30 @@ def target_sector_confidence(confidence, source_name="", source_field="", attrib
 
 def normalize_evidence_value(entity_type, value, attributes):
     if entity_type == "target_sector":
-        return normalize_target_sector_value(value, attributes)
+        return normalize_alias_value(
+            value,
+            attributes,
+            TARGET_SECTOR_ALIASES,
+            "target_sector",
+        )
+    if entity_type == "target_country":
+        return normalize_alias_value(
+            value,
+            attributes,
+            TARGET_COUNTRY_ALIASES,
+            "target_country",
+        )
     return value, attributes
 
 
-def normalize_target_sector_value(value, attributes):
-    canonical = TARGET_SECTOR_ALIASES.get(value.casefold(), value)
+def normalize_alias_value(value, attributes, aliases, scope):
+    canonical = aliases.get(value.casefold(), value)
     if canonical == value:
         return value, attributes
     attributes = dict(attributes)
     attributes.setdefault("source_value", value)
     attributes["normalized_value"] = True
-    attributes["normalization_scope"] = "target_sector"
+    attributes["normalization_scope"] = scope
     return canonical, compact_mapping(attributes)
 
 

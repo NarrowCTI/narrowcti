@@ -579,6 +579,9 @@ OpenCTI tab/export coverage is tracked in
   candidate provenance. Source-specific sector confidence weighting now favors
   explicit MISP `targeted-sector` victimology and structured OTX `industries`
   over generic sector evidence.
+- Added conservative target-country normalization for common source aliases and
+  ISO-style values such as `AR` -> `Argentina`, `BR` -> `Brazil` and `US` ->
+  `United States`, preserving the original feed value in provenance.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

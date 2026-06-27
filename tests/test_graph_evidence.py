@@ -100,6 +100,31 @@ class GraphEvidenceTests(unittest.TestCase):
         self.assertTrue(sector["attributes"]["normalized_value"])
         self.assertEqual("target_sector", sector["attributes"]["normalization_scope"])
 
+    def test_normalizes_otx_target_country_aliases(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "target_country",
+                            "value": "BR",
+                            "source_field": "targeted_countries",
+                            "confidence": 50,
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Country pulse",
+        )
+
+        country = evidence["records"][0]
+        self.assertEqual("Brazil", country["value"])
+        self.assertEqual("BR", country["attributes"]["source_value"])
+        self.assertTrue(country["attributes"]["normalized_value"])
+        self.assertEqual("target_country", country["attributes"]["normalization_scope"])
+
     def test_builds_otx_and_mitre_graph_evidence_records(self):
         evidence = build_graph_evidence(
             {
@@ -645,7 +670,8 @@ class GraphEvidenceTests(unittest.TestCase):
             for record in evidence["records"]
             if record["entity_type"] == "target_country"
         )
-        self.assertEqual("AR", country["value"])
+        self.assertEqual("Argentina", country["value"])
+        self.assertEqual("AR", country["attributes"]["source_value"])
 
     def test_normalizes_misp_target_sector_aliases_before_deduplication(self):
         evidence = build_graph_evidence(
