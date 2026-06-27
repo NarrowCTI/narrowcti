@@ -589,6 +589,9 @@ OpenCTI tab/export coverage is tracked in
 - Added conservative Intrusion Set alias normalization for validated aliases,
   including `Lazarus` -> `Lazarus Group` and `Palmerworm` -> `BlackTech`, with
   source-value provenance and confidence boost limited to curated alias matches.
+- Added conservative Malware alias normalization for validated duplicate-prone
+  family names, including `LummaC2` -> `Lumma Stealer`, with source-value
+  provenance and confidence boost limited to curated alias matches.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

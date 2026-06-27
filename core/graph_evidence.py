@@ -119,6 +119,13 @@ INTRUSION_SET_ALIASES = {
     "palmerworm": "BlackTech",
 }
 
+MALWARE_ALIASES = {
+    "lumma c2": "Lumma Stealer",
+    "lummac2": "Lumma Stealer",
+    "lumma stealer": "Lumma Stealer",
+    "lummastealer": "Lumma Stealer",
+}
+
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 
@@ -1520,6 +1527,8 @@ def evidence_confidence(entity_type, confidence, source_name="", source_field=""
         return target_location_confidence(confidence, source_name, source_field)
     if entity_type == "intrusion_set":
         return intrusion_set_confidence(confidence, attributes)
+    if entity_type == "malware":
+        return malware_confidence(confidence, attributes)
     return confidence
 
 
@@ -1562,6 +1571,13 @@ def intrusion_set_confidence(confidence, attributes=None):
     return confidence
 
 
+def malware_confidence(confidence, attributes=None):
+    attributes = compact_mapping(attributes)
+    if attributes.get("normalized_value"):
+        return max(confidence, 70)
+    return confidence
+
+
 def normalize_evidence_value(entity_type, value, attributes):
     if entity_type == "intrusion_set":
         return normalize_alias_value(
@@ -1569,6 +1585,13 @@ def normalize_evidence_value(entity_type, value, attributes):
             attributes,
             INTRUSION_SET_ALIASES,
             "intrusion_set",
+        )
+    if entity_type == "malware":
+        return normalize_alias_value(
+            value,
+            attributes,
+            MALWARE_ALIASES,
+            "malware",
         )
     if entity_type == "target_sector":
         return normalize_alias_value(

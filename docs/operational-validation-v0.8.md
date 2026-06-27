@@ -963,6 +963,12 @@ normalization for aliases already validated in the OpenCTI lab. `Lazarus` and
 `BlackTech`; the original source value remains in provenance and the confidence
 boost is limited to curated alias matches.
 
+Controlled unit validation added the same conservative alias hygiene for Malware
+families already observed as duplicate-prone in the lab. `LummaC2`,
+`Lumma C2` and `LummaStealer` now normalize to `Lumma Stealer` before graph
+deduplication and OpenCTI lookup, while the source spelling remains available in
+candidate provenance. The confidence boost is limited to curated alias matches.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local

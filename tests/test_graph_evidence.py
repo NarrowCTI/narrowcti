@@ -103,6 +103,32 @@ class GraphEvidenceTests(unittest.TestCase):
             intrusion_set["attributes"]["normalization_scope"],
         )
 
+    def test_normalizes_malware_aliases(self):
+        evidence = build_graph_evidence(
+            {
+                "otx_entities": {
+                    "records": [
+                        {
+                            "entity_type": "malware",
+                            "value": "LummaC2",
+                            "source_field": "malware_families",
+                            "confidence": 55,
+                        }
+                    ]
+                }
+            },
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Malware pulse",
+        )
+
+        malware = evidence["records"][0]
+        self.assertEqual("Lumma Stealer", malware["value"])
+        self.assertEqual(70, malware["confidence"])
+        self.assertEqual("LummaC2", malware["attributes"]["source_value"])
+        self.assertTrue(malware["attributes"]["normalized_value"])
+        self.assertEqual("malware", malware["attributes"]["normalization_scope"])
+
     def test_normalizes_otx_target_sector_aliases(self):
         evidence = build_graph_evidence(
             {
