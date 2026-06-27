@@ -576,7 +576,9 @@ OpenCTI tab/export coverage is tracked in
 - Added conservative target-sector synonym normalization for graph evidence.
   Clear aliases such as `Financial Services` -> `Finance` and `Defence` ->
   `Defense` deduplicate before export while preserving the source value in
-  candidate provenance.
+  candidate provenance. Source-specific sector confidence weighting now favors
+  explicit MISP `targeted-sector` victimology and structured OTX `industries`
+  over generic sector evidence.
 - Added OpenCTI Location subtype hints for graph exports. NarrowCTI now emits
   `x_opencti_location_type` for `target_region`, `target_country`,
   `target_administrative_area`, `target_city` and `target_position` so OpenCTI

@@ -1450,7 +1450,13 @@ def evidence_record(
         "source_key": clean_string(source_key),
         "source_name": clean_string(source_name),
         "source_field": clean_string(source_field),
-        "confidence": clamp_confidence(confidence),
+        "confidence": evidence_confidence(
+            entity_type,
+            confidence,
+            source_name,
+            source_field,
+            compact_attributes,
+        ),
     }
     display_name = clean_string(display_name)
     if display_name and display_name != value:
@@ -1458,6 +1464,26 @@ def evidence_record(
     if compact_attributes:
         record["attributes"] = compact_attributes
     return record
+
+
+def evidence_confidence(entity_type, confidence, source_name="", source_field="", attributes=None):
+    confidence = clamp_confidence(confidence)
+    if entity_type == "target_sector":
+        return target_sector_confidence(confidence, source_name, source_field, attributes)
+    return confidence
+
+
+def target_sector_confidence(confidence, source_name="", source_field="", attributes=None):
+    source_name = clean_string(source_name).casefold()
+    source_field = clean_string(source_field).casefold()
+    attributes = compact_mapping(attributes)
+    if source_name == "misp-galaxy" and "targeted-sector" in source_field:
+        return max(confidence, 75)
+    if source_name == "otx" and source_field == "industries":
+        return max(confidence, 60)
+    if attributes.get("normalized_value"):
+        return max(confidence, 60)
+    return confidence
 
 
 def normalize_evidence_value(entity_type, value, attributes):

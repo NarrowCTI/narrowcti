@@ -95,6 +95,7 @@ class GraphEvidenceTests(unittest.TestCase):
 
         sector = evidence["records"][0]
         self.assertEqual("Defense", sector["value"])
+        self.assertEqual(60, sector["confidence"])
         self.assertEqual("Defence", sector["attributes"]["source_value"])
         self.assertTrue(sector["attributes"]["normalized_value"])
         self.assertEqual("target_sector", sector["attributes"]["normalization_scope"])
@@ -634,6 +635,7 @@ class GraphEvidenceTests(unittest.TestCase):
             and record["value"] == "Activists"
         )
         self.assertEqual("Galaxy.meta.targeted-sector", sector["source_field"])
+        self.assertEqual(75, sector["confidence"])
         self.assertEqual(
             "APT Example",
             sector["attributes"]["parent_cluster_value"],
@@ -673,6 +675,7 @@ class GraphEvidenceTests(unittest.TestCase):
         ]
         self.assertEqual(1, len(sectors))
         self.assertEqual("Finance", sectors[0]["value"])
+        self.assertEqual(75, sectors[0]["confidence"])
         self.assertEqual("Financial Services", sectors[0]["attributes"]["source_value"])
         self.assertTrue(sectors[0]["attributes"]["normalized_value"])
 

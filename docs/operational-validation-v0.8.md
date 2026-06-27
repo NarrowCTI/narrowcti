@@ -935,6 +935,12 @@ before graph promotion, while `source_value`, `normalized_value` and
 victimology labels are intentionally not remapped without source-backed
 evidence.
 
+The same validation added source-specific target-sector confidence weighting.
+Explicit MISP Galaxy `targeted-sector` victimology now has stronger confidence
+than generic sector evidence, and structured OTX `industries` evidence is lifted
+above the neutral threshold without overriding stricter source-provided
+confidence.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local
