@@ -96,6 +96,22 @@ TARGET_COUNTRY_ALIASES = {
     "united states of america": "United States",
 }
 
+TARGET_REGION_ALIASES = {
+    "apac": "Asia-Pacific",
+    "asia pacific": "Asia-Pacific",
+    "asia-pacific": "Asia-Pacific",
+    "cis": "Commonwealth of Independent States",
+    "emea": "Europe, Middle East and Africa",
+    "eu": "Europe",
+    "european union": "Europe",
+    "latam": "Latin America",
+    "latin america and caribbean": "Latin America",
+    "mena": "Middle East and North Africa",
+    "middle east": "Middle East",
+    "north america": "North America",
+    "south america": "South America",
+}
+
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 
@@ -1544,6 +1560,13 @@ def normalize_evidence_value(entity_type, value, attributes):
             attributes,
             TARGET_COUNTRY_ALIASES,
             "target_country",
+        )
+    if entity_type == "target_region":
+        return normalize_alias_value(
+            value,
+            attributes,
+            TARGET_REGION_ALIASES,
+            "target_region",
         )
     return value, attributes
 

@@ -747,6 +747,7 @@ class GraphEvidenceTests(unittest.TestCase):
                         "galaxy_name": "Threat Actor",
                         "source_field": "Galaxy",
                         "meta": {
+                            "targeted-region": ["APAC"],
                             "targeted-state": ["Sao Paulo"],
                             "targeted-city": ["Sao Paulo"],
                             "targeted-coordinate": ["-23.5505,-46.6333"],
@@ -759,11 +760,21 @@ class GraphEvidenceTests(unittest.TestCase):
             title="MISP event",
         )
 
-        self.assertEqual(4, evidence["record_count"])
+        self.assertEqual(5, evidence["record_count"])
         self.assertEqual(1, evidence["counts"]["threat_actor"])
+        self.assertEqual(1, evidence["counts"]["target_region"])
         self.assertEqual(1, evidence["counts"]["target_administrative_area"])
         self.assertEqual(1, evidence["counts"]["target_city"])
         self.assertEqual(1, evidence["counts"]["target_position"])
+        region = next(
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_region"
+        )
+        self.assertEqual("Asia-Pacific", region["value"])
+        self.assertEqual(70, region["confidence"])
+        self.assertEqual("APAC", region["attributes"]["source_value"])
+        self.assertEqual("target_region", region["attributes"]["normalization_scope"])
         city = next(
             record
             for record in evidence["records"]

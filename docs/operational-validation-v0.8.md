@@ -952,6 +952,11 @@ explicit victimology geography. MISP Galaxy `targeted-*` location metadata now
 has a stronger minimum confidence than generic location evidence, and structured
 OTX `targeted_*` geography is lifted above the neutral threshold.
 
+The same location validation added conservative target-region normalization for
+common operational aliases. Values such as `APAC`, `LATAM` and `EMEA` are
+converted to canonical OpenCTI-friendly region names while keeping the original
+feed value in provenance.
+
 ## Captured Deep Location Export Evidence
 
 On June 26, 2026, controlled matrix validation was executed against the local
