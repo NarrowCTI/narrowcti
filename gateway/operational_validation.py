@@ -59,6 +59,7 @@ def build_operational_validation_report(
     resource_posture_ok=False,
     resource_posture_unhealthy=False,
     resource_posture_evidence=None,
+    relationship_audit_evidence=None,
     required_sources=("otx", "misp"),
 ):
     preflight = preflight_report.to_dict()
@@ -75,6 +76,7 @@ def build_operational_validation_report(
             opencti_ui_no_duplicate,
             opencti_ui_duplicate_found,
         ),
+        relationship_audit_check(relationship_audit_evidence),
         resource_posture_check(
             resource_posture_ok,
             resource_posture_unhealthy,
@@ -282,6 +284,65 @@ def duplicate_attack_pattern_check(no_duplicate, duplicate_found):
         "opencti-no-duplicate-attack-pattern",
         "needs-evidence",
         "OpenCTI UI duplicate check has not been recorded yet.",
+        evidence,
+    )
+
+
+def relationship_audit_check(audit_evidence):
+    audit_evidence = audit_evidence if isinstance(audit_evidence, dict) else {}
+    quadrant_counts = audit_evidence.get("diamond_quadrant_counts") or {}
+    relationship_count = int(audit_evidence.get("relationship_count", 0) or 0)
+    kill_chain_count = len(audit_evidence.get("kill_chain_attack_patterns") or [])
+    diamond_context_count = sum(
+        int(quadrant_counts.get(quadrant, 0) or 0)
+        for quadrant in (
+            "adversary",
+            "capability",
+            "infrastructure",
+            "victimology",
+        )
+    )
+    evidence = {
+        "found": bool(audit_evidence.get("found", False)),
+        "target": audit_evidence.get("target") or {},
+        "relationship_count": relationship_count,
+        "outbound_count": int(audit_evidence.get("outbound_count", 0) or 0),
+        "inbound_count": int(audit_evidence.get("inbound_count", 0) or 0),
+        "diamond_quadrant_counts": dict(quadrant_counts),
+        "kill_chain_attack_pattern_count": kill_chain_count,
+    }
+    if not audit_evidence:
+        return check(
+            "opencti-relationship-audit",
+            "needs-evidence",
+            "Run the OpenCTI relationship audit for at least one promoted graph object.",
+            evidence,
+        )
+    if not audit_evidence.get("found", False):
+        return check(
+            "opencti-relationship-audit",
+            "fail",
+            "OpenCTI relationship audit did not find the requested graph object.",
+            evidence,
+        )
+    if relationship_count <= 0:
+        return check(
+            "opencti-relationship-audit",
+            "fail",
+            "OpenCTI relationship audit found the object but no direct relationships.",
+            evidence,
+        )
+    if diamond_context_count > 0 or kill_chain_count > 0:
+        return check(
+            "opencti-relationship-audit",
+            "pass",
+            "OpenCTI relationship audit confirms direct Diamond or Kill Chain graph context.",
+            evidence,
+        )
+    return check(
+        "opencti-relationship-audit",
+        "needs-evidence",
+        "Relationship audit has direct edges, but not enough Diamond or Kill Chain context yet.",
         evidence,
     )
 
@@ -498,6 +559,17 @@ def load_manual_evidence(evidence_file):
     return data
 
 
+def load_relationship_audit_evidence(evidence_file):
+    evidence_file = str(evidence_file or "").strip()
+    if not evidence_file or not os.path.exists(evidence_file):
+        return {}
+    with open(evidence_file, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    if not isinstance(data, dict):
+        raise ValueError("relationship audit evidence file must contain a JSON object")
+    return data
+
+
 def evidence_bool(evidence, name):
     value = evidence.get(name, False)
     if isinstance(value, bool):
@@ -542,6 +614,11 @@ def main():
             "Optional JSON file with manual validation evidence such as "
             "full_validation_passed, opencti_ui_no_duplicate and resource_posture_ok."
         ),
+    )
+    parser.add_argument(
+        "--relationship-audit-file",
+        default=os.getenv("NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE", ""),
+        help="Optional JSON file produced by gateway.opencti_relationship_audit.",
     )
     parser.add_argument(
         "--full-validation-passed",
@@ -594,6 +671,9 @@ def main():
     )
     decisions = build_decision_audit_report(records)
     manual_evidence = load_manual_evidence(args.evidence_file)
+    relationship_audit_evidence = load_relationship_audit_evidence(
+        args.relationship_audit_file
+    )
     report = build_operational_validation_report(
         preflight,
         decisions,
@@ -608,6 +688,7 @@ def main():
         resource_posture_unhealthy=args.resource_posture_unhealthy
         or evidence_bool(manual_evidence, "resource_posture_unhealthy"),
         resource_posture_evidence=manual_evidence.get("resource_posture"),
+        relationship_audit_evidence=relationship_audit_evidence,
         required_sources=parse_sources(args.required_sources),
     )
     output_format = "json" if args.json else args.format

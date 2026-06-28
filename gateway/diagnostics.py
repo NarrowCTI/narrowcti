@@ -22,6 +22,7 @@ from gateway.decisions import build_decision_audit_report, read_decision_records
 from gateway.operational_validation import (
     build_operational_validation_report,
     evidence_bool,
+    load_relationship_audit_evidence,
     load_manual_evidence,
 )
 from gateway.preflight import build_preflight_report
@@ -67,6 +68,7 @@ def build_support_diagnostics(
     generated_at="",
     redaction_profile="none",
     operational_validation_evidence_file="",
+    opencti_relationship_audit_file="",
 ):
     profile = normalize_redaction_profile(redaction_profile)
     preflight = build_preflight_report(settings, env=env)
@@ -76,6 +78,13 @@ def build_support_diagnostics(
             evidence_item(
                 "operational_validation_evidence_file",
                 operational_validation_evidence_file,
+            )
+        )
+    if opencti_relationship_audit_file:
+        evidence.append(
+            evidence_item(
+                "opencti_relationship_audit_file",
+                opencti_relationship_audit_file,
             )
         )
     resolved_decision_paths = decision_paths or [settings.decision_audit_dir]
@@ -92,6 +101,9 @@ def build_support_diagnostics(
     )
     decisions = build_decision_audit_report(decision_records)
     manual_evidence = load_manual_evidence(operational_validation_evidence_file)
+    relationship_audit_evidence = load_relationship_audit_evidence(
+        opencti_relationship_audit_file
+    )
     operational_validation = build_operational_validation_report(
         preflight,
         decisions,
@@ -112,6 +124,7 @@ def build_support_diagnostics(
             manual_evidence,
             "resource_posture_unhealthy",
         ),
+        relationship_audit_evidence=relationship_audit_evidence,
         required_sources=preflight.enabled_sources,
     )
     snapshot = SupportDiagnosticSnapshot(
@@ -839,6 +852,11 @@ def main():
         default=os.environ.get("NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE", ""),
         help="Optional JSON file with manual v0.8 operational validation evidence.",
     )
+    parser.add_argument(
+        "--opencti-relationship-audit-file",
+        default=os.environ.get("NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE", ""),
+        help="Optional JSON file produced by gateway.opencti_relationship_audit.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -852,6 +870,7 @@ def main():
         limit=args.limit,
         redaction_profile=args.redaction_profile,
         operational_validation_evidence_file=args.operational_validation_evidence_file,
+        opencti_relationship_audit_file=args.opencti_relationship_audit_file,
     )
     bundle_result = None
     if args.bundle_file:

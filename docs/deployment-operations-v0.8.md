@@ -112,6 +112,12 @@ actually validated them. Missing evidence keeps those checks in
 `needs-evidence` state. Support diagnostics reads the same file when configured
 so the support bundle and the operational validation report do not diverge.
 
+The operational validation service also reads
+`/app/state/opencti-relationship-audit.json` by default. Run
+`narrowcti-opencti-relationship-audit` before the validation service when the
+goal is to prove that at least one promoted OpenCTI object has direct Diamond or
+Kill Chain graph context.
+
 The curation report service writes text, JSON and HTML artifacts from the same
 evidence snapshot. Use the JSON file as the stable contract artifact for
 comparison between validation runs, the text file for terminal review and the

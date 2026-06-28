@@ -711,13 +711,15 @@ future enterprise CTI reports.
 
 ## Operational Validation Checklist
 
-v0.8 also provides a read-only checklist command that consolidates preflight and
-decision-audit evidence into pass/fail/needs-evidence status:
+v0.8 also provides a read-only checklist command that consolidates preflight,
+decision-audit and optional OpenCTI relationship-audit evidence into
+pass/fail/needs-evidence status:
 
 ```powershell
 python -m gateway.operational_validation `
   --decision-path state\audit `
-  --required-sources otx,misp
+  --required-sources otx,misp `
+  --relationship-audit-file state\opencti-relationship-audit.json
 ```
 
 After repository validation, OpenCTI UI review and local resource review are
@@ -768,12 +770,14 @@ Then run:
 python -m gateway.operational_validation `
   --decision-path state\audit `
   --required-sources otx,misp `
-  --evidence-file state\operational-validation-evidence.json
+  --evidence-file state\operational-validation-evidence.json `
+  --relationship-audit-file state\opencti-relationship-audit.json
 ```
 
 If the evidence file is missing, the checklist remains read-only and treats
 manual checks as `needs-evidence`. If the file exists, it must contain a JSON
-object.
+object. If the relationship-audit file is missing, the OpenCTI relationship
+audit check also stays in `needs-evidence`.
 
 JSON output is available for attaching evidence to release notes:
 
@@ -781,6 +785,7 @@ JSON output is available for attaching evidence to release notes:
 python -m gateway.operational_validation `
   --decision-path state\audit `
   --required-sources otx,misp `
+  --relationship-audit-file state\opencti-relationship-audit.json `
   --format json `
   --output-file state\reports\v0.8-operational-validation.json
 ```
@@ -791,6 +796,7 @@ HTML output is available for local review or support-safe evidence packages:
 python -m gateway.operational_validation `
   --decision-path state\audit `
   --required-sources otx,misp `
+  --relationship-audit-file state\opencti-relationship-audit.json `
   --format html `
   --output-file state\reports\v0.8-operational-validation.html
 ```
@@ -801,6 +807,7 @@ Text output can also be written as a local evidence artifact:
 python -m gateway.operational_validation `
   --decision-path state\audit `
   --required-sources otx,misp `
+  --relationship-audit-file state\opencti-relationship-audit.json `
   --output-file state\reports\v0.8-operational-validation.txt
 ```
 

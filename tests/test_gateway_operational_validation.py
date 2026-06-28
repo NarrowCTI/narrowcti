@@ -10,6 +10,7 @@ from gateway.operational_validation import (
     evidence_bool,
     format_html_report,
     format_text_report,
+    load_relationship_audit_evidence,
     load_manual_evidence,
     normalize_output_format,
     parse_sources,
@@ -44,13 +45,15 @@ class GatewayOperationalValidationTests(unittest.TestCase):
             full_validation_passed=True,
             opencti_ui_no_duplicate=True,
             resource_posture_ok=True,
+            relationship_audit_evidence=relationship_audit_evidence(),
         )
         data = report.to_dict()
         text = format_text_report(report)
 
         self.assertEqual("pass", data["overall_status"])
-        self.assertEqual(8, data["counts"]["pass"])
+        self.assertEqual(9, data["counts"]["pass"])
         self.assertIn("canonical-attack-match status=pass", text)
+        self.assertIn("opencti-relationship-audit status=pass", text)
         json.dumps(data)
 
     def test_reports_needs_evidence_for_missing_lab_artifacts(self):
@@ -80,6 +83,10 @@ class GatewayOperationalValidationTests(unittest.TestCase):
             "needs-evidence",
             checks["opencti-no-duplicate-attack-pattern"].status,
         )
+        self.assertEqual(
+            "needs-evidence",
+            checks["opencti-relationship-audit"].status,
+        )
 
     def test_flags_unsafe_or_duplicate_conditions_as_failures(self):
         preflight = build_preflight_report(
@@ -104,6 +111,56 @@ class GatewayOperationalValidationTests(unittest.TestCase):
             checks["opencti-no-duplicate-attack-pattern"].status,
         )
         self.assertEqual("fail", checks["resource-posture"].status)
+
+    def test_relationship_audit_evidence_can_pass_or_fail(self):
+        preflight = build_preflight_report(
+            validation_settings(),
+            env={"OTX_DRY_RUN": "true", "MISP_DRY_RUN": "true"},
+        )
+        decisions = build_decision_audit_report(
+            [validation_decision("otx"), validation_decision("misp")]
+        )
+
+        passing = build_operational_validation_report(
+            preflight,
+            decisions,
+            full_validation_passed=True,
+            opencti_ui_no_duplicate=True,
+            resource_posture_ok=True,
+            relationship_audit_evidence=relationship_audit_evidence(),
+        )
+        missing_target = build_operational_validation_report(
+            preflight,
+            decisions,
+            full_validation_passed=True,
+            opencti_ui_no_duplicate=True,
+            resource_posture_ok=True,
+            relationship_audit_evidence={"found": False},
+        )
+        weak_context = build_operational_validation_report(
+            preflight,
+            decisions,
+            full_validation_passed=True,
+            opencti_ui_no_duplicate=True,
+            resource_posture_ok=True,
+            relationship_audit_evidence={
+                "found": True,
+                "target": {"name": "Report-only object"},
+                "relationship_count": 1,
+                "diamond_quadrant_counts": {"other": 1},
+            },
+        )
+
+        passing_checks = {item.code: item for item in passing.checks}
+        missing_checks = {item.code: item for item in missing_target.checks}
+        weak_checks = {item.code: item for item in weak_context.checks}
+
+        self.assertEqual("pass", passing_checks["opencti-relationship-audit"].status)
+        self.assertEqual("fail", missing_checks["opencti-relationship-audit"].status)
+        self.assertEqual(
+            "needs-evidence",
+            weak_checks["opencti-relationship-audit"].status,
+        )
 
     def test_structured_resource_posture_evidence_can_pass(self):
         preflight = build_preflight_report(
@@ -192,6 +249,7 @@ class GatewayOperationalValidationTests(unittest.TestCase):
 
     def test_missing_manual_evidence_file_is_empty(self):
         self.assertEqual({}, load_manual_evidence("/missing/validation.json"))
+        self.assertEqual({}, load_relationship_audit_evidence("/missing/audit.json"))
 
     def test_rejects_non_object_manual_evidence_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -201,6 +259,8 @@ class GatewayOperationalValidationTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 load_manual_evidence(evidence_file)
+            with self.assertRaises(ValueError):
+                load_relationship_audit_evidence(evidence_file)
 
     def test_renders_json_and_text_reports(self):
         report = validation_report()
@@ -266,6 +326,7 @@ def validation_report():
         full_validation_passed=True,
         opencti_ui_no_duplicate=True,
         resource_posture_ok=True,
+        relationship_audit_evidence=relationship_audit_evidence(),
     )
 
 
@@ -284,6 +345,27 @@ def validation_report_with_dynamic_html():
             ),
         ),
     )
+
+
+def relationship_audit_evidence():
+    return {
+        "found": True,
+        "target": {
+            "entity_type": "Infrastructure",
+            "name": "MISP ip-port 137.184.181.252",
+        },
+        "relationship_count": 30,
+        "outbound_count": 25,
+        "inbound_count": 5,
+        "diamond_quadrant_counts": {
+            "adversary": 0,
+            "capability": 28,
+            "infrastructure": 1,
+            "victimology": 0,
+            "other": 1,
+        },
+        "kill_chain_attack_patterns": ["T1090 Proxy", "T1486 Data Encrypted for Impact"],
+    }
 
 
 def validation_decision(source_key):

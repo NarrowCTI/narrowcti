@@ -21,6 +21,8 @@ The module composes:
 - `gateway.preflight` for runtime configuration, capability inventory and
   issues.
 - `gateway.curation_report` for curation, review and graph-readiness evidence.
+- `gateway.operational_validation` for release-readiness checks, including
+  optional OpenCTI relationship-audit evidence.
 - A local evidence inventory for configured state, audit, quarantine, release
   audit, deduplication and MITRE cache paths.
 
@@ -44,7 +46,8 @@ python -m gateway.diagnostics `
   --decision-path state\audit `
   --quarantine-file state\quarantine.jsonl `
   --release-audit-file state\audit\releases.jsonl `
-  --operational-validation-evidence-file state\operational-validation-evidence.json
+  --operational-validation-evidence-file state\operational-validation-evidence.json `
+  --opencti-relationship-audit-file state\opencti-relationship-audit.json
 ```
 
 JSON snapshot:
@@ -56,6 +59,7 @@ python -m gateway.diagnostics `
   --quarantine-file state\quarantine.jsonl `
   --release-audit-file state\audit\releases.jsonl `
   --operational-validation-evidence-file state\operational-validation-evidence.json `
+  --opencti-relationship-audit-file state\opencti-relationship-audit.json `
   --json
 ```
 
@@ -152,7 +156,9 @@ The current snapshot contains:
 - `operational_validation`: rendered text/HTML summary of the v0.8 operational
   validation checklist, including pass/fail/warn/needs-evidence state. When
   configured, it uses the same manual evidence JSON file as
-  `gateway.operational_validation`.
+  `gateway.operational_validation` and can also include the
+  `opencti-relationship-audit.json` evidence produced by the relationship audit
+  ops service.
 - `support_warnings`: deterministic support hints for blocking preflight
   errors, preflight warnings, missing evidence, empty curation evidence and
   operational validation failures or missing evidence.

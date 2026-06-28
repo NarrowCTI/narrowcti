@@ -164,6 +164,8 @@ services:
       - ${NARROWCTI_OPERATIONAL_VALIDATION_SOURCES:-otx,misp}
       - --evidence-file
       - ${NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE:-/app/state/operational-validation-evidence.json}
+      - --relationship-audit-file
+      - ${NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE:-/app/state/opencti-relationship-audit.json}
       - --format
       - html
       - --output-file
@@ -194,6 +196,8 @@ services:
       - support
       - --operational-validation-evidence-file
       - ${NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE:-/app/state/operational-validation-evidence.json}
+      - --opencti-relationship-audit-file
+      - ${NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE:-/app/state/opencti-relationship-audit.json}
       - --html-file
       - /app/state/support-diagnostics.html
       - --bundle-file

@@ -34,6 +34,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                 tmpdir,
                 "operational-validation-evidence.json",
             )
+            relationship_audit_file = os.path.join(
+                tmpdir,
+                "opencti-relationship-audit.json",
+            )
             with open(summary_file, "w", encoding="utf-8") as handle:
                 handle.write(
                     json.dumps(
@@ -73,6 +77,8 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                     },
                     handle,
                 )
+            with open(relationship_audit_file, "w", encoding="utf-8") as handle:
+                json.dump(relationship_audit_evidence(), handle)
             settings = make_settings(
                 state_dir=tmpdir,
                 decision_audit_dir=audit_dir,
@@ -86,6 +92,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
                 env={"OTX_DRY_RUN": "true"},
                 generated_at="2026-06-24T10:02:00Z",
                 operational_validation_evidence_file=validation_evidence_file,
+                opencti_relationship_audit_file=relationship_audit_file,
             )
 
         data = snapshot.to_dict()
@@ -115,6 +122,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         self.assertTrue(inventory["run_summary_file"]["exists"])
         self.assertTrue(inventory["decision_audit_dir"]["exists"])
         self.assertTrue(inventory["operational_validation_evidence_file"]["exists"])
+        self.assertTrue(inventory["opencti_relationship_audit_file"]["exists"])
         self.assertEqual(
             "otx",
             data["curation_report"]["source_summaries"][0]["source_key"],
@@ -129,6 +137,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             validation_checks["opencti-no-duplicate-attack-pattern"]["status"],
         )
         self.assertEqual("pass", validation_checks["resource-posture"]["status"])
+        self.assertEqual(
+            "pass",
+            validation_checks["opencti-relationship-audit"]["status"],
+        )
         self.assertIn("operational-validation-needs-evidence", warning_codes)
         self.assertIn("source_posture:", format_text_snapshot(snapshot))
         self.assertIn("policy_insights:", format_text_snapshot(snapshot))
@@ -434,6 +446,27 @@ class GatewayDiagnosticsTests(unittest.TestCase):
 
         self.assertIn("&lt;script&gt;", html)
         self.assertNotIn("<script>alert(1)</script>", html)
+
+
+def relationship_audit_evidence():
+    return {
+        "found": True,
+        "target": {
+            "entity_type": "Infrastructure",
+            "name": "MISP ip-port 137.184.181.252",
+        },
+        "relationship_count": 30,
+        "outbound_count": 25,
+        "inbound_count": 5,
+        "diamond_quadrant_counts": {
+            "adversary": 0,
+            "capability": 28,
+            "infrastructure": 1,
+            "victimology": 0,
+            "other": 1,
+        },
+        "kill_chain_attack_patterns": ["T1090 Proxy"],
+    }
 
 
 if __name__ == "__main__":

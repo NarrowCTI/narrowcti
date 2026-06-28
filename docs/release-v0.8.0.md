@@ -736,6 +736,11 @@ OpenCTI tab/export coverage is tracked in
   as the `narrowcti-opencti-relationship-audit` ops service with
   `NARROWCTI_OPENCTI_AUDIT_*` variables for repeatable lab runs and can persist
   JSON evidence under the gateway state volume.
+- Integrated relationship-audit evidence into `gateway.operational_validation`.
+  The operational checklist now reports whether a promoted OpenCTI object has
+  direct Diamond or Kill Chain graph context instead of leaving that proof only
+  in manual notes. `gateway.diagnostics` and the support diagnostics compose
+  service can also include the same evidence file in support-safe snapshots.
 
 ## Promotion Boundary
 
