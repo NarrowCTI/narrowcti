@@ -10,12 +10,15 @@ from datetime import datetime, timezone
 from core.decision_audit import utc_now
 from gateway.curation_report import (
     build_curation_report_from_files,
+    format_audit_target_summary,
     format_context_narrative_summary,
     format_context_quality_summary,
     format_graph_evidence_summary,
+    format_mapping_counts,
     format_policy_score_summary,
     format_reason_entries,
     format_redaction_policy,
+    format_text_values,
     report_to_dict,
 )
 from gateway.decisions import build_decision_audit_report, read_decision_records
@@ -93,6 +96,7 @@ def build_support_diagnostics(
         decision_paths=resolved_decision_paths,
         quarantine_file=quarantine_file or settings.quarantine_repository_file,
         release_audit_file=release_audit_file or settings.release_audit_file,
+        relationship_audit_file=opencti_relationship_audit_file,
         limit=limit,
     )
     decision_records = read_decision_records(
@@ -344,6 +348,16 @@ def build_support_warnings(
                 "No run or decision evidence was found for the curation report.",
             )
         )
+    if any(
+        item.get("code") == "complete-opencti-relationship-coverage"
+        for item in recommendations
+    ):
+        warnings.append(
+            support_warning(
+                "curation-graph-validation-incomplete",
+                "Curation report shows incomplete OpenCTI Diamond or Kill Chain relationship coverage.",
+            )
+        )
     if operational_validation_report:
         validation = operational_validation_report.to_dict()
         status = validation.get("overall_status", "")
@@ -505,6 +519,9 @@ def format_text_snapshot(snapshot):
     curation = data["curation_report"]
     validation = data.get("operational_validation") or {}
     summary = curation["executive_summary"]
+    relationship_audit = (
+        (curation.get("graph_validation") or {}).get("relationship_audit") or {}
+    )
     lines = [
         "NarrowCTI support diagnostics",
         f"schema_version={data['schema_version']}",
@@ -538,8 +555,23 @@ def format_text_snapshot(snapshot):
         f"would_create_objects={summary.get('graph_would_create_object_count', 0)} "
         f"would_create_relationships="
         f"{summary.get('graph_would_create_relationship_count', 0)}",
-        "evidence_inventory:",
     ]
+    if relationship_audit.get("available"):
+        lines.append("graph_validation:")
+        lines.append(
+            "- "
+            f"opencti_relationship_audit found="
+            f"{str(relationship_audit.get('found', False)).lower()} "
+            f"target={format_audit_target_summary(relationship_audit.get('target'))} "
+            f"relationships={relationship_audit.get('relationship_count', 0)} "
+            f"coverage={relationship_audit.get('coverage_status', '')} "
+            f"present={format_text_values(relationship_audit.get('present_quadrants'))} "
+            f"missing={format_text_values(relationship_audit.get('missing_quadrants'))} "
+            f"quadrants="
+            f"{format_mapping_counts(relationship_audit.get('diamond_quadrant_counts'))} "
+            f"kill_chain_present="
+            f"{str(relationship_audit.get('kill_chain_present', False)).lower()}"
+        )
     if curation.get("source_summaries"):
         lines.append("source_posture:")
         for source in curation["source_summaries"]:
@@ -588,6 +620,7 @@ def format_text_snapshot(snapshot):
                 f"{item.get('code')} status={item.get('status')}: "
                 f"{item.get('message')}"
             )
+    lines.append("evidence_inventory:")
     for item in data["evidence_inventory"]:
         lines.append(
             "- "
@@ -610,6 +643,9 @@ def format_html_snapshot(snapshot):
     curation = data.get("curation_report") or {}
     validation = data.get("operational_validation") or {}
     summary = curation.get("executive_summary") or {}
+    relationship_audit = (
+        (curation.get("graph_validation") or {}).get("relationship_audit") or {}
+    )
     source_rows = "\n".join(
         html_table_row(
             source.get("source_key"),
@@ -653,6 +689,25 @@ def format_html_snapshot(snapshot):
     )
     if not validation_rows:
         validation_rows = html_table_row("none", "", "")
+    graph_validation_rows = html_table_row(
+        "not-collected",
+        "",
+        0,
+        "none",
+        "none",
+        "none",
+        "false",
+    )
+    if relationship_audit.get("available"):
+        graph_validation_rows = html_table_row(
+            "found" if relationship_audit.get("found") else "missing",
+            format_audit_target_summary(relationship_audit.get("target")),
+            relationship_audit.get("relationship_count", 0),
+            relationship_audit.get("coverage_status", ""),
+            format_text_values(relationship_audit.get("present_quadrants")),
+            format_text_values(relationship_audit.get("missing_quadrants")),
+            str(relationship_audit.get("kill_chain_present", False)).lower(),
+        )
     evidence_rows = "\n".join(
         html_table_row(
             item.get("name"),
@@ -715,6 +770,13 @@ def format_html_snapshot(snapshot):
     <table>
       <tr><th>candidates</th><th>accepted</th><th>held</th><th>lookup matches</th><th>would-create objects</th><th>would-create relationships</th></tr>
       <tr><td>{graph_candidates}</td><td>{graph_accepted}</td><td>{graph_held}</td><td>{lookup_matches}</td><td>{would_create_objects}</td><td>{would_create_relationships}</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Graph Validation</h2>
+    <table>
+      <tr><th>status</th><th>target</th><th>relationships</th><th>coverage</th><th>present quadrants</th><th>missing quadrants</th><th>kill chain present</th></tr>
+      {graph_validation_rows}
     </table>
   </section>
   <section>
@@ -781,6 +843,7 @@ def format_html_snapshot(snapshot):
         would_create_relationships=escape(
             summary.get("graph_would_create_relationship_count", 0)
         ),
+        graph_validation_rows=graph_validation_rows,
         source_rows=source_rows,
         policy_rows=policy_rows,
         validation_status=escape(validation.get("overall_status", "")),

@@ -753,6 +753,11 @@ OpenCTI tab/export coverage is tracked in
   section with the audited target, relationship totals, Diamond quadrant
   coverage, missing quadrants and Kill Chain presence. This keeps the report
   aligned with real OpenCTI post-ingestion behavior while remaining read-only.
+- Propagated the same relationship-audit evidence into support diagnostics.
+  Support snapshots now embed curation-report `graph_validation`, render a
+  compact Graph Validation section in text/HTML and raise
+  `curation-graph-validation-incomplete` when expected Diamond or Kill Chain
+  coverage is still missing.
 - Added `scripts/capture-resource-posture.ps1` to generate local Docker
   resource posture evidence for the operational validation checklist. The helper
   captures Docker stats, Docker disk posture command completion and container

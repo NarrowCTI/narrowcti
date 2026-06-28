@@ -141,7 +141,9 @@ The current snapshot contains:
   graph-readiness evidence, including the embedded curation report
   `redaction_profile`, `redaction_policy` and structured context sections for
   ATT&CK, arsenal, threat actors/intrusion sets and target sectors when graph
-  evidence is available.
+  evidence is available. When an OpenCTI relationship-audit JSON is supplied,
+  the embedded curation report also carries `graph_validation` with the audited
+  target, relationship totals, Diamond coverage and Kill Chain presence.
 - `source_posture`: rendered text/HTML summary of per-source curation posture
   from the embedded curation report, including compact context narrative
   evidence when ATT&CK, arsenal, threat actor/intrusion set or target-sector
@@ -160,8 +162,9 @@ The current snapshot contains:
   `opencti-relationship-audit.json` evidence produced by the relationship audit
   ops service.
 - `support_warnings`: deterministic support hints for blocking preflight
-  errors, preflight warnings, missing evidence, empty curation evidence and
-  operational validation failures or missing evidence.
+  errors, preflight warnings, missing evidence, empty curation evidence,
+  incomplete OpenCTI graph validation and operational validation failures or
+  missing evidence.
 - `redaction_profile`: selected redaction mode, currently `none`, `support` or
   `external`.
 - `support_bundle`: optional CLI-only output metadata when `--bundle-file` is
@@ -179,6 +182,8 @@ customer or support engineer answer:
 - Which source appears stable or needs attention from aggregate evidence?
 - Are release/reject patterns suggesting noisy source scope or strict
   quarantine thresholds?
+- Does the embedded curation report show incomplete Diamond or Kill Chain
+  relationship coverage for the audited OpenCTI object?
 - Which v0.8 validation criteria have passed and which still need lab evidence?
 - Is graph promotion still held behind audit and validation controls?
 - Can this snapshot be shared safely with support using the `support` redaction

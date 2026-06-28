@@ -17,6 +17,7 @@ from tests.test_gateway_curation_report import (
     gateway_record,
     graph_context_metadata,
     release_event,
+    relationship_audit_evidence as incomplete_relationship_audit_evidence,
     source_result,
 )
 from tests.test_gateway_preflight import make_settings
@@ -127,6 +128,11 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             "otx",
             data["curation_report"]["source_summaries"][0]["source_key"],
         )
+        self.assertTrue(
+            data["curation_report"]["graph_validation"]["relationship_audit"][
+                "available"
+            ]
+        )
         self.assertEqual(
             "needs-evidence",
             data["operational_validation"]["overall_status"],
@@ -142,6 +148,7 @@ class GatewayDiagnosticsTests(unittest.TestCase):
             validation_checks["opencti-relationship-audit"]["status"],
         )
         self.assertIn("operational-validation-needs-evidence", warning_codes)
+        self.assertIn("graph_validation:", format_text_snapshot(snapshot))
         self.assertIn("source_posture:", format_text_snapshot(snapshot))
         self.assertIn("policy_insights:", format_text_snapshot(snapshot))
         self.assertIn(
@@ -182,10 +189,46 @@ class GatewayDiagnosticsTests(unittest.TestCase):
         )
         self.assertIn("operational_validation:", format_text_snapshot(snapshot))
         self.assertIn("Source Posture", format_html_snapshot(snapshot))
+        self.assertIn("Graph Validation", format_html_snapshot(snapshot))
         self.assertIn("Policy Insights", format_html_snapshot(snapshot))
         self.assertIn("Out of scope", format_html_snapshot(snapshot))
         self.assertIn("Operational Validation", format_html_snapshot(snapshot))
         json.dumps(data)
+
+    def test_support_warnings_surface_incomplete_graph_validation(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            relationship_audit_file = os.path.join(
+                tmpdir,
+                "opencti-relationship-audit.json",
+            )
+            with open(relationship_audit_file, "w", encoding="utf-8") as handle:
+                json.dump(incomplete_relationship_audit_evidence(), handle)
+            settings = make_settings(
+                state_dir=tmpdir,
+                decision_audit_dir=os.path.join(tmpdir, "missing-audit"),
+                run_summary_file=os.path.join(tmpdir, "missing-runs.jsonl"),
+                quarantine_repository_file=os.path.join(
+                    tmpdir,
+                    "missing-quarantine.jsonl",
+                ),
+                release_audit_file=os.path.join(tmpdir, "missing-releases.jsonl"),
+            )
+
+            snapshot = build_support_diagnostics(
+                settings,
+                env={"OTX_DRY_RUN": "true"},
+                generated_at="2026-06-24T10:02:00Z",
+                opencti_relationship_audit_file=relationship_audit_file,
+            )
+
+        data = snapshot.to_dict()
+        warning_codes = [item["code"] for item in data["support_warnings"]]
+        audit = data["curation_report"]["graph_validation"]["relationship_audit"]
+
+        self.assertEqual("needs-evidence", audit["coverage_status"])
+        self.assertEqual(["adversary", "victimology"], audit["missing_quadrants"])
+        self.assertIn("curation-graph-validation-incomplete", warning_codes)
+        self.assertIn("coverage=needs-evidence", format_text_snapshot(snapshot))
 
     def test_reports_missing_evidence_as_support_warning(self):
         with tempfile.TemporaryDirectory() as tmpdir:
