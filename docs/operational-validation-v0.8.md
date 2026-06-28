@@ -1238,6 +1238,13 @@ to the Report. Report lookup now preserves internal whitespace and retries
 existing Indicator lookup when native creation returns no node because OpenCTI
 already created the Indicator through STIX import.
 
+A UI validation then exposed that native Sigma Indicators were being created
+without OpenCTI labels even though the STIX builder already carried detection
+rule labels. The native fallback now resolves or creates OpenCTI Label objects
+and sends their IDs through `objectLabel`, so pattern-aware detection Indicators
+carry labels such as `narrowcti:detection-rule` and `rule-type:sigma` in the
+OpenCTI UI.
+
 This closes the MISP detection-rule evidence gap for real YARA and Sigma
 payloads in the local OpenCTI lab. Snort, Suricata and PCRE remain supported by
 the same native fallback path and still need broader real-feed evidence when

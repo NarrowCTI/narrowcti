@@ -5,6 +5,7 @@ from core.opencti_graph_lookup import filter_eq, first_node
 from exporters.stix_builder import (
     build_curated_report_bundle,
     build_report_bundle,
+    detection_rule_labels,
     detection_rule_indicator_name,
     graph_accepted_candidates,
     graph_candidate_description,
@@ -181,6 +182,34 @@ mutation NarrowCTIIndicatorAdd($input: IndicatorAddInput!) {
 }
 """
 
+LABEL_LOOKUP_QUERY = """
+query NarrowCTILabelLookup($filters: FilterGroup) {
+  labels(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        value
+        color
+      }
+    }
+  }
+}
+"""
+
+LABEL_ADD_MUTATION = """
+mutation NarrowCTILabelAdd($input: LabelAddInput!) {
+  labelAdd(input: $input) {
+    id
+    standard_id
+    entity_type
+    value
+    color
+  }
+}
+"""
+
 REPORT_LOOKUP_QUERY = """
 query NarrowCTIReportExportLookup($filters: FilterGroup) {
   reports(first: 1, filters: $filters) {
@@ -350,6 +379,7 @@ def export_native_detection_rule_indicators(
         ).lower()
         if not name or not pattern or not pattern_type:
             continue
+        label_ids = resolve_label_ids(api_client, detection_rule_labels(attributes))
         existing_id = candidate_existing_id(candidate)
         if existing_id:
             exported.append(
@@ -371,7 +401,11 @@ def export_native_detection_rule_indicators(
             "pattern": pattern,
             "pattern_type": pattern_type,
             "update": True,
+            "indicator_types": ["malicious-activity"],
+            "x_opencti_detection": True,
         }
+        if label_ids:
+            input_payload["objectLabel"] = label_ids
         description = clean_string(
             attributes.get("description")
             or graph_candidate_description(candidate, attributes)
@@ -630,6 +664,38 @@ def find_indicator(api_client, name):
     except Exception:
         return {}
     return first_node(result, "indicators")
+
+
+def find_label(api_client, value):
+    try:
+        result = api_client.query(
+            LABEL_LOOKUP_QUERY,
+            {"filters": filter_eq("value", value)},
+        )
+    except Exception:
+        return {}
+    return first_node(result, "labels")
+
+
+def add_label(api_client, value):
+    try:
+        result = api_client.query(
+            LABEL_ADD_MUTATION,
+            {"input": {"value": value, "update": True}},
+        )
+    except Exception:
+        return {}
+    return ((result.get("data") or {}).get("labelAdd")) or {}
+
+
+def resolve_label_ids(api_client, values):
+    label_ids = []
+    for value in clean_list_values(values):
+        label = find_label(api_client, value) or add_label(api_client, value)
+        label_id = clean_string(label.get("id"))
+        if label_id:
+            label_ids.append(label_id)
+    return label_ids
 
 
 def find_security_platform(api_client, name):

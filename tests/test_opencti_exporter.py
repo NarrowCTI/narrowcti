@@ -138,6 +138,12 @@ class OpenCTIExporterTests(unittest.TestCase):
                     ),
                     "pattern_type": "sigma",
                     "update": True,
+                    "indicator_types": ["malicious-activity"],
+                    "x_opencti_detection": True,
+                    "objectLabel": [
+                        "label--narrowcti-detection-rule",
+                        "label--rule-type-sigma",
+                    ],
                     "description": (
                         "Source-backed SIGMA detection rule observed by misp at "
                         "Attribute[0]."
@@ -148,6 +154,13 @@ class OpenCTIExporterTests(unittest.TestCase):
                 }
             ],
             api_client.indicator_adds,
+        )
+        self.assertEqual(
+            [
+                {"value": "narrowcti:detection-rule", "update": True},
+                {"value": "rule-type:sigma", "update": True},
+            ],
+            api_client.label_adds,
         )
         self.assertIn(
             {
@@ -501,10 +514,30 @@ class FakeOpenCTIClient:
         self.security_platform_adds = []
         self.threat_actor_individual_adds = []
         self.indicator_adds = []
+        self.label_adds = []
+        self.labels_by_value = {}
         self.report_object_refs = []
 
     def query(self, query, variables=None):
         variables = variables or {}
+        if "labels(" in query:
+            value = variables["filters"]["filters"][0]["values"][0]
+            node = self.labels_by_value.get(value)
+            edges = [{"node": node}] if node else []
+            return {"data": {"labels": {"edges": edges}}}
+        if "labelAdd" in query:
+            input_payload = dict(variables.get("input") or {})
+            value = input_payload.get("value")
+            self.label_adds.append(input_payload)
+            node = {
+                "id": "label--" + value.lower().replace(":", "-"),
+                "standard_id": "label--standard-" + value.lower().replace(":", "-"),
+                "entity_type": "Label",
+                "value": value,
+                "color": None,
+            }
+            self.labels_by_value[value] = node
+            return {"data": {"labelAdd": node}}
         if "identities" in query:
             return {
                 "data": {
