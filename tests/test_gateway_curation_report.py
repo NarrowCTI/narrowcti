@@ -564,6 +564,72 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("policy_insights:", text)
         self.assertIn("Policy Insights", html)
 
+    def test_context_sections_surface_shared_infrastructure_and_asn_overlaps(self):
+        decisions = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-24T10:01:00Z",
+                    "misp",
+                    "dry-run",
+                    "shared infrastructure",
+                    metadata=graph_infrastructure_metadata(),
+                ),
+                decision_record(
+                    "2026-06-24T10:02:00Z",
+                    "otx",
+                    "dry-run",
+                    "shared infrastructure",
+                    metadata=graph_infrastructure_metadata(),
+                ),
+            ]
+        )
+        report = build_curation_report(
+            build_operational_report([]),
+            decisions,
+            ReviewSummary(
+                record_count=0,
+                status_counts={},
+                source_counts={},
+                pending_count=0,
+                exportable_count=0,
+            ),
+        )
+
+        section = report.context_sections["infrastructure"]
+        source_narratives = {
+            source["source_key"]: source["context_narrative"]
+            for source in report.source_summaries
+        }
+        text = format_text_report(report)
+        html = format_html_report(report)
+
+        self.assertEqual("Infrastructure and ASNs", section["label"])
+        self.assertEqual(2, section["source_count"])
+        self.assertEqual(3, section["distinct_entity_count"])
+        self.assertEqual(6, section["observation_count"])
+        self.assertEqual(3, section["shared_entity_count"])
+        self.assertEqual(
+            {
+                "entity_type": "autonomous_system",
+                "value": "AS64512 Shared Hosting ASN",
+                "display_name": "AS64512 Shared Hosting ASN",
+                "count": 2,
+                "source_count": 2,
+            },
+            section["shared_entities"][0],
+        )
+        self.assertEqual(
+            1,
+            source_narratives["misp"]["overlap_counts"][
+                "threat_arsenal_infrastructure"
+            ],
+        )
+        self.assertIn("infrastructure=AS64512 Shared Hosting ASN:1", text)
+        self.assertIn("overlaps=arsenal_infrastructure:1", text)
+        self.assertIn("infrastructure label=Infrastructure and ASNs", text)
+        self.assertIn("shared_entities=3", text)
+        self.assertIn("Infrastructure and ASNs", html)
+
     def test_text_report_is_analyst_readable(self):
         operational = build_operational_report([])
         decisions = build_decision_audit_report([])
@@ -896,6 +962,70 @@ def graph_context_metadata():
         "applied_to_decision": False,
     }
     return metadata
+
+
+def graph_infrastructure_metadata():
+    return {
+        "graph_evidence": {
+            "version": "v0.8.0-dev",
+            "source_key": "misp",
+            "external_id": "external-infra-1",
+            "title": "Shared infrastructure intelligence",
+            "record_count": 5,
+            "records": [
+                {
+                    "entity_type": "threat_actor",
+                    "value": "APT Example",
+                    "display_name": "APT Example",
+                    "source_key": "misp",
+                    "source_name": "misp",
+                    "source_field": "Galaxy.value",
+                    "confidence": 80,
+                },
+                {
+                    "entity_type": "malware",
+                    "value": "Loader Example",
+                    "display_name": "Loader Example",
+                    "source_key": "misp",
+                    "source_name": "misp",
+                    "source_field": "Galaxy.value",
+                    "confidence": 80,
+                },
+                {
+                    "entity_type": "infrastructure",
+                    "value": "Shared C2 Infrastructure",
+                    "display_name": "Shared C2 Infrastructure",
+                    "source_key": "misp",
+                    "source_name": "misp",
+                    "source_field": "Object[0]",
+                    "confidence": 72,
+                },
+                {
+                    "entity_type": "autonomous_system",
+                    "value": "AS64512 Shared Hosting ASN",
+                    "display_name": "AS64512 Shared Hosting ASN",
+                    "source_key": "misp",
+                    "source_name": "misp",
+                    "source_field": "asn",
+                    "confidence": 60,
+                },
+                {
+                    "entity_type": "observable",
+                    "value": "203.0.113.10",
+                    "display_name": "203.0.113.10",
+                    "source_key": "misp",
+                    "source_name": "misp",
+                    "source_field": "ip",
+                    "confidence": 65,
+                    "attributes": {
+                        "observable_type": "ipv4-addr",
+                        "relationship_source_stix_object_type": "infrastructure",
+                        "relationship_source_value": "Shared C2 Infrastructure",
+                    },
+                },
+            ],
+        }
+    }
 
 
 if __name__ == "__main__":

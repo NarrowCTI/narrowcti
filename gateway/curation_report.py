@@ -22,6 +22,7 @@ SCHEMA_VERSION = "curation-report/v0.8"
 CONTEXT_SECTION_DEFINITIONS = (
     ("attack_patterns", "ATT&CK techniques", "top_attack_patterns"),
     ("arsenal", "Arsenal", "top_arsenal"),
+    ("infrastructure", "Infrastructure and ASNs", "top_infrastructure"),
     ("threat_actors", "Threat actors and intrusion sets", "top_threat_actors"),
     ("target_sectors", "Target sectors", "top_target_sectors"),
 )
@@ -478,11 +479,14 @@ def empty_context_narrative_summary():
         "counts": {
             "attack_patterns": 0,
             "arsenal": 0,
+            "infrastructure": 0,
             "target_sectors": 0,
             "threat_actors": 0,
         },
+        "overlap_counts": {},
         "top_attack_patterns": [],
         "top_arsenal": [],
+        "top_infrastructure": [],
         "top_threat_actors": [],
         "top_target_sectors": [],
     }
@@ -572,11 +576,14 @@ def build_context_narrative_summary(graph_entities):
         "counts": {
             "attack_patterns": int(counts.get("attack_patterns", 0) or 0),
             "arsenal": int(counts.get("arsenal", 0) or 0),
+            "infrastructure": int(counts.get("infrastructure", 0) or 0),
             "target_sectors": int(counts.get("target_sectors", 0) or 0),
             "threat_actors": int(counts.get("threat_actors", 0) or 0),
         },
+        "overlap_counts": dict(graph_entities.get("overlap_counts") or {}),
         "top_attack_patterns": list(graph_entities.get("top_attack_patterns") or []),
         "top_arsenal": list(graph_entities.get("top_arsenal") or []),
+        "top_infrastructure": list(graph_entities.get("top_infrastructure") or []),
         "top_threat_actors": list(graph_entities.get("top_threat_actors") or []),
         "top_target_sectors": list(graph_entities.get("top_target_sectors") or []),
     }
@@ -591,6 +598,7 @@ def build_context_sections(source_summaries):
 
 def build_context_section(source_summaries, category, label, field_name):
     entity_counts = Counter()
+    entity_sources = {}
     source_entries = []
     source_keys = set()
     for source in source_summaries or []:
@@ -607,6 +615,14 @@ def build_context_section(source_summaries, category, label, field_name):
                     entry["display_name"],
                 )
             ] += entry["count"]
+            entity_sources.setdefault(
+                (
+                    entry["entity_type"],
+                    entry["value"],
+                    entry["display_name"],
+                ),
+                set(),
+            ).add(entry["source_key"])
             source_entries.append(entry)
     source_entries.sort(
         key=lambda item: (
@@ -623,6 +639,8 @@ def build_context_section(source_summaries, category, label, field_name):
         "distinct_entity_count": len(entity_counts),
         "observation_count": sum(entity_counts.values()),
         "top_entities": context_section_top_entities(entity_counts),
+        "shared_entity_count": sum(1 for sources in entity_sources.values() if len(sources) > 1),
+        "shared_entities": context_section_shared_entities(entity_counts, entity_sources),
         "source_entries": source_entries,
     }
 
@@ -659,6 +677,42 @@ def context_section_top_entities(counter, limit=10):
         }
         for (entity_type, value, display_name), count in items[:limit]
     ]
+
+
+def context_section_shared_entities(counter, entity_sources, limit=10):
+    shared = [
+        (key, counter.get(key, 0), len(sources or ()))
+        for key, sources in (entity_sources or {}).items()
+        if len(sources or ()) > 1 and counter.get(key, 0) > 0
+    ]
+    shared.sort(
+        key=lambda item: (
+            -item[2],
+            -item[1],
+            context_entity_type_priority(item[0][0]),
+            item[0][2],
+            item[0][1],
+            item[0][0],
+        )
+    )
+    return [
+        {
+            "entity_type": entity_type,
+            "value": value,
+            "display_name": display_name,
+            "count": count,
+            "source_count": source_count,
+        }
+        for (entity_type, value, display_name), count, source_count in shared[:limit]
+    ]
+
+
+def context_entity_type_priority(entity_type):
+    return {
+        "autonomous_system": 0,
+        "infrastructure": 1,
+        "observable": 2,
+    }.get(entity_type, 10)
 
 
 def build_source_summaries(operational, decisions, analyst_review, review_actions):
@@ -1457,8 +1511,11 @@ def format_context_narrative_summary(summary):
         f"attack_patterns="
         f"{format_narrative_entries(summary.get('top_attack_patterns'))} "
         f"arsenal={format_narrative_entries(summary.get('top_arsenal'))} "
+        f"infrastructure="
+        f"{format_narrative_entries(summary.get('top_infrastructure'))} "
         f"threats={format_narrative_entries(summary.get('top_threat_actors'))} "
-        f"sectors={format_narrative_entries(summary.get('top_target_sectors'))}"
+        f"sectors={format_narrative_entries(summary.get('top_target_sectors'))} "
+        f"overlaps={format_mapping_counts(summary.get('overlap_counts'))}"
     )
 
 
@@ -1469,8 +1526,16 @@ def format_context_section_summary(section):
         f"sources={section.get('source_count', 0)} "
         f"distinct_entities={section.get('distinct_entity_count', 0)} "
         f"observations={section.get('observation_count', 0)} "
+        f"shared_entities={section.get('shared_entity_count', 0)} "
         f"top={format_narrative_entries(section.get('top_entities'))}"
     )
+
+
+def format_mapping_counts(counts):
+    counts = counts or {}
+    if not counts:
+        return "none"
+    return ",".join(f"{key}:{counts.get(key, 0)}" for key in sorted(counts))
 
 
 def format_category_entries(entries):

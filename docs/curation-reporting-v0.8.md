@@ -155,13 +155,13 @@ The current report contains:
 - `source_summaries`: per-source posture with operational, decision, review and
   review-action counters, plus an evidence-driven context narrative when
   source decision metadata carries ATT&CK, threat actor/intrusion set or
-  target-sector graph evidence, or arsenal evidence such as malware, tools and
-  vulnerabilities.
+  target-sector graph evidence, infrastructure/ASN evidence, or arsenal
+  evidence such as malware, tools and vulnerabilities.
 - `context_sections`: structured report sections for ATT&CK techniques,
-  arsenal, threat actors/intrusion sets and target sectors. Each section keeps
-  aggregate observations, distinct entity counts, top entities and source-level
-  entries derived only from graph evidence already present in decision audit
-  metadata.
+  arsenal, infrastructure/ASNs, threat actors/intrusion sets and target
+  sectors. Each section keeps aggregate observations, distinct entity counts,
+  top entities, shared entities across sources and source-level entries derived
+  only from graph evidence already present in decision audit metadata.
 - `policy_insights`: source-level policy tuning hints derived from repeated
   release/reject audit patterns, with top analyst reasons attached to explain
   what drove the signal and decision score distributions attached to show
@@ -172,8 +172,8 @@ The current report contains:
   contextual scoring evidence so analysts can see whether reviewed candidates
   carry actor, TTP, sector, arsenal or other high-value CTI context. The same
   evidence also feeds a compact context narrative with top ATT&CK techniques,
-  top arsenal, top threat actors/intrusion sets and top target sectors per
-  source.
+  top arsenal, top infrastructure/ASN evidence, top threat actors/intrusion
+  sets and top target sectors per source.
   Repeated quarantine reasons are attached from source-level decision audit
   action reasons so operators can see which policy condition is holding a
   source back.
@@ -255,15 +255,21 @@ evidence only; it does not apply contextual scoring to final ingest decisions.
 The context narrative summary is also evidence-only. It is built from
 `graph_evidence.records` in decision metadata and currently surfaces top
 `attack_pattern`, `malware`/`tool`/`vulnerability`,
-`threat_actor`/`intrusion_set` and `target_sector` values by source. It does
-not invent missing actors, arsenal, sectors or ATT&CK techniques; if a feed does
-not provide those fields, the report shows `none`.
+`infrastructure`/`autonomous_system`/infrastructure-linked network observable,
+`threat_actor`/`intrusion_set` and `target_sector` values by source. It also
+tracks evidence-only overlap counters such as threat+infrastructure,
+arsenal+infrastructure and threat+arsenal+infrastructure records so analysts
+can spot where a feed is carrying richer Diamond-style context. It does not
+invent missing actors, arsenal, infrastructure, sectors or ATT&CK techniques;
+if a feed does not provide those fields, the report shows `none`.
 
 The structured context sections reuse the same evidence and make it easier to
 turn the report into future enterprise CTI output. They currently cover:
 
 - ATT&CK techniques, from `attack_pattern` graph evidence.
 - Arsenal, from `malware`, `tool` and `vulnerability` graph evidence.
+- Infrastructure and ASNs, from `infrastructure`, `autonomous_system` and
+  infrastructure-linked network observable graph evidence.
 - Threat actors and intrusion sets, from `threat_actor` and `intrusion_set`
   graph evidence.
 - Target sectors, from `target_sector` graph evidence.

@@ -463,6 +463,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             {
                 "attack_patterns": 2,
                 "arsenal": 1,
+                "infrastructure": 0,
                 "target_sectors": 2,
                 "threat_actors": 2,
             },

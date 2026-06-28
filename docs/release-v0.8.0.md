@@ -585,6 +585,11 @@ OpenCTI tab/export coverage is tracked in
   emits both `IP -> belongs-to -> ASN` and
   `Infrastructure -> consists-of -> ASN`, preserving enrichment provenance and
   keeping raw standalone IP indicators out of Infrastructure promotion.
+- Expanded curation reporting for infrastructure intelligence. Decision-audit
+  graph evidence now feeds an `Infrastructure and ASNs` context section with
+  top infrastructure entities, ASN concentration, shared entities across
+  sources and overlap counters such as threat+infrastructure,
+  arsenal+infrastructure and threat+arsenal+infrastructure.
 - Added conservative target-sector synonym normalization for graph evidence.
   Clear aliases such as `Financial Services` -> `Finance` and `Defence` ->
   `Defense` deduplicate before export while preserving the source value in

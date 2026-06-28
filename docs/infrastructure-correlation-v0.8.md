@@ -394,8 +394,9 @@ Safe implementation sequence:
 10. Done: add relationship evidence for IP belongs-to ASN and Infrastructure
    consists-of ASN/IP when the source or offline enrichment supports it and an
    explicit Infrastructure anchor is present.
-11. Add curation report sections for ASN concentration, shared infrastructure
-   and actor/malware/infrastructure overlaps.
+11. Done: add curation report sections for ASN concentration, shared
+   infrastructure and actor/malware/infrastructure overlaps. The report remains
+   evidence-only and derives these sections from decision-audit graph evidence.
 
 This backlog is intentionally staged. The product value is very high, but the
 risk of graph pollution is also high if ASN and IP relationships are promoted

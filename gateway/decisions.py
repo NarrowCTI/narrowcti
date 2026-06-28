@@ -20,6 +20,8 @@ ACTION_ORDER = (
 
 GRAPH_ENTITY_CATEGORIES = {
     "attack_pattern": "attack_patterns",
+    "autonomous_system": "infrastructure",
+    "infrastructure": "infrastructure",
     "threat_actor": "threat_actors",
     "intrusion_set": "threat_actors",
     "target_sector": "target_sectors",
@@ -33,6 +35,7 @@ GRAPH_ENTITY_TOP_FIELDS = {
     "threat_actors": "top_threat_actors",
     "target_sectors": "top_target_sectors",
     "arsenal": "top_arsenal",
+    "infrastructure": "top_infrastructure",
 }
 
 
@@ -770,11 +773,14 @@ def empty_graph_entity_summary(include_breakdowns=True):
         "counts": {
             "attack_patterns": 0,
             "arsenal": 0,
+            "infrastructure": 0,
             "threat_actors": 0,
             "target_sectors": 0,
         },
+        "overlap_counts": {},
         "top_attack_patterns": [],
         "top_arsenal": [],
+        "top_infrastructure": [],
         "top_threat_actors": [],
         "top_target_sectors": [],
         "_entities": Counter(),
@@ -804,7 +810,7 @@ def graph_entity_entries(record):
 
 def graph_entity_entry(item):
     entity_type = normalize_value(item.get("entity_type"), "")
-    category = GRAPH_ENTITY_CATEGORIES.get(entity_type)
+    category = graph_entity_category(item, entity_type)
     if not category:
         return {}
     value = normalize_value(item.get("value"), "")
@@ -819,8 +825,29 @@ def graph_entity_entry(item):
     }
 
 
+def graph_entity_category(item, entity_type):
+    if entity_type == "observable" and observable_is_infrastructure_context(item):
+        return "infrastructure"
+    return GRAPH_ENTITY_CATEGORIES.get(entity_type)
+
+
+def observable_is_infrastructure_context(item):
+    attributes = item.get("attributes")
+    if not isinstance(attributes, Mapping):
+        return False
+    observable_type = normalize_value(attributes.get("observable_type"), "")
+    if observable_type not in {"domain-name", "ipv4-addr", "ipv6-addr", "url"}:
+        return False
+    return (
+        normalize_value(attributes.get("relationship_source_stix_object_type"), "")
+        == "infrastructure"
+    )
+
+
 def merge_graph_entity_entries(summary, entries):
     summary["record_count"] += 1
+    for key in graph_entity_overlap_keys({entry["category"] for entry in entries}):
+        summary["overlap_counts"][key] = int(summary["overlap_counts"].get(key, 0)) + 1
     for entry in entries:
         category = entry["category"]
         summary["entity_count"] += 1
@@ -837,10 +864,25 @@ def merge_graph_entity_entries(summary, entries):
 
 def normalize_graph_entity_summary(summary):
     summary["counts"] = dict(sorted((summary.get("counts") or {}).items()))
+    summary["overlap_counts"] = dict(sorted((summary.get("overlap_counts") or {}).items()))
     counters = summary.pop("_entities", Counter())
     for category, field_name in GRAPH_ENTITY_TOP_FIELDS.items():
         summary[field_name] = top_graph_entity_entries(counters, category)
     return summary
+
+
+def graph_entity_overlap_keys(categories):
+    categories = set(categories or ())
+    overlaps = []
+    if {"threat_actors", "infrastructure"}.issubset(categories):
+        overlaps.append("threat_infrastructure")
+    if {"arsenal", "infrastructure"}.issubset(categories):
+        overlaps.append("arsenal_infrastructure")
+    if {"attack_patterns", "infrastructure"}.issubset(categories):
+        overlaps.append("ttp_infrastructure")
+    if {"threat_actors", "arsenal", "infrastructure"}.issubset(categories):
+        overlaps.append("threat_arsenal_infrastructure")
+    return overlaps
 
 
 def top_graph_entity_entries(counter, category, limit=5):
@@ -849,7 +891,15 @@ def top_graph_entity_entries(counter, category, limit=5):
         for key, count in (counter or {}).items()
         if key[0] == category and int(count or 0) > 0
     ]
-    items.sort(key=lambda item: (-item[1], item[0][3], item[0][2], item[0][1]))
+    items.sort(
+        key=lambda item: (
+            -item[1],
+            graph_entity_type_priority(item[0][1]),
+            item[0][3],
+            item[0][2],
+            item[0][1],
+        )
+    )
     return [
         {
             "entity_type": entity_type,
@@ -859,6 +909,14 @@ def top_graph_entity_entries(counter, category, limit=5):
         }
         for (_, entity_type, value, display_name), count in items[:limit]
     ]
+
+
+def graph_entity_type_priority(entity_type):
+    return {
+        "autonomous_system": 0,
+        "infrastructure": 1,
+        "observable": 2,
+    }.get(entity_type, 10)
 
 
 def merge_counts(target, counts):
@@ -1132,8 +1190,10 @@ def format_graph_entity_summary(summary):
         f"attack_patterns="
         f"{format_entity_entries(summary.get('top_attack_patterns'))} "
         f"arsenal={format_entity_entries(summary.get('top_arsenal'))} "
+        f"infrastructure={format_entity_entries(summary.get('top_infrastructure'))} "
         f"threats={format_entity_entries(summary.get('top_threat_actors'))} "
-        f"sectors={format_entity_entries(summary.get('top_target_sectors'))}"
+        f"sectors={format_entity_entries(summary.get('top_target_sectors'))} "
+        f"overlaps={format_compact_counts(summary.get('overlap_counts', {}))}"
     )
 
 
