@@ -134,7 +134,7 @@ NarrowCTI flag.
 | View | Current NarrowCTI support | Remaining gap |
 | --- | --- | --- |
 | Knowledge | Reports, indicators, observables, infrastructure, ASN/IP relationships, actor, arsenal, ATT&CK, sector and location links can feed Knowledge when source evidence supports them. | Broader source payload validation and object-specific relationship tests. |
-| Diamond | Infrastructure, Adversary and Capability facets are validated for selected real source-backed cases. MISP `event:5280` now populates Infrastructure-to-Adversary context through `APT32 -> uses -> Infrastructure`; MISP `event:1649` now populates Capability context through `Malware -> uses -> Infrastructure` and ATT&CK context through `Infrastructure -> related-to -> Attack Pattern`. Victimology relationships can be emitted from trusted actor/campaign anchors when source evidence supports them. | Infrastructure-specific Victimology still needs explicit source-backed `Infrastructure -> targets -> Sector/Country/Organization` validation before broad export. Campaign, organization and deeper location relationships need more real source diversity. |
+| Diamond | Infrastructure, Adversary and Capability facets are validated for selected real source-backed cases. MISP `event:5280` now populates Infrastructure-to-Adversary context through `APT32 -> uses -> Infrastructure`; MISP `event:1649` now populates Capability context through `Malware -> uses -> Infrastructure` and ATT&CK context through `Infrastructure -> related-to -> Attack Pattern`. Victimology relationships can be emitted from trusted actor/campaign anchors when source evidence supports them. Infrastructure-specific Victimology now has audit-only preview candidates for explicit same-event source metadata, but those candidates are held by policy with `relationship_requires_opencti_validation`. | Validate held Infrastructure-specific Victimology previews against OpenCTI API/UI before broad export. Campaign, organization and deeper location relationships need more real source diversity. |
 | Timeline | Source created, modified, timestamp, date, first_seen, last_seen, valid_from and valid_until evidence can be preserved as `x_narrowcti_*` custom properties on promoted objects and relationships when the source candidate carries those fields. Event objects also preserve explicit `start_time` and `stop_time`. | Native OpenCTI Timeline rendering still needs live UI/API validation per object type and source. |
 | Kill Chain | Canonical ATT&CK Attack Pattern objects carry kill-chain phases. NarrowCTI links actors and infrastructure to those techniques when source evidence supports the relationship. Real MISP `event:1649` validated direct `Infrastructure -> related-to -> Attack Pattern` relationships for `MISP ip-port 137.184.181.252`, including techniques such as `T1190`, `T1090`, `T1573`, `T1059.001`, `T1059.003` and `T1486`. | Continue validating how each OpenCTI object view renders direct ATT&CK context and avoid source-weak inferred TTP links. |
 
@@ -147,7 +147,9 @@ NarrowCTI flag.
    Campaign, explicit target-location, top-level `ip-src|port`,
    top-level `domain|ip` Infrastructure evidence, top-level `AS` evidence and
    direct same-event Infrastructure context relationships for adversary,
-   malware and ATT&CK.
+   malware and ATT&CK. Infrastructure-specific victimology preview candidates
+   are now generated for explicit same-event metadata but held by policy until
+   OpenCTI behavior is validated.
    The remaining infrastructure work is netblock variety, broader ASN
    enrichment display and OTX/future-feed replay when safe candidates are
    available.

@@ -1622,6 +1622,16 @@ held for a later controlled validation. NarrowCTI must not infer
 generic co-occurrence until source metadata and OpenCTI rendering are both
 verified.
 
+Follow-up unit validation added the held preview path for this remaining
+Victimology gap. When explicit same-event MISP metadata contains Infrastructure
+and victimology evidence such as Sector or Country, NarrowCTI now creates
+`Infrastructure -> targets -> victimology` preview candidates with
+`relationship_validation_state=requires-opencti-validation`. The graph policy
+keeps those candidates out of export with held reason
+`relationship_requires_opencti_validation`. This makes the intended Diamond
+Victimology enrichment visible in audit without promoting unvalidated
+relationships into OpenCTI.
+
 The same pass also checked local MISP coverage for the remaining feed-dependent
 tabs after the additional feeds were enabled. The local dataset now contains
 real `AS`, `domain|ip`, `ip-src|port` and `ip-dst|port` evidence, which closes

@@ -298,6 +298,11 @@ def graph_candidate_policy_reasons(
         reasons.append("stix_object_type_not_allowed")
     if require_relationship_provenance and not candidate.provenance:
         reasons.append("relationship_provenance_required")
+    if (
+        compact_mapping(candidate.attributes).get("relationship_validation_state")
+        == "requires-opencti-validation"
+    ):
+        reasons.append("relationship_requires_opencti_validation")
     return reasons
 
 

@@ -246,9 +246,11 @@ coverage remains a source-validation task.
   source evidence supports it. Real MISP validation now covers direct
   Infrastructure Adversary, Capability and ATT&CK/Kill Chain relationships from
   same-event Galaxy context.
-- Validate Infrastructure-specific Victimology before broad export. Direct
-  `Infrastructure -> targets -> Sector/Country/Organization` relationships must
-  remain disabled or audit-only until explicit source metadata and OpenCTI
-  rendering are both verified.
+- Validate Infrastructure-specific Victimology before broad export. NarrowCTI
+  now builds audit-only preview candidates for direct `Infrastructure ->
+  targets -> Sector/Country/Organization` relationships when explicit
+  same-event source metadata exists, but the graph policy holds them with
+  `relationship_requires_opencti_validation` until OpenCTI rendering is
+  verified.
 - Keep unsupported or weakly supported relationships held, quarantined or
   audit-only instead of guessing attribution.

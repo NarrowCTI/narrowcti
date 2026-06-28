@@ -146,6 +146,17 @@ MISP_INFRA_CAPABILITY_ENTITY_TYPES = {
     "tool",
     "channel",
 }
+MISP_INFRA_VICTIMOLOGY_ENTITY_TYPES = {
+    "target_administrative_area",
+    "target_city",
+    "target_country",
+    "target_individual",
+    "target_organization",
+    "target_position",
+    "target_region",
+    "target_sector",
+    "target_system",
+}
 
 
 def build_graph_evidence(metadata, source_key="", external_id="", title=""):
@@ -1793,6 +1804,22 @@ def misp_infrastructure_context_relationship_evidence(records, source_key=""):
             )
         )
 
+    victimology = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") in MISP_INFRA_VICTIMOLOGY_ENTITY_TYPES
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if len(infrastructures) * len(victimology) <= MISP_INFRA_CONTEXT_MAX_PAIRINGS:
+        context_records.extend(
+            infrastructure_victimology_relationship_records(
+                infrastructures,
+                victimology,
+                source_key,
+                existing,
+            )
+        )
+
     return context_records[:MISP_INFRA_CONTEXT_MAX_RECORDS]
 
 
@@ -1890,6 +1917,54 @@ def infrastructure_attack_pattern_relationship_records(
                 attributes=attributes,
                 stix_object_type=attack_pattern.get("stix_object_type"),
                 relationship_type="related-to",
+            )
+            if record:
+                records.append(record)
+    return records
+
+
+def infrastructure_victimology_relationship_records(
+    infrastructures,
+    victimology,
+    source_key,
+    existing,
+):
+    records = []
+    for infrastructure in infrastructures:
+        for target in victimology:
+            key = semantic_relationship_key(
+                infrastructure.get("stix_object_type"),
+                infrastructure.get("value"),
+                "targets",
+                target.get("stix_object_type"),
+                target.get("value"),
+            )
+            if key in existing:
+                continue
+            existing.add(key)
+            attributes = {
+                **compact_mapping(target.get("attributes")),
+                "relationship_source_stix_object_type": "infrastructure",
+                "relationship_source_value": infrastructure.get("value"),
+                "relationship_source_field": infrastructure.get("source_field"),
+                "relationship_inference": "misp-event-infrastructure-victimology-context",
+                "relationship_context_scope": "same-misp-event",
+                "relationship_validation_state": "requires-opencti-validation",
+            }
+            record = evidence_record(
+                entity_type=target.get("entity_type"),
+                value=target.get("value"),
+                source_key=source_key,
+                source_name="misp-context",
+                source_field=target.get("source_field"),
+                confidence=min(
+                    clamp_confidence(infrastructure.get("confidence")),
+                    clamp_confidence(target.get("confidence")),
+                ),
+                display_name=target.get("display_name"),
+                attributes=attributes,
+                stix_object_type=target.get("stix_object_type"),
+                relationship_type="targets",
             )
             if record:
                 records.append(record)

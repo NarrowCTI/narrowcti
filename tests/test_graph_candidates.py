@@ -301,6 +301,44 @@ class GraphCandidateTests(unittest.TestCase):
         self.assertEqual(2, policy["candidate_count"])
         self.assertEqual("threat_actor", policy["held"][0]["candidate"]["entity_type"])
 
+    def test_holds_relationships_that_require_opencti_validation(self):
+        candidates = build_graph_candidates(
+            {
+                "source_key": "misp:misp",
+                "records": [
+                    {
+                        "entity_type": "target_sector",
+                        "value": "Finance",
+                        "stix_object_type": "identity",
+                        "relationship_type": "targets",
+                        "confidence": 75,
+                        "source_field": "Galaxy.meta.targeted-sector",
+                        "attributes": {
+                            "relationship_source_stix_object_type": "infrastructure",
+                            "relationship_source_value": "MISP domain-ip c2.example",
+                            "relationship_validation_state": (
+                                "requires-opencti-validation"
+                            ),
+                        },
+                    }
+                ],
+            }
+        )
+
+        result = apply_graph_candidate_policy(
+            candidates,
+            allowed_entity_types={"target_sector"},
+            allowed_stix_object_types={"identity"},
+        )
+
+        self.assertEqual(1, result.candidate_count)
+        self.assertEqual(0, result.accepted_count)
+        self.assertEqual(1, result.held_count)
+        self.assertEqual(
+            {"relationship_requires_opencti_validation": 1},
+            result.held_reasons,
+        )
+
     def test_skips_malformed_records_and_clamps_confidence(self):
         candidates = build_graph_candidates(
             {

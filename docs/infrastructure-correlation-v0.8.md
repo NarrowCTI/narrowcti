@@ -380,10 +380,14 @@ bounded, source-backed same-event Infrastructure context relationships:
 
 This closes the source-backed Adversary, Capability and Kill Chain relationship
 path for MISP Infrastructure when the event carries explicit Galaxy context.
-Victimology inside an Infrastructure Diamond remains intentionally stricter:
-`Infrastructure -> targets -> Sector/Country/Organization` must be validated
-with explicit source metadata and OpenCTI API/UI behavior before broad export is
-enabled.
+Victimology inside an Infrastructure Diamond remains intentionally stricter.
+NarrowCTI now creates an audit-only preview for explicit same-event
+Infrastructure victimology, such as `Infrastructure -> targets ->
+Sector/Country/Organization`, but marks those candidates with
+`relationship_validation_state=requires-opencti-validation`. The graph policy
+holds them with `relationship_requires_opencti_validation`, so they remain
+visible in decision audit without being exported until OpenCTI API/UI behavior
+is validated.
 
 Open questions before broad activation:
 
@@ -404,9 +408,9 @@ Open questions before broad activation:
   through `NARROWCTI_IP_ASN_ENRICHMENT_FILE`; unit coverage confirms that when
   an explicit Infrastructure object anchors the IP, the enrichment emits both
   `IP -> belongs-to -> ASN` and `Infrastructure -> consists-of -> ASN`.
-- Validate whether source payloads provide enough sector, location,
-  organization and campaign context to populate the Victimology quadrant from
-  the same Infrastructure object without unsupported inference.
+- Validate the held Infrastructure victimology preview against OpenCTI API/UI
+  before enabling broad export for `Infrastructure -> targets ->
+  Sector/Country/Organization`.
 
 ## Backlog
 
@@ -446,8 +450,11 @@ Safe implementation sequence:
 14. Done: add bounded same-event Infrastructure context relationships for MISP
    adversary, malware/tool/channel and ATT&CK evidence, with real OpenCTI API
    validation for Adversary, Capability and Kill Chain panels.
-15. Validate source-backed Infrastructure victimology relationships before
-   enabling `Infrastructure -> targets -> Sector/Country/Organization` export.
+15. Done: add source-backed Infrastructure victimology preview candidates and
+   hold them by policy with `relationship_requires_opencti_validation`.
+16. Validate held Infrastructure victimology preview relationships against
+   OpenCTI API/UI before enabling `Infrastructure -> targets ->
+   Sector/Country/Organization` export.
 
 This backlog is intentionally staged. The product value is very high, but the
 risk of graph pollution is also high if ASN and IP relationships are promoted

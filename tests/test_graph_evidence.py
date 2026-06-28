@@ -1730,6 +1730,72 @@ class GraphEvidenceTests(unittest.TestCase):
             )
         )
 
+    def test_builds_misp_infrastructure_victimology_preview_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "intrusion-set",
+                        "value": "APT32",
+                        "uuid": "cluster-actor",
+                        "galaxy_type": "mitre-intrusion-set",
+                        "galaxy_name": "Intrusion Set",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "targeted-sector": ["Finance"],
+                            "targeted-country": ["BR"],
+                        },
+                    }
+                ],
+                "misp_infrastructure": [
+                    {
+                        "entity_type": "infrastructure",
+                        "value": "MISP domain-ip c2.example",
+                        "stix_object_type": "infrastructure",
+                        "relationship_type": "uses",
+                        "source_field": "Attribute[0]",
+                        "confidence": 72,
+                    },
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        previews = [
+            record
+            for record in evidence["records"]
+            if record["source_name"] == "misp-context"
+            and record["relationship_type"] == "targets"
+        ]
+        self.assertEqual(2, len(previews))
+        self.assertTrue(
+            any(
+                record["entity_type"] == "target_sector"
+                and record["value"] == "Finance"
+                and record["attributes"]["relationship_source_stix_object_type"]
+                == "infrastructure"
+                and record["attributes"]["relationship_source_value"]
+                == "MISP domain-ip c2.example"
+                and record["attributes"]["relationship_inference"]
+                == "misp-event-infrastructure-victimology-context"
+                and record["attributes"]["relationship_validation_state"]
+                == "requires-opencti-validation"
+                for record in previews
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "target_country"
+                and record["value"] == "Brazil"
+                and record["attributes"]["source_value"] == "BR"
+                and record["attributes"]["relationship_validation_state"]
+                == "requires-opencti-validation"
+                for record in previews
+            )
+        )
+
     def test_builds_misp_detection_rule_evidence(self):
         evidence = build_graph_evidence(
             {
