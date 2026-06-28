@@ -137,9 +137,14 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     records.extend(mitre_attack_evidence(metadata.get("mitre_attack"), source_key))
     records.extend(misp_metadata_evidence(metadata, source_key))
     misp_timeline = misp_timeline_attributes(metadata)
+    misp_context_anchor = single_misp_context_anchor(metadata)
     records.extend(
         with_default_timeline(
-            misp_galaxy_evidence(metadata.get("misp_galaxies"), source_key),
+            misp_galaxy_evidence(
+                metadata.get("misp_galaxies"),
+                source_key,
+                misp_context_anchor,
+            ),
             misp_timeline,
         )
     )
@@ -158,13 +163,12 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
             misp_timeline,
         )
     )
-    victimology_anchor = misp_victimology_relationship_anchor(metadata)
     records.extend(
         with_default_timeline(
             misp_victimology_evidence(
                 metadata.get("misp_victimology"),
                 source_key,
-                victimology_anchor,
+                misp_context_anchor,
             ),
             misp_timeline,
         )
@@ -505,7 +509,7 @@ def misp_metadata_evidence(metadata, source_key=""):
     return records
 
 
-def misp_galaxy_evidence(clusters, source_key=""):
+def misp_galaxy_evidence(clusters, source_key="", relationship_anchor=None):
     records = []
     for cluster in clusters or []:
         if not isinstance(cluster, Mapping):
@@ -515,6 +519,10 @@ def misp_galaxy_evidence(clusters, source_key=""):
             continue
         value = misp_galaxy_value(entity_type, cluster)
         attributes = misp_galaxy_attributes(cluster, entity_type)
+        if misp_galaxy_uses_context_anchor(entity_type, attributes):
+            anchor = compact_mapping(relationship_anchor)
+            if anchor:
+                attributes.update(anchor)
         record = evidence_record(
             entity_type=entity_type,
             value=value,
@@ -530,6 +538,22 @@ def misp_galaxy_evidence(clusters, source_key=""):
             records.append(record)
         records.extend(misp_galaxy_meta_evidence(cluster, source_key))
     return records
+
+
+MISP_GALAXY_CONTEXT_ANCHOR_ENTITY_TYPES = {
+    "attack_pattern",
+    "channel",
+    "infrastructure",
+    "malware",
+    "tool",
+}
+
+
+def misp_galaxy_uses_context_anchor(entity_type, attributes):
+    if entity_type not in MISP_GALAXY_CONTEXT_ANCHOR_ENTITY_TYPES:
+        return False
+    attributes = compact_mapping(attributes)
+    return not clean_string(attributes.get("relationship_source_value"))
 
 
 def misp_galaxy_meta_evidence(cluster, source_key=""):
@@ -1427,27 +1451,25 @@ def misp_victimology_evidence(victimology_records, source_key="", relationship_a
     return records
 
 
-def misp_victimology_relationship_anchor(metadata):
+def single_misp_context_anchor(metadata):
     metadata = compact_mapping(metadata)
-    campaign_anchor = single_misp_campaign_anchor(metadata.get("misp_campaigns"))
-    if campaign_anchor:
-        return campaign_anchor
+    anchors = misp_campaign_anchors(metadata.get("misp_campaigns"))
     for entity_type, stix_object_type in (
         ("campaign", "campaign"),
         ("intrusion_set", "intrusion-set"),
         ("threat_actor", "threat-actor"),
     ):
-        anchor = single_misp_galaxy_anchor(
-            metadata.get("misp_galaxies"),
-            entity_type,
-            stix_object_type,
+        anchors.extend(
+            misp_galaxy_anchors(
+                metadata.get("misp_galaxies"),
+                entity_type,
+                stix_object_type,
+            )
         )
-        if anchor:
-            return anchor
-    return {}
+    return single_unique_anchor(anchors)
 
 
-def single_misp_campaign_anchor(campaigns):
+def misp_campaign_anchors(campaigns):
     anchors = []
     for campaign in campaigns or []:
         campaign = compact_mapping(campaign)
@@ -1463,10 +1485,10 @@ def single_misp_campaign_anchor(campaigns):
                 ),
             }
         )
-    return single_unique_anchor(anchors)
+    return anchors
 
 
-def single_misp_galaxy_anchor(clusters, entity_type, stix_object_type):
+def misp_galaxy_anchors(clusters, entity_type, stix_object_type):
     anchors = []
     for cluster in clusters or []:
         cluster = compact_mapping(cluster)
@@ -1485,7 +1507,7 @@ def single_misp_galaxy_anchor(clusters, entity_type, stix_object_type):
                 ),
             }
         )
-    return single_unique_anchor(anchors)
+    return anchors
 
 
 def single_unique_anchor(anchors):

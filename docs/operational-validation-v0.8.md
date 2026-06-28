@@ -554,6 +554,16 @@ Intrusion Set or Threat Actor endpoint. The validated campaign case produces
 multiple possible Campaign anchors, NarrowCTI deliberately keeps the
 victimology as Report context and does not choose an arbitrary semantic source.
 
+The same guarded anchor model now applies to MISP Galaxy arsenal and ATT&CK
+context. If one unambiguous Campaign, Intrusion Set or Threat Actor is present
+in the event, MISP Galaxy malware, tool, infrastructure, channel and
+attack-pattern candidates can inherit that source anchor and emit semantic
+`uses` relationships, for example `Threat Actor -> uses -> Malware`. Unit
+validation confirms the semantic `uses` bundle path and confirms that multiple
+possible Threat Actor anchors keep the malware candidate as Report context. A
+real-feed validation is still required before marking the actor/campaign to
+arsenal/ATT&CK path as fully live-validated.
+
 Follow-up Infrastructure API validation on June 27, 2026 reconfirmed the
 already ingested MISP `event:1649` chain. OpenCTI returned one Infrastructure
 `MISP ip-port 137.184.181.252` authored by `MISP via NarrowCTI`, with
