@@ -573,6 +573,13 @@ OpenCTI tab/export coverage is tracked in
   `date_sighting` as STIX Sighting `first_seen`/`last_seen`, carry source
   confidence when supplied and avoid exporting non-positive MISP sighting types
   such as false positives as positive STIX Sightings.
+- Added a detection-rule compatibility gate for OpenCTI export hygiene. YARA
+  and Sigma remain pattern-aware Indicator evidence when compatible, while
+  Snort, Suricata and PCRE are preserved as labeled Notes with source
+  references and raw rule content until OpenCTI-compatible Indicator
+  validation exists for those rule types. Native GraphQL Indicator creation is
+  now limited to Sigma instead of retrying pattern types already rejected by
+  the local OpenCTI lab.
 - Added conservative target-sector synonym normalization for graph evidence.
   Clear aliases such as `Financial Services` -> `Finance` and `Defence` ->
   `Defense` deduplicate before export while preserving the source value in

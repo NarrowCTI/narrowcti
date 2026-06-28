@@ -174,6 +174,28 @@ class OpenCTIExporterTests(unittest.TestCase):
             api_client.report_object_refs,
         )
 
+    def test_export_mode_preserves_snort_detection_rule_as_note_only(self):
+        api_client = FakeOpenCTIClient()
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [snort_detection_rule_candidate()]},
+            graph_export_mode="export",
+            identity_name="MISP via NarrowCTI",
+        )
+
+        objects = imported_objects(api_client)
+        self.assertNotIn("indicator", object_types(objects))
+        note = first_object(objects, "note")
+        self.assertEqual("SNORT: Adobe Flash Exploit", note["abstract"])
+        self.assertIn("rule-type:snort", note["labels"])
+        self.assertIn("alert tcp any any -> any any", note["content"])
+        self.assertEqual([], api_client.indicator_adds)
+        self.assertEqual([], api_client.label_adds)
+
     def test_export_mode_describes_native_security_platform_from_source_context(self):
         api_client = FakeOpenCTIClient()
         candidate = security_platform_candidate()
@@ -815,6 +837,28 @@ def sigma_detection_rule_candidate():
                 "    EventID: 1\n"
                 "  condition: selection"
             ),
+        },
+    }
+
+
+def snort_detection_rule_candidate():
+    return {
+        "fingerprint": "detection-rule-snort-flash",
+        "entity_type": "detection_rule",
+        "value": "Adobe Flash Exploit",
+        "name": "Adobe Flash Exploit",
+        "stix_object_type": "indicator",
+        "relationship_type": "detects",
+        "source_key": "misp:misp",
+        "source_name": "misp",
+        "source_field": "Attribute[2]",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "rule_type": "snort",
+            "pattern_type": "snort",
+            "pattern": 'alert tcp any any -> any any (msg:"Adobe Flash Exploit"; sid:1;)',
+            "attribute_uuid": "attribute-snort-1",
         },
     }
 

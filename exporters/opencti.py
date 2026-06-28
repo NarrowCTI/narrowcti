@@ -628,7 +628,7 @@ def native_threat_actor_individual_candidates(graph_candidate_policy):
 
 def native_detection_rule_indicator_candidates(graph_candidate_policy):
     candidates = []
-    native_pattern_types = {"sigma", "snort", "suricata", "pcre"}
+    native_pattern_types = {"sigma"}
     for candidate in graph_accepted_candidates(graph_candidate_policy):
         if clean_string(candidate.get("stix_object_type")).lower() != "indicator":
             continue

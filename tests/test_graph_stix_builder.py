@@ -146,6 +146,36 @@ class GraphStixBuilderTests(unittest.TestCase):
             [relationship["relationship_type"] for relationship in semantic_relationships],
         )
 
+    def test_preserves_incompatible_detection_rule_as_note(self):
+        bundle, summary = build_graph_report_bundle(
+            "Curated graph report",
+            "graph context",
+            80,
+            graph_candidate_policy={"accepted": [snort_detection_rule_candidate()]},
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        self.assertNotIn("indicator", objects_by_type)
+        self.assertEqual(1, len(objects_by_type["note"]))
+        self.assertEqual(1, summary["graph_object_count"])
+        self.assertEqual({"note": 1}, summary["object_counts"])
+        note = objects_by_type["note"][0]
+        self.assertEqual("SNORT: Adobe Flash Exploit", note["abstract"])
+        self.assertIn("rule-type:snort", note["labels"])
+        self.assertIn("narrowcti:detection-rule", note["labels"])
+        self.assertIn("alert tcp any any -> any any", note["content"])
+        self.assertIn(
+            {
+                "source_name": "narrowcti-attribute-uuid",
+                "external_id": "attribute-snort-1",
+            },
+            note["external_references"],
+        )
+
     def test_native_threat_actor_individual_is_not_exported_as_generic_stix_actor(self):
         bundle, summary = build_graph_report_bundle(
             "Curated graph report",
@@ -2090,6 +2120,27 @@ def detection_rule_candidate():
             "pattern": "title: Suspicious PowerShell",
             "pattern_type": "sigma",
             "attribute_uuid": "attribute-rule-1",
+        },
+    }
+
+
+def snort_detection_rule_candidate():
+    return {
+        "fingerprint": "rule-snort-1",
+        "entity_type": "detection_rule",
+        "value": "Adobe Flash Exploit",
+        "name": "Adobe Flash Exploit",
+        "stix_object_type": "indicator",
+        "relationship_type": "detects",
+        "source_key": "misp:event",
+        "source_name": "misp",
+        "source_field": "Attribute[2]",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "pattern": 'alert tcp any any -> any any (msg:"Adobe Flash Exploit"; sid:1;)',
+            "pattern_type": "snort",
+            "attribute_uuid": "attribute-snort-1",
         },
     }
 

@@ -1310,9 +1310,10 @@ carry labels such as `narrowcti:detection-rule` and `rule-type:sigma` in the
 OpenCTI UI.
 
 This closes the MISP detection-rule evidence gap for real YARA and Sigma
-payloads in the local OpenCTI lab. Snort, Suricata and PCRE remain supported by
-the same native fallback path and still need broader real-feed evidence when
-usable source events are available.
+payloads in the local OpenCTI lab. Snort, Suricata and PCRE remain valuable
+detection-engineering evidence, but they are not promoted through the native
+Indicator path until OpenCTI-compatible validation exists for those pattern
+types.
 
 ### MISP Infrastructure, ASN And Detection Rule Deep Validation
 
@@ -1372,11 +1373,17 @@ The same validation exposed a detection-rule compatibility gap. MISP event
 rejected the Snort Indicator creation attempts with
 `INCORRECT_INDICATOR_FORMAT`, and it also rejected some Sigma rules even though
 they passed NarrowCTI's basic YAML shape check. The GraphQL/API validation
-returned zero `pattern_type=snort` Indicators after the run. This means Snort,
-Suricata and PCRE must remain a final-polish backlog item until NarrowCTI can
-either pre-validate them with OpenCTI-compatible rules or preserve them as
-auditable detection engineering evidence without promising OpenCTI Indicator
-materialization.
+returned zero `pattern_type=snort` Indicators after the run.
+
+The controlled polish response is now implemented at unit level. YARA and
+Sigma remain Indicator candidates when the source rule passes NarrowCTI's
+compatibility checks. Snort, Suricata and PCRE are preserved as labeled Notes
+with the raw rule body, source field and detection-rule labels instead of being
+sent through the native Indicator mutation. This keeps hunting content
+available to analysts without polluting OpenCTI Indicator views or promising
+objects that the current OpenCTI lab rejects. A follow-up real UI/API
+validation should confirm that these Notes are visible from the source Report
+and carry enough context for detection engineering review.
 
 This event materially improves the real evidence for `Observations /
 Infrastructures`, `Observations / Observables`, ASN correlation, Arsenal /

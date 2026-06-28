@@ -75,6 +75,8 @@ OPENCTI_EXTENSION_DEFINITION_ID = (
     f"extension-definition--{uuid5(NAMESPACE_URL, 'opencti-extension-definition')}"
 )
 OPENCTI_CUSTOM_SDO_TYPES = {"channel", "event", "narrative"}
+DETECTION_RULE_INDICATOR_PATTERN_TYPES = {"sigma", "yara"}
+DETECTION_RULE_NOTE_PATTERN_TYPES = {"pcre", "snort", "suricata"}
 
 
 def escape_pattern_value(value):
@@ -666,6 +668,12 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
             candidate,
             attributes,
         )
+    if entity_type == "detection_rule":
+        name = detection_rule_indicator_name(name, attributes)
+        stix_object_type = detection_rule_stix_object_type(
+            stix_object_type,
+            attributes,
+        )
     confidence = clamp_stix_confidence(candidate.get("confidence"))
     custom_properties = graph_custom_properties(candidate)
 
@@ -673,8 +681,6 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
         return None
     if stix_object_type == "threat-actor" and entity_type == "threat_actor_individual":
         return None
-    if stix_object_type == "indicator" and entity_type == "detection_rule":
-        name = detection_rule_indicator_name(name, attributes)
 
     common = {
         "id": deterministic_graph_object_id(
@@ -772,6 +778,14 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
             **described_common,
         )
     if stix_object_type == "note":
+        if entity_type == "detection_rule":
+            return detection_rule_candidate_to_note(
+                name,
+                candidate,
+                attributes,
+                common,
+                identity_id,
+            )
         content = clean_string(attributes.get("content")) or value
         if not content:
             return None
@@ -1254,15 +1268,73 @@ def vulnerability_references(value):
     return [{"source_name": "cve", "external_id": normalized}]
 
 
+def detection_rule_stix_object_type(stix_object_type, attributes):
+    pattern_type = detection_rule_pattern_type(attributes)
+    if pattern_type in DETECTION_RULE_INDICATOR_PATTERN_TYPES:
+        return "indicator"
+    if pattern_type in DETECTION_RULE_NOTE_PATTERN_TYPES:
+        return "note"
+    if stix_object_type == "indicator":
+        return "note"
+    return stix_object_type
+
+
 def detection_rule_indicator_name(name, attributes):
-    rule_type = first_clean_value(
-        attributes.get("rule_type"),
-        attributes.get("pattern_type"),
-    ).upper()
+    rule_type = detection_rule_pattern_type(attributes).upper()
     name = clean_string(name)
     if not rule_type or name.upper().startswith(f"{rule_type}:"):
         return name
     return f"{rule_type}: {name}"
+
+
+def detection_rule_pattern_type(attributes):
+    return first_clean_value(
+        attributes.get("pattern_type"),
+        attributes.get("rule_type"),
+    ).lower()
+
+
+def detection_rule_candidate_to_note(name, candidate, attributes, common, identity_id):
+    content = detection_rule_note_content(candidate, attributes)
+    if not content:
+        return None
+    note_kwargs = dict(common)
+    labels = detection_rule_labels(attributes)
+    references = detection_rule_external_references(candidate, attributes)
+    if labels:
+        note_kwargs["labels"] = labels
+    if references:
+        note_kwargs["external_references"] = references
+    return Note(
+        abstract=name,
+        content=content,
+        object_refs=[identity_id],
+        **note_kwargs,
+    )
+
+
+def detection_rule_note_content(candidate, attributes):
+    rule_type = detection_rule_pattern_type(attributes)
+    pattern = clean_multiline_string(attributes.get("pattern"))
+    source_name = first_clean_value(
+        candidate.get("source_name"),
+        candidate.get("source_key"),
+    )
+    source_field = clean_string(candidate.get("source_field"))
+    label = f"{rule_type.upper()} detection rule" if rule_type else "Detection rule"
+    lines = [
+        (
+            f"{label} preserved as analyst evidence because this pattern type is "
+            "not exported as a native OpenCTI Indicator by the compatibility gate."
+        )
+    ]
+    if source_name and source_field:
+        lines.append(f"Source: {source_name} at {source_field}.")
+    elif source_name:
+        lines.append(f"Source: {source_name}.")
+    if pattern:
+        lines.extend(["", pattern])
+    return "\n".join(lines)
 
 
 def detection_rule_indicator_properties(candidate, attributes):
@@ -1276,10 +1348,7 @@ def detection_rule_indicator_properties(candidate, attributes):
 
 def detection_rule_labels(attributes):
     labels = ["narrowcti:detection-rule"]
-    rule_type = first_clean_value(
-        attributes.get("rule_type"),
-        attributes.get("pattern_type"),
-    ).lower()
+    rule_type = detection_rule_pattern_type(attributes)
     if rule_type:
         labels.append(f"rule-type:{rule_type}")
     return labels
@@ -1777,3 +1846,7 @@ def clamp_stix_confidence(value):
 
 def clean_string(value):
     return " ".join(str(value or "").strip().split())
+
+
+def clean_multiline_string(value):
+    return str(value or "").strip()
