@@ -314,9 +314,19 @@ def parse_args(argv=None):
     )
     parser.add_argument("--opencti-url", default=os.getenv("OPENCTI_URL", ""))
     parser.add_argument("--opencti-token", default=os.getenv("OPENCTI_TOKEN", ""))
-    parser.add_argument("--type", required=True, choices=sorted(TARGET_QUERIES))
-    parser.add_argument("--search", required=True)
-    parser.add_argument("--first", type=int, default=100)
+    parser.add_argument(
+        "--type",
+        default=os.getenv("NARROWCTI_OPENCTI_AUDIT_TYPE", ""),
+    )
+    parser.add_argument(
+        "--search",
+        default=os.getenv("NARROWCTI_OPENCTI_AUDIT_SEARCH", ""),
+    )
+    parser.add_argument(
+        "--first",
+        type=int,
+        default=int(os.getenv("NARROWCTI_OPENCTI_AUDIT_FIRST", "100")),
+    )
     return parser.parse_args(argv)
 
 
@@ -326,6 +336,13 @@ def main(argv=None):
         raise SystemExit("Missing --opencti-url or OPENCTI_URL")
     if not args.opencti_token:
         raise SystemExit("Missing --opencti-token or OPENCTI_TOKEN")
+    if not args.type:
+        raise SystemExit("Missing --type or NARROWCTI_OPENCTI_AUDIT_TYPE")
+    if args.type not in TARGET_QUERIES:
+        valid_types = ", ".join(sorted(TARGET_QUERIES))
+        raise SystemExit(f"Invalid --type {args.type!r}. Valid values: {valid_types}")
+    if not args.search:
+        raise SystemExit("Missing --search or NARROWCTI_OPENCTI_AUDIT_SEARCH")
     report = build_relationship_audit(
         args.opencti_url,
         args.opencti_token,

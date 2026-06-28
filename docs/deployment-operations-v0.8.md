@@ -48,11 +48,10 @@ commands:
 | `narrowcti-correlation-report` | Builds `/app/state/artifact-correlation-report.txt` from the local artifact deduplication index. |
 | `narrowcti-operational-validation` | Builds `/app/state/operational-validation.html` from preflight, decision audit and optional manual evidence. |
 | `narrowcti-support-diagnostics` | Builds a support-redacted HTML snapshot and support bundle under `/app/state`. |
+| `narrowcti-opencti-relationship-audit` | Runs a read-only OpenCTI relationship audit for one target object. |
 
 These services reuse the same image, env file, state volume and OpenCTI network
 as the gateway runtime. They do not start continuous ingestion by themselves.
-The same ops profile can also run read-only one-off commands, such as the
-OpenCTI relationship auditor, by overriding the service command.
 
 ## Installation Procedure
 
@@ -86,7 +85,10 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops 
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-curation-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-operational-validation
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-support-diagnostics
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight python -m gateway.opencti_relationship_audit --type infrastructure --search "MISP ip-port 137.184.181.252" --first 80
+$env:NARROWCTI_OPENCTI_AUDIT_TYPE = "infrastructure"
+$env:NARROWCTI_OPENCTI_AUDIT_SEARCH = "MISP ip-port 137.184.181.252"
+$env:NARROWCTI_OPENCTI_AUDIT_FIRST = "80"
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-opencti-relationship-audit
 ```
 
 If the OpenCTI network name is not `opencti_default`, set

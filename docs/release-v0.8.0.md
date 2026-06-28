@@ -732,7 +732,9 @@ OpenCTI tab/export coverage is tracked in
   objects into Diamond quadrants and lists direct ATT&CK Attack Patterns for
   Kill Chain evidence. This gives operators repeatable proof that a promoted
   object is actually feeding the expected OpenCTI relationship views without
-  relying on broad text search.
+  relying on broad text search. The deployment compose also exposes the auditor
+  as the `narrowcti-opencti-relationship-audit` ops service with
+  `NARROWCTI_OPENCTI_AUDIT_*` variables for repeatable lab runs.
 
 ## Promotion Boundary
 

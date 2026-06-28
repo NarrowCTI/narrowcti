@@ -1619,7 +1619,10 @@ This validation is now repeatable through the read-only OpenCTI relationship
 auditor:
 
 ```powershell
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight python -m gateway.opencti_relationship_audit --type infrastructure --search "MISP ip-port 137.184.181.252" --first 80
+$env:NARROWCTI_OPENCTI_AUDIT_TYPE = "infrastructure"
+$env:NARROWCTI_OPENCTI_AUDIT_SEARCH = "MISP ip-port 137.184.181.252"
+$env:NARROWCTI_OPENCTI_AUDIT_FIRST = "80"
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-opencti-relationship-audit
 ```
 
 The auditor resolves the target object first, then queries direct

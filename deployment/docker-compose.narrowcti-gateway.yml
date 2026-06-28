@@ -206,6 +206,28 @@ services:
     networks:
       - opencti
 
+  narrowcti-opencti-relationship-audit:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+      NARROWCTI_OPENCTI_AUDIT_TYPE: ${NARROWCTI_OPENCTI_AUDIT_TYPE:-}
+      NARROWCTI_OPENCTI_AUDIT_SEARCH: ${NARROWCTI_OPENCTI_AUDIT_SEARCH:-}
+      NARROWCTI_OPENCTI_AUDIT_FIRST: ${NARROWCTI_OPENCTI_AUDIT_FIRST:-100}
+    command: ["python", "-m", "gateway.opencti_relationship_audit"]
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
 networks:
   opencti:
     external: true

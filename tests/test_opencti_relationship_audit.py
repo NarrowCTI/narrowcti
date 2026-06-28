@@ -1,7 +1,9 @@
 import unittest
+from unittest.mock import patch
 
 from gateway.opencti_relationship_audit import (
     object_ref,
+    parse_args,
     quadrant_for_object,
     summarize_relationships,
 )
@@ -106,6 +108,21 @@ class OpenCTIRelationshipAuditTests(unittest.TestCase):
                 }
             ),
         )
+
+    def test_accepts_audit_target_from_environment(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "NARROWCTI_OPENCTI_AUDIT_TYPE": "infrastructure",
+                "NARROWCTI_OPENCTI_AUDIT_SEARCH": "MISP ip-port 137.184.181.252",
+                "NARROWCTI_OPENCTI_AUDIT_FIRST": "80",
+            },
+        ):
+            args = parse_args([])
+
+        self.assertEqual("infrastructure", args.type)
+        self.assertEqual("MISP ip-port 137.184.181.252", args.search)
+        self.assertEqual(80, args.first)
 
 
 if __name__ == "__main__":
