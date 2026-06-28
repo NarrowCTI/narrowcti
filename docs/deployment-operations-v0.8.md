@@ -127,6 +127,17 @@ actually validated them. Missing evidence keeps those checks in
 `needs-evidence` state. Support diagnostics reads the same file when configured
 so the support bundle and the operational validation report do not diverge.
 
+Resource posture evidence can be generated from the host with:
+
+```powershell
+.\scripts\capture-resource-posture.ps1 -OutputFile state\operational-validation-evidence.json
+```
+
+The script captures whether `docker stats --no-stream`, `docker system df` and
+container status checks completed. It does not mark disk posture as healthy by
+itself; after reviewing Docker disk usage, rerun with `-DiskPostureOk` to let
+the operational validation checklist pass the resource posture check.
+
 The operational validation service also reads
 `/app/state/opencti-relationship-audit.json` by default. Run
 `narrowcti-opencti-relationship-audit` before the validation service when the

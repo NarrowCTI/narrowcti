@@ -764,6 +764,18 @@ health and whether disk pressure is acceptable for the lab. If
 `containers_healthy=false`, `disk_posture_ok=false` or `status=unhealthy`, the
 check fails even when the old boolean is omitted.
 
+The host helper can generate the resource posture evidence file:
+
+```powershell
+.\scripts\capture-resource-posture.ps1 `
+  -OutputFile state\operational-validation-evidence.json
+```
+
+By default the helper captures Docker evidence and marks disk posture as
+`needs-review`. After reviewing `docker system df` and confirming local disk
+pressure is acceptable, rerun it with `-DiskPostureOk` to write
+`resource_posture.status=ok`.
+
 Then run:
 
 ```powershell

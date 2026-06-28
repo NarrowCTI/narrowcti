@@ -747,6 +747,11 @@ OpenCTI tab/export coverage is tracked in
   evidence. The auditor records missing quadrants in `coverage`, and the
   operational checklist treats incomplete configured coverage as
   `needs-evidence`.
+- Added `scripts/capture-resource-posture.ps1` to generate local Docker
+  resource posture evidence for the operational validation checklist. The helper
+  captures Docker stats, Docker disk posture command completion and container
+  health without collecting secrets, and requires an explicit
+  `-DiskPostureOk` operator decision before marking disk posture healthy.
 
 ## Promotion Boundary
 
