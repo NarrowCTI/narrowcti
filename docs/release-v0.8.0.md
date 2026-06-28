@@ -734,7 +734,8 @@ OpenCTI tab/export coverage is tracked in
   object is actually feeding the expected OpenCTI relationship views without
   relying on broad text search. The deployment compose also exposes the auditor
   as the `narrowcti-opencti-relationship-audit` ops service with
-  `NARROWCTI_OPENCTI_AUDIT_*` variables for repeatable lab runs.
+  `NARROWCTI_OPENCTI_AUDIT_*` variables for repeatable lab runs and can persist
+  JSON evidence under the gateway state volume.
 
 ## Promotion Boundary
 

@@ -1628,9 +1628,11 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops 
 The auditor resolves the target object first, then queries direct
 `stixCoreRelationships` by object id in both directions. It classifies related
 objects into Diamond quadrants, extracts direct ATT&CK Attack Patterns for Kill
-Chain evidence and returns sample edges. This avoids broad OpenCTI text-search
-contamination and gives operators a reusable way to prove whether the object
-has real Adversary, Capability, Infrastructure and Victimology context.
+Chain evidence and returns sample edges. It also writes the JSON evidence to
+`/app/state/opencti-relationship-audit.json` by default when run through the
+deployment ops service. This avoids broad OpenCTI text-search contamination and
+gives operators a reusable way to prove whether the object has real Adversary,
+Capability, Infrastructure and Victimology context.
 
 This validates real source-backed Adversary, Capability and Kill Chain context
 for MISP Infrastructure objects. Infrastructure-specific Victimology remains

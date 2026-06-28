@@ -116,6 +116,7 @@ class OpenCTIRelationshipAuditTests(unittest.TestCase):
                 "NARROWCTI_OPENCTI_AUDIT_TYPE": "infrastructure",
                 "NARROWCTI_OPENCTI_AUDIT_SEARCH": "MISP ip-port 137.184.181.252",
                 "NARROWCTI_OPENCTI_AUDIT_FIRST": "80",
+                "NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE": "state/audit.json",
             },
         ):
             args = parse_args([])
@@ -123,6 +124,7 @@ class OpenCTIRelationshipAuditTests(unittest.TestCase):
         self.assertEqual("infrastructure", args.type)
         self.assertEqual("MISP ip-port 137.184.181.252", args.search)
         self.assertEqual(80, args.first)
+        self.assertEqual("state/audit.json", args.output_file)
 
 
 if __name__ == "__main__":

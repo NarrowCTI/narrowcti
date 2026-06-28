@@ -91,6 +91,11 @@ $env:NARROWCTI_OPENCTI_AUDIT_FIRST = "80"
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-opencti-relationship-audit
 ```
 
+The relationship audit service prints JSON to stdout and writes the same
+evidence to `/app/state/opencti-relationship-audit.json` by default. Override
+`NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE` when multiple object audits need to be
+kept separately in the state volume.
+
 If the OpenCTI network name is not `opencti_default`, set
 `NARROWCTI_DOCKER_NETWORK` before running compose.
 

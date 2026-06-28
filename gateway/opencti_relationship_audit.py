@@ -327,6 +327,10 @@ def parse_args(argv=None):
         type=int,
         default=int(os.getenv("NARROWCTI_OPENCTI_AUDIT_FIRST", "100")),
     )
+    parser.add_argument(
+        "--output-file",
+        default=os.getenv("NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE", ""),
+    )
     return parser.parse_args(argv)
 
 
@@ -350,7 +354,15 @@ def main(argv=None):
         args.search,
         first=args.first,
     )
-    print(json.dumps(report, indent=2, ensure_ascii=False))
+    rendered = json.dumps(report, indent=2, ensure_ascii=False)
+    if args.output_file:
+        parent = os.path.dirname(args.output_file)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(args.output_file, "w", encoding="utf-8") as handle:
+            handle.write(rendered)
+            handle.write("\n")
+    print(rendered)
 
 
 if __name__ == "__main__":

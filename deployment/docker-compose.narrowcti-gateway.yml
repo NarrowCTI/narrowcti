@@ -219,6 +219,7 @@ services:
       NARROWCTI_OPENCTI_AUDIT_TYPE: ${NARROWCTI_OPENCTI_AUDIT_TYPE:-}
       NARROWCTI_OPENCTI_AUDIT_SEARCH: ${NARROWCTI_OPENCTI_AUDIT_SEARCH:-}
       NARROWCTI_OPENCTI_AUDIT_FIRST: ${NARROWCTI_OPENCTI_AUDIT_FIRST:-100}
+      NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE: ${NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE:-/app/state/opencti-relationship-audit.json}
     command: ["python", "-m", "gateway.opencti_relationship_audit"]
     restart: "no"
     profiles:
