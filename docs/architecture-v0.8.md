@@ -136,6 +136,26 @@ The final lookup-backed run found the existing Infrastructure, ASN, IP and CIDR
 objects, exported no new graph objects, and imported the six expected
 relationships into OpenCTI.
 
+## Relationship Audit Flow
+
+Post-import validation uses direct OpenCTI relationship queries, not broad text
+search. The read-only `gateway.opencti_relationship_audit` CLI first resolves
+the target object, then queries `stixCoreRelationships(fromId=...)` and
+`stixCoreRelationships(toId=...)` with that object id.
+
+The audit output summarizes:
+
+- Total inbound and outbound relationships.
+- Diamond quadrant counts for related Adversary, Capability, Infrastructure and
+  Victimology objects.
+- Direct ATT&CK Attack Patterns that can feed Kill Chain context.
+- Sample relationship edges for operator review.
+
+This keeps validation aligned with the product boundary: NarrowCTI curates and
+exports source-backed relationships, OpenCTI stores and renders them, and the
+operator can verify the exact graph shape without accidentally counting
+unrelated search results.
+
 ## Validated OTX Actor Infrastructure Flow
 
 The bounded real OTX validation on June 25, 2026 used pulse

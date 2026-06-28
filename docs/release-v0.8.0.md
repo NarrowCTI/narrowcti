@@ -726,6 +726,13 @@ OpenCTI tab/export coverage is tracked in
   `kill_chain_phases` from the graph candidate. The production recommendation
   remains to load ATT&CK through the official MITRE connector and let
   NarrowCTI link curated source evidence to those canonical objects.
+- Added a read-only OpenCTI relationship audit CLI for post-import validation.
+  `gateway.opencti_relationship_audit` resolves a target object, queries direct
+  inbound and outbound `stixCoreRelationships` by object id, classifies related
+  objects into Diamond quadrants and lists direct ATT&CK Attack Patterns for
+  Kill Chain evidence. This gives operators repeatable proof that a promoted
+  object is actually feeding the expected OpenCTI relationship views without
+  relying on broad text search.
 
 ## Promotion Boundary
 
