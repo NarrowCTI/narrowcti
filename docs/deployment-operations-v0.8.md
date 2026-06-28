@@ -96,6 +96,21 @@ evidence to `/app/state/opencti-relationship-audit.json` by default. Override
 `NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE` when multiple object audits need to be
 kept separately in the state volume.
 
+When the validation goal is full Diamond/Kill Chain readiness for one object,
+set explicit coverage expectations before running the audit:
+
+```powershell
+$env:NARROWCTI_OPENCTI_AUDIT_EXPECTED_QUADRANTS = "adversary,capability,infrastructure,victimology"
+$env:NARROWCTI_OPENCTI_AUDIT_REQUIRE_KILL_CHAIN = "true"
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-opencti-relationship-audit
+```
+
+The resulting JSON includes `coverage.present_quadrants`,
+`coverage.missing_quadrants`, `coverage.kill_chain_present` and
+`coverage.status`. Missing expected quadrants are treated as
+`needs-evidence` by the operational validation checklist, not as successful
+coverage.
+
 If the OpenCTI network name is not `opencti_default`, set
 `NARROWCTI_DOCKER_NETWORK` before running compose.
 

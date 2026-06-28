@@ -5,6 +5,7 @@ import urllib.request
 
 
 OPENCTI_GRAPHQL_PATH = "/graphql"
+DIAMOND_QUADRANTS = ("adversary", "capability", "infrastructure", "victimology")
 
 TARGET_QUERIES = {
     "infrastructure": (
@@ -208,7 +209,15 @@ def load_relationships(opencti_url, token, object_id, first=100):
     }
 
 
-def build_relationship_audit(opencti_url, token, target_type, search, first=100):
+def build_relationship_audit(
+    opencti_url,
+    token,
+    target_type,
+    search,
+    first=100,
+    expected_quadrants=(),
+    require_kill_chain=False,
+):
     target = load_target(opencti_url, token, target_type, search, first=10)
     if not target:
         return {
@@ -217,10 +226,20 @@ def build_relationship_audit(opencti_url, token, target_type, search, first=100)
             "found": False,
         }
     relationships = load_relationships(opencti_url, token, target["id"], first=first)
-    return summarize_relationships(target, relationships)
+    return summarize_relationships(
+        target,
+        relationships,
+        expected_quadrants=expected_quadrants,
+        require_kill_chain=require_kill_chain,
+    )
 
 
-def summarize_relationships(target, relationships):
+def summarize_relationships(
+    target,
+    relationships,
+    expected_quadrants=(),
+    require_kill_chain=False,
+):
     outbound = list(relationships.get("outbound") or [])
     inbound = list(relationships.get("inbound") or [])
     all_relationships = outbound + inbound
@@ -258,7 +277,42 @@ def summarize_relationships(target, relationships):
         "inbound_count": len(inbound),
         "diamond_quadrant_counts": quadrant_counts,
         "kill_chain_attack_patterns": attack_patterns,
+        "coverage": coverage_summary(
+            quadrant_counts,
+            attack_patterns,
+            expected_quadrants=expected_quadrants,
+            require_kill_chain=require_kill_chain,
+        ),
         "sample_relationships": samples,
+    }
+
+
+def coverage_summary(
+    quadrant_counts,
+    attack_patterns,
+    expected_quadrants=(),
+    require_kill_chain=False,
+):
+    expected = normalize_quadrants(expected_quadrants)
+    present = [
+        quadrant
+        for quadrant in DIAMOND_QUADRANTS
+        if int((quadrant_counts or {}).get(quadrant, 0) or 0) > 0
+    ]
+    missing = [quadrant for quadrant in expected if quadrant not in present]
+    kill_chain_present = bool(attack_patterns)
+    status = "informational"
+    if expected or require_kill_chain:
+        status = "pass"
+        if missing or (require_kill_chain and not kill_chain_present):
+            status = "needs-evidence"
+    return {
+        "status": status,
+        "expected_quadrants": list(expected),
+        "present_quadrants": present,
+        "missing_quadrants": missing,
+        "kill_chain_required": bool(require_kill_chain),
+        "kill_chain_present": kill_chain_present,
     }
 
 
@@ -308,6 +362,26 @@ def object_summary(value):
     }
 
 
+def normalize_quadrants(value):
+    if isinstance(value, str):
+        raw_items = value.split(",")
+    else:
+        raw_items = value or ()
+    quadrants = []
+    for item in raw_items:
+        quadrant = str(item or "").strip().lower()
+        if quadrant and quadrant in DIAMOND_QUADRANTS and quadrant not in quadrants:
+            quadrants.append(quadrant)
+    return tuple(quadrants)
+
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Read-only OpenCTI object relationship and Diamond context audit."
@@ -331,6 +405,17 @@ def parse_args(argv=None):
         "--output-file",
         default=os.getenv("NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE", ""),
     )
+    parser.add_argument(
+        "--expected-quadrants",
+        default=os.getenv("NARROWCTI_OPENCTI_AUDIT_EXPECTED_QUADRANTS", ""),
+        help="Comma-separated Diamond quadrants expected for this target.",
+    )
+    parser.add_argument(
+        "--require-kill-chain",
+        action=argparse.BooleanOptionalAction,
+        default=env_bool("NARROWCTI_OPENCTI_AUDIT_REQUIRE_KILL_CHAIN", False),
+        help="Require at least one direct ATT&CK Attack Pattern in the audit.",
+    )
     return parser.parse_args(argv)
 
 
@@ -353,6 +438,8 @@ def main(argv=None):
         args.type,
         args.search,
         first=args.first,
+        expected_quadrants=normalize_quadrants(args.expected_quadrants),
+        require_kill_chain=args.require_kill_chain,
     )
     rendered = json.dumps(report, indent=2, ensure_ascii=False)
     if args.output_file:

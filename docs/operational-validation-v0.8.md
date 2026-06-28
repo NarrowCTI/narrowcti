@@ -1629,6 +1629,8 @@ auditor:
 $env:NARROWCTI_OPENCTI_AUDIT_TYPE = "infrastructure"
 $env:NARROWCTI_OPENCTI_AUDIT_SEARCH = "MISP ip-port 137.184.181.252"
 $env:NARROWCTI_OPENCTI_AUDIT_FIRST = "80"
+$env:NARROWCTI_OPENCTI_AUDIT_EXPECTED_QUADRANTS = "adversary,capability,infrastructure,victimology"
+$env:NARROWCTI_OPENCTI_AUDIT_REQUIRE_KILL_CHAIN = "true"
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-opencti-relationship-audit
 ```
 
@@ -1639,7 +1641,10 @@ Chain evidence and returns sample edges. It also writes the JSON evidence to
 `/app/state/opencti-relationship-audit.json` by default when run through the
 deployment ops service. This avoids broad OpenCTI text-search contamination and
 gives operators a reusable way to prove whether the object has real Adversary,
-Capability, Infrastructure and Victimology context.
+Capability, Infrastructure and Victimology context. When expected quadrants or
+Kill Chain are configured, the JSON includes explicit `coverage` status and
+missing quadrants so incomplete Diamond panels remain visible as
+`needs-evidence` instead of looking complete.
 
 This validates real source-backed Adversary, Capability and Kill Chain context
 for MISP Infrastructure objects. Infrastructure-specific Victimology remains
@@ -1647,6 +1652,15 @@ held for a later controlled validation. NarrowCTI must not infer
 `Infrastructure -> targets -> Sector/Country/Organization` from report title or
 generic co-occurrence until source metadata and OpenCTI rendering are both
 verified.
+
+Follow-up strict coverage validation for `MISP ip-port 137.184.181.252` used
+expected quadrants `adversary,capability,infrastructure,victimology` and
+required direct Kill Chain evidence. The audit returned
+`coverage.status=needs-evidence`, `present_quadrants=capability,infrastructure`,
+`missing_quadrants=adversary,victimology` and `kill_chain_present=true`. This
+is the desired operational signal: Capability and Kill Chain are proven for
+that Infrastructure object, while the remaining Diamond facets stay visible as
+open evidence gaps instead of being treated as complete.
 
 Follow-up unit validation added the held preview path for this remaining
 Victimology gap. When explicit same-event MISP metadata contains Infrastructure

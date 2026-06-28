@@ -741,6 +741,12 @@ OpenCTI tab/export coverage is tracked in
   direct Diamond or Kill Chain graph context instead of leaving that proof only
   in manual notes. `gateway.diagnostics` and the support diagnostics compose
   service can also include the same evidence file in support-safe snapshots.
+- Added explicit coverage expectations to the OpenCTI relationship auditor.
+  Operators can require Diamond quadrants such as `adversary`, `capability`,
+  `infrastructure` and `victimology`, and can require direct Kill Chain
+  evidence. The auditor records missing quadrants in `coverage`, and the
+  operational checklist treats incomplete configured coverage as
+  `needs-evidence`.
 
 ## Promotion Boundary
 

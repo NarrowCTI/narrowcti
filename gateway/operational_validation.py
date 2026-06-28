@@ -293,6 +293,7 @@ def relationship_audit_check(audit_evidence):
     quadrant_counts = audit_evidence.get("diamond_quadrant_counts") or {}
     relationship_count = int(audit_evidence.get("relationship_count", 0) or 0)
     kill_chain_count = len(audit_evidence.get("kill_chain_attack_patterns") or [])
+    coverage = audit_evidence.get("coverage") or {}
     diamond_context_count = sum(
         int(quadrant_counts.get(quadrant, 0) or 0)
         for quadrant in (
@@ -310,6 +311,7 @@ def relationship_audit_check(audit_evidence):
         "inbound_count": int(audit_evidence.get("inbound_count", 0) or 0),
         "diamond_quadrant_counts": dict(quadrant_counts),
         "kill_chain_attack_pattern_count": kill_chain_count,
+        "coverage": dict(coverage),
     }
     if not audit_evidence:
         return check(
@@ -330,6 +332,20 @@ def relationship_audit_check(audit_evidence):
             "opencti-relationship-audit",
             "fail",
             "OpenCTI relationship audit found the object but no direct relationships.",
+            evidence,
+        )
+    if coverage.get("status") == "needs-evidence":
+        return check(
+            "opencti-relationship-audit",
+            "needs-evidence",
+            "OpenCTI relationship audit found the object, but expected Diamond or Kill Chain coverage is still incomplete.",
+            evidence,
+        )
+    if coverage.get("status") == "pass":
+        return check(
+            "opencti-relationship-audit",
+            "pass",
+            "OpenCTI relationship audit satisfies the configured Diamond and Kill Chain coverage requirements.",
             evidence,
         )
     if diamond_context_count > 0 or kill_chain_count > 0:

@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import patch
 
 from gateway.opencti_relationship_audit import (
+    coverage_summary,
+    normalize_quadrants,
     object_ref,
     parse_args,
     quadrant_for_object,
@@ -71,7 +73,12 @@ class OpenCTIRelationshipAuditTests(unittest.TestCase):
             ],
         }
 
-        summary = summarize_relationships(target, relationships)
+        summary = summarize_relationships(
+            target,
+            relationships,
+            expected_quadrants=("capability", "victimology"),
+            require_kill_chain=True,
+        )
 
         self.assertTrue(summary["found"])
         self.assertEqual(3, summary["relationship_count"])
@@ -88,6 +95,17 @@ class OpenCTIRelationshipAuditTests(unittest.TestCase):
             summary["diamond_quadrant_counts"],
         )
         self.assertEqual(["T1090 Proxy"], summary["kill_chain_attack_patterns"])
+        self.assertEqual(
+            {
+                "status": "pass",
+                "expected_quadrants": ["capability", "victimology"],
+                "present_quadrants": ["capability", "victimology"],
+                "missing_quadrants": [],
+                "kill_chain_required": True,
+                "kill_chain_present": True,
+            },
+            summary["coverage"],
+        )
         self.assertEqual(
             {
                 "direction": "outbound",
@@ -109,6 +127,24 @@ class OpenCTIRelationshipAuditTests(unittest.TestCase):
             ),
         )
 
+    def test_reports_missing_expected_quadrants(self):
+        coverage = coverage_summary(
+            {"adversary": 0, "capability": 3, "infrastructure": 1, "victimology": 0},
+            ["T1090 Proxy"],
+            expected_quadrants="adversary,capability,infrastructure,victimology",
+            require_kill_chain=True,
+        )
+
+        self.assertEqual("needs-evidence", coverage["status"])
+        self.assertEqual(["adversary", "victimology"], coverage["missing_quadrants"])
+        self.assertTrue(coverage["kill_chain_present"])
+
+    def test_normalizes_expected_quadrants(self):
+        self.assertEqual(
+            ("adversary", "capability"),
+            normalize_quadrants(" adversary,capability,invalid,adversary "),
+        )
+
     def test_accepts_audit_target_from_environment(self):
         with patch.dict(
             "os.environ",
@@ -117,6 +153,8 @@ class OpenCTIRelationshipAuditTests(unittest.TestCase):
                 "NARROWCTI_OPENCTI_AUDIT_SEARCH": "MISP ip-port 137.184.181.252",
                 "NARROWCTI_OPENCTI_AUDIT_FIRST": "80",
                 "NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE": "state/audit.json",
+                "NARROWCTI_OPENCTI_AUDIT_EXPECTED_QUADRANTS": "capability,infrastructure",
+                "NARROWCTI_OPENCTI_AUDIT_REQUIRE_KILL_CHAIN": "true",
             },
         ):
             args = parse_args([])
@@ -125,6 +163,8 @@ class OpenCTIRelationshipAuditTests(unittest.TestCase):
         self.assertEqual("MISP ip-port 137.184.181.252", args.search)
         self.assertEqual(80, args.first)
         self.assertEqual("state/audit.json", args.output_file)
+        self.assertEqual("capability,infrastructure", args.expected_quadrants)
+        self.assertTrue(args.require_kill_chain)
 
 
 if __name__ == "__main__":

@@ -150,16 +150,52 @@ class GatewayOperationalValidationTests(unittest.TestCase):
                 "diamond_quadrant_counts": {"other": 1},
             },
         )
+        missing_expected_coverage = build_operational_validation_report(
+            preflight,
+            decisions,
+            full_validation_passed=True,
+            opencti_ui_no_duplicate=True,
+            resource_posture_ok=True,
+            relationship_audit_evidence={
+                **relationship_audit_evidence(),
+                "coverage": {
+                    "status": "needs-evidence",
+                    "expected_quadrants": [
+                        "adversary",
+                        "capability",
+                        "infrastructure",
+                        "victimology",
+                    ],
+                    "present_quadrants": ["capability", "infrastructure"],
+                    "missing_quadrants": ["adversary", "victimology"],
+                    "kill_chain_required": True,
+                    "kill_chain_present": True,
+                },
+            },
+        )
 
         passing_checks = {item.code: item for item in passing.checks}
         missing_checks = {item.code: item for item in missing_target.checks}
         weak_checks = {item.code: item for item in weak_context.checks}
+        missing_coverage_checks = {
+            item.code: item for item in missing_expected_coverage.checks
+        }
 
         self.assertEqual("pass", passing_checks["opencti-relationship-audit"].status)
         self.assertEqual("fail", missing_checks["opencti-relationship-audit"].status)
         self.assertEqual(
             "needs-evidence",
             weak_checks["opencti-relationship-audit"].status,
+        )
+        self.assertEqual(
+            "needs-evidence",
+            missing_coverage_checks["opencti-relationship-audit"].status,
+        )
+        self.assertEqual(
+            ["adversary", "victimology"],
+            missing_coverage_checks["opencti-relationship-audit"].evidence[
+                "coverage"
+            ]["missing_quadrants"],
         )
 
     def test_structured_resource_posture_evidence_can_pass(self):
