@@ -763,6 +763,11 @@ OpenCTI tab/export coverage is tracked in
   `relationship_requires_opencti_validation` now remain visible in reports and
   produce a deterministic recommendation to validate those OpenCTI relationship
   candidates before broader graph promotion.
+- Added an operational validation check for held OpenCTI relationship
+  candidates. Decision evidence with
+  `relationship_requires_opencti_validation` now leaves
+  `held-opencti-relationship-validation` in `needs-evidence` until the
+  relationship path is validated against OpenCTI UI/API behavior.
 - Added `scripts/capture-resource-posture.ps1` to generate local Docker
   resource posture evidence for the operational validation checklist. The helper
   captures Docker stats, Docker disk posture command completion and container

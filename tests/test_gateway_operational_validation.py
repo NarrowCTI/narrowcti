@@ -51,7 +51,7 @@ class GatewayOperationalValidationTests(unittest.TestCase):
         text = format_text_report(report)
 
         self.assertEqual("pass", data["overall_status"])
-        self.assertEqual(9, data["counts"]["pass"])
+        self.assertEqual(10, data["counts"]["pass"])
         self.assertIn("canonical-attack-match status=pass", text)
         self.assertIn("opencti-relationship-audit status=pass", text)
         json.dumps(data)
@@ -196,6 +196,54 @@ class GatewayOperationalValidationTests(unittest.TestCase):
             missing_coverage_checks["opencti-relationship-audit"].evidence[
                 "coverage"
             ]["missing_quadrants"],
+        )
+
+    def test_held_opencti_relationship_candidates_need_validation_evidence(self):
+        preflight = build_preflight_report(
+            validation_settings(enabled_sources=["otx"]),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        decisions = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-24T10:01:00Z",
+                    "otx",
+                    "dry-run",
+                    "would hold relationship",
+                    query="attack",
+                    metadata={
+                        "graph_export_plan": graph_export_plan(
+                            mode="dry-run",
+                            status="dry-run",
+                            candidate_count=1,
+                            accepted_count=0,
+                            held_count=1,
+                            actions=["held"],
+                            held_reasons={
+                                "relationship_requires_opencti_validation": 1,
+                            },
+                        )
+                    },
+                )
+            ]
+        )
+
+        report = build_operational_validation_report(
+            preflight,
+            decisions,
+            required_sources=("otx",),
+        )
+        checks = {item.code: item for item in report.checks}
+
+        self.assertEqual(
+            "needs-evidence",
+            checks["held-opencti-relationship-validation"].status,
+        )
+        self.assertEqual(
+            1,
+            checks["held-opencti-relationship-validation"].evidence[
+                "relationship_requires_opencti_validation"
+            ],
         )
 
     def test_structured_resource_posture_evidence_can_pass(self):

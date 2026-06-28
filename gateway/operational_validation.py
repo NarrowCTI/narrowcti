@@ -72,6 +72,7 @@ def build_operational_validation_report(
         canonical_attack_match_check(graph),
         lookup_metadata_check(graph),
         lookup_aggregation_check(graph),
+        held_relationship_validation_check(graph),
         duplicate_attack_pattern_check(
             opencti_ui_no_duplicate,
             opencti_ui_duplicate_found,
@@ -257,6 +258,30 @@ def lookup_aggregation_check(graph):
         "lookup-aggregation",
         "needs-evidence",
         "Decision report lookup counters are empty; capture lookup evidence before closing v0.8 validation.",
+        evidence,
+    )
+
+
+def held_relationship_validation_check(graph):
+    held_reasons = graph.get("held_reasons") or {}
+    validation_count = int(
+        held_reasons.get("relationship_requires_opencti_validation", 0) or 0
+    )
+    evidence = {
+        "held_reasons": dict(held_reasons),
+        "relationship_requires_opencti_validation": validation_count,
+    }
+    if validation_count > 0:
+        return check(
+            "held-opencti-relationship-validation",
+            "needs-evidence",
+            "Decision evidence contains OpenCTI relationship candidates held until source semantics and OpenCTI rendering are validated.",
+            evidence,
+        )
+    return check(
+        "held-opencti-relationship-validation",
+        "pass",
+        "Decision evidence has no OpenCTI relationship candidates held for validation.",
         evidence,
     )
 

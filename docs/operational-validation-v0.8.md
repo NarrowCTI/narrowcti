@@ -834,6 +834,13 @@ The checklist does not call source APIs, query OpenCTI or mutate state. It reads
 existing preflight settings and decision audit records, then leaves UI duplicate
 checks and resource posture as explicit operator-recorded evidence.
 
+The checklist also inspects decision-audit graph held reasons. If graph
+evidence contains `relationship_requires_opencti_validation`, the
+`held-opencti-relationship-validation` check remains `needs-evidence`. This is
+expected for audit-only relationship previews such as Infrastructure-specific
+Victimology until source semantics and OpenCTI object-view rendering are
+validated in a controlled lab run.
+
 ## Pass Criteria
 
 The v0.8 graph lookup gate is acceptable when:
@@ -844,6 +851,9 @@ The v0.8 graph lookup gate is acceptable when:
 - At least one ATT&CK candidate is matched to a canonical OpenCTI object.
 - Decision metadata includes bounded lookup match evidence.
 - Decision report aggregates lookup evidence.
+- Decision metadata has no unresolved OpenCTI relationship candidates held by
+  `relationship_requires_opencti_validation`, or those candidates are explicitly
+  tracked as remaining validation evidence.
 - No duplicate ATT&CK attack-pattern object is created in OpenCTI.
 
 ## Stop Criteria
