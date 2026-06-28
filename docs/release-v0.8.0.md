@@ -783,6 +783,11 @@ OpenCTI tab/export coverage is tracked in
   surfaced stale Indicator relationship warnings in OpenCTI logs, which remain
   tracked as historical replay polish rather than a Suricata materialization
   blocker.
+- Recorded a conservative MISP geolocation guardrail. Real `geolocation`
+  objects in events `1776`, `1794` and `1811` carry GeoOpen country-average
+  latitude/longitude values; a dry-run of `event:1776` confirmed NarrowCTI keeps
+  this as country context and does not promote country-average coordinates into
+  OpenCTI Position objects.
 
 ## Promotion Boundary
 

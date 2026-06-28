@@ -159,8 +159,12 @@ NarrowCTI flag.
    event. Do not derive campaigns from report titles alone.
 3. Deeper Locations remain feed-dependent. Controlled OpenCTI import behavior is
    validated, and MISP/OTX mappings are implemented, but the local MISP dataset
-   currently has no real region, administrative-area, city or coordinate meta
-   payloads for OpenCTI UI/API validation.
+   currently has no real region, administrative-area, city or explicit
+   operational coordinate meta payloads for OpenCTI UI/API validation. The
+   local MISP `geolocation` objects found in events `1776`, `1794` and `1811`
+   carry country-average GeoOpen coordinates; dry-run validation of `event:1776`
+   confirmed NarrowCTI keeps those as country context and does not promote them
+   to Position.
 4. Channels, Events, Security Platforms and Systems remain feed-dependent for
    real validation. MISP Galaxy meta aliases and explicit OTX fields are
    implemented with IOC/provenance guardrails and covered by unit tests. After

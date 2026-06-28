@@ -1729,6 +1729,16 @@ structured source fields such as `c2-channel`, `security-platform`,
 but real OpenCTI UI/API validation is blocked until a source feed carries those
 structured fields.
 
+A final location guardrail check found six real MISP `geolocation` objects in
+events `1776`, `1794` and `1811`. These objects carry `country`,
+`countrycode`, `latitude` and `longitude`, but the source text identifies the
+coordinates as GeoOpen country or country-ASN averages. A focused dry-run of
+`event:1776` confirmed the desired behavior: NarrowCTI extracted Serbia as
+`target_country` from MISP country Galaxy evidence and did not promote the
+country-average latitude/longitude into an OpenCTI Position. This keeps deeper
+Locations conservative until a feed provides explicit operational city,
+administrative-area or coordinate victimology fields.
+
 ## OTX Preflight Blocked By Upstream Timeout
 
 On June 27, 2026, OTX was not promoted to real ingestion after the MISP batch.
