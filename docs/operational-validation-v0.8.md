@@ -1550,6 +1550,78 @@ confirmed:
   `CVE-2018-0171` and the imported reports are queryable through the OpenCTI
   API after the real runs.
 
+## Infrastructure Diamond And Kill Chain Context Validation
+
+On June 28, 2026, a targeted OpenCTI API validation checked whether real
+Infrastructure objects had direct relationships capable of feeding the
+Infrastructure Knowledge, Diamond and Kill Chain views.
+
+The validation intentionally used exact object ids with
+`stixCoreRelationships(fromId=...)` and `stixCoreRelationships(toId=...)`.
+Broad `search` queries were rejected as evidence because they returned
+unrelated ATT&CK objects whose names contained words such as `Domain` or `IP`.
+
+Initial API checks showed the gap:
+
+- `MISP domain-ip your-ip.getmyip.com` had two outbound `consists-of`
+  relationships to Domain/IP observables and one inbound Report `related-to`
+  relationship, but no direct adversary, capability, victimology or ATT&CK
+  relationship.
+- `MISP domain-ip arabica.podzone.net` had the same direct shape.
+- `MISP ip-port 137.184.181.252` had one outbound IPv4 `consists-of`
+  relationship and one inbound Report `related-to` relationship, but no direct
+  malware or ATT&CK relationship.
+- `AS327712` had the corrected display name but only the Report relationship,
+  which is expected when the source provides no ASN organization/context.
+
+NarrowCTI was then updated to parse `misp-galaxy:*` tags as graph evidence and
+to add bounded same-event Infrastructure context relationships when source
+metadata is explicit.
+
+Dry-run evidence before real export:
+
+- `event:5280`, `OceanLotus - WateringHole - Framework B 2018`, produced 49
+  `misp-event-infrastructure-adversary-context` candidates:
+  `Intrusion-Set APT32 -> uses -> Infrastructure`.
+- `event:1649`, `Chiseling In: Lorenz Ransomware Group Cracks MiVoice And
+  Calls Back For Free`, produced four
+  `misp-event-infrastructure-capability-context` candidates and 24
+  `misp-event-infrastructure-ttp-context` candidates for
+  `MISP ip-port 137.184.181.252`.
+
+Real export evidence:
+
+- `event:5280` was re-run with `NARROWCTI_GRAPH_EXPORT_MODE=export`,
+  `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true`, `MISP_DRY_RUN=false`,
+  `MISP_MAX_EVENTS_PER_RUN=1`, temporary state files and bounded score
+  overrides. The run completed with `ingested=1`, `errors=0`,
+  `entities=146` and `relationships=197`.
+- Post-export OpenCTI API validation confirmed:
+  `Intrusion-Set APT32 -> uses -> Infrastructure MISP domain-ip
+  your-ip.getmyip.com`.
+- The same validation confirmed:
+  `Intrusion-Set APT32 -> uses -> Infrastructure MISP domain-ip
+  arabica.podzone.net`.
+- `event:1649` was re-run with the same controlled export posture. The run
+  completed with `ingested=1`, `errors=0`, `entities=51` and
+  `relationships=84`.
+- Post-export OpenCTI API validation for `MISP ip-port 137.184.181.252`
+  returned 30 direct relationships, including:
+  `Malware Lorenz -> uses -> Infrastructure`,
+  `Malware Lorenz Ransomware -> uses -> Infrastructure`,
+  `Malware Chisel (ELF) -> uses -> Infrastructure`,
+  `Malware Chisel (Windows) -> uses -> Infrastructure`, and direct
+  `Infrastructure -> related-to -> Attack Pattern` relationships for ATT&CK
+  techniques including `T1190`, `T1090`, `T1573`, `T1059.001`, `T1059.003`
+  and `T1486`.
+
+This validates real source-backed Adversary, Capability and Kill Chain context
+for MISP Infrastructure objects. Infrastructure-specific Victimology remains
+held for a later controlled validation. NarrowCTI must not infer
+`Infrastructure -> targets -> Sector/Country/Organization` from report title or
+generic co-occurrence until source metadata and OpenCTI rendering are both
+verified.
+
 The same pass also checked local MISP coverage for the remaining feed-dependent
 tabs after the additional feeds were enabled. The local dataset now contains
 real `AS`, `domain|ip`, `ip-src|port` and `ip-dst|port` evidence, which closes

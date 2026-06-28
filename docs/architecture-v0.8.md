@@ -233,13 +233,22 @@ coverage remains a source-validation task.
 
 ## Remaining Architecture Work
 
-- Validate true external MISP feed payloads for ASN/netblock/domain-ip/ip-port
-  evidence now that controlled MISP object-template export is validated.
+- Continue real MISP source-shape validation for netblock variety and larger
+  ASN/IP datasets. Real MISP `AS`, `domain|ip`, `ip-src|port` and
+  `ip-dst|port` feed shapes are already validated against OpenCTI API.
 - Validate true OTX feed payloads that carry source-backed ASN/netblock
   evidence now that unit-level OTX ASN/CIDR extraction is implemented.
-- Add optional offline-first IP-to-ASN enrichment providers.
-- Extend source mapping so actor, malware, campaign, sector, location, ATT&CK,
-  Diamond, Timeline and Kill Chain context can be emitted together when source
-  evidence supports it.
+- Expand optional offline-first IP-to-ASN enrichment datasets and noise
+  controls. The provider interface and MISP integration are implemented behind
+  `NARROWCTI_IP_ASN_ENRICHMENT_FILE`.
+- Continue source mapping so actor, malware, campaign, sector, location,
+  ATT&CK, Diamond, Timeline and Kill Chain context can be emitted together when
+  source evidence supports it. Real MISP validation now covers direct
+  Infrastructure Adversary, Capability and ATT&CK/Kill Chain relationships from
+  same-event Galaxy context.
+- Validate Infrastructure-specific Victimology before broad export. Direct
+  `Infrastructure -> targets -> Sector/Country/Organization` relationships must
+  remain disabled or audit-only until explicit source metadata and OpenCTI
+  rendering are both verified.
 - Keep unsupported or weakly supported relationships held, quarantined or
   audit-only instead of guessing attribution.

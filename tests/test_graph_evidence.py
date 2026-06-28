@@ -1612,6 +1612,124 @@ class GraphEvidenceTests(unittest.TestCase):
             )
         )
 
+    def test_builds_misp_galaxy_tag_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "tags": [
+                    'misp-galaxy:mitre-intrusion-set="APT32"',
+                    'misp-galaxy:mitre-attack-pattern="PowerShell - T1059.001"',
+                    'misp-galaxy:malpedia="Lorenz"',
+                ]
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertTrue(
+            any(
+                record["entity_type"] == "intrusion_set"
+                and record["value"] == "APT32"
+                and record["source_field"] == "tags[0]"
+                for record in evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "attack_pattern"
+                and record["value"] == "T1059.001"
+                and record["display_name"] == "PowerShell - T1059.001"
+                and record["source_field"] == "tags[1]"
+                for record in evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "malware"
+                and record["value"] == "Lorenz"
+                and record["source_field"] == "tags[2]"
+                for record in evidence["records"]
+            )
+        )
+
+    def test_builds_misp_infrastructure_context_relationship_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "tags": [
+                    'misp-galaxy:mitre-intrusion-set="APT32"',
+                    'misp-galaxy:mitre-attack-pattern="PowerShell - T1059.001"',
+                    'misp-galaxy:malpedia="Lorenz"',
+                ],
+                "misp_infrastructure": [
+                    {
+                        "entity_type": "infrastructure",
+                        "value": "MISP domain-ip c2.example",
+                        "stix_object_type": "infrastructure",
+                        "relationship_type": "uses",
+                        "source_field": "Attribute[0]",
+                        "confidence": 72,
+                    },
+                    {
+                        "entity_type": "observable",
+                        "value": "c2.example",
+                        "stix_object_type": "observable",
+                        "relationship_type": "consists-of",
+                        "source_field": "Attribute[0]",
+                        "confidence": 70,
+                        "attributes": {
+                            "observable_type": "domain-name",
+                            "relationship_source_stix_object_type": "infrastructure",
+                            "relationship_source_value": "MISP domain-ip c2.example",
+                        },
+                    },
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        self.assertTrue(
+            any(
+                record["entity_type"] == "infrastructure"
+                and record["source_name"] == "misp-context"
+                and record["relationship_type"] == "uses"
+                and record["attributes"]["relationship_source_stix_object_type"]
+                == "intrusion-set"
+                and record["attributes"]["relationship_source_value"] == "APT32"
+                and record["attributes"]["relationship_inference"]
+                == "misp-event-infrastructure-adversary-context"
+                for record in evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "infrastructure"
+                and record["source_name"] == "misp-context"
+                and record["relationship_type"] == "uses"
+                and record["attributes"]["relationship_source_stix_object_type"]
+                == "malware"
+                and record["attributes"]["relationship_source_value"] == "Lorenz"
+                and record["attributes"]["relationship_inference"]
+                == "misp-event-infrastructure-capability-context"
+                for record in evidence["records"]
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "attack_pattern"
+                and record["source_name"] == "misp-context"
+                and record["relationship_type"] == "related-to"
+                and record["attributes"]["relationship_source_stix_object_type"]
+                == "infrastructure"
+                and record["attributes"]["relationship_source_value"]
+                == "MISP domain-ip c2.example"
+                and record["attributes"]["relationship_inference"]
+                == "misp-event-infrastructure-ttp-context"
+                for record in evidence["records"]
+            )
+        )
+
     def test_builds_misp_detection_rule_evidence(self):
         evidence = build_graph_evidence(
             {

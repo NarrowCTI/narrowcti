@@ -128,6 +128,24 @@ MALWARE_ALIASES = {
 
 ATTACK_ID_PATTERN = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 CVE_ID_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
+MISP_GALAXY_TAG_PATTERN = re.compile(
+    r'^misp-galaxy:([^=]+)=(?:"([^"]+)"|(.+))$',
+    re.IGNORECASE,
+)
+MISP_INFRA_CONTEXT_MAX_INFRASTRUCTURES = 50
+MISP_INFRA_CONTEXT_MAX_PAIRINGS = 100
+MISP_INFRA_CONTEXT_MAX_RECORDS = 200
+MISP_INFRA_ADVERSARY_ENTITY_TYPES = {
+    "campaign",
+    "intrusion_set",
+    "threat_actor",
+    "threat_actor_individual",
+}
+MISP_INFRA_CAPABILITY_ENTITY_TYPES = {
+    "malware",
+    "tool",
+    "channel",
+}
 
 
 def build_graph_evidence(metadata, source_key="", external_id="", title=""):
@@ -214,6 +232,9 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
             ),
             misp_timeline,
         )
+    )
+    records.extend(
+        misp_infrastructure_context_relationship_evidence(records, source_key)
     )
 
     return {
@@ -506,7 +527,33 @@ def misp_metadata_evidence(metadata, source_key=""):
         if record:
             records.append(record)
 
+    records.extend(misp_galaxy_evidence(misp_galaxy_tag_clusters(tags), source_key))
+
     return records
+
+
+def misp_galaxy_tag_clusters(tags):
+    clusters = []
+    for index, tag in enumerate(tags or []):
+        tag = clean_string(tag)
+        match = MISP_GALAXY_TAG_PATTERN.match(tag)
+        if not match:
+            continue
+        galaxy_type = clean_string(match.group(1))
+        value = clean_string(match.group(2) or match.group(3))
+        if not galaxy_type or not value:
+            continue
+        clusters.append(
+            {
+                "type": galaxy_type,
+                "galaxy_type": galaxy_type,
+                "galaxy_name": galaxy_type,
+                "tag_name": tag,
+                "value": value,
+                "source_field": f"tags[{index}]",
+            }
+        )
+    return clusters
 
 
 def misp_galaxy_evidence(clusters, source_key="", relationship_anchor=None):
@@ -1467,6 +1514,8 @@ def misp_victimology_evidence(victimology_records, source_key="", relationship_a
 def single_misp_context_anchor(metadata):
     metadata = compact_mapping(metadata)
     anchors = misp_campaign_anchors(metadata.get("misp_campaigns"))
+    galaxy_sources = list(metadata.get("misp_galaxies") or [])
+    galaxy_sources.extend(misp_galaxy_tag_clusters(metadata.get("tags")))
     for entity_type, stix_object_type in (
         ("campaign", "campaign"),
         ("intrusion_set", "intrusion-set"),
@@ -1474,7 +1523,7 @@ def single_misp_context_anchor(metadata):
     ):
         anchors.extend(
             misp_galaxy_anchors(
-                metadata.get("misp_galaxies"),
+                galaxy_sources,
                 entity_type,
                 stix_object_type,
             )
@@ -1671,6 +1720,235 @@ def misp_infrastructure_evidence(infrastructure_records, source_key=""):
         if record:
             records.append(record)
     return records
+
+
+def misp_infrastructure_context_relationship_evidence(records, source_key=""):
+    records = [record for record in records or [] if isinstance(record, Mapping)]
+    infrastructures = unique_context_records(
+        (
+            record
+            for record in records
+            if record.get("entity_type") == "infrastructure"
+            and record.get("stix_object_type") == "infrastructure"
+            and clean_string(record.get("source_name")).startswith("misp")
+        )
+    )
+    if (
+        not infrastructures
+        or len(infrastructures) > MISP_INFRA_CONTEXT_MAX_INFRASTRUCTURES
+    ):
+        return []
+
+    context_records = []
+    existing = semantic_relationship_keys(records)
+    adversaries = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") in MISP_INFRA_ADVERSARY_ENTITY_TYPES
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if len(adversaries) == 1:
+        context_records.extend(
+            infrastructure_anchor_relationship_records(
+                infrastructures,
+                adversaries,
+                source_key,
+                existing,
+                "uses",
+                "misp-event-infrastructure-adversary-context",
+            )
+        )
+
+    capabilities = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") in MISP_INFRA_CAPABILITY_ENTITY_TYPES
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if len(infrastructures) * len(capabilities) <= MISP_INFRA_CONTEXT_MAX_PAIRINGS:
+        context_records.extend(
+            infrastructure_anchor_relationship_records(
+                infrastructures,
+                capabilities,
+                source_key,
+                existing,
+                "uses",
+                "misp-event-infrastructure-capability-context",
+            )
+        )
+
+    attack_patterns = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") == "attack_pattern"
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if len(infrastructures) * len(attack_patterns) <= MISP_INFRA_CONTEXT_MAX_PAIRINGS:
+        context_records.extend(
+            infrastructure_attack_pattern_relationship_records(
+                infrastructures,
+                attack_patterns,
+                source_key,
+                existing,
+            )
+        )
+
+    return context_records[:MISP_INFRA_CONTEXT_MAX_RECORDS]
+
+
+def infrastructure_anchor_relationship_records(
+    infrastructures,
+    anchors,
+    source_key,
+    existing,
+    relationship_type,
+    inference,
+):
+    records = []
+    for infrastructure in infrastructures:
+        for anchor in anchors:
+            source_type = clean_string(anchor.get("stix_object_type"))
+            source_value = clean_string(anchor.get("value"))
+            if not source_type or not source_value:
+                continue
+            key = semantic_relationship_key(
+                source_type,
+                source_value,
+                relationship_type,
+                infrastructure.get("stix_object_type"),
+                infrastructure.get("value"),
+            )
+            if key in existing:
+                continue
+            existing.add(key)
+            attributes = {
+                **compact_mapping(infrastructure.get("attributes")),
+                "relationship_source_stix_object_type": source_type,
+                "relationship_source_value": source_value,
+                "relationship_source_field": anchor.get("source_field"),
+                "relationship_inference": inference,
+                "relationship_context_scope": "same-misp-event",
+            }
+            record = evidence_record(
+                entity_type=infrastructure.get("entity_type"),
+                value=infrastructure.get("value"),
+                source_key=source_key,
+                source_name="misp-context",
+                source_field=infrastructure.get("source_field"),
+                confidence=min(
+                    clamp_confidence(infrastructure.get("confidence")),
+                    clamp_confidence(anchor.get("confidence")),
+                ),
+                display_name=infrastructure.get("display_name"),
+                attributes=attributes,
+                stix_object_type=infrastructure.get("stix_object_type"),
+                relationship_type=relationship_type,
+            )
+            if record:
+                records.append(record)
+    return records
+
+
+def infrastructure_attack_pattern_relationship_records(
+    infrastructures,
+    attack_patterns,
+    source_key,
+    existing,
+):
+    records = []
+    for infrastructure in infrastructures:
+        for attack_pattern in attack_patterns:
+            key = semantic_relationship_key(
+                infrastructure.get("stix_object_type"),
+                infrastructure.get("value"),
+                "related-to",
+                attack_pattern.get("stix_object_type"),
+                attack_pattern.get("value"),
+            )
+            if key in existing:
+                continue
+            existing.add(key)
+            attributes = {
+                **compact_mapping(attack_pattern.get("attributes")),
+                "relationship_source_stix_object_type": "infrastructure",
+                "relationship_source_value": infrastructure.get("value"),
+                "relationship_source_field": infrastructure.get("source_field"),
+                "relationship_inference": "misp-event-infrastructure-ttp-context",
+                "relationship_context_scope": "same-misp-event",
+            }
+            record = evidence_record(
+                entity_type=attack_pattern.get("entity_type"),
+                value=attack_pattern.get("value"),
+                source_key=source_key,
+                source_name="misp-context",
+                source_field=attack_pattern.get("source_field"),
+                confidence=min(
+                    clamp_confidence(infrastructure.get("confidence")),
+                    clamp_confidence(attack_pattern.get("confidence")),
+                ),
+                display_name=attack_pattern.get("display_name"),
+                attributes=attributes,
+                stix_object_type=attack_pattern.get("stix_object_type"),
+                relationship_type="related-to",
+            )
+            if record:
+                records.append(record)
+    return records
+
+
+def unique_context_records(records):
+    unique = {}
+    for record in records or []:
+        record = compact_mapping(record)
+        key = (
+            clean_string(record.get("entity_type")).casefold(),
+            clean_string(record.get("stix_object_type")).casefold(),
+            clean_string(record.get("value")).casefold(),
+        )
+        if not all(key) or key in unique:
+            continue
+        unique[key] = record
+    return list(unique.values())
+
+
+def semantic_relationship_keys(records):
+    keys = set()
+    for record in records or []:
+        record = compact_mapping(record)
+        attributes = compact_mapping(record.get("attributes"))
+        source_type = clean_string(
+            attributes.get("relationship_source_stix_object_type")
+        )
+        source_value = clean_string(attributes.get("relationship_source_value"))
+        key = semantic_relationship_key(
+            source_type,
+            source_value,
+            record.get("relationship_type"),
+            record.get("stix_object_type"),
+            record.get("value"),
+        )
+        if key:
+            keys.add(key)
+    return keys
+
+
+def semantic_relationship_key(
+    source_type,
+    source_value,
+    relationship_type,
+    target_type,
+    target_value,
+):
+    values = (
+        clean_string(source_type).casefold(),
+        clean_string(source_value).casefold(),
+        clean_string(relationship_type).casefold(),
+        clean_string(target_type).casefold(),
+        clean_string(target_value).casefold(),
+    )
+    if not all(values):
+        return ()
+    return values
 
 
 def misp_detection_rule_evidence(detection_rules, source_key=""):

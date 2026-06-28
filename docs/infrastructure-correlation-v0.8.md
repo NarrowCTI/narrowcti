@@ -356,6 +356,35 @@ source-payload shape gap for top-level `AS` and `domain|ip` attributes:
 | OpenCTI API | Infrastructure `MISP domain-ip arabica.podzone.net`, Domain-Name `arabica.podzone.net`, IPv4 `178.128.103.24` and report `OceanLotus - WateringHole - Framework B 2018` returned with author `MISP via NarrowCTI` |
 | Graph export summary | `event:5280` created 145 entities and 147 relationships in the OpenCTI lab |
 
+Follow-up Diamond and Kill Chain validation on June 28, 2026 checked the same
+objects directly through `stixCoreRelationships(fromId=...)` and
+`stixCoreRelationships(toId=...)` instead of broad text search. The pre-fix
+state confirmed that real Infrastructure objects such as
+`MISP domain-ip your-ip.getmyip.com`, `MISP domain-ip arabica.podzone.net` and
+`MISP ip-port 137.184.181.252` had only direct Infrastructure membership
+relationships plus Report references. They had no direct adversary, capability,
+victimology or ATT&CK relationships, so the OpenCTI Infrastructure Diamond and
+Kill Chain panels could remain empty even when the parent report carried richer
+context.
+
+NarrowCTI now parses `misp-galaxy:*` tags into graph evidence and adds
+bounded, source-backed same-event Infrastructure context relationships:
+
+| Evidence | Result |
+| --- | --- |
+| MISP Galaxy tag fallback | Tags such as `misp-galaxy:mitre-intrusion-set="APT32"`, `misp-galaxy:mitre-attack-pattern="PowerShell - T1059.001"` and `misp-galaxy:malpedia="Lorenz"` become Intrusion Set, ATT&CK and Malware graph candidates instead of labels only |
+| `event:5280` dry-run | Produced 49 `APT32 -> uses -> Infrastructure` context candidates for the domain/IP Infrastructure set |
+| `event:5280` real export | OpenCTI import completed with `errors=0`, `entities=146` and `relationships=197`; API validation confirmed `Intrusion-Set APT32 -> uses -> Infrastructure MISP domain-ip your-ip.getmyip.com` and `Intrusion-Set APT32 -> uses -> Infrastructure MISP domain-ip arabica.podzone.net` |
+| `event:1649` dry-run | Produced four `Malware -> uses -> Infrastructure` and 24 `Infrastructure -> related-to -> ATT&CK Attack Pattern` context candidates for `MISP ip-port 137.184.181.252` |
+| `event:1649` real export | OpenCTI import completed with `errors=0`, `entities=51` and `relationships=84`; API validation returned four Malware relationships (`Lorenz`, `Lorenz Ransomware`, `Chisel (ELF)`, `Chisel (Windows)`) and ATT&CK relationships such as `T1190`, `T1090`, `T1573`, `T1059.001`, `T1059.003` and `T1486` directly on the Infrastructure object |
+
+This closes the source-backed Adversary, Capability and Kill Chain relationship
+path for MISP Infrastructure when the event carries explicit Galaxy context.
+Victimology inside an Infrastructure Diamond remains intentionally stricter:
+`Infrastructure -> targets -> Sector/Country/Organization` must be validated
+with explicit source metadata and OpenCTI API/UI behavior before broad export is
+enabled.
+
 Open questions before broad activation:
 
 - Confirm the same relationships visually in OpenCTI's graph and knowledge UI,
@@ -375,9 +404,9 @@ Open questions before broad activation:
   through `NARROWCTI_IP_ASN_ENRICHMENT_FILE`; unit coverage confirms that when
   an explicit Infrastructure object anchors the IP, the enrichment emits both
   `IP -> belongs-to -> ASN` and `Infrastructure -> consists-of -> ASN`.
-- Validate whether source payloads provide enough actor, malware, sector,
-  location and campaign context to populate Diamond, Timeline and Knowledge
-  views from the same curated bundle.
+- Validate whether source payloads provide enough sector, location,
+  organization and campaign context to populate the Victimology quadrant from
+  the same Infrastructure object without unsupported inference.
 
 ## Backlog
 
@@ -412,6 +441,13 @@ Safe implementation sequence:
 12. Done: validate true MISP top-level `AS` and `domain|ip` feed samples
    against OpenCTI API after real export. Netblock feed-shape validation remains
    pending until a safe source event carries explicit netblock evidence.
+13. Done: parse MISP Galaxy tags as graph evidence when MISP exposes Galaxy
+   context only as tags.
+14. Done: add bounded same-event Infrastructure context relationships for MISP
+   adversary, malware/tool/channel and ATT&CK evidence, with real OpenCTI API
+   validation for Adversary, Capability and Kill Chain panels.
+15. Validate source-backed Infrastructure victimology relationships before
+   enabling `Infrastructure -> targets -> Sector/Country/Organization` export.
 
 This backlog is intentionally staged. The product value is very high, but the
 risk of graph pollution is also high if ASN and IP relationships are promoted

@@ -1292,6 +1292,66 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_links_misp_galaxy_tags_to_infrastructure_context(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["tags"] = [
+            "tlp:green",
+            'misp-galaxy:mitre-intrusion-set="APT32"',
+            'misp-galaxy:mitre-attack-pattern="PowerShell - T1059.001"',
+            'misp-galaxy:malpedia="Lorenz"',
+        ]
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-domain-ip",
+                "type": "domain|ip",
+                "category": "Network activity",
+                "value": "c2.example|203.0.113.10",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "infrastructure"
+                and candidate["value"] == "MISP domain-ip c2.example"
+                and candidate["source_name"] == "misp-context"
+                and candidate["relationship_type"] == "uses"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "intrusion-set"
+                and candidate["attributes"]["relationship_source_value"] == "APT32"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "infrastructure"
+                and candidate["value"] == "MISP domain-ip c2.example"
+                and candidate["source_name"] == "misp-context"
+                and candidate["relationship_type"] == "uses"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "malware"
+                and candidate["attributes"]["relationship_source_value"] == "Lorenz"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "attack_pattern"
+                and candidate["value"] == "T1059.001"
+                and candidate["source_name"] == "misp-context"
+                and candidate["relationship_type"] == "related-to"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "infrastructure"
+                and candidate["attributes"]["relationship_source_value"]
+                == "MISP domain-ip c2.example"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_extracts_misp_detection_rules(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         event = enriched_event()
