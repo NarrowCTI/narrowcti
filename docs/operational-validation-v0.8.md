@@ -1615,6 +1615,20 @@ Real export evidence:
   techniques including `T1190`, `T1090`, `T1573`, `T1059.001`, `T1059.003`
   and `T1486`.
 
+This validation is now repeatable through the read-only OpenCTI relationship
+auditor:
+
+```powershell
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight python -m gateway.opencti_relationship_audit --type infrastructure --search "MISP ip-port 137.184.181.252" --first 80
+```
+
+The auditor resolves the target object first, then queries direct
+`stixCoreRelationships` by object id in both directions. It classifies related
+objects into Diamond quadrants, extracts direct ATT&CK Attack Patterns for Kill
+Chain evidence and returns sample edges. This avoids broad OpenCTI text-search
+contamination and gives operators a reusable way to prove whether the object
+has real Adversary, Capability, Infrastructure and Victimology context.
+
 This validates real source-backed Adversary, Capability and Kill Chain context
 for MISP Infrastructure objects. Infrastructure-specific Victimology remains
 held for a later controlled validation. NarrowCTI must not infer

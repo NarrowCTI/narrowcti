@@ -51,6 +51,8 @@ commands:
 
 These services reuse the same image, env file, state volume and OpenCTI network
 as the gateway runtime. They do not start continuous ingestion by themselves.
+The same ops profile can also run read-only one-off commands, such as the
+OpenCTI relationship auditor, by overriding the service command.
 
 ## Installation Procedure
 
@@ -84,6 +86,7 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops 
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-curation-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-operational-validation
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-support-diagnostics
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight python -m gateway.opencti_relationship_audit --type infrastructure --search "MISP ip-port 137.184.181.252" --first 80
 ```
 
 If the OpenCTI network name is not `opencti_default`, set
