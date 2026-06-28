@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from exporters.opencti import send_bundle
+from exporters.opencti import report_refs_from_bundle_json, send_bundle
 from exporters.stix_builder import deterministic_graph_object_id
 
 
@@ -109,6 +109,55 @@ class OpenCTIExporterTests(unittest.TestCase):
                     },
                 }
             ],
+            api_client.report_object_refs,
+        )
+
+    def test_export_mode_creates_native_detection_rule_indicator(self):
+        api_client = FakeOpenCTIClient()
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={"accepted": [sigma_detection_rule_candidate()]},
+            graph_export_mode="export",
+            identity_name="MISP via NarrowCTI",
+        )
+
+        self.assertEqual(
+            [
+                {
+                    "name": "SIGMA: Suspicious PowerShell",
+                    "pattern": (
+                        "title: Suspicious PowerShell\n"
+                        "detection:\n"
+                        "  selection:\n"
+                        "    EventID: 1\n"
+                        "  condition: selection"
+                    ),
+                    "pattern_type": "sigma",
+                    "update": True,
+                    "description": (
+                        "Source-backed SIGMA detection rule observed by misp at "
+                        "Attribute[0]."
+                    ),
+                    "confidence": 70,
+                    "x_opencti_score": 75,
+                    "createdBy": "identity--misp-via-narrowcti",
+                }
+            ],
+            api_client.indicator_adds,
+        )
+        self.assertIn(
+            {
+                "id": "report--internal",
+                "input": {
+                    "toId": "indicator--native",
+                    "relationship_type": "object",
+                    "update": True,
+                },
+            },
             api_client.report_object_refs,
         )
 
@@ -417,6 +466,23 @@ class OpenCTIExporterTests(unittest.TestCase):
         self.assertEqual(first_report["id"], second_report["id"])
         self.assertTrue(first_report["id"].startswith("report--"))
 
+    def test_report_lookup_refs_preserve_internal_whitespace(self):
+        refs = report_refs_from_bundle_json(
+            json.dumps(
+                {
+                    "objects": [
+                        {
+                            "type": "report",
+                            "id": "report--example",
+                            "name": "OSINT -  US CERT TA17-293A",
+                        }
+                    ]
+                }
+            )
+        )
+
+        self.assertEqual("OSINT -  US CERT TA17-293A", refs[0]["name"])
+
 
 class FakeOpenCTIClient:
     def __init__(
@@ -434,10 +500,52 @@ class FakeOpenCTIClient:
         self.patches = []
         self.security_platform_adds = []
         self.threat_actor_individual_adds = []
+        self.indicator_adds = []
         self.report_object_refs = []
 
     def query(self, query, variables=None):
         variables = variables or {}
+        if "identities" in query:
+            return {
+                "data": {
+                    "identities": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "identity--misp-via-narrowcti",
+                                    "standard_id": (
+                                        "identity--77777777-7777-4777-8777-"
+                                        "777777777777"
+                                    ),
+                                    "entity_type": "Organization",
+                                    "name": variables["filters"]["filters"][0][
+                                        "values"
+                                    ][0],
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        if "indicators" in query:
+            return {"data": {"indicators": {"edges": []}}}
+        if "indicatorAdd" in query:
+            self.indicator_adds.append(dict(variables.get("input") or {}))
+            return {
+                "data": {
+                    "indicatorAdd": {
+                        "id": "indicator--native",
+                        "standard_id": (
+                            "indicator--66666666-6666-4666-8666-666666666666"
+                        ),
+                        "entity_type": "Indicator",
+                        "name": variables.get("input", {}).get("name"),
+                        "pattern_type": variables.get("input", {}).get(
+                            "pattern_type"
+                        ),
+                    }
+                }
+            }
         if "threatActorsIndividuals" in query:
             edges = []
             if self.existing_threat_actor_individual:
@@ -647,6 +755,33 @@ def security_platform_candidate():
         "attributes": {
             "description": "Source-backed detection platform validation.",
             "security_platform_type": "SIEM",
+        },
+    }
+
+
+def sigma_detection_rule_candidate():
+    return {
+        "fingerprint": "detection-rule-sigma-powershell",
+        "entity_type": "detection_rule",
+        "value": "Suspicious PowerShell",
+        "name": "Suspicious PowerShell",
+        "stix_object_type": "indicator",
+        "relationship_type": "detects",
+        "source_key": "misp:misp",
+        "source_name": "misp",
+        "source_field": "Attribute[0]",
+        "confidence": 70,
+        "relationship_confidence": 70,
+        "attributes": {
+            "rule_type": "sigma",
+            "pattern_type": "sigma",
+            "pattern": (
+                "title: Suspicious PowerShell\n"
+                "detection:\n"
+                "  selection:\n"
+                "    EventID: 1\n"
+                "  condition: selection"
+            ),
         },
     }
 

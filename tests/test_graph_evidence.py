@@ -761,6 +761,53 @@ class GraphEvidenceTests(unittest.TestCase):
         self.assertEqual("Financial Services", sectors[0]["attributes"]["source_value"])
         self.assertTrue(sectors[0]["attributes"]["normalized_value"])
 
+    def test_builds_misp_cfr_victimology_meta_evidence(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_galaxies": [
+                    {
+                        "type": "threat-actor",
+                        "value": "Equation Group",
+                        "uuid": "cluster-actor",
+                        "galaxy_type": "threat-actor",
+                        "source_field": "Galaxy",
+                        "meta": {
+                            "cfr-target-category": ["Government", "Military"],
+                            "cfr-suspected-victims": ["Iran", "Afghanistan"],
+                        },
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-1",
+            title="MISP event",
+        )
+
+        sectors = [
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_sector"
+        ]
+        countries = [
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "target_country"
+        ]
+        self.assertEqual(["Government", "Military"], [record["value"] for record in sectors])
+        self.assertEqual(["Iran", "Afghanistan"], [record["value"] for record in countries])
+        self.assertTrue(
+            all(
+                record["source_field"] == "Galaxy.meta.cfr-target-category"
+                for record in sectors
+            )
+        )
+        self.assertTrue(
+            all(
+                record["source_field"] == "Galaxy.meta.cfr-suspected-victims"
+                for record in countries
+            )
+        )
+
     def test_builds_misp_threat_actor_individual_evidence_only_class(self):
         evidence = build_graph_evidence(
             {

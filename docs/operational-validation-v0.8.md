@@ -1119,3 +1119,148 @@ This intentionally does not infer Campaign objects from MISP event titles, OTX
 pulse names, report titles or feed names. The remaining evidence step is live
 OpenCTI validation using a real MISP or OTX payload that carries explicit
 campaign or operation fields.
+
+## Clean OpenCTI MISP Batch Validation
+
+On June 27, 2026, after a clean OpenCTI volume rebuild and a partial CVE
+backfill, NarrowCTI ran a controlled MISP collector batch against newly enabled
+local MISP feeds. The run intentionally used direct `event:<id>` queries so each
+MISP event was processed one at a time instead of relying on a broad `*` search.
+
+The validated runtime settings were:
+
+- `MISP_DRY_RUN=false`
+- `MISP_RUN_ONCE=true`
+- `NARROWCTI_GRAPH_EXPORT_MODE=export`
+- `NARROWCTI_OPENCTI_GRAPH_LOOKUP=true`
+- `MISP_OVERSIZED_EVENT_ACTION=skip`
+- `NARROWCTI_ALLOWED_TLP=white,clear,green`
+- `MISP_MAX_EVENTS_PER_RUN=1`
+- `MISP_MAX_ATTRIBUTES_PER_EVENT=500` for the CIRCL event and `1000` for the
+  ThreatFox events
+
+The controlled batch ingested these MISP events:
+
+| Event | Source | Result |
+| --- | --- | --- |
+| `4182` | CIRCL | `Phishing Campaign Targeting Hotel Customers in Luxembourg`, score `80`, 43 indicators imported. |
+| `5569` | abuse.ch ThreatFox | `ThreatFox IOCs for 2026-06-25`, score `70`, 664 indicators imported. |
+| `4391` | abuse.ch ThreatFox | `ThreatFox IOCs for 2026-06-24`, score `80`, 425 indicators imported. |
+| `4384` | abuse.ch ThreatFox | `ThreatFox IOCs for 2026-06-23`, score `80`, 473 indicators imported. |
+| `4308` | abuse.ch ThreatFox | `ThreatFox IOCs for 2026-06-22`, score `70`, 784 indicators imported. |
+| `4241` | abuse.ch ThreatFox | `ThreatFox IOCs for 2026-06-21`, score `80`, 269 indicators imported. |
+
+Together with the previous controlled MISP events `4076`, `4079` and `4082`,
+the local MISP state recorded nine processed events. OpenCTI API validation
+confirmed eight ThreatFox reports authored by `MISP via NarrowCTI`, one CIRCL
+phishing report authored by `MISP via NarrowCTI`, and 3,855 indicators after
+the batch.
+
+The CIRCL event provided richer graph evidence than the IoC-only ThreatFox
+events. OpenCTI materialized the report context with `Spearphishing Link -
+T1192`, sectors `Hospitality` and `Hotels`, indicators, and source-backed
+relationships. This validates the expected product behavior: source payloads
+that carry contextual metadata can populate the richer OpenCTI graph, while
+IoC-only feeds remain mostly report and indicator oriented.
+
+Resource validation after the batch stayed within the local lab guardrails:
+OpenCTI remained responsive over HTTP 200, no NarrowCTI containers were left
+running, RabbitMQ queues stayed empty, and Elasticsearch memory was observed at
+approximately 912 MiB in the local Docker Desktop environment.
+
+## MISP Rich Graph And Detection Rule Validation
+
+On June 27, 2026, after additional MISP feeds were enabled, NarrowCTI executed
+controlled one-event-at-a-time validation against historical MISP OSINT events.
+The purpose was to verify whether MISP metadata can populate OpenCTI graph tabs
+beyond Reports and raw Indicators.
+
+The first rich batch used direct MISP event queries for `528`, `455`, `7`,
+`393`, `489`, `361`, `374`, `443` and `849`. The batch validated these graph
+paths:
+
+- CFR victimology metadata is now mapped from MISP Galaxy fields such as
+  `cfr-target-category` and `cfr-suspected-victims` into target Sectors and
+  Countries.
+- Event `528` produced `Equation Group`, `EquationDrug`, target sectors
+  `Government` and `Military`, and 15 target Countries.
+- Event `455` produced `Blue Termite`, `CVE-2015-5119`, target sectors
+  `Government` and `Private sector`, and target country `Japan`.
+- Event `7` produced Campaign evidence for `Dust Storm`.
+- Events `393`, `489`, `374` and `849` validated detection-rule promotion as
+  OpenCTI Indicators for YARA/Sigma-style evidence when the source rule is
+  structurally usable.
+- Event `443` added `DarkHotel` with source-backed Country victimology.
+
+During this validation a real detection-rule hygiene issue was found. MISP
+rules without comments were previously named from the MISP attribute UUID,
+which created poor analyst-facing Indicator names. NarrowCTI now extracts the
+rule title from rule content:
+
+- YARA: `rule <Name>`
+- Sigma: `title: <Name>`
+- Snort/Suricata: `msg:"<Name>"`
+
+OpenCTI API validation confirmed that event `849` materialized five YARA
+Indicators with names such as `YARA: WannaCry_Ransomware` and report author
+`MISP via NarrowCTI`.
+
+The same event also exposed a source-data quality guardrail. Its Sigma
+attribute is malformed at the YAML level (`produc%WINDIR%\` instead of a valid
+Sigma `logsource` field). OpenCTI rejects that rule as an incorrect Sigma
+Indicator. NarrowCTI now validates Sigma shape before export, so malformed Sigma
+rules are not promised in the graph export plan. After the guardrail, event
+`849` produced exactly five YARA Indicators plus the related Malware context;
+the invalid Sigma stayed out of the OpenCTI graph.
+
+To validate a good Sigma path, event `1027` was processed next:
+
+- MISP title: `OSINT -  US CERT TA17-293A report - renamed PsExec execution
+  (sigma/SIEM ruleset)`.
+- Dry-run result: score `30`, one Sigma detection rule, one threat actor, three
+  sectors and ten countries.
+- Real ingest result: `11` entities and `15` relationships marked in the graph
+  dedup index.
+- OpenCTI validation confirmed the Indicator
+  `SIGMA: Detects renamed SysInternals tool execution with a binary named
+  ps.exe as used by Dragonfly APT group and documentied in TA17-293A report`
+  with pattern type `sigma` and author `MISP via NarrowCTI`.
+- The same Report contained the Sigma Indicator, `ENERGETIC BEAR`, sectors
+  `Energy`, `Private sector` and `Government`, plus countries including
+  `Turkey`, `Poland`, `Ireland`, `Japan`, `Germany`, `Spain`, `France`,
+  `United States`, `Italy` and `China`.
+
+A second report-context bug was also fixed during the event `1027` validation.
+The report name contains a double space after `OSINT -`. The native OpenCTI
+linker was normalizing internal whitespace before looking up the Report, which
+could prevent native objects such as Sigma Indicators from being attached back
+to the Report. Report lookup now preserves internal whitespace and retries
+existing Indicator lookup when native creation returns no node because OpenCTI
+already created the Indicator through STIX import.
+
+This closes the MISP detection-rule evidence gap for real YARA and Sigma
+payloads in the local OpenCTI lab. Snort, Suricata and PCRE remain supported by
+the same native fallback path and still need broader real-feed evidence when
+usable source events are available.
+
+## OTX Preflight Blocked By Upstream Timeout
+
+On June 27, 2026, OTX was not promoted to real ingestion after the MISP batch.
+This was intentional. A metadata-only preflight against the OTX search endpoint
+was executed before any pulse enrichment or OpenCTI export.
+
+The first preflight searched bounded radar terms such as `lummac2 2026`,
+`darkgate 2026`, `rhadamanthys 2026`, `remcos 2026`, `cobalt strike 2026` and
+`stealc 2026`; no usable candidates were returned. A second preflight without
+the year filter also returned no candidates for the tested radar terms.
+
+A final diagnostic run with explicit logging showed the actual failure mode:
+`https://otx.alienvault.com/api/v1/search/pulses` returned read timeouts for
+generic searches such as `malware`, `phishing`, `hotel phishing`, and even for
+the exact indicator `guest.saisuarneo.net`.
+
+Because the OTX search endpoint was timing out before a safe candidate could be
+selected, NarrowCTI did not run real OTX ingestion in this cycle. This preserves
+the v0.8 operational rule: OTX must pass preflight with a bounded, known-size
+candidate before enrichment and export are allowed, especially after prior
+tests showed that generic OTX searches can return very large stale pulses.

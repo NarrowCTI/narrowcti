@@ -3,6 +3,11 @@ import re
 import time
 from collections.abc import Mapping
 
+try:
+    import yaml
+except Exception:
+    yaml = None
+
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.contextual_scoring import build_contextual_score_evidence
 from core.feed_contract import FeedRunSummary
@@ -1474,16 +1479,15 @@ def normalize_misp_detection_rule(source):
     attribute = compact_mapping(source.get("attribute"))
     misp_object = compact_mapping(source.get("object"))
     rule_type = clean_text(attribute.get("type")).casefold()
-    rule_content = clean_text(attribute.get("value"))
+    raw_rule_content = str(attribute.get("value") or "").strip()
+    rule_content = raw_rule_content.strip()
     if rule_type not in DETECTION_RULE_TYPES:
         return {}
-    if not rule_content or is_truthy(attribute.get("deleted")):
+    if not clean_text(rule_content) or is_truthy(attribute.get("deleted")):
         return {}
-    title = clean_text(
-        attribute.get("comment")
-        or attribute.get("uuid")
-        or f"{rule_type} detection rule"
-    )
+    if rule_type == "sigma" and not sigma_rule_has_valid_shape(rule_content):
+        return {}
+    title = detection_rule_title(rule_type, raw_rule_content, attribute)
     return compact_mapping(
         {
             "value": title,
@@ -1500,6 +1504,76 @@ def normalize_misp_detection_rule(source):
             "source_field": source.get("source_field"),
         }
     )
+
+
+def detection_rule_title(rule_type, rule_content, attribute):
+    comment = clean_text(attribute.get("comment"))
+    if comment:
+        return comment
+
+    extracted = extract_detection_rule_name(rule_type, rule_content)
+    if extracted:
+        return extracted
+
+    return "detection rule"
+
+
+def extract_detection_rule_name(rule_type, rule_content):
+    if rule_type == "sigma":
+        match = re.search(r"(?im)^\s*title\s*:\s*(.+?)\s*$", rule_content)
+        if match:
+            return clean_text(match.group(1).strip("'\""))
+
+    if rule_type == "yara":
+        match = re.search(
+            r"(?im)^\s*(?:private\s+)?rule\s+([A-Za-z0-9_.$-]+)",
+            rule_content,
+        )
+        if match:
+            return clean_text(match.group(1))
+
+    if rule_type in {"snort", "suricata"}:
+        match = re.search(r'msg\s*:\s*"([^"]+)"', rule_content, flags=re.IGNORECASE)
+        if match:
+            return clean_text(match.group(1))
+
+    return ""
+
+
+def sigma_rule_has_valid_shape(rule_content):
+    content = str(rule_content or "").strip()
+    if not content:
+        return False
+    if yaml:
+        try:
+            parsed = yaml.safe_load(content)
+        except Exception:
+            return False
+        if not isinstance(parsed, Mapping):
+            return False
+        return bool(parsed.get("title") and parsed.get("detection"))
+
+    if not re.search(r"(?im)^\s*title\s*:", content):
+        return False
+    if not re.search(r"(?im)^\s*detection\s*:", content):
+        return False
+    in_block_scalar = None
+    for line in content.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        stripped = line.strip()
+        if in_block_scalar is not None:
+            if indent > in_block_scalar:
+                continue
+            in_block_scalar = None
+        if stripped.startswith("- "):
+            continue
+        if ":" not in stripped:
+            return False
+        if stripped.endswith("|") or stripped.endswith(">"):
+            in_block_scalar = indent
+    return True
 
 
 def deduplicate_misp_detection_rules(rules):

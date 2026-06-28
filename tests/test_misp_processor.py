@@ -948,7 +948,13 @@ class MISPProcessorTests(unittest.TestCase):
                 "uuid": "attribute-rule-1",
                 "type": "sigma",
                 "category": "Payload delivery",
-                "value": "title: Suspicious PowerShell",
+                "value": (
+                    "title: Suspicious PowerShell\n"
+                    "detection:\n"
+                    "  selection:\n"
+                    "    EventID: 1\n"
+                    "  condition: selection"
+                ),
                 "comment": "Suspicious PowerShell",
                 "Tag": [{"name": "tlp:green"}],
             },
@@ -958,19 +964,73 @@ class MISPProcessorTests(unittest.TestCase):
                 "value": "rule DeletedRule { condition: true }",
                 "deleted": "1",
             },
+            {
+                "uuid": "attribute-snort-1",
+                "type": "snort",
+                "category": "Network activity",
+                "value": 'alert tcp any any -> any any (msg:"Adobe Flash Exploit"; sid:1;)',
+            },
+            {
+                "uuid": "attribute-sigma-2",
+                "type": "sigma",
+                "category": "Payload delivery",
+                "value": (
+                    "title: WannaCry Ransomware\n"
+                    "description: Detects activity\n"
+                    "detection:\n"
+                    "  selection:\n"
+                    "    EventID: 1\n"
+                    "  condition: selection"
+                ),
+            },
+            {
+                "uuid": "attribute-invalid-sigma",
+                "type": "sigma",
+                "category": "Payload delivery",
+                "value": (
+                    "title: Broken Sigma\n"
+                    "logsource:\n"
+                    "    produc%WINDIR%\\\n"
+                    "detection:\n"
+                    "    condition: selection"
+                ),
+            },
         ]
         prepared = SimpleNamespace(event=event, score_details={})
 
         metadata = decision_metadata(candidate_ref, prepared)
 
-        self.assertEqual(1, len(metadata["misp_detection_rules"]))
+        self.assertEqual(3, len(metadata["misp_detection_rules"]))
         self.assertEqual("sigma", metadata["misp_detection_rules"][0]["rule_type"])
         self.assertEqual(
-            "title: Suspicious PowerShell",
+            (
+                "title: Suspicious PowerShell\n"
+                "detection:\n"
+                "  selection:\n"
+                "    EventID: 1\n"
+                "  condition: selection"
+            ),
             metadata["misp_detection_rules"][0]["pattern"],
         )
+        self.assertEqual("snort", metadata["misp_detection_rules"][1]["rule_type"])
+        self.assertEqual(
+            "Adobe Flash Exploit",
+            metadata["misp_detection_rules"][1]["value"],
+        )
+        self.assertEqual("WannaCry Ransomware", metadata["misp_detection_rules"][2]["value"])
+        self.assertEqual(
+            (
+                "title: WannaCry Ransomware\n"
+                "description: Detects activity\n"
+                "detection:\n"
+                "  selection:\n"
+                "    EventID: 1\n"
+                "  condition: selection"
+            ),
+            metadata["misp_detection_rules"][2]["pattern"],
+        )
         graph_evidence = metadata["graph_evidence"]
-        self.assertEqual(1, graph_evidence["counts"]["detection_rule"])
+        self.assertEqual(3, graph_evidence["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 record["entity_type"] == "detection_rule"
@@ -980,12 +1040,44 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
         graph_candidates = metadata["graph_candidates"]
-        self.assertEqual(1, graph_candidates["counts"]["detection_rule"])
+        self.assertEqual(3, graph_candidates["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 candidate["entity_type"] == "detection_rule"
                 and candidate["relationship_type"] == "detects"
-                and candidate["attributes"]["pattern"] == "title: Suspicious PowerShell"
+                and candidate["attributes"]["pattern"]
+                == (
+                    "title: Suspicious PowerShell\n"
+                    "detection:\n"
+                    "  selection:\n"
+                    "    EventID: 1\n"
+                    "  condition: selection"
+                )
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["value"] == "Adobe Flash Exploit"
+                and candidate["attributes"]["pattern_type"] == "snort"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["value"] == "WannaCry Ransomware"
+                and candidate["attributes"]["pattern_type"] == "sigma"
+                and candidate["attributes"]["pattern"]
+                == (
+                    "title: WannaCry Ransomware\n"
+                    "description: Detects activity\n"
+                    "detection:\n"
+                    "  selection:\n"
+                    "    EventID: 1\n"
+                    "  condition: selection"
+                )
                 for candidate in graph_candidates["candidates"]
             )
         )

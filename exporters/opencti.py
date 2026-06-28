@@ -5,6 +5,7 @@ from core.opencti_graph_lookup import filter_eq, first_node
 from exporters.stix_builder import (
     build_curated_report_bundle,
     build_report_bundle,
+    detection_rule_indicator_name,
     graph_accepted_candidates,
     graph_candidate_description,
     graph_description_hydration_requests,
@@ -137,6 +138,49 @@ mutation NarrowCTIThreatActorIndividualAdd(
 }
 """
 
+IDENTITY_LOOKUP_QUERY = """
+query NarrowCTIIdentityLookup($filters: FilterGroup) {
+  identities(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+      }
+    }
+  }
+}
+"""
+
+INDICATOR_LOOKUP_QUERY = """
+query NarrowCTIIndicatorLookup($filters: FilterGroup) {
+  indicators(first: 1, filters: $filters) {
+    edges {
+      node {
+        id
+        standard_id
+        entity_type
+        name
+        pattern_type
+      }
+    }
+  }
+}
+"""
+
+INDICATOR_ADD_MUTATION = """
+mutation NarrowCTIIndicatorAdd($input: IndicatorAddInput!) {
+  indicatorAdd(input: $input) {
+    id
+    standard_id
+    entity_type
+    name
+    pattern_type
+  }
+}
+"""
+
 REPORT_LOOKUP_QUERY = """
 query NarrowCTIReportExportLookup($filters: FilterGroup) {
   reports(first: 1, filters: $filters) {
@@ -207,10 +251,20 @@ def send_bundle(
             api_client,
             graph_candidate_policy,
         )
-        link_native_security_platforms_to_reports(
+        native_detection_rules = export_native_detection_rule_indicators(
+            api_client,
+            graph_candidate_policy,
+            identity_name=identity_name,
+            score=score,
+        )
+        link_native_objects_to_reports(
             api_client,
             bundle_json,
-            [*native_security_platforms, *native_threat_actor_individuals],
+            [
+                *native_security_platforms,
+                *native_threat_actor_individuals,
+                *native_detection_rules,
+            ],
         )
         hydrate_existing_graph_descriptions(
             api_client,
@@ -276,6 +330,78 @@ def export_native_security_platforms(api_client, graph_candidate_policy):
         node = ((result.get("data") or {}).get("securityPlatformAdd")) or {}
         if node:
             exported.append(node)
+    return exported
+
+
+def export_native_detection_rule_indicators(
+    api_client,
+    graph_candidate_policy,
+    identity_name="NarrowCTI Gateway",
+    score=None,
+):
+    exported = []
+    author = find_identity(api_client, identity_name)
+    for candidate in native_detection_rule_indicator_candidates(graph_candidate_policy):
+        attributes = candidate_attributes(candidate)
+        name = detection_rule_indicator_name(graph_candidate_name(candidate), attributes)
+        pattern = clean_multiline_string(attributes.get("pattern"))
+        pattern_type = clean_string(
+            attributes.get("pattern_type") or attributes.get("rule_type")
+        ).lower()
+        if not name or not pattern or not pattern_type:
+            continue
+        existing_id = candidate_existing_id(candidate)
+        if existing_id:
+            exported.append(
+                {
+                    "id": existing_id,
+                    "standard_id": clean_string(attributes.get("opencti_existing_ref")),
+                    "entity_type": "Indicator",
+                    "name": name,
+                    "pattern_type": pattern_type,
+                }
+            )
+            continue
+        existing = find_indicator(api_client, name)
+        if existing:
+            exported.append(existing)
+            continue
+        input_payload = {
+            "name": name,
+            "pattern": pattern,
+            "pattern_type": pattern_type,
+            "update": True,
+        }
+        description = clean_string(
+            attributes.get("description")
+            or graph_candidate_description(candidate, attributes)
+        )
+        confidence = graph_candidate_confidence(candidate)
+        if description:
+            input_payload["description"] = description
+        if confidence is not None:
+            input_payload["confidence"] = confidence
+        if score is not None:
+            input_payload["x_opencti_score"] = score
+        if author.get("id"):
+            input_payload["createdBy"] = author["id"]
+        try:
+            result = api_client.query(
+                INDICATOR_ADD_MUTATION,
+                {"input": input_payload},
+            )
+        except Exception:
+            existing = find_indicator(api_client, name)
+            if existing:
+                exported.append(existing)
+            continue
+        node = ((result.get("data") or {}).get("indicatorAdd")) or {}
+        if node:
+            exported.append(node)
+            continue
+        existing = find_indicator(api_client, name)
+        if existing:
+            exported.append(existing)
     return exported
 
 
@@ -357,12 +483,12 @@ def export_native_threat_actor_individuals(api_client, graph_candidate_policy):
     return exported
 
 
-def link_native_security_platforms_to_reports(
+def link_native_objects_to_reports(
     api_client,
     bundle_json,
-    security_platforms,
+    objects,
 ):
-    if not security_platforms:
+    if not objects:
         return []
     reports = report_nodes_for_bundle(api_client, bundle_json)
     linked = []
@@ -370,7 +496,7 @@ def link_native_security_platforms_to_reports(
         report_id = clean_string(report.get("id"))
         if not report_id:
             continue
-        for platform in security_platforms:
+        for platform in objects:
             platform_id = clean_string(platform.get("id"))
             if not platform_id:
                 continue
@@ -394,6 +520,10 @@ def link_native_security_platforms_to_reports(
             if node:
                 linked.append(node)
     return linked
+
+
+def link_native_security_platforms_to_reports(api_client, bundle_json, security_platforms):
+    return link_native_objects_to_reports(api_client, bundle_json, security_platforms)
 
 
 def report_nodes_for_bundle(api_client, bundle_json):
@@ -423,7 +553,7 @@ def report_refs_from_bundle_json(bundle_json):
         reports.append(
             {
                 "standard_id": clean_string(item.get("id")),
-                "name": clean_string(item.get("name")),
+                "name": clean_edge_string(item.get("name")),
             }
         )
     return reports
@@ -460,6 +590,46 @@ def native_threat_actor_individual_candidates(graph_candidate_policy):
             continue
         candidates.append(candidate)
     return candidates
+
+
+def native_detection_rule_indicator_candidates(graph_candidate_policy):
+    candidates = []
+    native_pattern_types = {"sigma", "snort", "suricata", "pcre"}
+    for candidate in graph_accepted_candidates(graph_candidate_policy):
+        if clean_string(candidate.get("stix_object_type")).lower() != "indicator":
+            continue
+        if clean_string(candidate.get("entity_type")).lower() != "detection_rule":
+            continue
+        attributes = candidate_attributes(candidate)
+        pattern_type = clean_string(
+            attributes.get("pattern_type") or attributes.get("rule_type")
+        ).lower()
+        if pattern_type not in native_pattern_types:
+            continue
+        candidates.append(candidate)
+    return candidates
+
+
+def find_identity(api_client, name):
+    try:
+        result = api_client.query(
+            IDENTITY_LOOKUP_QUERY,
+            {"filters": filter_eq("name", name)},
+        )
+    except Exception:
+        return {}
+    return first_node(result, "identities")
+
+
+def find_indicator(api_client, name):
+    try:
+        result = api_client.query(
+            INDICATOR_LOOKUP_QUERY,
+            {"filters": filter_eq("name", name)},
+        )
+    except Exception:
+        return {}
+    return first_node(result, "indicators")
 
 
 def find_security_platform(api_client, name):
@@ -542,6 +712,14 @@ def candidate_attributes(candidate):
 
 def clean_string(value):
     return " ".join(str(value or "").strip().split())
+
+
+def clean_multiline_string(value):
+    return str(value or "").strip()
+
+
+def clean_edge_string(value):
+    return str(value or "").strip()
 
 
 def clean_list_values(*values):
