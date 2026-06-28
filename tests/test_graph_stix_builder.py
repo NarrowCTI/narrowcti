@@ -716,6 +716,40 @@ class GraphStixBuilderTests(unittest.TestCase):
             )
         )
 
+    def test_autonomous_system_without_source_name_uses_as_number_as_name(self):
+        bundle, summary = build_graph_report_bundle(
+            "Curated ASN report",
+            "ASN-only context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    {
+                        "fingerprint": "asn-only",
+                        "entity_type": "autonomous_system",
+                        "value": "AS64513",
+                        "stix_object_type": "autonomous-system",
+                        "relationship_type": "related-to",
+                        "source_key": "misp:misp",
+                        "source_name": "misp-object",
+                        "source_field": "Attribute[5]",
+                        "confidence": 70,
+                        "relationship_confidence": 70,
+                        "attributes": {"asn": 64513},
+                    }
+                ]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        autonomous_system = objects_by_type["autonomous-system"][0]
+        self.assertEqual(1, summary["object_counts"]["autonomous-system"])
+        self.assertEqual(64513, autonomous_system["number"])
+        self.assertEqual("AS64513", autonomous_system["name"])
+
     def test_builds_ipv6_belongs_to_autonomous_system_relationship(self):
         bundle, summary = build_graph_report_bundle(
             "Curated IPv6 infrastructure report",

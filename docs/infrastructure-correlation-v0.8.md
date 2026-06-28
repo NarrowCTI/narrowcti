@@ -351,7 +351,7 @@ source-payload shape gap for top-level `AS` and `domain|ip` attributes:
 | Evidence | Result |
 | --- | --- |
 | MISP `event:1442` | Top-level `AS=327712` promoted as Autonomous-System evidence |
-| OpenCTI API | `Report -> related-to -> Autonomous-System` relationship returned with destination entity type `Autonomous-System` and number `327712` |
+| OpenCTI API | `Report -> related-to -> Autonomous-System` relationship returned with destination entity type `Autonomous-System` and number `327712`; NarrowCTI emits fallback name `AS327712` when the source does not provide an AS organization name |
 | MISP `event:5280` | 49 top-level `domain|ip` attributes promoted as Infrastructure evidence |
 | OpenCTI API | Infrastructure `MISP domain-ip arabica.podzone.net`, Domain-Name `arabica.podzone.net`, IPv4 `178.128.103.24` and report `OceanLotus - WateringHole - Framework B 2018` returned with author `MISP via NarrowCTI` |
 | Graph export summary | `event:5280` created 145 entities and 147 relationships in the OpenCTI lab |

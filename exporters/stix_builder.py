@@ -902,12 +902,13 @@ def autonomous_system_candidate_to_stix(candidate, custom_properties):
     number = autonomous_system_number(candidate, attributes)
     if number is None:
         return None
-    name = clean_string(
+    name = autonomous_system_name(
+        number,
         attributes.get("as_name")
         or attributes.get("asn_name")
         or attributes.get("name")
         or candidate.get("name")
-        or candidate.get("value")
+        or candidate.get("value"),
     )
     rir = clean_string(attributes.get("rir"))
     properties = {
@@ -916,7 +917,7 @@ def autonomous_system_candidate_to_stix(candidate, custom_properties):
         "custom_properties": custom_properties,
         "allow_custom": True,
     }
-    if name and name != f"AS{number}":
+    if name:
         properties["name"] = name
     if rir:
         properties["rir"] = rir
@@ -936,6 +937,18 @@ def autonomous_system_number(candidate, attributes):
         if parsed is not None:
             return parsed
     return None
+
+
+def autonomous_system_name(number, value):
+    fallback = f"AS{number}"
+    name = clean_string(value)
+    if not name:
+        return fallback
+    if name.isdigit() and int(name) == int(number):
+        return fallback
+    if re.fullmatch(rf"AS\s*{int(number)}", name, re.IGNORECASE):
+        return fallback
+    return name
 
 
 def parse_autonomous_system_number(value):

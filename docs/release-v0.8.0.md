@@ -623,8 +623,9 @@ OpenCTI tab/export coverage is tracked in
   Vulnerability objects.
 - Extended the same closure validation with real MISP events `1442` and `5280`.
   Event `1442` validated top-level `AS` promotion as an OpenCTI
-  `Autonomous-System` related to the imported report. Event `5280` validated
-  top-level `domain|ip` promotion with 49 Infrastructure objects, 98
+  `Autonomous-System` related to the imported report, with fallback display
+  name `AS327712` when the source only provides the AS number. Event `5280`
+  validated top-level `domain|ip` promotion with 49 Infrastructure objects, 98
   observables and 147 relationships, including API-confirmed Infrastructure
   `MISP domain-ip arabica.podzone.net`, Domain-Name `arabica.podzone.net` and
   IPv4 `178.128.103.24`.

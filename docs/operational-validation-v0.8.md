@@ -1504,8 +1504,10 @@ Dry-run evidence then confirmed the source mappings before export:
   `80` and `Infrastructure -> consists-of -> IPv4-Addr` provenance.
 - `event:1442`, `On-memory post exploit payloads from encoded binary`,
   confirmed that a top-level MISP `AS` attribute promotes an
-  Autonomous-System candidate `AS327712` and keeps collector/source tags held
-  by graph policy instead of creating noisy graph objects.
+  Autonomous-System candidate `AS327712`, sets a fallback display name of
+  `AS327712` when the source has no organization name, and keeps
+  collector/source tags held by graph policy instead of creating noisy graph
+  objects.
 - `event:5280`, `OceanLotus - WateringHole - Framework B 2018`, confirmed
   that top-level `domain|ip` attributes promote source-backed Infrastructure
   objects such as `MISP domain-ip arabica.podzone.net`, plus Domain-Name and
@@ -1534,7 +1536,11 @@ confirmed:
   `MISP via NarrowCTI`, with corresponding IPv4 Observables.
 - `event:1442` created a queryable `Report -> related-to ->
   Autonomous-System` relationship to OpenCTI entity type `Autonomous-System`
-  with number `327712`; the report author is `MISP via NarrowCTI`.
+  with number `327712`; the report author is `MISP via NarrowCTI`. When the
+  source does not provide an AS organization name, NarrowCTI now emits the
+  Autonomous-System `name` as `AS327712` so OpenCTI does not display only the
+  bare number. Post-fix API validation returned observable value `AS327712`,
+  number `327712` and name `AS327712`.
 - `event:5280` created 49 domain/IP-backed Infrastructure objects, 98
   observables and 147 graph relationships. OpenCTI API validation confirmed
   Infrastructure `MISP domain-ip arabica.podzone.net`, Domain-Name observable
