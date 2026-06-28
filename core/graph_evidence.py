@@ -158,11 +158,13 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
             misp_timeline,
         )
     )
+    victimology_anchor = misp_victimology_relationship_anchor(metadata)
     records.extend(
         with_default_timeline(
             misp_victimology_evidence(
                 metadata.get("misp_victimology"),
                 source_key,
+                victimology_anchor,
             ),
             misp_timeline,
         )
@@ -1378,7 +1380,7 @@ def misp_campaign_evidence(campaigns, source_key=""):
     return records
 
 
-def misp_victimology_evidence(victimology_records, source_key=""):
+def misp_victimology_evidence(victimology_records, source_key="", relationship_anchor=None):
     records = []
     for item in victimology_records or []:
         item = compact_mapping(item)
@@ -1401,6 +1403,9 @@ def misp_victimology_evidence(victimology_records, source_key=""):
                 "tags": item.get("tags"),
             }
         )
+        anchor = compact_mapping(relationship_anchor)
+        if anchor and not attributes.get("relationship_source_value"):
+            attributes.update(anchor)
         normalized, attributes = normalize_evidence_value(
             entity_type,
             value,
@@ -1420,6 +1425,83 @@ def misp_victimology_evidence(victimology_records, source_key=""):
         if record:
             records.append(record)
     return records
+
+
+def misp_victimology_relationship_anchor(metadata):
+    metadata = compact_mapping(metadata)
+    campaign_anchor = single_misp_campaign_anchor(metadata.get("misp_campaigns"))
+    if campaign_anchor:
+        return campaign_anchor
+    for entity_type, stix_object_type in (
+        ("campaign", "campaign"),
+        ("intrusion_set", "intrusion-set"),
+        ("threat_actor", "threat-actor"),
+    ):
+        anchor = single_misp_galaxy_anchor(
+            metadata.get("misp_galaxies"),
+            entity_type,
+            stix_object_type,
+        )
+        if anchor:
+            return anchor
+    return {}
+
+
+def single_misp_campaign_anchor(campaigns):
+    anchors = []
+    for campaign in campaigns or []:
+        campaign = compact_mapping(campaign)
+        value = clean_string(campaign.get("value"))
+        if not value:
+            continue
+        anchors.append(
+            {
+                "relationship_source_stix_object_type": "campaign",
+                "relationship_source_value": value,
+                "relationship_source_field": (
+                    clean_string(campaign.get("source_field")) or "misp_campaigns"
+                ),
+            }
+        )
+    return single_unique_anchor(anchors)
+
+
+def single_misp_galaxy_anchor(clusters, entity_type, stix_object_type):
+    anchors = []
+    for cluster in clusters or []:
+        cluster = compact_mapping(cluster)
+        classified_entity_type, _ = classify_misp_galaxy(cluster)
+        if classified_entity_type != entity_type:
+            continue
+        value = misp_galaxy_value(entity_type, cluster)
+        if not value:
+            continue
+        anchors.append(
+            {
+                "relationship_source_stix_object_type": stix_object_type,
+                "relationship_source_value": value,
+                "relationship_source_field": (
+                    clean_string(cluster.get("source_field")) or "misp_galaxies"
+                ),
+            }
+        )
+    return single_unique_anchor(anchors)
+
+
+def single_unique_anchor(anchors):
+    unique = {}
+    for anchor in anchors:
+        anchor = compact_mapping(anchor)
+        key = (
+            clean_string(anchor.get("relationship_source_stix_object_type")).casefold(),
+            clean_string(anchor.get("relationship_source_value")).casefold(),
+        )
+        if not all(key):
+            continue
+        unique[key] = anchor
+    if len(unique) != 1:
+        return {}
+    return next(iter(unique.values()))
 
 
 def misp_event_report_evidence(event_reports, source_key=""):

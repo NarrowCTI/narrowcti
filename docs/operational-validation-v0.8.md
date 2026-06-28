@@ -546,6 +546,14 @@ edges only when a real source endpoint exists, for example
 `Campaign -> targets -> Organization`, `Threat Actor -> uses -> Malware` or
 `Infrastructure -> consists-of -> Observable`.
 
+Follow-up unit validation turned this finding into a guarded export behavior.
+Explicit MISP victimology such as `target-org` can now inherit a semantic source
+anchor only when the same event contains exactly one trusted Campaign,
+Intrusion Set or Threat Actor endpoint. The validated campaign case produces
+`Campaign -> targets -> Organization` in the STIX graph bundle. If the event has
+multiple possible Campaign anchors, NarrowCTI deliberately keeps the
+victimology as Report context and does not choose an arbitrary semantic source.
+
 Follow-up Infrastructure API validation on June 27, 2026 reconfirmed the
 already ingested MISP `event:1649` chain. OpenCTI returned one Infrastructure
 `MISP ip-port 137.184.181.252` authored by `MISP via NarrowCTI`, with

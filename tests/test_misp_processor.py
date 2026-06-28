@@ -1,3 +1,4 @@
+import json
 import ipaddress
 import unittest
 from types import SimpleNamespace
@@ -9,6 +10,7 @@ from connectors.misp.processor import (
 )
 from core.feed_contract import FeedCandidate, FeedRunSummary, FeedSource
 from core.ip_asn_enrichment import IPASNRecord, OfflineIPASNEnricher
+from exporters.stix_builder import build_graph_report_bundle
 
 
 MISP_TEST_SOURCE = FeedSource(name="MISP", source_type="external_import", provider="MISP")
@@ -694,6 +696,110 @@ class MISPProcessorTests(unittest.TestCase):
                 for item in graph_candidates["candidates"]
             )
         )
+
+    def test_decision_metadata_anchors_explicit_victimology_to_single_campaign(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-campaign-1",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "Operation Example",
+            },
+            {
+                "uuid": "attribute-target-org",
+                "type": "target-org",
+                "category": "Targeting data",
+                "value": "Example Energy Co",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        accepted = [
+            item
+            for item in metadata["graph_candidate_policy"]["accepted"]
+            if item["entity_type"] in {"campaign", "target_organization"}
+        ]
+        organization = next(
+            item for item in accepted if item["entity_type"] == "target_organization"
+        )
+        self.assertEqual(
+            "campaign",
+            organization["attributes"]["relationship_source_stix_object_type"],
+        )
+        self.assertEqual(
+            "Operation Example",
+            organization["attributes"]["relationship_source_value"],
+        )
+        bundle, summary = build_graph_report_bundle(
+            "Curated graph report",
+            "graph context",
+            80,
+            graph_candidate_policy={"accepted": accepted},
+        )
+
+        data = json.loads(bundle.serialize())
+        campaign_object = next(
+            item for item in data["objects"] if item["type"] == "campaign"
+        )
+        organization_object = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "identity" and item["name"] == "Example Energy Co"
+        )
+        target_relationship = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "relationship" and item["relationship_type"] == "targets"
+        )
+        self.assertEqual(campaign_object["id"], target_relationship["source_ref"])
+        self.assertEqual(organization_object["id"], target_relationship["target_ref"])
+        self.assertEqual(
+            "semantic",
+            target_relationship["x_narrowcti_relationship_mode"],
+        )
+        self.assertEqual(1, summary["semantic_relationship_count"])
+
+    def test_decision_metadata_does_not_anchor_victimology_to_multiple_campaigns(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-campaign-1",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "Operation Alpha",
+            },
+            {
+                "uuid": "attribute-campaign-2",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "Operation Beta",
+            },
+            {
+                "uuid": "attribute-target-org",
+                "type": "target-org",
+                "category": "Targeting data",
+                "value": "Example Energy Co",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        organization = next(
+            item
+            for item in metadata["graph_candidates"]["candidates"]
+            if item["entity_type"] == "target_organization"
+        )
+        self.assertNotIn(
+            "relationship_source_stix_object_type",
+            organization["attributes"],
+        )
+        self.assertNotIn("relationship_source_value", organization["attributes"])
 
     def test_decision_metadata_extracts_misp_event_reports(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
