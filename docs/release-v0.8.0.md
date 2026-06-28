@@ -758,6 +758,11 @@ OpenCTI tab/export coverage is tracked in
   compact Graph Validation section in text/HTML and raise
   `curation-graph-validation-incomplete` when expected Diamond or Kill Chain
   coverage is still missing.
+- Extended curation and diagnostics graph evidence summaries with held graph
+  reasons. Relationship candidates held by
+  `relationship_requires_opencti_validation` now remain visible in reports and
+  produce a deterministic recommendation to validate those OpenCTI relationship
+  candidates before broader graph promotion.
 - Added `scripts/capture-resource-posture.ps1` to generate local Docker
   resource posture evidence for the operational validation checklist. The helper
   captures Docker stats, Docker disk posture command completion and container

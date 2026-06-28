@@ -200,6 +200,8 @@ Current recommendation examples:
 - Complete OpenCTI relationship coverage when the relationship audit finds an
   object but expected Diamond quadrants or Kill Chain evidence are still
   missing.
+- Validate held OpenCTI relationship candidates when graph evidence shows
+  `relationship_requires_opencti_validation`.
 
 ## Product Boundary
 
@@ -247,9 +249,13 @@ The graph evidence summary includes source-level candidate count, accepted and
 held graph candidates, OpenCTI lookup matches, would-create object/relationship
 counts and density ratios. It is evidence for review and promotion readiness,
 not an automatic export trigger. It also surfaces the top accepted graph object
-types, accepted relationship types, OpenCTI lookup object types and STIX preview
-object/relationship types so an analyst can see whether a source is carrying
-ATT&CK, malware, vulnerability or relationship-rich context before promotion.
+types, accepted relationship types, held reasons, OpenCTI lookup object types
+and STIX preview object/relationship types so an analyst can see whether a
+source is carrying ATT&CK, malware, vulnerability or relationship-rich context
+before promotion. Held reasons such as
+`relationship_requires_opencti_validation` are intentional governance evidence:
+they show relationship candidates that NarrowCTI could explain but must not
+promote until OpenCTI behavior and source semantics are validated.
 
 The executive graph-readiness summary reads the current decision-audit
 `graph_stix_preview` counters: preview record count as STIX bundle count,

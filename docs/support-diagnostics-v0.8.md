@@ -151,10 +151,10 @@ The current snapshot contains:
 - `policy_insights`: rendered text/HTML summary of source-level policy tuning
   signals from repeated release/reject patterns, including top analyst review
   reasons, repeated quarantine reasons, source score summaries, graph evidence
-  density, graph object/relationship type composition and context-quality
-  metrics carried from the curation report. The policy view also carries the
-  same top ATT&CK, arsenal, threat actor/intrusion set and target-sector
-  narrative evidence.
+  density, graph object/relationship type composition, held graph reasons and
+  context-quality metrics carried from the curation report. The policy view
+  also carries the same top ATT&CK, arsenal, threat actor/intrusion set and
+  target-sector narrative evidence.
 - `operational_validation`: rendered text/HTML summary of the v0.8 operational
   validation checklist, including pass/fail/warn/needs-evidence state. When
   configured, it uses the same manual evidence JSON file as

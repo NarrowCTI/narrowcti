@@ -448,6 +448,10 @@ class GatewayCurationReportTests(unittest.TestCase):
             insight["graph_evidence"]["top_accepted_relationships"],
         )
         self.assertEqual(
+            [{"type": "relationship_requires_opencti_validation", "count": 3}],
+            insight["graph_evidence"]["top_held_reasons"],
+        )
+        self.assertEqual(
             [{"type": "attack-pattern", "count": 3}],
             insight["graph_evidence"]["top_lookup_objects"],
         )
@@ -551,6 +555,10 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("scores=records=3 min=30 max=80 average=50.0 low=2", text)
         self.assertIn("graph=candidates=6 density=2.0", text)
         self.assertIn("accepted_object_types=attack-pattern:3", text)
+        self.assertIn(
+            "held_reasons=relationship_requires_opencti_validation:3",
+            text,
+        )
         self.assertIn("stix_relationship_types=uses:6", text)
         self.assertIn(
             "narrative=records=3 entities=12 attack_patterns=Command and Scripting Interpreter:3",
@@ -567,6 +575,7 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertIn("top_reasons=reject:Out of scope=2", text)
         self.assertIn("Out of scope", html)
         self.assertIn("review-source-policy-insights", recommendation_codes)
+        self.assertIn("validate-held-opencti-relationships", recommendation_codes)
 
     def test_policy_insights_identify_frequent_analyst_releases(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -908,6 +917,7 @@ def graph_metadata():
             "would_create_relationship_count": 2,
             "accepted_object_counts": {"attack-pattern": 1},
             "accepted_relationship_counts": {"uses": 2},
+            "held_reasons": {"relationship_requires_opencti_validation": 1},
             "actions": [{"action": "would_create"}, {"action": "held"}],
         },
         "graph_export_plan_lookup_matches": [

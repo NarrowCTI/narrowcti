@@ -307,6 +307,19 @@ def build_recommendations(
                 "Source-level review patterns indicate policy tuning may be needed before broader promotion.",
             )
         )
+    if any(
+        graph_evidence_has_held_reason(
+            insight.get("graph_evidence"),
+            "relationship_requires_opencti_validation",
+        )
+        for insight in policy_insights
+    ):
+        recommendations.append(
+            recommendation(
+                "validate-held-opencti-relationships",
+                "Validate held OpenCTI relationship candidates before enabling broader graph promotion.",
+            )
+        )
     relationship_audit = (graph_validation or {}).get("relationship_audit") or {}
     if (
         relationship_audit.get("available")
@@ -326,6 +339,18 @@ def recommendation(code, message):
         "code": code,
         "message": message,
     }
+
+
+def graph_evidence_has_held_reason(graph_evidence, reason):
+    expected = str(reason or "").strip()
+    if not expected:
+        return False
+    for entry in (graph_evidence or {}).get("top_held_reasons") or []:
+        if str(entry.get("type") or "").strip() == expected and int(
+            entry.get("count", 0) or 0
+        ) > 0:
+            return True
+    return False
 
 
 def build_curation_report_from_files(
@@ -566,6 +591,7 @@ def empty_graph_evidence_summary():
         "lookup_match_rate_pct": 0.0,
         "top_accepted_objects": [],
         "top_accepted_relationships": [],
+        "top_held_reasons": [],
         "top_lookup_objects": [],
         "top_stix_objects": [],
         "top_stix_relationships": [],
@@ -626,6 +652,7 @@ def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
     )
     accepted_object_counts = graph_export.get("accepted_object_counts") or {}
     accepted_relationship_counts = graph_export.get("accepted_relationship_counts") or {}
+    held_reasons = graph_export.get("held_reasons") or {}
     lookup_object_counts = graph_export.get("lookup_match_object_counts") or {}
     stix_object_counts = graph_preview.get("object_counts") or {}
     stix_relationship_counts = graph_preview.get("relationship_counts") or {}
@@ -653,6 +680,7 @@ def build_graph_evidence_summary(graph_export, graph_preview, decision_records):
         "lookup_match_rate_pct": percent(lookup_match_count, accepted_count),
         "top_accepted_objects": top_count_entries(accepted_object_counts),
         "top_accepted_relationships": top_count_entries(accepted_relationship_counts),
+        "top_held_reasons": top_count_entries(held_reasons),
         "top_lookup_objects": top_count_entries(lookup_object_counts),
         "top_stix_objects": top_count_entries(stix_object_counts),
         "top_stix_relationships": top_count_entries(stix_relationship_counts),
@@ -1662,6 +1690,7 @@ def format_graph_evidence_summary(summary):
         f"{format_count_entries(summary.get('top_accepted_objects'))} "
         f"accepted_relationship_types="
         f"{format_count_entries(summary.get('top_accepted_relationships'))} "
+        f"held_reasons={format_count_entries(summary.get('top_held_reasons'))} "
         f"lookup_object_types={format_count_entries(summary.get('top_lookup_objects'))} "
         f"stix_object_types={format_count_entries(summary.get('top_stix_objects'))} "
         f"stix_relationship_types="
