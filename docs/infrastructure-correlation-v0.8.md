@@ -205,13 +205,14 @@ Already validated:
   Infrastructure through `consists-of`; when attribution is ambiguous, the ASN
   remains related evidence and is not anchored to Infrastructure.
 
-Implementation gap:
+Fallback behavior:
 
-- If NarrowCTI creates an attack-pattern itself, the current graph STIX builder
-  does not yet export `kill_chain_phases`; this should remain a backlog item.
-  The preferred production posture is still to use the official MITRE connector
-  for canonical ATT&CK loading and let NarrowCTI link curated source evidence
-  to those canonical techniques.
+- If NarrowCTI creates an attack-pattern itself because no canonical OpenCTI
+  ATT&CK object is available, the graph STIX builder now preserves
+  source-backed `kill_chain_phases` carried by the candidate. The preferred
+  production posture is still to use the official MITRE connector for
+  canonical ATT&CK loading and let NarrowCTI link curated source evidence to
+  those canonical techniques.
 
 The decision audit and future enterprise CTI report should summarize:
 

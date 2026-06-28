@@ -699,9 +699,14 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
     if description:
         described_common["description"] = description
     if stix_object_type == "attack-pattern":
+        attack_pattern_kwargs = {}
+        kill_chain_phases = attack_pattern_kill_chain_phases(attributes)
+        if kill_chain_phases:
+            attack_pattern_kwargs["kill_chain_phases"] = kill_chain_phases
         return AttackPattern(
             name=name,
             external_references=attack_pattern_references(value, attributes),
+            **attack_pattern_kwargs,
             **described_common,
         )
     if stix_object_type == "campaign":
@@ -1259,6 +1264,32 @@ def attack_pattern_references(value, attributes):
     if stix_id:
         references.append({"source_name": "mitre-attack", "url": stix_id})
     return references or None
+
+
+def attack_pattern_kill_chain_phases(attributes):
+    phases = attributes.get("kill_chain_phases")
+    if not isinstance(phases, (list, tuple)):
+        return None
+    normalized = []
+    seen = set()
+    for phase in phases:
+        if not isinstance(phase, dict):
+            continue
+        kill_chain_name = clean_string(phase.get("kill_chain_name"))
+        phase_name = clean_string(phase.get("phase_name"))
+        if not kill_chain_name or not phase_name:
+            continue
+        key = (kill_chain_name.casefold(), phase_name.casefold())
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(
+            {
+                "kill_chain_name": kill_chain_name,
+                "phase_name": phase_name,
+            }
+        )
+    return normalized or None
 
 
 def vulnerability_references(value):

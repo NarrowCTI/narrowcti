@@ -663,6 +663,12 @@ OpenCTI tab/export coverage is tracked in
   `NarrowCTI Matrix Artifact Builder Validation 20260626B` materialized exactly
   one OpenCTI `Artifact`; generic file hashes remain file observables or
   Indicators and are not promoted as Artifacts automatically.
+- Added Kill Chain preservation for fallback Attack Pattern export. When
+  NarrowCTI must create an `attack-pattern` because canonical OpenCTI ATT&CK
+  lookup has no match, the STIX builder now carries source-backed
+  `kill_chain_phases` from the graph candidate. The production recommendation
+  remains to load ATT&CK through the official MITRE connector and let
+  NarrowCTI link curated source evidence to those canonical objects.
 
 ## Promotion Boundary
 

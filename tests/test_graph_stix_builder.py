@@ -146,6 +146,34 @@ class GraphStixBuilderTests(unittest.TestCase):
             [relationship["relationship_type"] for relationship in semantic_relationships],
         )
 
+    def test_attack_pattern_preserves_kill_chain_phases(self):
+        candidate = attack_pattern_candidate()
+        candidate["attributes"] = {
+            "kill_chain_phases": [
+                {"kill_chain_name": "mitre-attack", "phase_name": "execution"},
+                {"kill_chain_name": "mitre-attack", "phase_name": "execution"},
+                {"kill_chain_name": "", "phase_name": "ignored"},
+                "ignored",
+            ],
+        }
+
+        bundle, _summary = build_graph_report_bundle(
+            "Curated graph report",
+            "graph context",
+            80,
+            graph_candidate_policy={"accepted": [candidate]},
+        )
+
+        data = json.loads(bundle.serialize())
+        attack_pattern = next(
+            item for item in data["objects"] if item["type"] == "attack-pattern"
+        )
+
+        self.assertEqual(
+            [{"kill_chain_name": "mitre-attack", "phase_name": "execution"}],
+            attack_pattern["kill_chain_phases"],
+        )
+
     def test_preserves_incompatible_detection_rule_as_note(self):
         bundle, summary = build_graph_report_bundle(
             "Curated graph report",
