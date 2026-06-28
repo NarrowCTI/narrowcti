@@ -1434,6 +1434,11 @@ OpenCTI API validation confirmed:
 This closes the real OpenCTI API validation for Snort-as-Note behavior and
 reconfirms the Infrastructure/IP/ASN graph path from the same rich MISP event.
 
+A follow-up MISP API check for local `suricata` and `pcre` attribute types
+returned zero records in the current lab dataset. Those pattern types remain
+implemented as Note-preserved detection evidence, but still need real-source
+OpenCTI UI/API validation when a usable feed sample is available.
+
 This event materially improves the real evidence for `Observations /
 Infrastructures`, `Observations / Observables`, ASN correlation, Arsenal /
 Malware, Arsenal / Vulnerabilities, Techniques / Attack patterns, Locations /

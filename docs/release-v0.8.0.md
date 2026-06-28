@@ -605,6 +605,11 @@ OpenCTI tab/export coverage is tracked in
   top infrastructure entities, ASN concentration, shared entities across
   sources and overlap counters such as threat+infrastructure,
   arsenal+infrastructure and threat+arsenal+infrastructure.
+- Validated the Dockerized curation report after the controlled MISP
+  `event:1649` export. The generated text, JSON and HTML reports surfaced
+  `AS14061 DIGITALOCEAN-ASN`, `AS399629 BL Networks`, the infrastructure IP
+  `137.184.181.252`, and overlap counters including
+  `arsenal_infrastructure` and `ttp_infrastructure`.
 - Added conservative target-sector synonym normalization for graph evidence.
   Clear aliases such as `Financial Services` -> `Finance` and `Defence` ->
   `Defense` deduplicate before export while preserving the source value in

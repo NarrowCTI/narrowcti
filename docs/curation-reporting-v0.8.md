@@ -277,6 +277,22 @@ turn the report into future enterprise CTI output. They currently cover:
 These sections remain report evidence only. They do not create OpenCTI
 entities, infer unsupported victimology or promote graph relationships.
 
+Runtime validation on June 28, 2026 generated
+`/app/state/curation-report-20260628.txt`,
+`/app/state/curation-report-20260628.json` and
+`/app/state/curation-report-20260628.html` from the Dockerized
+`narrowcti-gateway` container after the controlled MISP `event:1649` export.
+The report confirmed the structured sections with real decision-audit data:
+
+- `Infrastructure and ASNs` surfaced `AS14061 DIGITALOCEAN-ASN`,
+  `AS399629 BL Networks`, `137.184.181.252` and
+  `MISP ip-port 137.184.181.252`.
+- The context narrative exposed `arsenal_infrastructure` and
+  `ttp_infrastructure` overlap counters.
+- The Arsenal, ATT&CK techniques, Target sectors and Threat actors sections
+  remained populated from the accumulated MISP evidence without creating new
+  OpenCTI graph objects by themselves.
+
 Repeated quarantine reasons are taken from decision audit evidence grouped by
 source and action. They explain why candidates are being held, for example low
 score, missing relationship provenance or blocked TLP, without changing
