@@ -613,6 +613,88 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_explicit_misp_victimology(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-target-org",
+                "type": "target-org",
+                "category": "Attribution",
+                "value": "Banamex",
+                "Tag": [{"name": "tlp:green"}],
+            },
+            {
+                "uuid": "attribute-target-machine",
+                "type": "target-machine",
+                "category": "Payload delivery",
+                "value": "Windows Workstations",
+            },
+            {
+                "uuid": "attribute-target-machine-package",
+                "type": "target-machine",
+                "category": "Payload delivery",
+                "value": "com.paypal.android.p2pmobile",
+            },
+            {
+                "uuid": "attribute-target-location",
+                "type": "target-location",
+                "category": "Attribution",
+                "value": "Belgium",
+            },
+            {
+                "uuid": "attribute-target-user-ambiguous",
+                "type": "target-user",
+                "category": "Attribution",
+                "value": "Westpac",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(4, len(metadata["misp_victimology"]))
+        self.assertEqual(
+            {
+                ("target_organization", "Banamex"),
+                ("target_system", "Windows Workstations"),
+                ("target_system", "com.paypal.android.p2pmobile"),
+                ("target_country", "Belgium"),
+            },
+            {
+                (item["entity_type"], item["value"])
+                for item in metadata["misp_victimology"]
+            },
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["target_organization"])
+        self.assertEqual(1, graph_evidence["counts"]["target_system"])
+        self.assertEqual(1, graph_evidence["counts"]["target_country"])
+        self.assertNotIn("target_individual", graph_evidence["counts"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "target_organization"
+                and record["value"] == "Banamex"
+                and record["source_name"] == "misp-attribute"
+                and record["source_field"] == "Attribute[0]"
+                and record["attributes"]["attribute_type"] == "target-org"
+                and record["attributes"]["attribute_uuid"] == "attribute-target-org"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["target_organization"])
+        self.assertEqual(1, graph_candidates["counts"]["target_system"])
+        self.assertEqual(1, graph_candidates["counts"]["target_country"])
+        self.assertFalse(
+            any(
+                item["entity_type"] == "target_individual"
+                or item["value"] == "Westpac"
+                or item["value"] == "com.paypal.android.p2pmobile"
+                for item in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_extracts_misp_event_reports(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         event = enriched_event()

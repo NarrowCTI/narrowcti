@@ -94,6 +94,9 @@ def decision_metadata(
     misp_campaigns = extract_misp_campaigns(source)
     if misp_campaigns:
         metadata["misp_campaigns"] = misp_campaigns
+    misp_victimology = extract_misp_victimology(source)
+    if misp_victimology:
+        metadata["misp_victimology"] = misp_victimology
     misp_event_reports = extract_misp_event_reports(source)
     if misp_event_reports:
         metadata["misp_event_reports"] = misp_event_reports
@@ -479,6 +482,120 @@ def deduplicate_misp_campaigns(campaigns):
             continue
         seen.add(key)
         deduplicated.append(campaign)
+    return deduplicated
+
+
+MISP_VICTIMOLOGY_ATTRIBUTE_TYPES = {
+    "target-org": ("target_organization", 68),
+    "target-machine": ("target_system", 65),
+    "target-location": ("target_country", 70),
+}
+
+
+def extract_misp_victimology(event):
+    event = compact_mapping(event)
+    records = []
+    for source in misp_attribute_sources(event):
+        normalized = normalize_misp_victimology(source)
+        if normalized:
+            records.append(normalized)
+    return deduplicate_misp_victimology(records)
+
+
+def misp_attribute_sources(event):
+    event = compact_mapping(event)
+    sources = []
+    for index, attribute in enumerate(list_values(event.get("Attribute"))):
+        attribute = compact_mapping(attribute)
+        if not attribute:
+            continue
+        sources.append(
+            {
+                "source_field": f"Attribute[{index}]",
+                "attribute": attribute,
+                "object": {},
+                "source_type": "attribute",
+            }
+        )
+    for object_index, misp_object in enumerate(list_values(event.get("Object"))):
+        misp_object = compact_mapping(misp_object)
+        if not misp_object:
+            continue
+        for attribute_index, attribute in enumerate(
+            list_values(misp_object.get("Attribute"))
+        ):
+            attribute = compact_mapping(attribute)
+            if not attribute:
+                continue
+            sources.append(
+                {
+                    "source_field": (
+                        f"Object[{object_index}].Attribute[{attribute_index}]"
+                    ),
+                    "attribute": attribute,
+                    "object": misp_object,
+                    "source_type": "object-attribute",
+                }
+            )
+    return sources
+
+
+def normalize_misp_victimology(source):
+    source = compact_mapping(source)
+    attribute = compact_mapping(source.get("attribute"))
+    misp_object = compact_mapping(source.get("object"))
+    entity_type, confidence = misp_victimology_entity_type(attribute)
+    if not entity_type:
+        return {}
+    value = clean_text(attribute.get("value") or attribute.get("comment"))
+    if not value:
+        return {}
+    return compact_mapping(
+        {
+            "value": value,
+            "entity_type": entity_type,
+            "confidence": confidence,
+            "source_type": source.get("source_type"),
+            "source_field": source.get("source_field"),
+            "attribute_type": attribute.get("type"),
+            "attribute_category": attribute.get("category"),
+            "attribute_uuid": attribute.get("uuid"),
+            "attribute_relation": attribute.get("object_relation"),
+            "first_seen": attribute.get("first_seen"),
+            "last_seen": attribute.get("last_seen"),
+            "object_name": misp_object.get("name"),
+            "object_uuid": misp_object.get("uuid"),
+            "object_meta_category": misp_object.get("meta-category"),
+            "tags": [tag_name for tag_name in attribute_tags(attribute) if tag_name],
+        }
+    )
+
+
+def misp_victimology_entity_type(attribute):
+    attribute = compact_mapping(attribute)
+    attribute_type = clean_text(attribute.get("type")).casefold()
+    relation = clean_text(attribute.get("object_relation")).casefold()
+    return (
+        MISP_VICTIMOLOGY_ATTRIBUTE_TYPES.get(attribute_type)
+        or MISP_VICTIMOLOGY_ATTRIBUTE_TYPES.get(relation)
+        or ("", 0)
+    )
+
+
+def deduplicate_misp_victimology(records):
+    seen = set()
+    deduplicated = []
+    for record in records:
+        key = (
+            str(record.get("entity_type", "")).casefold(),
+            str(record.get("value", "")).casefold(),
+            str(record.get("attribute_uuid", "")).casefold(),
+            str(record.get("object_uuid", "")).casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append(record)
     return deduplicated
 
 

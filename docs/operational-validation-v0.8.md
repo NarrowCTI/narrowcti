@@ -508,6 +508,52 @@ match only when `entity_type=Artifact` and `observable_value` equals the source
 hash. The validation returned `deduplicated_entity_count=1` and
 `would_create_object_count=0`.
 
+Real MISP victimology validation on June 27, 2026 used explicit MISP
+`target-org`, `target-location` and `target-machine` attributes from local OSINT
+feed events. Dry-run validation confirmed:
+
+- `event:142` extracted `target_organization=Banamex` from `target-org` but was
+  dropped by the default score policy with score `50`.
+- `event:280` extracted `target_country` candidates for Belgium, Sweden, Russia
+  and China from `target-location` but was also dropped by default policy.
+- `event:33` preserved 49 `target-machine` values in audit metadata but, after
+  guardrail tightening, did not promote Android reverse-domain package ids such
+  as `com.paypal.android.p2pmobile` as OpenCTI Systems.
+
+The same validation then used a bounded historical replay of MISP `event:5379`
+(`Cyberattack on fuel supplier causes supply chain disruption`) with explicit
+lab-only overrides `MIN_SCORE_TO_INGEST=50` and `MAX_DAYS_OLD=3650`. The default
+policy would drop the event with score `50`; the replay was used only to
+validate real graph materialization. The export was authored by
+`MISP via NarrowCTI`, ingested 95 indicators and accepted:
+
+- 14 existing ATT&CK Attack Patterns through OpenCTI lookup.
+- 5 target Organizations: `Oiltanking GmbH Group`,
+  `Mabanaft GmbH & Co. KG Group`, `SEA-Tank`, `Oiltanking` and `Evos`.
+- 1 existing Malware, `Conti - S0575`.
+- 1 existing Vulnerability, `CVE-2016-0099`.
+- 4 MISP EventReports as Notes.
+
+OpenCTI GraphQL validation confirmed the Report existed with author
+`MISP via NarrowCTI`; all five Organizations, `Conti - S0575`,
+`CVE-2016-0099` and sampled ATT&CK techniques were queryable in their native
+collections. The graph preview recorded `proposed_relationship_counts` for
+`targets=5`, `uses=15`, `detects=1`, `documents=4` and `related-to=1`, but the
+actual OpenCTI Report context materialized as 25 outgoing `related-to`
+relationships. This is expected for candidates whose only safe source anchor is
+the Report. It is now a v0.8 polish/backlog item to create richer semantic
+edges only when a real source endpoint exists, for example
+`Campaign -> targets -> Organization`, `Threat Actor -> uses -> Malware` or
+`Infrastructure -> consists-of -> Observable`.
+
+Follow-up Infrastructure API validation on June 27, 2026 reconfirmed the
+already ingested MISP `event:1649` chain. OpenCTI returned one Infrastructure
+`MISP ip-port 137.184.181.252` authored by `MISP via NarrowCTI`, with
+`Infrastructure -> consists-of -> IPv4-Addr 137.184.181.252`. The same check
+confirmed `IPv4-Addr 138.197.218.11 -> belongs-to -> Autonomous-System
+DIGITALOCEAN-ASN`. Raw IPs remain normal observables unless the source carries
+infrastructure context.
+
 ## Required Lab Posture
 
 Before live validation, confirm:
@@ -1249,6 +1295,79 @@ This closes the MISP detection-rule evidence gap for real YARA and Sigma
 payloads in the local OpenCTI lab. Snort, Suricata and PCRE remain supported by
 the same native fallback path and still need broader real-feed evidence when
 usable source events are available.
+
+### MISP Infrastructure, ASN And Detection Rule Deep Validation
+
+On June 27, 2026, NarrowCTI executed a second controlled MISP validation pass
+focused on the remaining real-ingestion gaps from the OpenCTI matrix. The pass
+started with dry-runs against candidate events carrying `AS`, `domain|ip`,
+`ip-src|port`, `ip-dst|port`, Snort, Sigma and YARA attributes.
+
+The dry-run evidence showed an important graph hygiene behavior:
+
+- Events such as `428`, `1187`, `1379`, `1534` and `278` contained network
+  indicators or AS-like attributes, but did not carry enough source-backed
+  infrastructure context for NarrowCTI to promote Infrastructure. They stayed
+  as report/indicator/provenance-oriented evidence.
+- Event `3` was rejected by the attribute guardrail because it carried 11,367
+  attributes, validating that the local lab does not need to ingest oversized
+  samples to prove coverage.
+- Event `1649`, `Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls
+  Back For Free`, was selected for real export because it carried a compact but
+  rich source context: Infrastructure, ASNs, IPs, Malware, CVE, ATT&CK, Country
+  victimology and detection rules in the same event.
+
+The real export of event `1649` completed with:
+
+- `reviewed=1`, `ingested=1`, `errors=0`.
+- Guardrails: 61 attributes, 14 indicators, no IOC truncation.
+- Graph plan: 1 Infrastructure, 7 Autonomous System candidates, 6 network
+  Observables, 22 Attack Patterns, 4 Malware objects, 1 Vulnerability, 1
+  Country and 12 detection-rule candidates.
+- Relationship plan: 5 `belongs-to`, 1 `consists-of`, 12 `detects`, 27 `uses`,
+  8 `related-to` and 1 `targets`.
+
+OpenCTI API validation confirmed:
+
+- Report `Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back
+  For Free` exists with author `MISP via NarrowCTI`.
+- Infrastructure `MISP ip-port 137.184.181.252` exists with author
+  `MISP via NarrowCTI` and a source-backed description.
+- The Infrastructure has a `consists-of` relationship to IPv4 observable
+  `137.184.181.252`.
+- Five additional IPv4 observables have `belongs-to` Autonomous System
+  relationships: `138.197.218.11`, `138.68.19.94` and `159.65.248.159` to
+  `DIGITALOCEAN-ASN`; `206.188.197.125` and `64.190.113.100` to
+  `BL Networks`.
+- Malware `Lorenz` and `Lorenz Ransomware` exist with author
+  `MISP via NarrowCTI`.
+- Vulnerability `CVE-2022-29499` exists with author `MISP via NarrowCTI`.
+- ATT&CK objects such as `Exploit Public-Facing Application / T1190` and
+  `PowerShell / T1059.001` are queryable with kill-chain phases from the MITRE
+  baseline.
+- YARA and several Sigma Indicators from the same event are materialized with
+  labels such as `narrowcti:detection-rule`, `rule-type:yara` and
+  `rule-type:sigma`.
+
+The same validation exposed a detection-rule compatibility gap. MISP event
+`1649` included four Snort candidates and six Sigma candidates. OpenCTI 6.9.4
+rejected the Snort Indicator creation attempts with
+`INCORRECT_INDICATOR_FORMAT`, and it also rejected some Sigma rules even though
+they passed NarrowCTI's basic YAML shape check. The GraphQL/API validation
+returned zero `pattern_type=snort` Indicators after the run. This means Snort,
+Suricata and PCRE must remain a final-polish backlog item until NarrowCTI can
+either pre-validate them with OpenCTI-compatible rules or preserve them as
+auditable detection engineering evidence without promising OpenCTI Indicator
+materialization.
+
+This event materially improves the real evidence for `Observations /
+Infrastructures`, `Observations / Observables`, ASN correlation, Arsenal /
+Malware, Arsenal / Vulnerabilities, Techniques / Attack patterns, Locations /
+Countries and Knowledge/Diamond graph population. Remaining infrastructure
+polish is to attach ASN context to the primary Infrastructure IP when the
+source or enrichment supports it, and to verify whether OpenCTI should show
+the full Infrastructure -> IP -> ASN chain directly inside the Infrastructure
+view or only through graph traversal.
 
 ## OTX Preflight Blocked By Upstream Timeout
 

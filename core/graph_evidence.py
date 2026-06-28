@@ -160,6 +160,15 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
     )
     records.extend(
         with_default_timeline(
+            misp_victimology_evidence(
+                metadata.get("misp_victimology"),
+                source_key,
+            ),
+            misp_timeline,
+        )
+    )
+    records.extend(
+        with_default_timeline(
             misp_event_report_evidence(
                 metadata.get("misp_event_reports"),
                 source_key,
@@ -994,9 +1003,22 @@ def is_target_organization_value(value):
         return False
     if ATTACK_ID_PATTERN.fullmatch(value) or CVE_ID_PATTERN.fullmatch(value):
         return False
+    if is_dotted_identifier_value(value):
+        return False
     if re.fullmatch(r"(?:[a-z0-9-]+\.)+[a-z]{2,}", lowered):
         return False
     return True
+
+
+def is_dotted_identifier_value(value):
+    value = clean_string(value)
+    lowered = value.casefold()
+    if not value or any(char.isspace() for char in value):
+        return False
+    if lowered.count(".") < 2:
+        return False
+    labels = lowered.split(".")
+    return all(re.fullmatch(r"[a-z0-9_-]+", label or "") for label in labels)
 
 
 def is_target_individual_value(value):
@@ -1349,6 +1371,50 @@ def misp_campaign_evidence(campaigns, source_key=""):
             source_name="misp",
             source_field=campaign.get("source_field"),
             confidence=70,
+            attributes=attributes,
+        )
+        if record:
+            records.append(record)
+    return records
+
+
+def misp_victimology_evidence(victimology_records, source_key=""):
+    records = []
+    for item in victimology_records or []:
+        item = compact_mapping(item)
+        entity_type = clean_string(item.get("entity_type"))
+        value = clean_string(item.get("value"))
+        if not entity_type or not value:
+            continue
+        attributes = compact_mapping(
+            {
+                "source_type": item.get("source_type"),
+                "attribute_type": item.get("attribute_type"),
+                "attribute_category": item.get("attribute_category"),
+                "attribute_uuid": item.get("attribute_uuid"),
+                "attribute_relation": item.get("attribute_relation"),
+                "first_seen": item.get("first_seen"),
+                "last_seen": item.get("last_seen"),
+                "object_name": item.get("object_name"),
+                "object_uuid": item.get("object_uuid"),
+                "object_meta_category": item.get("object_meta_category"),
+                "tags": item.get("tags"),
+            }
+        )
+        normalized, attributes = normalize_evidence_value(
+            entity_type,
+            value,
+            attributes,
+        )
+        if not normalized or not is_safe_misp_meta_graph_value(entity_type, normalized):
+            continue
+        record = evidence_record(
+            entity_type=entity_type,
+            value=normalized,
+            source_key=source_key,
+            source_name="misp-attribute",
+            source_field=item.get("source_field") or "Attribute",
+            confidence=item.get("confidence") or 65,
             attributes=attributes,
         )
         if record:
