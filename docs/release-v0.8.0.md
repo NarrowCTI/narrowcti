@@ -580,6 +580,11 @@ OpenCTI tab/export coverage is tracked in
   validation exists for those rule types. Native GraphQL Indicator creation is
   now limited to Sigma instead of retrying pattern types already rejected by
   the local OpenCTI lab.
+- Expanded offline MISP IP-to-ASN enrichment graph output. When an explicit
+  source-backed Infrastructure object anchors an enriched IP, NarrowCTI now
+  emits both `IP -> belongs-to -> ASN` and
+  `Infrastructure -> consists-of -> ASN`, preserving enrichment provenance and
+  keeping raw standalone IP indicators out of Infrastructure promotion.
 - Added conservative target-sector synonym normalization for graph evidence.
   Clear aliases such as `Financial Services` -> `Finance` and `Defence` ->
   `Defense` deduplicate before export while preserving the source value in

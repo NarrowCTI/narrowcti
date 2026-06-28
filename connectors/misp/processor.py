@@ -1146,12 +1146,19 @@ def normalize_misp_infrastructure_object(
             ip_asn_enricher,
             source_field,
             misp_object,
+            infrastructure_name,
         )
     )
     return records
 
 
-def offline_ip_asn_records(observables, ip_asn_enricher, source_field, misp_object):
+def offline_ip_asn_records(
+    observables,
+    ip_asn_enricher,
+    source_field,
+    misp_object,
+    infrastructure_name="",
+):
     if not ip_asn_enricher:
         return []
     records = []
@@ -1193,6 +1200,27 @@ def offline_ip_asn_records(observables, ip_asn_enricher, source_field, misp_obje
                 attributes=attributes,
             )
         )
+        if infrastructure_name:
+            infra_attributes = dict(attributes)
+            infra_attributes.update(
+                relationship_source_attributes(
+                    "infrastructure",
+                    infrastructure_name,
+                    observable.get("source_field") or source_field,
+                )
+            )
+            records.append(
+                misp_infrastructure_record(
+                    "autonomous_system",
+                    match.value,
+                    "autonomous-system",
+                    "consists-of",
+                    observable.get("source_field") or source_field,
+                    misp_object,
+                    confidence=60,
+                    attributes=infra_attributes,
+                )
+            )
     return records
 
 

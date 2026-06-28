@@ -1388,11 +1388,15 @@ and carry enough context for detection engineering review.
 This event materially improves the real evidence for `Observations /
 Infrastructures`, `Observations / Observables`, ASN correlation, Arsenal /
 Malware, Arsenal / Vulnerabilities, Techniques / Attack patterns, Locations /
-Countries and Knowledge/Diamond graph population. Remaining infrastructure
-polish is to attach ASN context to the primary Infrastructure IP when the
-source or enrichment supports it, and to verify whether OpenCTI should show
-the full Infrastructure -> IP -> ASN chain directly inside the Infrastructure
-view or only through graph traversal.
+Countries and Knowledge/Diamond graph population.
+
+Follow-up unit validation closed the primary-IP ASN attachment gap for the
+offline enrichment path. When MISP provides an explicit Infrastructure object
+with an IP and `NARROWCTI_IP_ASN_ENRICHMENT_FILE` resolves that IP to an ASN,
+NarrowCTI now emits both `IP -> belongs-to -> ASN` and
+`Infrastructure -> consists-of -> ASN`. The next real validation step is to
+confirm whether OpenCTI shows the full Infrastructure -> IP -> ASN chain
+directly inside the Infrastructure view or only through graph traversal.
 
 ## OTX Preflight Blocked By Upstream Timeout
 

@@ -1414,6 +1414,59 @@ class MISPProcessorTests(unittest.TestCase):
                 for candidate in graph_candidates["candidates"]
             )
         )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512 Offline Validation ASN"
+                and candidate["relationship_type"] == "consists-of"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "infrastructure"
+                and candidate["attributes"]["relationship_source_value"]
+                == "MISP domain-ip c2.example.com"
+                and candidate["attributes"]["enrichment_source"] == "unit-test"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        accepted = [
+            candidate
+            for candidate in metadata["graph_candidate_policy"]["accepted"]
+            if candidate["entity_type"] in {"autonomous_system", "infrastructure", "observable"}
+        ]
+        bundle, summary = build_graph_report_bundle(
+            "Curated infrastructure report",
+            "offline ASN context",
+            80,
+            graph_candidate_policy={"accepted": accepted},
+        )
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+        infrastructure = objects_by_type["infrastructure"][0]
+        autonomous_system = objects_by_type["autonomous-system"][0]
+        ip_address = next(
+            item
+            for item in objects_by_type["ipv4-addr"]
+            if item["value"] == "203.0.113.10"
+        )
+        relationships = objects_by_type["relationship"]
+        self.assertTrue(
+            any(
+                relationship["source_ref"] == infrastructure["id"]
+                and relationship["relationship_type"] == "consists-of"
+                and relationship["target_ref"] == autonomous_system["id"]
+                for relationship in relationships
+            )
+        )
+        self.assertTrue(
+            any(
+                relationship["source_ref"] == ip_address["id"]
+                and relationship["relationship_type"] == "belongs-to"
+                and relationship["target_ref"] == autonomous_system["id"]
+                for relationship in relationships
+            )
+        )
+        self.assertEqual(4, summary["semantic_relationship_count"])
 
     def test_decision_metadata_builds_dry_run_graph_export_plan(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})

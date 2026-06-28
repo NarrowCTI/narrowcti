@@ -360,7 +360,9 @@ Open questions before broad activation:
   coverage still needs evidence.
 - Validate optional offline IP-to-ASN enrichment against broader external
   datasets and graph noise. The initial v0.8 implementation is opt-in for MISP
-  through `NARROWCTI_IP_ASN_ENRICHMENT_FILE`.
+  through `NARROWCTI_IP_ASN_ENRICHMENT_FILE`; unit coverage confirms that when
+  an explicit Infrastructure object anchors the IP, the enrichment emits both
+  `IP -> belongs-to -> ASN` and `Infrastructure -> consists-of -> ASN`.
 - Validate whether source payloads provide enough actor, malware, sector,
   location and campaign context to populate Diamond, Timeline and Knowledge
   views from the same curated bundle.
@@ -389,8 +391,9 @@ Safe implementation sequence:
    offline-first behavior. The initial MISP integration supports CSV, JSON,
    JSONL, longest-prefix matching and strict provenance, and is disabled unless
    `NARROWCTI_IP_ASN_ENRICHMENT_FILE` is set.
-10. Add relationship evidence for IP belongs-to ASN and infrastructure
-   consists-of ASN/IP when the source supports it.
+10. Done: add relationship evidence for IP belongs-to ASN and Infrastructure
+   consists-of ASN/IP when the source or offline enrichment supports it and an
+   explicit Infrastructure anchor is present.
 11. Add curation report sections for ASN concentration, shared infrastructure
    and actor/malware/infrastructure overlaps.
 
