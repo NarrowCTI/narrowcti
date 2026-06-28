@@ -586,6 +586,15 @@ OpenCTI tab/export coverage is tracked in
   Sigma rules that fail this gate are preserved as labeled Notes with the raw
   rule and compatibility reason, and the native OpenCTI Indicator path skips
   them instead of retrying a known-bad materialization.
+- Added follow-up live OpenCTI validation for the detection-rule compatibility
+  gate using MISP `event:1649`. The rebuilt gateway container ran a controlled
+  real export against local OpenCTI with graph lookup enabled. OpenCTI API
+  validation confirmed four Snort rules preserved as Notes with author
+  `MISP via NarrowCTI` and labels `narrowcti:detection-rule` plus
+  `rule-type:snort`, while compatible Sigma rules remained labeled Indicators.
+  The same run reconfirmed Infrastructure/IP/ASN graph relationships and
+  canonical lookup reuse for ATT&CK, Malware, Vulnerability, Location,
+  Infrastructure and Observable objects.
 - Expanded offline MISP IP-to-ASN enrichment graph output. When an explicit
   source-backed Infrastructure object anchors an enriched IP, NarrowCTI now
   emits both `IP -> belongs-to -> ASN` and

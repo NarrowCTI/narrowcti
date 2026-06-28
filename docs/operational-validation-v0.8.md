@@ -1388,6 +1388,52 @@ promising objects that the current OpenCTI lab rejects. A follow-up real UI/API
 validation should confirm that these Notes are visible from the source Report
 and carry enough context for detection engineering review.
 
+Follow-up live validation on June 28, 2026 reran MISP `event:1649` through the
+rebuilt `narrowcti-gateway` container on the shared `threat-net` Docker
+network. The first dry-run intentionally disabled artifact deduplication so the
+graph plan could be inspected without writing to OpenCTI. It produced one
+Infrastructure, six network Observables, seven ASN candidates, 22 ATT&CK
+candidates, four Malware candidates, one Vulnerability and 12 detection-rule
+candidates.
+
+The real controlled export used `NARROWCTI_GRAPH_EXPORT_MODE=export`,
+`NARROWCTI_OPENCTI_GRAPH_LOOKUP=true`, `MISP_DRY_RUN=false`,
+`MISP_QUERIES=event:1649`, `MISP_MAX_EVENTS_PER_RUN=1`,
+`MISP_MAX_ATTRIBUTES_PER_EVENT=500` and `MISP_MAX_IOCS_PER_EVENT=50`. The run
+completed with `reviewed=1`, `ingested=1`, `errors=0`, nine exported
+indicators and graph dedup marks for 49 entities and 54 relationships.
+
+The decision audit confirmed graph hygiene after OpenCTI lookup:
+
+- Existing references were used for 22 ATT&CK attack-patterns, one
+  Infrastructure, one Location, four Malware objects, six Observables and one
+  Vulnerability.
+- The actual new graph preview object set was limited to two
+  Autonomous-System objects, eight Indicators and four Notes.
+- Relationship output contained five `IPv4-Addr -> belongs-to ->
+  Autonomous-System` relationships, one `Infrastructure -> consists-of ->
+  IPv4-Addr` relationship and 48 report-context relationships.
+
+OpenCTI API validation confirmed:
+
+- Report `Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back
+  For Free` exists with author `MISP via NarrowCTI`.
+- Four Snort rules from the event materialized as Notes, not Indicators. Each
+  Note has author `MISP via NarrowCTI` and labels
+  `narrowcti:detection-rule` plus `rule-type:snort`.
+- Sigma rules such as `SIGMA: Process Dump via Comsvcs DLL` materialized as
+  Indicators with labels `narrowcti:detection-rule` and `rule-type:sigma`.
+- Infrastructure `MISP ip-port 137.184.181.252` exists with a source-backed
+  description and a `consists-of` relationship to IPv4 observable
+  `137.184.181.252`.
+- IPv4 observables `138.197.218.11`, `138.68.19.94` and `159.65.248.159`
+  have `belongs-to` relationships to `DIGITALOCEAN-ASN`.
+- IPv4 observables `206.188.197.125` and `64.190.113.100` have `belongs-to`
+  relationships to `BL Networks`.
+
+This closes the real OpenCTI API validation for Snort-as-Note behavior and
+reconfirms the Infrastructure/IP/ASN graph path from the same rich MISP event.
+
 This event materially improves the real evidence for `Observations /
 Infrastructures`, `Observations / Observables`, ASN correlation, Arsenal /
 Malware, Arsenal / Vulnerabilities, Techniques / Attack patterns, Locations /
