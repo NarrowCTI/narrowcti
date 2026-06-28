@@ -580,6 +580,12 @@ OpenCTI tab/export coverage is tracked in
   validation exists for those rule types. Native GraphQL Indicator creation is
   now limited to Sigma instead of retrying pattern types already rejected by
   the local OpenCTI lab.
+- Tightened Sigma compatibility handling. MISP Sigma rules must now include a
+  title, logsource, detection mapping, condition and at least one detection
+  selection before NarrowCTI treats them as OpenCTI Indicator-compatible.
+  Sigma rules that fail this gate are preserved as labeled Notes with the raw
+  rule and compatibility reason, and the native OpenCTI Indicator path skips
+  them instead of retrying a known-bad materialization.
 - Expanded offline MISP IP-to-ASN enrichment graph output. When an explicit
   source-backed Infrastructure object anchors an enriched IP, NarrowCTI now
   emits both `IP -> belongs-to -> ASN` and

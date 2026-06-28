@@ -1630,8 +1630,13 @@ def normalize_misp_detection_rule(source):
         return {}
     if not clean_text(rule_content) or is_truthy(attribute.get("deleted")):
         return {}
-    if rule_type == "sigma" and not sigma_rule_has_valid_shape(rule_content):
-        return {}
+    opencti_indicator_compatible = True
+    compatibility_reason = ""
+    if rule_type == "sigma":
+        (
+            opencti_indicator_compatible,
+            compatibility_reason,
+        ) = sigma_rule_opencti_compatibility(rule_content)
     title = detection_rule_title(rule_type, raw_rule_content, attribute)
     return compact_mapping(
         {
@@ -1639,6 +1644,8 @@ def normalize_misp_detection_rule(source):
             "rule_type": rule_type,
             "pattern_type": rule_type,
             "pattern": rule_content,
+            "opencti_indicator_compatible": opencti_indicator_compatible,
+            "opencti_indicator_compatibility_reason": compatibility_reason,
             "attribute_category": attribute.get("category"),
             "attribute_uuid": attribute.get("uuid"),
             "object_name": misp_object.get("name"),
@@ -1686,22 +1693,49 @@ def extract_detection_rule_name(rule_type, rule_content):
 
 
 def sigma_rule_has_valid_shape(rule_content):
+    compatible, _reason = sigma_rule_opencti_compatibility(rule_content)
+    return compatible
+
+
+def sigma_rule_opencti_compatibility(rule_content):
     content = str(rule_content or "").strip()
     if not content:
-        return False
+        return False, "empty sigma rule"
     if yaml:
         try:
             parsed = yaml.safe_load(content)
         except Exception:
-            return False
+            return False, "invalid sigma yaml"
         if not isinstance(parsed, Mapping):
-            return False
-        return bool(parsed.get("title") and parsed.get("detection"))
+            return False, "sigma yaml is not a mapping"
+        if not clean_text(parsed.get("title")):
+            return False, "missing title"
+        logsource = parsed.get("logsource")
+        if not isinstance(logsource, Mapping) or not compact_mapping(logsource):
+            return False, "missing logsource"
+        detection = parsed.get("detection")
+        if not isinstance(detection, Mapping):
+            return False, "missing detection mapping"
+        if not clean_text(detection.get("condition")):
+            return False, "missing detection condition"
+        selections = [
+            value
+            for key, value in detection.items()
+            if clean_text(key).casefold() != "condition"
+            and value not in ("", None, [], {})
+        ]
+        if not selections:
+            return False, "missing detection selection"
+        return True, ""
 
     if not re.search(r"(?im)^\s*title\s*:", content):
-        return False
+        return False, "missing title"
+    if not re.search(r"(?im)^\s*logsource\s*:", content):
+        return False, "missing logsource"
     if not re.search(r"(?im)^\s*detection\s*:", content):
-        return False
+        return False, "missing detection"
+    if not re.search(r"(?im)^\s*condition\s*:", content):
+        return False, "missing detection condition"
     in_block_scalar = None
     for line in content.splitlines():
         if not line.strip() or line.lstrip().startswith("#"):
@@ -1715,10 +1749,10 @@ def sigma_rule_has_valid_shape(rule_content):
         if stripped.startswith("- "):
             continue
         if ":" not in stripped:
-            return False
+            return False, "invalid yaml-like line"
         if stripped.endswith("|") or stripped.endswith(">"):
             in_block_scalar = indent
-    return True
+    return True, ""
 
 
 def deduplicate_misp_detection_rules(rules):

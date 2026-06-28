@@ -1376,12 +1376,15 @@ they passed NarrowCTI's basic YAML shape check. The GraphQL/API validation
 returned zero `pattern_type=snort` Indicators after the run.
 
 The controlled polish response is now implemented at unit level. YARA and
-Sigma remain Indicator candidates when the source rule passes NarrowCTI's
-compatibility checks. Snort, Suricata and PCRE are preserved as labeled Notes
-with the raw rule body, source field and detection-rule labels instead of being
-sent through the native Indicator mutation. This keeps hunting content
-available to analysts without polluting OpenCTI Indicator views or promising
-objects that the current OpenCTI lab rejects. A follow-up real UI/API
+Sigma remain Indicator candidates only when the source rule passes NarrowCTI's
+compatibility checks. The Sigma gate now requires a title, logsource, detection
+mapping, condition and at least one detection selection before the rule is
+eligible for native Indicator creation. Sigma rules that fail this stricter
+gate, plus Snort, Suricata and PCRE rules, are preserved as labeled Notes with
+the raw rule body, source field, compatibility reason and detection-rule labels
+instead of being sent through the native Indicator mutation. This keeps hunting
+content available to analysts without polluting OpenCTI Indicator views or
+promising objects that the current OpenCTI lab rejects. A follow-up real UI/API
 validation should confirm that these Notes are visible from the source Report
 and carry enough context for detection engineering review.
 

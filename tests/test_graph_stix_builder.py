@@ -204,6 +204,31 @@ class GraphStixBuilderTests(unittest.TestCase):
             note["external_references"],
         )
 
+    def test_preserves_incompatible_sigma_detection_rule_as_note(self):
+        bundle, summary = build_graph_report_bundle(
+            "Curated graph report",
+            "graph context",
+            80,
+            graph_candidate_policy={
+                "accepted": [incompatible_sigma_detection_rule_candidate()]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        self.assertNotIn("indicator", objects_by_type)
+        self.assertEqual(1, len(objects_by_type["note"]))
+        self.assertEqual(1, summary["graph_object_count"])
+        self.assertEqual({"note": 1}, summary["object_counts"])
+        note = objects_by_type["note"][0]
+        self.assertEqual("SIGMA: Broken Sigma", note["abstract"])
+        self.assertIn("rule-type:sigma", note["labels"])
+        self.assertIn("missing detection selection", note["content"])
+        self.assertIn("title: Broken Sigma", note["content"])
+
     def test_native_threat_actor_individual_is_not_exported_as_generic_stix_actor(self):
         bundle, summary = build_graph_report_bundle(
             "Curated graph report",
@@ -2145,11 +2170,42 @@ def detection_rule_candidate():
         "confidence": 75,
         "relationship_confidence": 70,
         "attributes": {
-            "pattern": "title: Suspicious PowerShell",
+            "pattern": (
+                "title: Suspicious PowerShell\n"
+                "logsource:\n"
+                "  product: windows\n"
+                "detection:\n"
+                "  selection:\n"
+                "    EventID: 1\n"
+                "  condition: selection"
+            ),
             "pattern_type": "sigma",
             "attribute_uuid": "attribute-rule-1",
         },
     }
+
+
+def incompatible_sigma_detection_rule_candidate():
+    candidate = detection_rule_candidate()
+    candidate["fingerprint"] = "rule-sigma-incompatible-1"
+    candidate["value"] = "Broken Sigma"
+    candidate["name"] = "Broken Sigma"
+    candidate["attributes"] = dict(candidate["attributes"])
+    candidate["attributes"].update(
+        {
+            "pattern": (
+                "title: Broken Sigma\n"
+                "logsource:\n"
+                "  product: windows\n"
+                "detection:\n"
+                "  condition: selection"
+            ),
+            "opencti_indicator_compatible": False,
+            "opencti_indicator_compatibility_reason": "missing detection selection",
+            "attribute_uuid": "attribute-invalid-sigma",
+        }
+    )
+    return candidate
 
 
 def snort_detection_rule_candidate():

@@ -1228,6 +1228,8 @@ class MISPProcessorTests(unittest.TestCase):
                 "category": "Payload delivery",
                 "value": (
                     "title: Suspicious PowerShell\n"
+                    "logsource:\n"
+                    "  product: windows\n"
                     "detection:\n"
                     "  selection:\n"
                     "    EventID: 1\n"
@@ -1255,6 +1257,8 @@ class MISPProcessorTests(unittest.TestCase):
                 "value": (
                     "title: WannaCry Ransomware\n"
                     "description: Detects activity\n"
+                    "logsource:\n"
+                    "  product: windows\n"
                     "detection:\n"
                     "  selection:\n"
                     "    EventID: 1\n"
@@ -1278,11 +1282,13 @@ class MISPProcessorTests(unittest.TestCase):
 
         metadata = decision_metadata(candidate_ref, prepared)
 
-        self.assertEqual(3, len(metadata["misp_detection_rules"]))
+        self.assertEqual(4, len(metadata["misp_detection_rules"]))
         self.assertEqual("sigma", metadata["misp_detection_rules"][0]["rule_type"])
         self.assertEqual(
             (
                 "title: Suspicious PowerShell\n"
+                "logsource:\n"
+                "  product: windows\n"
                 "detection:\n"
                 "  selection:\n"
                 "    EventID: 1\n"
@@ -1300,6 +1306,8 @@ class MISPProcessorTests(unittest.TestCase):
             (
                 "title: WannaCry Ransomware\n"
                 "description: Detects activity\n"
+                "logsource:\n"
+                "  product: windows\n"
                 "detection:\n"
                 "  selection:\n"
                 "    EventID: 1\n"
@@ -1307,8 +1315,12 @@ class MISPProcessorTests(unittest.TestCase):
             ),
             metadata["misp_detection_rules"][2]["pattern"],
         )
+        self.assertEqual("Broken Sigma", metadata["misp_detection_rules"][3]["value"])
+        self.assertFalse(
+            metadata["misp_detection_rules"][3]["opencti_indicator_compatible"]
+        )
         graph_evidence = metadata["graph_evidence"]
-        self.assertEqual(3, graph_evidence["counts"]["detection_rule"])
+        self.assertEqual(4, graph_evidence["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 record["entity_type"] == "detection_rule"
@@ -1318,7 +1330,7 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
         graph_candidates = metadata["graph_candidates"]
-        self.assertEqual(3, graph_candidates["counts"]["detection_rule"])
+        self.assertEqual(4, graph_candidates["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 candidate["entity_type"] == "detection_rule"
@@ -1326,6 +1338,8 @@ class MISPProcessorTests(unittest.TestCase):
                 and candidate["attributes"]["pattern"]
                 == (
                     "title: Suspicious PowerShell\n"
+                    "logsource:\n"
+                    "  product: windows\n"
                     "detection:\n"
                     "  selection:\n"
                     "    EventID: 1\n"
@@ -1351,11 +1365,22 @@ class MISPProcessorTests(unittest.TestCase):
                 == (
                     "title: WannaCry Ransomware\n"
                     "description: Detects activity\n"
+                    "logsource:\n"
+                    "  product: windows\n"
                     "detection:\n"
                     "  selection:\n"
                     "    EventID: 1\n"
                     "  condition: selection"
                 )
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["value"] == "Broken Sigma"
+                and candidate["attributes"]["pattern_type"] == "sigma"
+                and candidate["attributes"]["opencti_indicator_compatible"] is False
                 for candidate in graph_candidates["candidates"]
             )
         )

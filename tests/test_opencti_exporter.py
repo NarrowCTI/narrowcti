@@ -131,6 +131,8 @@ class OpenCTIExporterTests(unittest.TestCase):
                     "name": "SIGMA: Suspicious PowerShell",
                     "pattern": (
                         "title: Suspicious PowerShell\n"
+                        "logsource:\n"
+                        "  product: windows\n"
                         "detection:\n"
                         "  selection:\n"
                         "    EventID: 1\n"
@@ -193,6 +195,30 @@ class OpenCTIExporterTests(unittest.TestCase):
         self.assertEqual("SNORT: Adobe Flash Exploit", note["abstract"])
         self.assertIn("rule-type:snort", note["labels"])
         self.assertIn("alert tcp any any -> any any", note["content"])
+        self.assertEqual([], api_client.indicator_adds)
+        self.assertEqual([], api_client.label_adds)
+
+    def test_export_mode_preserves_incompatible_sigma_as_note_only(self):
+        api_client = FakeOpenCTIClient()
+
+        send_bundle(
+            api_client,
+            "Curated report",
+            "description",
+            75,
+            graph_candidate_policy={
+                "accepted": [incompatible_sigma_detection_rule_candidate()]
+            },
+            graph_export_mode="export",
+            identity_name="MISP via NarrowCTI",
+        )
+
+        objects = imported_objects(api_client)
+        self.assertNotIn("indicator", object_types(objects))
+        note = first_object(objects, "note")
+        self.assertEqual("SIGMA: Broken Sigma", note["abstract"])
+        self.assertIn("rule-type:sigma", note["labels"])
+        self.assertIn("missing detection selection", note["content"])
         self.assertEqual([], api_client.indicator_adds)
         self.assertEqual([], api_client.label_adds)
 
@@ -832,6 +858,8 @@ def sigma_detection_rule_candidate():
             "pattern_type": "sigma",
             "pattern": (
                 "title: Suspicious PowerShell\n"
+                "logsource:\n"
+                "  product: windows\n"
                 "detection:\n"
                 "  selection:\n"
                 "    EventID: 1\n"
@@ -839,6 +867,28 @@ def sigma_detection_rule_candidate():
             ),
         },
     }
+
+
+def incompatible_sigma_detection_rule_candidate():
+    candidate = sigma_detection_rule_candidate()
+    candidate["fingerprint"] = "detection-rule-sigma-broken"
+    candidate["value"] = "Broken Sigma"
+    candidate["name"] = "Broken Sigma"
+    candidate["attributes"] = dict(candidate["attributes"])
+    candidate["attributes"].update(
+        {
+            "pattern": (
+                "title: Broken Sigma\n"
+                "logsource:\n"
+                "  product: windows\n"
+                "detection:\n"
+                "  condition: selection"
+            ),
+            "opencti_indicator_compatible": False,
+            "opencti_indicator_compatibility_reason": "missing detection selection",
+        }
+    )
+    return candidate
 
 
 def snort_detection_rule_candidate():

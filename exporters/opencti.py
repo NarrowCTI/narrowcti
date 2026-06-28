@@ -5,6 +5,7 @@ from core.opencti_graph_lookup import filter_eq, first_node
 from exporters.stix_builder import (
     build_curated_report_bundle,
     build_report_bundle,
+    detection_rule_indicator_compatible,
     detection_rule_labels,
     detection_rule_indicator_name,
     graph_accepted_candidates,
@@ -638,6 +639,8 @@ def native_detection_rule_indicator_candidates(graph_candidate_policy):
         pattern_type = clean_string(
             attributes.get("pattern_type") or attributes.get("rule_type")
         ).lower()
+        if not detection_rule_indicator_compatible(attributes):
+            continue
         if pattern_type not in native_pattern_types:
             continue
         candidates.append(candidate)

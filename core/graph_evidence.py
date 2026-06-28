@@ -1671,6 +1671,12 @@ def misp_detection_rule_evidence(detection_rules, source_key=""):
                 "rule_type": detection_rule.get("rule_type"),
                 "pattern_type": detection_rule.get("pattern_type"),
                 "pattern": detection_rule.get("pattern"),
+                "opencti_indicator_compatible": detection_rule.get(
+                    "opencti_indicator_compatible"
+                ),
+                "opencti_indicator_compatibility_reason": detection_rule.get(
+                    "opencti_indicator_compatibility_reason"
+                ),
                 "attribute_category": detection_rule.get("attribute_category"),
                 "attribute_uuid": detection_rule.get("attribute_uuid"),
                 "object_name": detection_rule.get("object_name"),

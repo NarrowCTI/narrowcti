@@ -1301,6 +1301,8 @@ def vulnerability_references(value):
 
 def detection_rule_stix_object_type(stix_object_type, attributes):
     pattern_type = detection_rule_pattern_type(attributes)
+    if not detection_rule_indicator_compatible(attributes):
+        return "note"
     if pattern_type in DETECTION_RULE_INDICATOR_PATTERN_TYPES:
         return "indicator"
     if pattern_type in DETECTION_RULE_NOTE_PATTERN_TYPES:
@@ -1323,6 +1325,16 @@ def detection_rule_pattern_type(attributes):
         attributes.get("pattern_type"),
         attributes.get("rule_type"),
     ).lower()
+
+
+def detection_rule_indicator_compatible(attributes):
+    value = attributes.get("opencti_indicator_compatible")
+    if isinstance(value, bool):
+        return value
+    normalized = clean_string(value).casefold()
+    if normalized in {"0", "false", "no"}:
+        return False
+    return True
 
 
 def detection_rule_candidate_to_note(name, candidate, attributes, common, identity_id):
@@ -1353,12 +1365,23 @@ def detection_rule_note_content(candidate, attributes):
     )
     source_field = clean_string(candidate.get("source_field"))
     label = f"{rule_type.upper()} detection rule" if rule_type else "Detection rule"
-    lines = [
-        (
-            f"{label} preserved as analyst evidence because this pattern type is "
-            "not exported as a native OpenCTI Indicator by the compatibility gate."
-        )
-    ]
+    if detection_rule_indicator_compatible(attributes):
+        lines = [
+            (
+                f"{label} preserved as analyst evidence because this pattern type is "
+                "not exported as a native OpenCTI Indicator by the compatibility gate."
+            )
+        ]
+    else:
+        lines = [
+            (
+                f"{label} preserved as analyst evidence because it did not pass "
+                "the OpenCTI Indicator compatibility gate."
+            )
+        ]
+        reason = clean_string(attributes.get("opencti_indicator_compatibility_reason"))
+        if reason:
+            lines.append(f"Compatibility reason: {reason}.")
     if source_name and source_field:
         lines.append(f"Source: {source_name} at {source_field}.")
     elif source_name:
