@@ -774,6 +774,8 @@ class GraphEvidenceTests(unittest.TestCase):
                         "meta": {
                             "cfr-target-category": ["Government", "Military"],
                             "cfr-suspected-victims": ["Iran", "Afghanistan"],
+                            "cfr-type-of-incident": ["Espionage"],
+                            "observed_motivations": ["Cyber Espionage"],
                         },
                     }
                 ],
@@ -795,6 +797,17 @@ class GraphEvidenceTests(unittest.TestCase):
         ]
         self.assertEqual(["Government", "Military"], [record["value"] for record in sectors])
         self.assertEqual(["Iran", "Afghanistan"], [record["value"] for record in countries])
+        narratives = [
+            record
+            for record in evidence["records"]
+            if record["entity_type"] == "narrative"
+        ]
+        narrative_types = {
+            record["value"]: record["attributes"]["narrative_types"]
+            for record in narratives
+        }
+        self.assertEqual(["incident-type"], narrative_types["Espionage"])
+        self.assertEqual(["motivation"], narrative_types["Cyber Espionage"])
         self.assertTrue(
             all(
                 record["source_field"] == "Galaxy.meta.cfr-target-category"

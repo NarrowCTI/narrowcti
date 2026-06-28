@@ -968,6 +968,17 @@ def deduplicate_misp_object_references(references):
 def extract_misp_infrastructure(event, ip_asn_enricher=None):
     event = compact_mapping(event)
     records = []
+    for attribute_index, attribute in enumerate(list_values(event.get("Attribute"))):
+        attribute = compact_mapping(attribute)
+        if not attribute:
+            continue
+        records.extend(
+            normalize_misp_infrastructure_attribute(
+                attribute,
+                f"Attribute[{attribute_index}]",
+                ip_asn_enricher=ip_asn_enricher,
+            )
+        )
     for object_index, misp_object in enumerate(list_values(event.get("Object"))):
         misp_object = compact_mapping(misp_object)
         if not misp_object:
@@ -990,6 +1001,41 @@ MISP_INFRASTRUCTURE_OBJECT_NAMES = {
     "ip-port",
     "netblock",
 }
+
+
+MISP_INFRASTRUCTURE_ATTRIBUTE_OBJECT_NAMES = {
+    "as": "asn",
+    "asn": "asn",
+    "domain|ip": "domain-ip",
+    "hostname|port": "ip-port",
+    "ip-dst|port": "ip-port",
+    "ip-src|port": "ip-port",
+}
+
+
+def normalize_misp_infrastructure_attribute(
+    attribute,
+    source_field,
+    ip_asn_enricher=None,
+):
+    attribute = compact_mapping(attribute)
+    if not attribute or is_truthy(attribute.get("deleted")):
+        return []
+    attribute_type = clean_text(attribute.get("type")).casefold()
+    object_name = MISP_INFRASTRUCTURE_ATTRIBUTE_OBJECT_NAMES.get(attribute_type)
+    if not object_name:
+        return []
+    pseudo_object = {
+        "uuid": attribute.get("uuid"),
+        "name": object_name,
+        "meta-category": attribute.get("category") or "network",
+        "Attribute": [attribute],
+    }
+    return normalize_misp_infrastructure_object(
+        pseudo_object,
+        source_field,
+        ip_asn_enricher=ip_asn_enricher,
+    )
 
 
 def normalize_misp_infrastructure_object(
@@ -1232,7 +1278,10 @@ def misp_object_attribute_facts(misp_object, object_source_field):
         attribute = compact_mapping(attribute)
         if not attribute or is_truthy(attribute.get("deleted")):
             continue
-        source_field = f"{object_source_field}.Attribute[{attribute_index}]"
+        if object_source_field.startswith("Attribute[") and attribute_index == 0:
+            source_field = object_source_field
+        else:
+            source_field = f"{object_source_field}.Attribute[{attribute_index}]"
         relation = clean_text(
             attribute.get("object_relation")
             or attribute.get("relation")

@@ -345,6 +345,17 @@ For bounded validation and replay, operators can use `MISP_QUERIES=event:<id>`
 or `MISP_QUERIES=uuid:<uuid>` to load one event directly instead of running a
 broad `events/restSearch` query.
 
+Additional real MISP validation on June 28, 2026 closed the main
+source-payload shape gap for top-level `AS` and `domain|ip` attributes:
+
+| Evidence | Result |
+| --- | --- |
+| MISP `event:1442` | Top-level `AS=327712` promoted as Autonomous-System evidence |
+| OpenCTI API | `Report -> related-to -> Autonomous-System` relationship returned with destination entity type `Autonomous-System` and number `327712` |
+| MISP `event:5280` | 49 top-level `domain|ip` attributes promoted as Infrastructure evidence |
+| OpenCTI API | Infrastructure `MISP domain-ip arabica.podzone.net`, Domain-Name `arabica.podzone.net`, IPv4 `178.128.103.24` and report `OceanLotus - WateringHole - Framework B 2018` returned with author `MISP via NarrowCTI` |
+| Graph export summary | `event:5280` created 145 entities and 147 relationships in the OpenCTI lab |
+
 Open questions before broad activation:
 
 - Confirm the same relationships visually in OpenCTI's graph and knowledge UI,
@@ -353,9 +364,9 @@ Open questions before broad activation:
   Unit-level STIX builder coverage confirms the relationship direction and
   object materialization contract.
 - Validate how noisy broad ASN searches become in larger OpenCTI datasets.
-- Validate true external MISP feed samples that carry ASN/netblock metadata;
-  controlled MISP object-template validation is complete, but real feed shape
-  coverage still needs evidence.
+- Validate true external MISP feed samples that carry netblock metadata; real
+  `AS`, `domain|ip` and `ip-src|port`/`ip-dst|port` feed shape coverage is now
+  validated.
 - Validate true OTX feed payloads that carry ASN/netblock metadata; unit-level
   source-provided ASN/CIDR extraction is implemented, but live feed shape
   coverage still needs evidence.
@@ -398,6 +409,9 @@ Safe implementation sequence:
 11. Done: add curation report sections for ASN concentration, shared
    infrastructure and actor/malware/infrastructure overlaps. The report remains
    evidence-only and derives these sections from decision-audit graph evidence.
+12. Done: validate true MISP top-level `AS` and `domain|ip` feed samples
+   against OpenCTI API after real export. Netblock feed-shape validation remains
+   pending until a safe source event carries explicit netblock evidence.
 
 This backlog is intentionally staged. The product value is very high, but the
 risk of graph pollution is also high if ASN and IP relationships are promoted

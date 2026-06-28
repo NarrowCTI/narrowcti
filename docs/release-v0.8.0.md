@@ -600,6 +600,42 @@ OpenCTI tab/export coverage is tracked in
   emits both `IP -> belongs-to -> ASN` and
   `Infrastructure -> consists-of -> ASN`, preserving enrichment provenance and
   keeping raw standalone IP indicators out of Infrastructure promotion.
+- Added safe top-level MISP infrastructure attribute promotion. Explicit
+  `ip-src|port`, `ip-dst|port`, `hostname|port`, `domain|ip`, `AS` and `asn`
+  attributes now reuse the MISP infrastructure object normalization path, while
+  raw standalone IP attributes still do not become Infrastructure. Unit coverage
+  confirms `ip-src|port` creates Infrastructure plus Observable with port
+  provenance and does not misread the port as an ASN.
+- Added MISP Narrative aliases for real source intent/context metadata.
+  `observed_motivations` now promotes Narrative evidence with type
+  `motivation`, and `cfr-type-of-incident` promotes Narrative evidence with
+  type `incident-type`. This keeps values such as `Espionage` and
+  `Financial Gain` as context objects instead of unsafe generic CTI Events.
+- Completed a controlled MISP matrix closure validation against the local
+  OpenCTI lab. Bounded exports validated `event:1578` for Sandworm,
+  `Centreon`, sectors, countries, Narrative `Espionage`, ATT&CK and detection
+  rules; `event:5559` for Narrative `Financial Gain`; `event:7` for Campaign
+  `Dust Storm`; `event:1534` for `ip-src|port` Infrastructure; and
+  `event:1150` for explicit `target-location` countries and
+  `CVE-2018-0171`. OpenCTI API validation confirmed reports with author
+  `MISP via NarrowCTI` and the expected Campaign, Narrative, Organization,
+  Sector, Country, Infrastructure, Observable, Malware, Threat Actor and
+  Vulnerability objects.
+- Extended the same closure validation with real MISP events `1442` and `5280`.
+  Event `1442` validated top-level `AS` promotion as an OpenCTI
+  `Autonomous-System` related to the imported report. Event `5280` validated
+  top-level `domain|ip` promotion with 49 Infrastructure objects, 98
+  observables and 147 relationships, including API-confirmed Infrastructure
+  `MISP domain-ip arabica.podzone.net`, Domain-Name `arabica.podzone.net` and
+  IPv4 `178.128.103.24`.
+- Recorded local feed blockers for the remaining v0.8 matrix items. The current
+  MISP dataset has zero `suricata` and zero `pcre` attributes. Broad keyword
+  searches found only prose/reference hits for channels, security platforms,
+  systems and deep locations; no structured fields such as `c2-channel`,
+  `security-platform`, `targeted-system`, `target-platform`,
+  `targeted-region`, `targeted-city` or `targeted-coordinate` are available for
+  safe real OpenCTI UI/API validation yet. The mappings remain implemented or
+  guarded, but real validation needs a feed that actually carries those fields.
 - Expanded curation reporting for infrastructure intelligence. Decision-audit
   graph evidence now feeds an `Infrastructure and ASNs` context section with
   top infrastructure entities, ASN concentration, shared entities across

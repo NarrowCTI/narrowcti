@@ -1327,7 +1327,8 @@ The dry-run evidence showed an important graph hygiene behavior:
 - Events such as `428`, `1187`, `1379`, `1534` and `278` contained network
   indicators or AS-like attributes, but did not carry enough source-backed
   infrastructure context for NarrowCTI to promote Infrastructure. They stayed
-  as report/indicator/provenance-oriented evidence.
+  as report/indicator/provenance-oriented evidence at that point in the
+  validation cycle.
 - Event `3` was rejected by the attribute guardrail because it carried 11,367
   attributes, validating that the local lab does not need to ingest oversized
   samples to prove coverage.
@@ -1451,6 +1452,109 @@ NarrowCTI now emits both `IP -> belongs-to -> ASN` and
 `Infrastructure -> consists-of -> ASN`. The next real validation step is to
 confirm whether OpenCTI shows the full Infrastructure -> IP -> ASN chain
 directly inside the Infrastructure view or only through graph traversal.
+
+### MISP Matrix Closure Validation
+
+On June 28, 2026, NarrowCTI executed a focused closure pass against the local
+MISP/OpenCTI lab to reduce the remaining v0.8 matrix backlog with real source
+payloads. The rebuilt `narrowcti-gateway` image was run on `threat-net`, with
+OpenCTI graph lookup enabled and one MISP event processed per run.
+
+Two small code-level gaps were closed before the real exports:
+
+- MISP Galaxy meta keys `observed_motivations` and `cfr-type-of-incident` now
+  promote source-backed Narrative candidates. `observed_motivations` is typed
+  as `motivation`; `cfr-type-of-incident` is typed as `incident-type`. These are
+  intentionally Narratives, not Events, because values such as `Espionage` or
+  `Financial Gain` describe context/intent rather than a discrete CTI event.
+- Top-level MISP infrastructure attributes `ip-src|port`, `ip-dst|port`,
+  `hostname|port`, `domain|ip`, `AS` and `asn` now reuse the same safe
+  infrastructure normalization as official MISP infrastructure objects. Raw
+  standalone IP attributes still do not become Infrastructure.
+
+Focused unit validation passed with:
+
+```text
+python -m unittest tests.test_graph_evidence tests.test_misp_processor
+Ran 65 tests in 0.214s
+OK
+```
+
+Dry-run evidence then confirmed the source mappings before export:
+
+- `event:5483`, `Peach Sandstorm delivers FalseFont to defense sector`, carried
+  `APT33`, `Defense`, `Private sector`, `United States`, `Saudi Arabia`,
+  `South Korea` and Narrative `Espionage` from
+  `Galaxy.meta.cfr-type-of-incident`.
+- `event:5559`, `Phorpiex - Downloader Delivering Ransomware`, carried
+  Narrative `Financial Gain` from `Galaxy.meta.observed_motivations`, plus
+  `Phorpiex`, ransomware context and ten ATT&CK attack patterns.
+- `event:7`, `OSINT Dust Storm Campaign Targeting Japanese Critical
+  Infrastructure`, carried explicit `campaign-name=Dust Storm`.
+- `event:1578`, `CERT-FR report extended - sandworm intrusion set campaign
+  targeting Centreon systems`, carried `Sandworm`, `Sandworm Team - G0034`,
+  five target sectors, 11 target countries, target organization `Centreon`,
+  Narrative `Espionage`, 11 ATT&CK attack patterns and 13 detection rules.
+- `event:1150`, `OSINT - Cisco IOS CVE-2018-0171 attack`, carried explicit
+  `target-location` values `Iran` and `Russia`, plus `CVE-2018-0171`.
+- `event:1534`, `Linux/KAITEN AK47(a Mod-Telnet-Scanner) & Echo-loader
+  hexstrings spread`, confirmed that top-level `ip-src|port` values now
+  produce source-backed Infrastructures `MISP ip-port 204.11.49.132` and
+  `MISP ip-port 196.53.114.199`, each with an IPv4 observable carrying port
+  `80` and `Infrastructure -> consists-of -> IPv4-Addr` provenance.
+- `event:1442`, `On-memory post exploit payloads from encoded binary`,
+  confirmed that a top-level MISP `AS` attribute promotes an
+  Autonomous-System candidate `AS327712` and keeps collector/source tags held
+  by graph policy instead of creating noisy graph objects.
+- `event:5280`, `OceanLotus - WateringHole - Framework B 2018`, confirmed
+  that top-level `domain|ip` attributes promote source-backed Infrastructure
+  objects such as `MISP domain-ip arabica.podzone.net`, plus Domain-Name and
+  IPv4 observables connected through `Infrastructure -> consists-of`
+  relationships.
+
+Controlled real exports were then executed for `event:1578`, `event:5559`,
+`event:7`, `event:1534`, `event:1150`, `event:1442` and `event:5280` with
+`MISP_MAX_EVENTS_PER_RUN=1`, source-specific state files, graph lookup enabled
+and bounded historical replay score overrides. OpenCTI API validation
+confirmed:
+
+- Reports for all seven events exist with author `MISP via NarrowCTI`.
+- Campaign `Dust Storm` exists as an OpenCTI Campaign authored by
+  `MISP via NarrowCTI`.
+- Narratives `Espionage` and `Financial Gain` exist as OpenCTI Narratives
+  authored by `MISP via NarrowCTI`.
+- Organization `Centreon` exists as an OpenCTI Organization authored by
+  `MISP via NarrowCTI`.
+- Sectors such as `Energy` and `Private sector` exist as OpenCTI Sectors
+  authored by `MISP via NarrowCTI`.
+- Countries `Ukraine`, `Iran` and `Russia` exist as OpenCTI Countries authored
+  by `MISP via NarrowCTI`.
+- Infrastructures `MISP ip-port 196.53.114.199` and
+  `MISP ip-port 204.11.49.132` exist as OpenCTI Infrastructures authored by
+  `MISP via NarrowCTI`, with corresponding IPv4 Observables.
+- `event:1442` created a queryable `Report -> related-to ->
+  Autonomous-System` relationship to OpenCTI entity type `Autonomous-System`
+  with number `327712`; the report author is `MISP via NarrowCTI`.
+- `event:5280` created 49 domain/IP-backed Infrastructure objects, 98
+  observables and 147 graph relationships. OpenCTI API validation confirmed
+  Infrastructure `MISP domain-ip arabica.podzone.net`, Domain-Name observable
+  `arabica.podzone.net`, IPv4 observable `178.128.103.24` and report
+  `OceanLotus - WateringHole - Framework B 2018`.
+- Malware `Phorpiex`, Threat Actor Group `Sandworm`, Vulnerability
+  `CVE-2018-0171` and the imported reports are queryable through the OpenCTI
+  API after the real runs.
+
+The same pass also checked local MISP coverage for the remaining feed-dependent
+tabs after the additional feeds were enabled. The local dataset now contains
+real `AS`, `domain|ip`, `ip-src|port` and `ip-dst|port` evidence, which closes
+the core MISP infrastructure validation for v0.8. It still has zero
+`suricata` and zero `pcre` attributes. Broad searches produced textual
+references to channels, security products, systems and coordinates, but no
+structured source fields such as `c2-channel`, `security-platform`,
+`targeted-system`, `target-platform`, `targeted-region`, `targeted-city` or
+`targeted-coordinate`. Those mappings remain implemented or guarded in code,
+but real OpenCTI UI/API validation is blocked until a source feed carries those
+structured fields.
 
 ## OTX Preflight Blocked By Upstream Timeout
 

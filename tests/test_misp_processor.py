@@ -1218,6 +1218,80 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_top_level_misp_infrastructure_attributes(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-ip-src-port",
+                "type": "ip-src|port",
+                "category": "Network activity",
+                "value": "196.53.114.199|80",
+            },
+            {
+                "uuid": "attribute-asn",
+                "type": "AS",
+                "category": "Network activity",
+                "value": "AS64512",
+            },
+            {
+                "uuid": "attribute-raw-ip",
+                "type": "ip-src",
+                "category": "Network activity",
+                "value": "203.0.113.30",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["infrastructure"])
+        self.assertEqual(1, graph_evidence["counts"]["observable"])
+        self.assertEqual(1, graph_evidence["counts"]["autonomous_system"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "infrastructure"
+                and candidate["value"] == "MISP ip-port 196.53.114.199"
+                and candidate["source_field"] == "Attribute[0]"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "observable"
+                and candidate["value"] == "196.53.114.199"
+                and candidate["relationship_type"] == "consists-of"
+                and candidate["attributes"]["port"] == "80"
+                and candidate["attributes"]["relationship_source_value"]
+                == "MISP ip-port 196.53.114.199"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512"
+                and candidate["relationship_type"] == "related-to"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "infrastructure"
+                and candidate["value"] == "203.0.113.30"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS80"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_extracts_misp_detection_rules(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         event = enriched_event()
