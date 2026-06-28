@@ -1672,7 +1672,7 @@ def normalize_misp_detection_rule(source):
     source = compact_mapping(source)
     attribute = compact_mapping(source.get("attribute"))
     misp_object = compact_mapping(source.get("object"))
-    rule_type = clean_text(attribute.get("type")).casefold()
+    rule_type = misp_detection_rule_type(attribute, misp_object)
     raw_rule_content = str(attribute.get("value") or "").strip()
     rule_content = raw_rule_content.strip()
     if rule_type not in DETECTION_RULE_TYPES:
@@ -1705,6 +1705,21 @@ def normalize_misp_detection_rule(source):
             "source_field": source.get("source_field"),
         }
     )
+
+
+def misp_detection_rule_type(attribute, misp_object):
+    attribute = compact_mapping(attribute)
+    misp_object = compact_mapping(misp_object)
+    attribute_type = clean_text(attribute.get("type")).casefold()
+    object_relation = clean_text(attribute.get("object_relation")).casefold()
+    object_name = clean_text(misp_object.get("name")).casefold()
+    if object_relation in DETECTION_RULE_TYPES:
+        return object_relation
+    if attribute_type not in DETECTION_RULE_TYPES:
+        return ""
+    if object_name in DETECTION_RULE_TYPES:
+        return object_name
+    return attribute_type
 
 
 def detection_rule_title(rule_type, rule_content, attribute):

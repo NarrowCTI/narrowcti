@@ -773,6 +773,16 @@ OpenCTI tab/export coverage is tracked in
   captures Docker stats, Docker disk posture command completion and container
   health without collecting secrets, and requires an explicit
   `-DiskPostureOk` operator decision before marking disk posture healthy.
+- Refined MISP detection-rule source-shape handling for Suricata objects.
+  Real MISP `event:1649` stores Suricata object rules as attributes with MISP
+  type `snort` and `object_relation=suricata`; NarrowCTI now classifies those
+  candidates as `rule-type:suricata` in dry-run evidence instead of collapsing
+  them into Snort. Post-export OpenCTI API validation confirmed four
+  `SURICATA:` Notes authored by `MISP via NarrowCTI`, each carrying
+  `narrowcti:detection-rule` and `rule-type:suricata` labels. The same retry
+  surfaced stale Indicator relationship warnings in OpenCTI logs, which remain
+  tracked as historical replay polish rather than a Suricata materialization
+  blocker.
 
 ## Promotion Boundary
 

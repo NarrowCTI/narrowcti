@@ -1412,11 +1412,35 @@ class MISPProcessorTests(unittest.TestCase):
                 ),
             },
         ]
+        event["Object"] = [
+            {
+                "uuid": "object-suricata-1",
+                "name": "suricata",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-suricata-ref",
+                        "type": "link",
+                        "object_relation": "ref",
+                        "value": "https://example.com/rule",
+                    },
+                    {
+                        "uuid": "attribute-suricata-1",
+                        "type": "snort",
+                        "object_relation": "suricata",
+                        "category": "Network activity",
+                        "value": (
+                            'alert http any any -> any any '
+                            '(msg:"Suricata HTTP Beacon"; sid:2;)'
+                        ),
+                    },
+                ],
+            }
+        ]
         prepared = SimpleNamespace(event=event, score_details={})
 
         metadata = decision_metadata(candidate_ref, prepared)
 
-        self.assertEqual(4, len(metadata["misp_detection_rules"]))
+        self.assertEqual(5, len(metadata["misp_detection_rules"]))
         self.assertEqual("sigma", metadata["misp_detection_rules"][0]["rule_type"])
         self.assertEqual(
             (
@@ -1453,8 +1477,13 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertFalse(
             metadata["misp_detection_rules"][3]["opencti_indicator_compatible"]
         )
+        self.assertEqual("suricata", metadata["misp_detection_rules"][4]["rule_type"])
+        self.assertEqual(
+            "Suricata HTTP Beacon",
+            metadata["misp_detection_rules"][4]["value"],
+        )
         graph_evidence = metadata["graph_evidence"]
-        self.assertEqual(4, graph_evidence["counts"]["detection_rule"])
+        self.assertEqual(5, graph_evidence["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 record["entity_type"] == "detection_rule"
@@ -1464,7 +1493,7 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
         graph_candidates = metadata["graph_candidates"]
-        self.assertEqual(4, graph_candidates["counts"]["detection_rule"])
+        self.assertEqual(5, graph_candidates["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 candidate["entity_type"] == "detection_rule"
@@ -1515,6 +1544,14 @@ class MISPProcessorTests(unittest.TestCase):
                 and candidate["value"] == "Broken Sigma"
                 and candidate["attributes"]["pattern_type"] == "sigma"
                 and candidate["attributes"]["opencti_indicator_compatible"] is False
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["value"] == "Suricata HTTP Beacon"
+                and candidate["attributes"]["pattern_type"] == "suricata"
                 for candidate in graph_candidates["candidates"]
             )
         )

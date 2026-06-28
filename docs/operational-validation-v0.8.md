@@ -1464,10 +1464,32 @@ OpenCTI API validation confirmed:
 This closes the real OpenCTI API validation for Snort-as-Note behavior and
 reconfirms the Infrastructure/IP/ASN graph path from the same rich MISP event.
 
-A follow-up MISP API check for local `suricata` and `pcre` attribute types
-returned zero records in the current lab dataset. Those pattern types remain
-implemented as Note-preserved detection evidence, but still need real-source
-OpenCTI UI/API validation when a usable feed sample is available.
+A follow-up MISP database check refined the source-shape evidence. The local
+dataset still has zero direct `suricata` and zero `pcre` attribute types, but
+it does contain three MISP objects named `suricata` in real `event:1649`. Those
+objects store their rule attributes with MISP type `snort` and
+`object_relation=suricata`. A focused parser fix now lets the object relation
+and object name override the generic attribute type for detection-rule
+classification. The rebuilt image dry-run for `event:1649` returned
+`rule_type_counts={'suricata': 4, 'yara': 2, 'sigma': 6}` and preserved the
+four Suricata rule names from the real source object.
+
+An immediate controlled real export retry was started with the rebuilt image.
+During the run, the local Docker Desktop API briefly returned
+`500 Internal Server Error` for container inspection and log calls, and OpenCTI
+logged transient `MISSING_REFERENCE_ERROR` warnings for several historical
+Indicator relationships. After the API stabilized, post-export OpenCTI GraphQL
+validation confirmed that the Suricata evidence did materialize correctly: four
+Notes were returned for `Suricata`, all authored by `MISP via NarrowCTI`, with
+abstracts prefixed `SURICATA:` and labels `narrowcti:detection-rule` plus
+`rule-type:suricata`.
+
+This closes the real source-shape, dry-run classification and OpenCTI Note
+validation for Suricata. The remaining detection-rule evidence gap is PCRE,
+which remains blocked by source data because the current local MISP dataset has
+no PCRE attributes or objects. The repeated historical replay relationship
+warnings should stay in the polish backlog so stale Indicator references do not
+mask otherwise valid Note materialization.
 
 This event materially improves the real evidence for `Observations /
 Infrastructures`, `Observations / Observables`, ASN correlation, Arsenal /
@@ -1697,8 +1719,9 @@ relationships into OpenCTI.
 The same pass also checked local MISP coverage for the remaining feed-dependent
 tabs after the additional feeds were enabled. The local dataset now contains
 real `AS`, `domain|ip`, `ip-src|port` and `ip-dst|port` evidence, which closes
-the core MISP infrastructure validation for v0.8. It still has zero
-`suricata` and zero `pcre` attributes. Broad searches produced textual
+the core MISP infrastructure validation for v0.8. It also contains real
+Suricata objects in `event:1649`, even though there are no direct `suricata`
+attribute types. PCRE remains absent. Broad searches produced textual
 references to channels, security products, systems and coordinates, but no
 structured source fields such as `c2-channel`, `security-platform`,
 `targeted-system`, `target-platform`, `targeted-region`, `targeted-city` or
