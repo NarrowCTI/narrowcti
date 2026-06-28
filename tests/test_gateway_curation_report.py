@@ -182,6 +182,36 @@ class GatewayCurationReportTests(unittest.TestCase):
         self.assertEqual(1, report.executive_summary["pending_review_count"])
         self.assertEqual(1, report.source_summaries[0]["pending_review"])
 
+    def test_report_from_files_surfaces_relationship_audit_graph_validation(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            relationship_audit_file = os.path.join(
+                tmpdir,
+                "opencti-relationship-audit.json",
+            )
+            with open(relationship_audit_file, "w", encoding="utf-8") as file_obj:
+                json.dump(relationship_audit_evidence(), file_obj)
+
+            report = build_curation_report_from_files(
+                relationship_audit_file=relationship_audit_file,
+            )
+
+        audit = report.to_dict()["graph_validation"]["relationship_audit"]
+        recommendation_codes = [item["code"] for item in report.recommendations]
+        text = format_text_report(report)
+        html = format_html_report(report)
+
+        self.assertTrue(audit["available"])
+        self.assertTrue(audit["found"])
+        self.assertEqual("needs-evidence", audit["coverage_status"])
+        self.assertEqual(30, audit["relationship_count"])
+        self.assertEqual(["adversary", "victimology"], audit["missing_quadrants"])
+        self.assertEqual(1, audit["kill_chain_attack_pattern_count"])
+        self.assertIn("complete-opencti-relationship-coverage", recommendation_codes)
+        self.assertIn("graph_validation:", text)
+        self.assertIn("coverage=needs-evidence", text)
+        self.assertIn("missing=adversary,victimology", text)
+        self.assertIn("Graph Validation", html)
+
     def test_support_redaction_removes_detailed_lists(self):
         operational = build_operational_report(
             [
@@ -1025,6 +1055,42 @@ def graph_infrastructure_metadata():
                 },
             ],
         }
+    }
+
+
+def relationship_audit_evidence():
+    return {
+        "found": True,
+        "target": {
+            "id": "infrastructure--1",
+            "standard_id": "infrastructure--1",
+            "entity_type": "Infrastructure",
+            "name": "MISP ip-port 137.184.181.252",
+        },
+        "relationship_count": 30,
+        "outbound_count": 18,
+        "inbound_count": 12,
+        "diamond_quadrant_counts": {
+            "adversary": 0,
+            "capability": 10,
+            "infrastructure": 20,
+            "victimology": 0,
+            "other": 0,
+        },
+        "kill_chain_attack_patterns": ["T1090 Proxy"],
+        "coverage": {
+            "status": "needs-evidence",
+            "expected_quadrants": [
+                "adversary",
+                "capability",
+                "infrastructure",
+                "victimology",
+            ],
+            "present_quadrants": ["capability", "infrastructure"],
+            "missing_quadrants": ["adversary", "victimology"],
+            "kill_chain_required": True,
+            "kill_chain_present": True,
+        },
     }
 
 

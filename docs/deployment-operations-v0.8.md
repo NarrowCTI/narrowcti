@@ -43,7 +43,7 @@ commands:
 | --- | --- |
 | `narrowcti-preflight` | Runs `python -m gateway.preflight`. |
 | `narrowcti-gateway-report` | Builds `/app/state/gateway-operational-report.txt` from gateway run and quarantine evidence. |
-| `narrowcti-curation-report` | Writes `/app/state/curation-report.txt`, `/app/state/curation-report.json` and `/app/state/curation-report.html`. |
+| `narrowcti-curation-report` | Writes `/app/state/curation-report.txt`, `/app/state/curation-report.json` and `/app/state/curation-report.html`, including relationship-audit graph validation when `/app/state/opencti-relationship-audit.json` exists. |
 | `narrowcti-decision-report` | Builds `/app/state/decision-audit-report.txt` from `/app/state/audit`. |
 | `narrowcti-correlation-report` | Builds `/app/state/artifact-correlation-report.txt` from the local artifact deduplication index. |
 | `narrowcti-operational-validation` | Builds `/app/state/operational-validation.html` from preflight, decision audit and optional manual evidence. |
@@ -82,19 +82,25 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml logs --tail 12
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-gateway-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-decision-report
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-correlation-report
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-curation-report
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-operational-validation
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-support-diagnostics
 $env:NARROWCTI_OPENCTI_AUDIT_TYPE = "infrastructure"
 $env:NARROWCTI_OPENCTI_AUDIT_SEARCH = "MISP ip-port 137.184.181.252"
 $env:NARROWCTI_OPENCTI_AUDIT_FIRST = "80"
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-opencti-relationship-audit
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-curation-report
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-operational-validation
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-support-diagnostics
 ```
 
 The relationship audit service prints JSON to stdout and writes the same
 evidence to `/app/state/opencti-relationship-audit.json` by default. Override
 `NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE` when multiple object audits need to be
 kept separately in the state volume.
+
+The curation report service reads
+`NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE`, defaulting to
+`/app/state/opencti-relationship-audit.json`. Run the relationship audit before
+`narrowcti-curation-report` when the report needs to show post-ingestion
+Diamond quadrant and Kill Chain coverage for the audited OpenCTI object.
 
 When the validation goal is full Diamond/Kill Chain readiness for one object,
 set explicit coverage expectations before running the audit:

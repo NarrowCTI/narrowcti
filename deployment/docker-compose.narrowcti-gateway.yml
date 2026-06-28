@@ -84,6 +84,8 @@ services:
       - /app/state/curation-report.json
       - --html-file
       - /app/state/curation-report.html
+      - --relationship-audit-file
+      - ${NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE:-/app/state/opencti-relationship-audit.json}
     restart: "no"
     profiles:
       - ops

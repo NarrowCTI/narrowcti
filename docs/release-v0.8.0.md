@@ -747,6 +747,12 @@ OpenCTI tab/export coverage is tracked in
   evidence. The auditor records missing quadrants in `coverage`, and the
   operational checklist treats incomplete configured coverage as
   `needs-evidence`.
+- Integrated relationship-audit evidence into the curation report. The
+  `narrowcti-curation-report` ops service can now read
+  `/app/state/opencti-relationship-audit.json` and render a `graph_validation`
+  section with the audited target, relationship totals, Diamond quadrant
+  coverage, missing quadrants and Kill Chain presence. This keeps the report
+  aligned with real OpenCTI post-ingestion behavior while remaining read-only.
 - Added `scripts/capture-resource-posture.ps1` to generate local Docker
   resource posture evidence for the operational validation checklist. The helper
   captures Docker stats, Docker disk posture command completion and container

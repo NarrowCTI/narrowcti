@@ -40,6 +40,7 @@ REDACTION_POLICIES = {
             "analyst_review_actions",
             "source_summaries",
             "context_sections",
+            "graph_validation",
             "policy_insights",
             "recommendations",
         ],
@@ -59,6 +60,7 @@ REDACTION_POLICIES = {
             "executive_summary",
             "source_summaries",
             "context_sections",
+            "graph_validation",
             "policy_insights",
             "recommendations",
         ],
@@ -78,6 +80,7 @@ REDACTION_POLICIES = {
             "executive_summary",
             "source_summaries",
             "context_sections",
+            "graph_validation",
             "policy_insights",
             "recommendations",
         ],
@@ -96,6 +99,7 @@ class CurationReport:
     analyst_review_actions: dict
     source_summaries: list
     context_sections: dict
+    graph_validation: dict
     policy_insights: list
     recommendations: list
 
@@ -110,6 +114,7 @@ class CurationReport:
             "analyst_review_actions": self.analyst_review_actions,
             "source_summaries": list(self.source_summaries),
             "context_sections": self.context_sections,
+            "graph_validation": self.graph_validation,
             "policy_insights": list(self.policy_insights),
             "recommendations": list(self.recommendations),
         }
@@ -120,6 +125,7 @@ def build_curation_report(
     decision_report,
     analyst_review_summary,
     analyst_review_actions=None,
+    graph_validation=None,
     generated_at="",
 ):
     operational = operational_report.to_dict()
@@ -139,6 +145,7 @@ def build_curation_report(
         review_actions,
     )
     context_sections = build_context_sections(source_summaries)
+    graph_validation = graph_validation or empty_graph_validation_summary()
     policy_insights = build_policy_insights(source_summaries)
     return CurationReport(
         schema_version=SCHEMA_VERSION,
@@ -150,11 +157,13 @@ def build_curation_report(
         analyst_review_actions=review_actions,
         source_summaries=source_summaries,
         context_sections=context_sections,
+        graph_validation=graph_validation,
         policy_insights=policy_insights,
         recommendations=build_recommendations(
             executive,
             review_actions,
             policy_insights=policy_insights,
+            graph_validation=graph_validation,
         ),
     )
 
@@ -223,7 +232,12 @@ def build_executive_summary(
     }
 
 
-def build_recommendations(summary, review_actions=None, policy_insights=None):
+def build_recommendations(
+    summary,
+    review_actions=None,
+    policy_insights=None,
+    graph_validation=None,
+):
     recommendations = []
     review_actions = review_actions or empty_review_action_summary()
     policy_insights = policy_insights or []
@@ -293,6 +307,17 @@ def build_recommendations(summary, review_actions=None, policy_insights=None):
                 "Source-level review patterns indicate policy tuning may be needed before broader promotion.",
             )
         )
+    relationship_audit = (graph_validation or {}).get("relationship_audit") or {}
+    if (
+        relationship_audit.get("available")
+        and relationship_audit.get("coverage_status") == "needs-evidence"
+    ):
+        recommendations.append(
+            recommendation(
+                "complete-opencti-relationship-coverage",
+                "OpenCTI relationship audit found promoted graph evidence, but expected Diamond or Kill Chain coverage is still incomplete.",
+            )
+        )
     return recommendations
 
 
@@ -308,6 +333,7 @@ def build_curation_report_from_files(
     decision_paths=None,
     quarantine_file="",
     release_audit_file="",
+    relationship_audit_file="",
     limit=0,
 ):
     summary_records = safe_read_gateway_summary_file(summary_file, limit=limit)
@@ -322,11 +348,15 @@ def build_curation_report_from_files(
     review_actions = build_review_action_summary(
         safe_read_audit_events(release_audit_file, limit=limit),
     )
+    graph_validation = build_graph_validation_summary(
+        load_relationship_audit_evidence(relationship_audit_file)
+    )
     return build_curation_report(
         operational,
         decisions,
         review_summary,
         analyst_review_actions=review_actions,
+        graph_validation=graph_validation,
     )
 
 
@@ -358,6 +388,93 @@ def safe_read_audit_events(release_audit_file="", limit=0):
     if limit and limit > 0:
         return events[-limit:]
     return events
+
+
+def load_relationship_audit_evidence(evidence_file):
+    evidence_file = str(evidence_file or "").strip()
+    if not evidence_file or not os.path.exists(evidence_file):
+        return {}
+    with open(evidence_file, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    if not isinstance(data, dict):
+        raise ValueError("relationship audit evidence file must contain a JSON object")
+    return data
+
+
+def empty_graph_validation_summary():
+    return {
+        "relationship_audit": {
+            "available": False,
+            "found": False,
+            "target": {},
+            "relationship_count": 0,
+            "outbound_count": 0,
+            "inbound_count": 0,
+            "diamond_quadrant_counts": {},
+            "coverage_status": "not-collected",
+            "expected_quadrants": [],
+            "present_quadrants": [],
+            "missing_quadrants": [],
+            "kill_chain_required": False,
+            "kill_chain_present": False,
+            "kill_chain_attack_pattern_count": 0,
+        }
+    }
+
+
+def build_graph_validation_summary(relationship_audit_evidence=None):
+    evidence = (
+        relationship_audit_evidence
+        if isinstance(relationship_audit_evidence, dict)
+        else {}
+    )
+    if not evidence:
+        return empty_graph_validation_summary()
+    target = evidence.get("target") or {}
+    coverage = evidence.get("coverage") or {}
+    return {
+        "relationship_audit": {
+            "available": True,
+            "found": bool(evidence.get("found", False)),
+            "target": compact_audit_target(target),
+            "relationship_count": int(evidence.get("relationship_count", 0) or 0),
+            "outbound_count": int(evidence.get("outbound_count", 0) or 0),
+            "inbound_count": int(evidence.get("inbound_count", 0) or 0),
+            "diamond_quadrant_counts": {
+                str(key): int(value or 0)
+                for key, value in (
+                    evidence.get("diamond_quadrant_counts") or {}
+                ).items()
+            },
+            "coverage_status": str(coverage.get("status") or "informational"),
+            "expected_quadrants": sorted_text_values(
+                coverage.get("expected_quadrants")
+            ),
+            "present_quadrants": sorted_text_values(coverage.get("present_quadrants")),
+            "missing_quadrants": sorted_text_values(coverage.get("missing_quadrants")),
+            "kill_chain_required": bool(coverage.get("kill_chain_required", False)),
+            "kill_chain_present": bool(coverage.get("kill_chain_present", False)),
+            "kill_chain_attack_pattern_count": len(
+                evidence.get("kill_chain_attack_patterns") or []
+            ),
+        }
+    }
+
+
+def compact_audit_target(target):
+    if not isinstance(target, dict):
+        return {}
+    return {
+        key: str(target.get(key) or "")
+        for key in ("id", "standard_id", "entity_type", "name", "observable_value")
+        if target.get(key)
+    }
+
+
+def sorted_text_values(values):
+    if isinstance(values, str):
+        values = [item.strip() for item in values.split(",")]
+    return sorted(str(value) for value in values or [] if str(value or "").strip())
 
 
 def build_review_action_summary(events):
@@ -1036,6 +1153,9 @@ def format_text_report(report, redaction_profile="none"):
     summary = data["executive_summary"]
     review_actions = data.get("analyst_review_actions") or {}
     redaction_policy = data.get("redaction_policy") or {}
+    relationship_audit = (
+        (data.get("graph_validation") or {}).get("relationship_audit") or {}
+    )
     lines = [
         "NarrowCTI curation report",
         f"schema_version={data['schema_version']}",
@@ -1086,6 +1206,28 @@ def format_text_report(report, redaction_profile="none"):
         f"stix_objects={summary['graph_stix_object_count']} "
         f"stix_relationships={summary['graph_stix_relationship_count']}",
     ]
+    if relationship_audit.get("available"):
+        lines.append("graph_validation:")
+        lines.append(
+            "- "
+            f"opencti_relationship_audit found="
+            f"{str(relationship_audit.get('found', False)).lower()} "
+            f"target={format_audit_target_summary(relationship_audit.get('target'))} "
+            f"relationships={relationship_audit.get('relationship_count', 0)} "
+            f"outbound={relationship_audit.get('outbound_count', 0)} "
+            f"inbound={relationship_audit.get('inbound_count', 0)} "
+            f"coverage={relationship_audit.get('coverage_status', '')} "
+            f"present={format_text_values(relationship_audit.get('present_quadrants'))} "
+            f"missing={format_text_values(relationship_audit.get('missing_quadrants'))} "
+            f"quadrants="
+            f"{format_mapping_counts(relationship_audit.get('diamond_quadrant_counts'))} "
+            f"kill_chain_required="
+            f"{str(relationship_audit.get('kill_chain_required', False)).lower()} "
+            f"kill_chain_present="
+            f"{str(relationship_audit.get('kill_chain_present', False)).lower()} "
+            f"kill_chain_attack_patterns="
+            f"{relationship_audit.get('kill_chain_attack_pattern_count', 0)}"
+        )
     if data.get("context_sections"):
         lines.append("context_sections:")
         sections = sorted(
@@ -1146,6 +1288,9 @@ def format_html_report(report, redaction_profile="none"):
     summary = data["executive_summary"]
     review_actions = data.get("analyst_review_actions") or {}
     redaction_policy = data.get("redaction_policy") or {}
+    relationship_audit = (
+        (data.get("graph_validation") or {}).get("relationship_audit") or {}
+    )
     recommendations = "\n".join(
         "<li><strong>{}</strong>: {}</li>".format(
             escape(item.get("code")),
@@ -1229,6 +1374,33 @@ def format_html_report(report, redaction_profile="none"):
     )
     if not context_rows:
         context_rows = html_table_row("none", "", 0, 0, 0, "")
+    graph_validation_rows = html_table_row(
+        "not-collected",
+        "",
+        0,
+        0,
+        0,
+        "none",
+        "none",
+        "none",
+        "false",
+        "false",
+        0,
+    )
+    if relationship_audit.get("available"):
+        graph_validation_rows = html_table_row(
+            "found" if relationship_audit.get("found") else "missing",
+            format_audit_target_summary(relationship_audit.get("target")),
+            relationship_audit.get("relationship_count", 0),
+            relationship_audit.get("outbound_count", 0),
+            relationship_audit.get("inbound_count", 0),
+            relationship_audit.get("coverage_status", ""),
+            format_text_values(relationship_audit.get("present_quadrants")),
+            format_text_values(relationship_audit.get("missing_quadrants")),
+            str(relationship_audit.get("kill_chain_required", False)).lower(),
+            str(relationship_audit.get("kill_chain_present", False)).lower(),
+            relationship_audit.get("kill_chain_attack_pattern_count", 0),
+        )
 
     return """<!doctype html>
 <html lang="en">
@@ -1285,6 +1457,13 @@ def format_html_report(report, redaction_profile="none"):
     <table>
       <tr><th>STIX bundles</th><th>STIX objects</th><th>STIX relationships</th></tr>
       <tr><td>{stix_bundles}</td><td>{stix_objects}</td><td>{stix_relationships}</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Graph Validation</h2>
+    <table>
+      <tr><th>status</th><th>target</th><th>relationships</th><th>outbound</th><th>inbound</th><th>coverage</th><th>present quadrants</th><th>missing quadrants</th><th>kill chain required</th><th>kill chain present</th><th>attack patterns</th></tr>
+      {graph_validation_rows}
     </table>
   </section>
   <section>
@@ -1353,6 +1532,7 @@ def format_html_report(report, redaction_profile="none"):
         stix_bundles=escape(summary["graph_stix_bundle_count"]),
         stix_objects=escape(summary["graph_stix_object_count"]),
         stix_relationships=escape(summary["graph_stix_relationship_count"]),
+        graph_validation_rows=graph_validation_rows,
         context_rows=context_rows,
         source_rows=source_rows,
         policy_rows=policy_rows,
@@ -1519,6 +1699,28 @@ def format_context_narrative_summary(summary):
     )
 
 
+def format_audit_target_summary(target):
+    target = target or {}
+    entity_type = target.get("entity_type") or "object"
+    name = (
+        target.get("name")
+        or target.get("observable_value")
+        or target.get("standard_id")
+        or target.get("id")
+        or ""
+    )
+    if not name:
+        return str(entity_type)
+    return f"{entity_type}:{name}"
+
+
+def format_text_values(values):
+    values = [str(value) for value in values or [] if str(value or "").strip()]
+    if not values:
+        return "none"
+    return ",".join(values)
+
+
 def format_context_section_summary(section):
     section = section or {}
     return (
@@ -1607,6 +1809,11 @@ def main():
         help="Release audit JSONL. Defaults to NARROWCTI_RELEASE_AUDIT_FILE.",
     )
     parser.add_argument(
+        "--relationship-audit-file",
+        default=os.getenv("NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE", ""),
+        help="Optional JSON file produced by gateway.opencti_relationship_audit.",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=0,
@@ -1642,6 +1849,7 @@ def main():
         decision_paths=args.decision_path or [settings.decision_audit_dir],
         quarantine_file=args.quarantine_file or settings.quarantine_repository_file,
         release_audit_file=args.release_audit_file or settings.release_audit_file,
+        relationship_audit_file=args.relationship_audit_file,
         limit=args.limit,
     )
     if args.html_file:

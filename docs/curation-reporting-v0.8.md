@@ -29,6 +29,7 @@ The v0.8 curation report is built from existing evidence:
 | Graph promotion planning | `graph_export_plan` in decision metadata |
 | OpenCTI graph lookup evidence | `graph_export_plan_lookup_matches` in decision metadata |
 | Graph STIX preview evidence | `graph_stix_preview` in decision metadata |
+| OpenCTI relationship audit evidence | JSON produced by `gateway.opencti_relationship_audit` |
 
 The report intentionally reads evidence. It does not call source APIs, query
 OpenCTI, mutate quarantine records or export graph objects.
@@ -64,6 +65,7 @@ python -m gateway.curation_report `
   --decision-path state\audit `
   --quarantine-file state\quarantine.jsonl `
   --release-audit-file state\audit\releases.jsonl `
+  --relationship-audit-file state\opencti-relationship-audit.json `
   --output-file state\curation-report.txt
 ```
 
@@ -162,6 +164,11 @@ The current report contains:
   sectors. Each section keeps aggregate observations, distinct entity counts,
   top entities, shared entities across sources and source-level entries derived
   only from graph evidence already present in decision audit metadata.
+- `graph_validation`: post-ingestion relationship-audit evidence for one
+  promoted OpenCTI object when an audit JSON is supplied. The section keeps a
+  compact target reference, relationship totals, Diamond quadrant counts,
+  expected/present/missing quadrants and Kill Chain presence. It does not embed
+  raw relationship samples.
 - `policy_insights`: source-level policy tuning hints derived from repeated
   release/reject audit patterns, with top analyst reasons attached to explain
   what drove the signal and decision score distributions attached to show
@@ -190,6 +197,9 @@ Current recommendation examples:
   accepted releases.
 - Validate graph dry-run objects before export mode.
 - Preserve OpenCTI graph lookup when canonical matches are found.
+- Complete OpenCTI relationship coverage when the relationship audit finds an
+  object but expected Diamond quadrants or Kill Chain evidence are still
+  missing.
 
 ## Product Boundary
 
@@ -277,6 +287,15 @@ turn the report into future enterprise CTI output. They currently cover:
 These sections remain report evidence only. They do not create OpenCTI
 entities, infer unsupported victimology or promote graph relationships.
 
+The graph validation section is the post-ingestion counterpart to graph
+readiness. Graph readiness explains what NarrowCTI planned or previewed from
+decision metadata. Graph validation explains what OpenCTI actually exposes for
+one audited object after import, using only the JSON previously written by the
+read-only relationship audit. This is the report bridge toward the future
+enterprise narrative: which object was promoted, which Diamond quadrants it
+feeds, whether direct ATT&CK/Kill Chain evidence exists and what still needs
+source evidence before the graph can be considered complete.
+
 Runtime validation on June 28, 2026 generated
 `/app/state/curation-report-20260628.txt`,
 `/app/state/curation-report-20260628.json` and
@@ -301,8 +320,8 @@ quarantine policy automatically.
 ## Future Work
 
 - Add PDF export once the report schema stabilizes.
-- Expand structured context sections with relationship-level narrative once
-  controlled graph promotion evidence is available.
 - Add graph-quality deltas after controlled graph promotion is enabled.
+- Expand relationship-level narrative from single-object audit evidence to
+  multi-object graph-quality trends after controlled graph promotion is enabled.
 - Add tenant-configurable redaction policies for future customer-specific
   external report delivery.
