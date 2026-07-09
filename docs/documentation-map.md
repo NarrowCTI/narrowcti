@@ -16,7 +16,11 @@ Use these docs first:
 - `configuration-reference-v0.6.md`
 - `architecture-v0.8.md`
 - `graph-promotion-v0.8.md`
+- `infrastructure-correlation-v0.8.md`
 - `opencti-coverage-matrix-v0.8.md`
+- `analyst-review-v0.8.md`
+- `curation-reporting-v0.8.md`
+- `support-diagnostics-v0.8.md`
 - `release-v0.8.0.md`
 - `roadmap.md`
 
@@ -50,6 +54,7 @@ Current architecture:
 Historical design context:
 
 - `product-foundation-v0.3.md`
+- `otx-adapter-foundation-v0.2.md`
 - `multi-feed-expansion-v0.4.md`
 - `gateway-runtime-v0.5.md`
 - `enterprise-intelligence-gateway-v0.5.md`
@@ -58,9 +63,15 @@ Historical design context:
 - `graph-enrichment-v0.7.md`
 - `mitre-curation-architecture-v0.7.md`
 - `source-ingestion-modes-v0.7.md`
+- `source-adapter-onboarding-v0.7.md`
+- `contextual-scoring-reference-v0.7.md`
 
 Historical architecture docs may remain public when they help contributors
 understand why the product evolved into a gateway.
+
+Reference docs such as `contextual-scoring-reference-v0.7.md` may remain in the
+release source archive when they describe product design decisions that
+contributors need to preserve.
 
 ## Release Notes Path
 

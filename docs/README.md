@@ -39,6 +39,7 @@ release archive or community-facing page.
 - `infrastructure-correlation-v0.8.md`
 - `opencti-rules-engine-v0.8.md`
 - `mitre-curation-architecture-v0.7.md`
+- `contextual-scoring-reference-v0.7.md`
 - `source-ingestion-modes-v0.7.md`
 - `source-adapter-onboarding-v0.7.md`
 
