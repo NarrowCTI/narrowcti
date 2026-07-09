@@ -22,6 +22,7 @@ Start here when installing, operating or evaluating NarrowCTI:
 
 ## Release Notes
 
+- `../CHANGELOG.md`
 - `release-v0.8.0.md`
 - `release-v0.7.0.md`
 - `release-v0.6.0.md`

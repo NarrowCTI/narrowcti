@@ -1,6 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security report
-    url: https://github.com/NarrowCTI/narrowcti/security/advisories/new
-    about: Please report vulnerabilities privately when possible.
-
+    url: https://github.com/NarrowCTI/narrowcti/blob/main/SECURITY.md
+    about: Read the supported private disclosure path before opening a public issue.

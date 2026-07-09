@@ -19,6 +19,7 @@ upgrade guidance.
 
 - `VERSION` contains the target version.
 - `README.md` points to the current release and public docs.
+- `CHANGELOG.md` summarizes the release for public repository visitors.
 - `docs/release-vX.Y.Z.md` is product-facing and does not read like a lab log.
 - `docs/deployment-operations-vX.Y.md` is current.
 - `CONTRIBUTING.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md` are present.
@@ -79,4 +80,3 @@ Release notes should be concise and operator-facing:
 
 Do not paste raw lab logs, customer data, local file paths or internal agent
 instructions into release notes.
-

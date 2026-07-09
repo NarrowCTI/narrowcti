@@ -4,6 +4,7 @@
 
 AGENTS.md export-ignore
 agents.md export-ignore
+state/ export-ignore
 state/** export-ignore
 
 docs/operational-validation-v*.md export-ignore
@@ -13,4 +14,3 @@ docs/product-architecture-validation-v*.md export-ignore
 docs/metadata-validation-v*.md export-ignore
 docs/market-positioning-v*.md export-ignore
 docs/post-v1-ml-roadmap.md export-ignore
-

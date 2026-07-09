@@ -19,6 +19,9 @@ release. It closes controlled graph promotion readiness with OpenCTI canonical
 lookup, bounded OTX/MISP validation evidence, relationship audit evidence,
 support diagnostics and deployment operations.
 
+Release history is summarized in `CHANGELOG.md`; detailed operator-facing
+release notes are maintained under `docs/release-v*.md`.
+
 ## Product Identity
 
 The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
