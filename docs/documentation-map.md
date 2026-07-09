@@ -1,8 +1,8 @@
 # Documentation Map
 
-NarrowCTI keeps documentation paths stable across pre-1.0 releases. For v0.8,
-the project uses an index-first documentation model instead of moving historical
-files into new directories.
+NarrowCTI keeps documentation paths stable across pre-1.0 releases. Current
+operator documentation uses unversioned filenames, while versioned files preserve
+release-specific snapshots and historical design evidence.
 
 This avoids broken links in release notes while still giving operators and
 contributors a clear public entry point.
@@ -12,9 +12,11 @@ contributors a clear public entry point.
 Use these docs first:
 
 - `getting-started.md`
-- `deployment-operations-v0.8.md`
-- `configuration-reference-v0.6.md`
-- `architecture-v0.8.md`
+- `deployment-operations.md`
+- `configuration-reference.md`
+- `architecture.md`
+- `curation-decision-reference.md`
+- `environment-profiles.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
 - `opencti-coverage-matrix-v0.8.md`
@@ -46,6 +48,7 @@ These files are public and should be included in release source archives.
 
 Current architecture:
 
+- `architecture.md`
 - `architecture-v0.8.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
@@ -72,6 +75,20 @@ understand why the product evolved into a gateway.
 Reference docs such as `contextual-scoring-reference-v0.7.md` may remain in the
 release source archive when they describe product design decisions that
 contributors need to preserve.
+
+## Current Reference Path
+
+These unversioned files are the current source of truth for operators and public
+repository readers:
+
+- `architecture.md`
+- `deployment-operations.md`
+- `configuration-reference.md`
+- `curation-decision-reference.md`
+- `environment-profiles.md`
+
+When behavior changes, update these files first. Add or retain a versioned
+snapshot only when the release needs exact historical documentation.
 
 ## Release Notes Path
 

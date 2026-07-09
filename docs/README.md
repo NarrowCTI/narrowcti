@@ -9,9 +9,11 @@ release archive or community-facing page.
 ## Product Entry Points
 
 - `getting-started.md`
-- `deployment-operations-v0.8.md`
-- `configuration-reference-v0.6.md`
-- `architecture-v0.8.md`
+- `deployment-operations.md`
+- `configuration-reference.md`
+- `architecture.md`
+- `curation-decision-reference.md`
+- `environment-profiles.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
 - `opencti-coverage-matrix-v0.8.md`
@@ -34,6 +36,7 @@ release archive or community-facing page.
 
 ## Architecture and Design
 
+- `architecture.md`
 - `architecture-v0.8.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
@@ -51,6 +54,16 @@ release archive or community-facing page.
 - `release-v0.6.0.md`
 - `release-v0.5.0.md`
 - `release-v0.4.0.md`
+
+## Release Snapshots
+
+Versioned documents preserve release-specific behavior and design evidence.
+Use the unversioned product entry points for the current operator path.
+
+- `architecture-v0.8.md`
+- `deployment-operations-v0.8.md`
+- `configuration-reference-v0.6.md`
+- `configuration-reference-v0.5.md`
 
 ## Development Evidence
 

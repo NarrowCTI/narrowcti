@@ -2,7 +2,7 @@
 
 This guide is the shortest safe path to evaluate NarrowCTI Community Edition.
 
-Use the full deployment runbook in `docs/deployment-operations-v0.8.md` for
+Use the full deployment runbook in `docs/deployment-operations.md` for
 production-like upgrades, controlled graph export and operational handoff.
 
 ## Prerequisites
@@ -26,8 +26,8 @@ Review the public entry points:
 ```text
 README.md
 docs/README.md
-docs/deployment-operations-v0.8.md
-docs/configuration-reference-v0.6.md
+docs/deployment-operations.md
+docs/configuration-reference.md
 ```
 
 ## Create Local Configuration
@@ -118,8 +118,10 @@ The current graph promotion design is in `docs/graph-promotion-v0.8.md`.
 
 ## Next Reading
 
-- `docs/deployment-operations-v0.8.md`
-- `docs/configuration-reference-v0.6.md`
+- `docs/deployment-operations.md`
+- `docs/configuration-reference.md`
+- `docs/curation-decision-reference.md`
+- `docs/environment-profiles.md`
 - `docs/opencti-coverage-matrix-v0.8.md`
 - `docs/infrastructure-correlation-v0.8.md`
 - `docs/support-diagnostics-v0.8.md`

@@ -40,7 +40,7 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops 
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narrowcti-gateway
 ```
 
-Use `docs/deployment-operations-v0.8.md` for the authoritative deployment and
+Use `docs/deployment-operations.md` for the authoritative deployment and
 upgrade procedure.
 
 ## Product Identity
@@ -357,9 +357,10 @@ identity mapping with the same suffix. NarrowCTI also remains visible through
 decision audit records, curation reports, export plans and `x_narrowcti_*`
 graph metadata.
 
-The full configuration reference is tracked in
-`docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in
-`docs/configuration-reference-v0.5.md`.
+The full current configuration reference is tracked in
+`docs/configuration-reference.md`. Versioned configuration references remain
+available as release snapshots when a release note needs exact historical
+behavior.
 
 ## NarrowCTI Gateway Runtime
 
@@ -488,10 +489,10 @@ bounded backfills while the v0.5 gateway matures.
 
 ## Deployment
 
-The authoritative v0.8 deployment and upgrade procedure is centralized in:
+The authoritative current deployment and upgrade procedure is centralized in:
 
 ```text
-docs/deployment-operations-v0.8.md
+docs/deployment-operations.md
 ```
 
 The deployment assets are:
@@ -510,12 +511,12 @@ curation report service persists text, JSON and HTML artifacts under the
 gateway state volume, while support diagnostics can produce a redacted HTML
 snapshot and support bundle for review. Older deployment snippets in
 release-specific documents are
-historical context; use `docs/deployment-operations-v0.8.md` for the current
+historical context; use `docs/deployment-operations.md` for the current
 procedure.
 
 Source-specific OTX and MISP runtimes remain available for debugging and
 bounded backfill investigations, but they are not the current deployment source
-of truth. Use `docs/deployment-operations-v0.8.md` for deployment and upgrade
+of truth. Use `docs/deployment-operations.md` for deployment and upgrade
 steps, and `scripts/misp-backfill-window.ps1 -Preview` only for controlled MISP
 backfill command inspection.
 
@@ -571,11 +572,13 @@ docs/README.md
 Recommended starting points:
 
 ```text
-docs/deployment-operations-v0.8.md
 docs/getting-started.md
+docs/deployment-operations.md
+docs/configuration-reference.md
+docs/architecture.md
+docs/curation-decision-reference.md
+docs/environment-profiles.md
 docs/documentation-map.md
-docs/configuration-reference-v0.6.md
-docs/architecture-v0.8.md
 docs/graph-promotion-v0.8.md
 docs/opencti-coverage-matrix-v0.8.md
 docs/repository-structure.md
