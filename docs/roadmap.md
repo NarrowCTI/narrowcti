@@ -224,6 +224,9 @@ Purpose:
 - Validate the Infrastructure/ASN/IP correlation model so NarrowCTI can enrich
   actor and malware infrastructure with IP, CIDR and ASN relationships without
   turning raw IOCs into low-context graph entities.
+- Track relationship-only graph replay as a backlog item so improved curation
+  mappings can add missing semantic edges to already-ingested events without
+  replaying indicator bundles.
 - Add an operational validation checklist for v0.8 graph lookup evidence,
   OpenCTI duplicate review and local resource posture.
 - Harden configuration defaults.
