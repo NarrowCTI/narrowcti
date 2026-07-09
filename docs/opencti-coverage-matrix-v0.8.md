@@ -211,8 +211,16 @@ Additional real MISP feed validation added three important evidence points:
   single trusted actor, intrusion set or campaign anchor. A Galaxy cluster such
   as `Threat Actor: APT Example` with `meta.targeted-sector=Activists` now
   produces a semantic `Threat Actor -> targets -> Sector` STIX relationship in
-  unit tests. This still needs the next controlled real OpenCTI ingestion to
-  move from test-covered to live-validated evidence.
+  unit tests. The same control was expanded to source-backed MISP Sector,
+  Country and Region Galaxy clusters when a single actor, intrusion set or
+  campaign anchor is present.
+- Follow-up live validation reprocessed MISP `event:5564` with a one-IoC
+  guardrail and confirmed `MirrorFace -> targets -> Sector` in OpenCTI.
+  Relationship audit returned `coverage.status=pass`,
+  `diamond_quadrant_counts.capability=44`,
+  `diamond_quadrant_counts.victimology=2` and `kill_chain_present=true`,
+  including outbound `targets` relationships to Sector `Diplomacy` and Sector
+  `Research - Innovation`.
 - `event:5505` live-validated netblock and ASN observables from real MISP feed
   data. OpenCTI audit confirmed `178.21.14.0/23 -> belongs-to -> AS49352`, and
   `AS49352` displayed as an `Autonomous-System` with the readable name

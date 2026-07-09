@@ -461,6 +461,13 @@ OpenCTI tab/export coverage is tracked in
   instead of creating a duplicate Attack Pattern, and exposed queryable
   `Campaign -> targets -> Organization`, `Campaign -> targets -> Sector` and
   `Data Component -> detects -> Attack Pattern` relationships.
+- Live-validated MISP Galaxy Sector victimology against real MISP `event:5564`.
+  A controlled replay of `Operation AkaiRyu: MirrorFace invites Europe to Expo
+  2025 and revives ANEL backdoor` exported direct `MirrorFace -> targets ->
+  Sector` relationships for `Diplomacy` and `Research - Innovation` while
+  preserving 44 direct ATT&CK capability relationships. OpenCTI relationship
+  audit returned `coverage.status=pass`, `capability=44`, `victimology=2` and
+  `kill_chain_present=true`.
 - Extended read-only OpenCTI graph lookup to matrix Technique objects:
   `Course-Of-Action` through `coursesOfAction`, `Data-Component` through
   `dataComponents` and `Data-Source` through `dataSources`. Export planning now

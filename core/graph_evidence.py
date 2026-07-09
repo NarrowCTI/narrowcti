@@ -606,7 +606,7 @@ MISP_GALAXY_CONTEXT_ANCHOR_ENTITY_TYPES = {
     "infrastructure",
     "malware",
     "tool",
-}
+} | MISP_INFRA_VICTIMOLOGY_ENTITY_TYPES
 
 
 def misp_galaxy_uses_context_anchor(entity_type, attributes):

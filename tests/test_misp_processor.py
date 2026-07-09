@@ -418,13 +418,20 @@ class MISPProcessorTests(unittest.TestCase):
                 for candidate in graph_candidates["candidates"]
             )
         )
-        self.assertTrue(
-            any(
-                candidate["entity_type"] == "target_sector"
-                and candidate["value"] == "Finance"
-                and candidate["source_field"] == "Object[0].GalaxyCluster"
-                for candidate in graph_candidates["candidates"]
-            )
+        finance_sector = next(
+            candidate
+            for candidate in graph_candidates["candidates"]
+            if candidate["entity_type"] == "target_sector"
+            and candidate["value"] == "Finance"
+            and candidate["source_field"] == "Object[0].GalaxyCluster"
+        )
+        self.assertEqual(
+            "threat-actor",
+            finance_sector["attributes"]["relationship_source_stix_object_type"],
+        )
+        self.assertEqual(
+            "APT Example",
+            finance_sector["attributes"]["relationship_source_value"],
         )
         target_sector = next(
             candidate
@@ -503,7 +510,13 @@ class MISPProcessorTests(unittest.TestCase):
             item
             for item in data["objects"]
             if item["type"] == "relationship" and item["relationship_type"] == "targets"
+            and item["target_ref"] == sector_object["id"]
         )
+        target_relationships = [
+            item
+            for item in data["objects"]
+            if item["type"] == "relationship" and item["relationship_type"] == "targets"
+        ]
         self.assertEqual(actor_object["id"], uses_relationship["source_ref"])
         self.assertEqual(malware_object["id"], uses_relationship["target_ref"])
         self.assertEqual(
@@ -516,7 +529,8 @@ class MISPProcessorTests(unittest.TestCase):
             "semantic",
             targets_relationship["x_narrowcti_relationship_mode"],
         )
-        self.assertEqual(2, summary["semantic_relationship_count"])
+        self.assertEqual(2, len(target_relationships))
+        self.assertEqual(3, summary["semantic_relationship_count"])
 
     def test_decision_metadata_does_not_anchor_galaxy_arsenal_to_multiple_actors(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})

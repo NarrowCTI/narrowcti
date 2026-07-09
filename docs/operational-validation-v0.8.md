@@ -1780,13 +1780,27 @@ actor-to-victimology promotion remains a visible `needs-evidence` gap. The
 current behavior is safe because victimology without an exported semantic edge
 still remains accessible through the source Report instead of being fabricated.
 
-Follow-up unit validation tightened that gap for the safest source shape:
+Follow-up validation tightened that gap for the safest source shapes:
 MISP Galaxy metadata victimology attached to a single trusted actor, intrusion
-set or campaign anchor. A Galaxy cluster carrying `meta.targeted-sector` now
-promotes that sector with a semantic `targets` relationship from the source
-actor/campaign when the anchor is unambiguous. This is test-covered, but still
-requires a new controlled live ingestion before the Matrix marks direct actor
-to sector victimology as live-validated.
+set or campaign anchor, and source-backed MISP Sector/Country/Region Galaxy
+clusters in the same unambiguous context. A Galaxy cluster carrying
+`meta.targeted-sector` or a standalone Sector Galaxy now promotes that target
+with a semantic `targets` relationship from the source actor/campaign when the
+anchor is unambiguous.
+
+The corrected behavior was live-validated against `event:5564` by rebuilding
+`narrowcti/gateway:local`, running a dry-run export plan and then replaying the
+event with `MISP_MAX_IOCS_PER_EVENT=1` to minimize duplicate IOC pressure in the
+lab. The real export completed with `ingested=1`, `errors=0` and
+`indicators=1`. OpenCTI relationship audit for `MirrorFace` returned
+`coverage.status=pass`, `capability=44`, `victimology=2`,
+`kill_chain_present=true`, and outbound `targets` relationships to Sector
+`Diplomacy` and Sector `Research - Innovation`.
+
+This validation also exposed a product backlog item: once a source event is
+already known by artifact deduplication, NarrowCTI needs a relationship-only
+graph replay path so improved curation mappings can add missing semantic edges
+without replaying even a minimized indicator bundle.
 
 ## OTX Preflight Blocked By Upstream Timeout
 
