@@ -68,7 +68,7 @@ connectors/misp/     MISP client, feed adapter, settings and processor foundatio
 core/                Feed contracts, scoring, policy and persistent state handling
 exporters/           OpenCTI export and STIX bundle construction
 tests/               Unit coverage for the processor and shared pipeline logic
-docs/                Release and implementation documentation
+docs/                Product, operations, architecture and release documentation
 ```
 
 ## Product Positioning
@@ -234,19 +234,17 @@ tracked in `docs/contextual-scoring-reference-v0.7.md`.
 The direct source, MISP collector and hybrid ingestion architecture is tracked
 in `docs/source-ingestion-modes-v0.7.md`.
 
-## v0.8 Development Track
+## v0.8 Release
 
-The v0.8 track starts the controlled promotion gate after v0.7. Its first
-technical priority is read-only OpenCTI graph lookup so NarrowCTI can detect
-canonical ATT&CK objects, such as existing `attack-pattern` entries loaded by
-the official MITRE connector, before any real graph promotion is enabled.
+The v0.8 release starts the controlled promotion gate after v0.7. It adds
+read-only OpenCTI graph lookup so NarrowCTI can detect canonical ATT&CK objects,
+such as existing `attack-pattern` entries loaded by the official MITRE
+connector, before controlled graph promotion is enabled.
 
 The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`, and
-the detailed development notes are tracked in `docs/release-v0.8.0.md`.
-Bounded lab validation for this track is described in
-`docs/operational-validation-v0.8.md`. Deployment, analyst review, curation
-reporting and support diagnostics are tracked in the dedicated v0.8 documents
-under `docs/`.
+the release notes are tracked in `docs/release-v0.8.0.md`. Deployment, analyst
+review, curation reporting and support diagnostics are tracked in the dedicated
+v0.8 documents under `docs/`.
 
 The relationship between NarrowCTI curation and OpenCTI post-ingestion
 inference rules is documented in `docs/opencti-rules-engine-v0.8.md`.
@@ -525,13 +523,14 @@ docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narr
 ## Release Flow
 
 The project uses `dev` as the integration branch and `main` as the stable branch.
-Official versions should be marked with Git tags.
+Official versions should be published from `main` with both a Git tag and a
+GitHub Release containing curated release notes.
 
 ```text
-feature/refactor branch -> dev -> main -> version tag
+feature/* -> dev -> main -> version tag -> GitHub Release
 ```
 
-Current development track:
+Current release:
 
 ```text
 v0.8.0
@@ -539,49 +538,41 @@ v0.8.0
 
 ## Documentation
 
-Detailed implementation notes for this release are available in:
+The documentation index is available in:
 
 ```text
-docs/otx-adapter-foundation-v0.2.md
+docs/README.md
 ```
 
-Product and expansion documents:
+Recommended starting points:
 
 ```text
-docs/product-foundation-v0.3.md
-docs/multi-feed-expansion-v0.4.md
-docs/misp-validation-v0.4.md
-docs/release-v0.4.0.md
-docs/release-v0.5.0.md
-docs/release-v0.6.0.md
-docs/release-v0.7.0.md
-docs/release-v0.8.0.md
-docs/graph-promotion-v0.8.md
-docs/operational-validation-v0.8.md
 docs/deployment-operations-v0.8.md
-docs/analyst-review-v0.8.md
-docs/curation-reporting-v0.8.md
-docs/support-diagnostics-v0.8.md
-docs/opencti-coverage-matrix-v0.8.md
-docs/quarantine-enrichment-v0.6.md
-docs/architecture-v0.7.md
-docs/graph-enrichment-v0.7.md
-docs/mitre-curation-architecture-v0.7.md
-docs/metadata-validation-v0.7.md
-docs/contextual-scoring-reference-v0.7.md
-docs/source-ingestion-modes-v0.7.md
-docs/misp-official-connector-mapping-v0.7.md
-docs/otx-official-connector-mapping-v0.7.md
-docs/gateway-runtime-v0.5.md
 docs/configuration-reference-v0.6.md
-docs/configuration-reference-v0.5.md
-docs/enterprise-intelligence-gateway-v0.5.md
-docs/product-architecture-validation-v0.5.md
-docs/market-positioning-v1.0.md
-docs/post-v1-ml-roadmap.md
+docs/architecture-v0.8.md
+docs/graph-promotion-v0.8.md
+docs/opencti-coverage-matrix-v0.8.md
+docs/release-v0.8.0.md
+docs/release-process.md
 docs/roadmap.md
-docs/open-source-strategy.md
 ```
+
+Development evidence and lab validation notes may remain in the repository for
+transparency, but release source archives are curated through `.gitattributes`
+so operators receive product-focused documentation.
+
+## Contributing
+
+NarrowCTI is open to community contributions. Start with:
+
+```text
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+```
+
+Issues and pull requests should avoid secrets, `.env` files, local `state/`
+artifacts, raw customer data and private feed payloads.
 
 ## Roadmap
 
@@ -607,6 +598,7 @@ docs/open-source-strategy.md
 - Preserve `state/state.json` unless reprocessing old pulses is intentional.
 - Avoid destructive Docker cleanup commands against persistent OpenCTI or MISP
   volumes unless backups are confirmed.
+- Report vulnerabilities privately when possible. See `SECURITY.md`.
 
 ## License
 
