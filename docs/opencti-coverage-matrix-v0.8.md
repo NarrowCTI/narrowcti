@@ -193,6 +193,31 @@ NarrowCTI flag.
    has no PCRE attributes or objects, so PCRE is blocked by source data rather
    than code.
 
+## July 9 2026 Matrix Evidence Update
+
+Additional real MISP feed validation added three important evidence points:
+
+- `event:5564` live-validated direct Threat Actor Group to ATT&CK graph
+  materialization. OpenCTI audit for `MirrorFace` returned 44 outbound `uses`
+  relationships to Attack Patterns and `kill_chain_present=true`, proving that
+  actor capability and Kill Chain panels can be fed directly when the source
+  carries a single trusted actor plus ATT&CK context.
+- The same `event:5564` showed that Sector victimology can still remain
+  Report-centric even when actor and ATT&CK relationships materialize directly.
+  Sector `Diplomacy` was present but linked from the Report with `related-to`,
+  so direct `Threat Actor -> targets -> Sector` requires additional export
+  polish or stricter source-shape validation before it can be marked complete.
+- Follow-up code validation now covers MISP Galaxy metadata victimology with a
+  single trusted actor, intrusion set or campaign anchor. A Galaxy cluster such
+  as `Threat Actor: APT Example` with `meta.targeted-sector=Activists` now
+  produces a semantic `Threat Actor -> targets -> Sector` STIX relationship in
+  unit tests. This still needs the next controlled real OpenCTI ingestion to
+  move from test-covered to live-validated evidence.
+- `event:5505` live-validated netblock and ASN observables from real MISP feed
+  data. OpenCTI audit confirmed `178.21.14.0/23 -> belongs-to -> AS49352`, and
+  `AS49352` displayed as an `Autonomous-System` with the readable name
+  `AS49352`.
+
 ## Guardrails
 
 - Do not promote feed provenance, collectors, labels or markings as graph

@@ -594,7 +594,9 @@ def misp_galaxy_evidence(clusters, source_key="", relationship_anchor=None):
         )
         if record:
             records.append(record)
-        records.extend(misp_galaxy_meta_evidence(cluster, source_key))
+        records.extend(
+            misp_galaxy_meta_evidence(cluster, source_key, relationship_anchor)
+        )
     return records
 
 
@@ -614,13 +616,14 @@ def misp_galaxy_uses_context_anchor(entity_type, attributes):
     return not clean_string(attributes.get("relationship_source_value"))
 
 
-def misp_galaxy_meta_evidence(cluster, source_key=""):
+def misp_galaxy_meta_evidence(cluster, source_key="", relationship_anchor=None):
     cluster = compact_mapping(cluster)
     meta = compact_mapping(cluster.get("meta"))
     if not meta:
         return []
 
     records = []
+    anchor = misp_galaxy_meta_relationship_anchor(cluster, relationship_anchor)
     for entity_type, field_names, confidence in MISP_GALAXY_META_ENTITY_FIELDS:
         seen = set()
         for field_name in field_names:
@@ -632,6 +635,12 @@ def misp_galaxy_meta_evidence(cluster, source_key=""):
                     field_name,
                     entity_type,
                 )
+                if (
+                    anchor
+                    and entity_type in MISP_INFRA_VICTIMOLOGY_ENTITY_TYPES
+                    and not attributes.get("relationship_source_value")
+                ):
+                    attributes.update(anchor)
                 normalized, attributes = normalize_evidence_value(
                     entity_type,
                     source_value,
@@ -655,6 +664,27 @@ def misp_galaxy_meta_evidence(cluster, source_key=""):
                 if record:
                     records.append(record)
     return records
+
+
+def misp_galaxy_meta_relationship_anchor(cluster, relationship_anchor=None):
+    cluster = compact_mapping(cluster)
+    classified_entity_type, _ = classify_misp_galaxy(cluster)
+    stix_object_type = {
+        "campaign": "campaign",
+        "intrusion_set": "intrusion-set",
+        "threat_actor": "threat-actor",
+    }.get(classified_entity_type)
+    if stix_object_type:
+        value = misp_galaxy_value(classified_entity_type, cluster)
+        if value:
+            return {
+                "relationship_source_stix_object_type": stix_object_type,
+                "relationship_source_value": value,
+                "relationship_source_field": (
+                    clean_string(cluster.get("source_field")) or "misp_galaxies"
+                ),
+            }
+    return compact_mapping(relationship_anchor)
 
 
 MISP_GALAXY_META_ENTITY_FIELDS = (

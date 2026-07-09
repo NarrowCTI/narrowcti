@@ -389,6 +389,21 @@ holds them with `relationship_requires_opencti_validation`, so they remain
 visible in decision audit without being exported until OpenCTI API/UI behavior
 is validated.
 
+July 9, 2026 real-feed validation closed the first netblock-specific MISP API
+proof point. Controlled export of MISP `event:5505` materialized IPv4 CIDR
+observable `178.21.14.0/23` and Autonomous System `AS49352`; the OpenCTI
+relationship audit returned `coverage.status=pass` for the infrastructure
+quadrant and confirmed
+`IPv4-Addr 178.21.14.0/23 -> belongs-to -> Autonomous-System AS49352`.
+This validates the real feed-shape path for MISP ASN plus netblock evidence,
+not only unit-level STIX behavior.
+
+The same validation cycle also confirmed a boundary: rich MISP `event:1913`
+contained IP/ASN-like source evidence in MISP, but NarrowCTI did not promote it
+as Infrastructure during export. This remains a useful backlog item for mapping
+MISP `ip-src` plus `asn` object shapes into explicit Infrastructure only when
+source provenance is strong enough.
+
 Open questions before broad activation:
 
 - Confirm the same relationships visually in OpenCTI's graph and knowledge UI,

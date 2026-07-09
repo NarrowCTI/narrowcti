@@ -426,14 +426,24 @@ class MISPProcessorTests(unittest.TestCase):
                 for candidate in graph_candidates["candidates"]
             )
         )
-        self.assertTrue(
-            any(
-                candidate["entity_type"] == "target_sector"
-                and candidate["value"] == "Activists"
-                and candidate["source_field"] == "Galaxy.meta.targeted-sector"
-                and candidate["attributes"]["parent_cluster_value"] == "APT Example"
-                for candidate in graph_candidates["candidates"]
-            )
+        target_sector = next(
+            candidate
+            for candidate in graph_candidates["candidates"]
+            if candidate["entity_type"] == "target_sector"
+            and candidate["value"] == "Activists"
+            and candidate["source_field"] == "Galaxy.meta.targeted-sector"
+        )
+        self.assertEqual(
+            "APT Example",
+            target_sector["attributes"]["parent_cluster_value"],
+        )
+        self.assertEqual(
+            "threat-actor",
+            target_sector["attributes"]["relationship_source_stix_object_type"],
+        )
+        self.assertEqual(
+            "APT Example",
+            target_sector["attributes"]["relationship_source_value"],
         )
         malware = next(
             candidate
@@ -460,7 +470,11 @@ class MISPProcessorTests(unittest.TestCase):
         accepted = [
             candidate
             for candidate in metadata["graph_candidate_policy"]["accepted"]
-            if candidate["entity_type"] in {"threat_actor", "malware"}
+            if candidate["entity_type"] in {
+                "threat_actor",
+                "malware",
+                "target_sector",
+            }
         ]
         bundle, summary = build_graph_report_bundle(
             "Curated graph report",
@@ -469,17 +483,40 @@ class MISPProcessorTests(unittest.TestCase):
             graph_candidate_policy={"accepted": accepted},
         )
         data = json.loads(bundle.serialize())
-        actor_object = next(item for item in data["objects"] if item["type"] == "threat-actor")
-        malware_object = next(item for item in data["objects"] if item["type"] == "malware")
+        actor_object = next(
+            item for item in data["objects"] if item["type"] == "threat-actor"
+        )
+        malware_object = next(
+            item for item in data["objects"] if item["type"] == "malware"
+        )
+        sector_object = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "identity" and item["name"] == "Activists"
+        )
         uses_relationship = next(
             item
             for item in data["objects"]
             if item["type"] == "relationship" and item["relationship_type"] == "uses"
         )
+        targets_relationship = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "relationship" and item["relationship_type"] == "targets"
+        )
         self.assertEqual(actor_object["id"], uses_relationship["source_ref"])
         self.assertEqual(malware_object["id"], uses_relationship["target_ref"])
-        self.assertEqual("semantic", uses_relationship["x_narrowcti_relationship_mode"])
-        self.assertEqual(1, summary["semantic_relationship_count"])
+        self.assertEqual(
+            "semantic",
+            uses_relationship["x_narrowcti_relationship_mode"],
+        )
+        self.assertEqual(actor_object["id"], targets_relationship["source_ref"])
+        self.assertEqual(sector_object["id"], targets_relationship["target_ref"])
+        self.assertEqual(
+            "semantic",
+            targets_relationship["x_narrowcti_relationship_mode"],
+        )
+        self.assertEqual(2, summary["semantic_relationship_count"])
 
     def test_decision_metadata_does_not_anchor_galaxy_arsenal_to_multiple_actors(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})

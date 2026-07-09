@@ -1739,6 +1739,55 @@ country-average latitude/longitude into an OpenCTI Position. This keeps deeper
 Locations conservative until a feed provides explicit operational city,
 administrative-area or coordinate victimology fields.
 
+## July 9 2026 MISP Feed Revalidation
+
+After additional MISP feeds were enabled, three controlled real validations were
+run through the rebuilt `narrowcti-gateway` container on the shared
+`threat-net` network. The runs used one explicit `MISP_QUERIES=event:<id>` at a
+time, source-specific state and audit files, OpenCTI graph lookup enabled and
+bounded IoC limits.
+
+- `event:1913`, `PFCloud - Bulletproof Hosting - Datacarry Ransomware`, passed
+  normal policy with score `60` and imported with `ingested=1`, `errors=0` and
+  `indicators=13`. OpenCTI relationship audit confirmed Malware `datacarry` and
+  Sector `Finance` were created and linked to the Report with `related-to`.
+  The same audit confirmed this event remains Report-centric: direct Malware or
+  Sector Diamond relationships were not present, so this event is useful as a
+  graph object validation but not as proof of semantic victimology.
+- `event:5564`, `Operation AkaiRyu: MirrorFace invites Europe to Expo 2025 and
+  revives ANEL backdoor`, required a lab-only score threshold override from 60
+  to 50 because the source scored `55`. The export completed with
+  `ingested=1`, `errors=0` and `indicators=21`. OpenCTI relationship audit for
+  Threat Actor Group `MirrorFace` returned 45 direct relationships, including
+  44 outbound `uses` relationships to ATT&CK Attack Patterns. The audit returned
+  `kill_chain_present=true` and listed techniques such as `T1059.001`,
+  `T1059.003`, `T1547.001`, `T1566.002`, `T1071.001`, `T1041`, `T1573` and
+  `T1588.002`. Victimology remained missing as a direct actor quadrant: Sector
+  `Diplomacy` was present but linked to the Report with `related-to`, not to
+  `MirrorFace` with `targets`.
+- `event:5505`, `PORTAL KOMBAT A structured and coordinated pro-Russian
+  propaganda network`, required the same lab-only score threshold override
+  because the source scored `50`. The export completed with `ingested=1`,
+  `errors=0` and the IoC guardrail capped output at `indicators=10`. OpenCTI
+  relationship audit confirmed IPv4 CIDR observable `178.21.14.0/23` has a
+  direct outbound `belongs-to` relationship to Autonomous System `AS49352`, and
+  `AS49352` has inbound Report and CIDR relationships. This validates real
+  MISP netblock-to-ASN graph materialization.
+
+The resulting v0.8 evidence is intentionally mixed: ASN/netblock and actor to
+ATT&CK/Kill Chain are now live-validated with real MISP feed data, while direct
+actor-to-victimology promotion remains a visible `needs-evidence` gap. The
+current behavior is safe because victimology without an exported semantic edge
+still remains accessible through the source Report instead of being fabricated.
+
+Follow-up unit validation tightened that gap for the safest source shape:
+MISP Galaxy metadata victimology attached to a single trusted actor, intrusion
+set or campaign anchor. A Galaxy cluster carrying `meta.targeted-sector` now
+promotes that sector with a semantic `targets` relationship from the source
+actor/campaign when the anchor is unambiguous. This is test-covered, but still
+requires a new controlled live ingestion before the Matrix marks direct actor
+to sector victimology as live-validated.
+
 ## OTX Preflight Blocked By Upstream Timeout
 
 On June 27, 2026, OTX was not promoted to real ingestion after the MISP batch.
