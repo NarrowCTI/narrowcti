@@ -74,6 +74,18 @@ legacy `Report + Indicators` objects and appends accepted graph entities and
 relationships to the same bundle. Local graph deduplication state is marked
 only after the OpenCTI import call succeeds.
 
+MISP also has an explicit graph-only replay gate for curation improvements.
+When `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true` or
+`MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true`, and
+`NARROWCTI_GRAPH_EXPORT_MODE=export`, a MISP event skipped by artifact
+deduplication because every indicator is already known can still export its
+accepted graph context. The replay sends an empty indicator list, records the
+decision reason as `all indicators already known; graph replay only`, and
+preserves the same graph policy, lookup and local graph deduplication gates.
+This is intended for bounded lab replay when mappings improve and existing
+reports need missing semantic relationships, not for broad production
+backfills.
+
 Known graph keys returned by local state or OpenCTI lookup are not re-created
 by the export gate. This protects canonical objects loaded by official
 connectors, especially MITRE ATT&CK attack-patterns and existing Arsenal
@@ -210,6 +222,11 @@ The lookup itself is read-only. In `audit` and `dry-run` modes it does not
 create entities, relationships or state marks in OpenCTI. In `export` mode,
 matches with valid `standard_id` values can be referenced by the curated STIX
 bundle.
+
+`NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` defaults to `false`. It currently
+applies to MISP. Enable it only with `NARROWCTI_GRAPH_EXPORT_MODE=export`,
+OpenCTI lookup and bounded `MISP_QUERIES=event:<id>` style validation when the
+operator intentionally wants graph context replay without indicator replay.
 
 For Arsenal objects, lookup is intentionally conservative. Exact
 `standard_id` wins, exact name remains the default, and curated alias groups can

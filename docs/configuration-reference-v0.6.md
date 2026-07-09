@@ -64,6 +64,7 @@ graph enrichment layer.
 | `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` enables controlled graph promotion for accepted candidates. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. Exported graph state is marked only after a successful OpenCTI import. |
 | `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, including ATT&CK attack-patterns, malware, tools, infrastructure, CVE vulnerabilities, threat actors, intrusion sets, controlled locations/countries/systems, autonomous systems, channels, narratives, events and supported cyber observables, before graph promotion creates new objects. |
+| `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` | v0.8 opt-in MISP graph replay gate. When `true` and `NARROWCTI_GRAPH_EXPORT_MODE=export`, a MISP event whose indicators are all already known by artifact deduplication can still export accepted graph objects and relationships with an empty indicator list. Keep `false` unless replaying improved curation mappings in a bounded lab. `MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` can override the global value for MISP only. |
 | `NARROWCTI_IP_ASN_ENRICHMENT_FILE` | Optional offline IP-to-ASN mapping file for MISP infrastructure enrichment. Empty disables enrichment. CSV, JSON list, JSON object with `records`/`prefixes`, or JSONL rows are supported with fields such as `cidr`, `asn`, `as_name`, `rir` and `source`. Matches add explicit `IP/CIDR -> belongs-to -> ASN` evidence only; they do not invent actor or infrastructure attribution. |
 
 Use `export` only with explicit graph thresholds, allow-lists and validation
@@ -140,6 +141,11 @@ promoted graph keys are marked locally only after successful OpenCTI import.
 Graph SDOs created by NarrowCTI use deterministic STIX ids derived from object
 type, identity class and normalized value/name so repeated exports converge on
 the same OpenCTI `standard_id` when the curated object is unchanged.
+For MISP replay operations, `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true`
+allows graph-only enrichment after artifact deduplication has identified all
+indicators as already known. The replay uses the same graph policy, OpenCTI
+lookup and graph deduplication controls, records `graph_replay_only=true` in
+decision metadata and sends no indicator objects in that replay bundle.
 Target identity candidates are scoped to victimology and use OpenCTI-native
 collections for lookup before creation: `target_sector` uses `sectors`,
 `target_organization` uses `organizations`, `target_system` uses `systems` and
@@ -217,6 +223,7 @@ NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=attack-pattern,malware,threat-actor,in
 NARROWCTI_GRAPH_EXPORT_MODE=dry-run
 NARROWCTI_GRAPH_DEDUP_STATE_FILE=/app/state/graph_dedup.json
 NARROWCTI_OPENCTI_GRAPH_LOOKUP=false
+NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=false
 ```
 
 Open source capability inventory posture:

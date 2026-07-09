@@ -208,6 +208,15 @@ MISP_QUERIES=event:<id>
 
 This loads a known event by id/uuid and avoids broad MISP searches while
 validating object mapping and OpenCTI import behavior.
+When the event indicators are already known but the operator needs to replay
+newly improved graph mappings, keep the same bounded event selector and enable:
+
+```env
+NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true
+```
+
+This MISP replay gate requires `NARROWCTI_GRAPH_EXPORT_MODE=export` and exports
+accepted graph context with no indicator objects.
 
 ## Upgrade Procedure
 

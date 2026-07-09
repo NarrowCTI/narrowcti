@@ -293,6 +293,11 @@ instead of duplicating it. Graph SDOs created by NarrowCTI also use
 deterministic STIX ids so repeated exports of the same curated object converge
 on the same OpenCTI `standard_id`.
 
+For bounded MISP curation replay,
+`NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true` can be combined with
+`NARROWCTI_GRAPH_EXPORT_MODE=export` so events whose indicators are already
+known still export accepted graph context without replaying indicator objects.
+
 When real graph export is enabled without an explicit allow-list, NarrowCTI
 uses a safe default allow-list. It promotes source-backed CTI objects such as
 infrastructure, ASN, observables, sectors, locations, arsenal, ATT&CK,

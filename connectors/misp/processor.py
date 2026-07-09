@@ -2023,6 +2023,8 @@ class MISPProcessor:
         candidate = self.apply_artifact_dedup(query, candidate_ref, candidate)
         if not candidate:
             return "skip"
+        if self.is_graph_replay_only(candidate):
+            reason = "all indicators already known; graph replay only"
 
         if self.settings.dry_run:
             self.log(
@@ -2201,6 +2203,12 @@ class MISPProcessor:
                 f"MISP artifact dedup: {candidate.name} duplicates={duplicate_count}"
             )
         if not indicators:
+            replay_candidate = self.artifact_dedup_graph_replay_candidate(
+                candidate_ref,
+                candidate,
+            )
+            if replay_candidate:
+                return replay_candidate
             self.record_decision(
                 query,
                 candidate_ref,
@@ -2221,6 +2229,64 @@ class MISPProcessor:
             score=candidate.score,
             score_details=candidate.score_details,
         )
+
+    def artifact_dedup_graph_replay_candidate(self, candidate_ref, candidate):
+        if not self.graph_replay_on_artifact_dedup_enabled():
+            return None
+        try:
+            _, metadata = self.graph_policy_for_export(candidate_ref, candidate)
+        except Exception as exc:
+            self.log(
+                f"MISP artifact dedup graph replay planning failed: "
+                f"{candidate.name} error={exc}"
+            )
+            return None
+        graph_plan = compact_mapping(metadata.get("graph_export_plan"))
+        exported_objects = int(graph_plan.get("exported_object_count") or 0)
+        exported_relationships = int(
+            graph_plan.get("exported_relationship_count") or 0
+        )
+        if exported_objects < 1 and exported_relationships < 1:
+            self.log(
+                f"MISP artifact dedup graph replay skipped: "
+                f"{candidate.name} no exportable graph context"
+            )
+            return None
+
+        event = dict(candidate.event)
+        controls = compact_mapping(event.get("narrowcti_controls"))
+        controls.update(
+            {
+                "graph_replay_only": True,
+                "graph_replay_reason": "all indicators already known",
+                "graph_replay_exported_object_count": exported_objects,
+                "graph_replay_exported_relationship_count": exported_relationships,
+            }
+        )
+        event["narrowcti_controls"] = controls
+        self.log(
+            f"MISP artifact dedup graph replay: {candidate.name} "
+            f"objects={exported_objects} relationships={exported_relationships}"
+        )
+        return MISPEventCandidate(
+            event=event,
+            name=candidate.name,
+            description=candidate.description,
+            indicators=[],
+            ioc_count=0,
+            age=candidate.age,
+            score=candidate.score,
+            score_details=candidate.score_details,
+        )
+
+    def graph_replay_on_artifact_dedup_enabled(self):
+        return bool(
+            getattr(self.settings, "graph_replay_on_artifact_dedup", False)
+        ) and getattr(self.settings, "graph_export_mode", "audit") == "export"
+
+    def is_graph_replay_only(self, candidate):
+        controls = compact_mapping(candidate.event.get("narrowcti_controls"))
+        return bool(controls.get("graph_replay_only"))
 
     def apply_indicator_type_filter(self, query, candidate_ref, candidate):
         indicators, dropped_count = filter_indicators_by_type(
@@ -2255,6 +2321,8 @@ class MISPProcessor:
 
     def mark_artifacts(self, candidate_ref, candidate):
         if not self.artifact_dedup:
+            return
+        if not candidate.indicators:
             return
         try:
             added = self.artifact_dedup.mark_indicators(

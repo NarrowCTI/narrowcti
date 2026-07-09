@@ -224,9 +224,11 @@ Purpose:
 - Validate the Infrastructure/ASN/IP correlation model so NarrowCTI can enrich
   actor and malware infrastructure with IP, CIDR and ASN relationships without
   turning raw IOCs into low-context graph entities.
-- Track relationship-only graph replay as a backlog item so improved curation
-  mappings can add missing semantic edges to already-ingested events without
-  replaying indicator bundles.
+- Add MISP graph-only replay for improved curation mappings so already-known
+  events can add missing semantic edges without replaying indicator bundles.
+  The v0.8 gate is opt-in through `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP`
+  or `MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` and remains bounded to export-mode
+  validation.
 - Add an operational validation checklist for v0.8 graph lookup evidence,
   OpenCTI duplicate review and local resource posture.
 - Harden configuration defaults.

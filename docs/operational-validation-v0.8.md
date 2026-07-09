@@ -1797,10 +1797,18 @@ lab. The real export completed with `ingested=1`, `errors=0` and
 `kill_chain_present=true`, and outbound `targets` relationships to Sector
 `Diplomacy` and Sector `Research - Innovation`.
 
-This validation also exposed a product backlog item: once a source event is
-already known by artifact deduplication, NarrowCTI needs a relationship-only
-graph replay path so improved curation mappings can add missing semantic edges
-without replaying even a minimized indicator bundle.
+This validation also exposed and closed a product backlog item: once a MISP
+source event is already known by artifact deduplication, NarrowCTI can now use
+an explicit graph-only replay path so improved curation mappings can add
+missing semantic edges without replaying indicators. The gate is disabled by
+default and requires `NARROWCTI_GRAPH_EXPORT_MODE=export` plus
+`NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true` or the MISP-specific
+`MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true`. Unit validation confirmed that a
+MISP event whose only indicator is already known exports an empty indicator
+list, still passes graph policy, records `graph_replay_only=true`, marks the
+source event processed, and does not mark duplicate artifacts again. Real
+OpenCTI replay evidence should still be captured for each high-value mapping
+batch before broad production use.
 
 ## OTX Preflight Blocked By Upstream Timeout
 

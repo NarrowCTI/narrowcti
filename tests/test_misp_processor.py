@@ -1791,6 +1791,90 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("all indicators already known", records[0].reason)
         self.assertIn("MISP artifact dedup: tlp green event duplicates=1", logs)
 
+    def test_process_event_replays_graph_when_artifacts_are_known(self):
+        records = []
+        marked = []
+        logs = []
+        exports = []
+        settings = self.settings()
+        settings.graph_export_mode = "export"
+        settings.graph_replay_on_artifact_dedup = True
+        settings.graph_min_entity_confidence = 0
+        settings.graph_min_relationship_confidence = 0
+        settings.graph_require_relationship_provenance = False
+        settings.graph_allowed_entity_types = []
+        settings.graph_allowed_stix_object_types = []
+        state = SimpleNamespace(
+            has_event=lambda event_id: False,
+            mark_event=lambda event_id: marked.append(event_id),
+        )
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators: ([], len(indicators)),
+            mark_indicators=lambda indicators, **kwargs: self.fail(
+                "artifacts should not be marked during graph-only replay"
+            ),
+        )
+        event = enriched_event(indicator_count=1)
+        event["Galaxy"] = [
+            {
+                "type": "threat-actor",
+                "name": "Threat Actor",
+                "GalaxyCluster": [
+                    {
+                        "type": "threat-actor",
+                        "value": "Replay Actor",
+                        "uuid": "cluster-replay-actor",
+                        "meta": {
+                            "targeted-sector": ["Finance"],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        def exporter(api_client, name, description, score, indicators, **kwargs):
+            exports.append(
+                {
+                    "indicators": indicators,
+                    "kwargs": kwargs,
+                }
+            )
+            return len(indicators)
+
+        processor = MISPProcessor(
+            settings,
+            misp_client=None,
+            api_client="api",
+            logger=logs.append,
+            exporter=exporter,
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=self.adapter(enriched=candidate(raw=event)),
+            artifact_dedup=artifact_dedup,
+        )
+
+        outcome = processor.process_event_outcome("tlp:green", candidate(), state)
+
+        self.assertEqual("ingest", outcome)
+        self.assertEqual(["event-1"], marked)
+        self.assertEqual(1, len(exports))
+        self.assertEqual([], exports[0]["indicators"])
+        self.assertEqual("export", exports[0]["kwargs"]["graph_export_mode"])
+        self.assertGreater(
+            len(exports[0]["kwargs"]["graph_candidate_policy"]["accepted"]),
+            0,
+        )
+        self.assertEqual("ingest", records[-1].action)
+        self.assertEqual(
+            "all indicators already known; graph replay only",
+            records[-1].reason,
+        )
+        self.assertEqual(0, records[-1].indicator_count)
+        self.assertTrue(records[-1].metadata["guardrails"]["graph_replay_only"])
+        self.assertIn(
+            "MISP artifact dedup graph replay: tlp green event objects=2 relationships=2",
+            logs,
+        )
+
     def test_process_event_drops_disallowed_tlp(self):
         records = []
         marked = []

@@ -203,6 +203,13 @@ OpenCTI tab/export coverage is tracked in
   `source_identity`, labels and markings out of automatic graph promotion.
   Audit and dry-run remain broad for visibility, and explicit allow-lists can
   still override the default.
+- Added opt-in MISP graph-only replay for artifact-deduplicated events. When
+  `NARROWCTI_GRAPH_EXPORT_MODE=export` and
+  `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true` or
+  `MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true`, a MISP event whose indicators are
+  all already known can export accepted graph context with no indicator
+  objects, preserving graph policy, OpenCTI lookup and local graph dedup
+  controls.
 - Added decision audit report file output and an `ops` profile service so
   graph lookup and curation decision evidence can be archived from the gateway
   state volume.
