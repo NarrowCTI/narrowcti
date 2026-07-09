@@ -41,6 +41,8 @@ feature/* -> dev -> main -> version tag / GitHub release
 
 ## Development Setup
 
+The full contributor guide is tracked in `docs/development-guide.md`.
+
 Install the Python dependencies used by the gateway image:
 
 ```text
@@ -90,4 +92,3 @@ Common components are `gateway`, `core`, `connectors`, `exporters`, `docs`,
 
 Do not disclose vulnerabilities publicly before maintainers have had time to
 review and fix them. See `SECURITY.md`.
-

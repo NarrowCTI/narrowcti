@@ -22,6 +22,27 @@ support diagnostics and deployment operations.
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
 
+## Quick Start
+
+For a first safe evaluation, start with the current operator guide:
+
+```text
+docs/getting-started.md
+```
+
+The default deployment posture is dry-run, run-once and audit-first. Build the
+gateway image, run preflight, then execute one bounded run before enabling real
+OpenCTI graph export:
+
+```powershell
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml build narrowcti-gateway
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narrowcti-gateway
+```
+
+Use `docs/deployment-operations-v0.8.md` for the authoritative deployment and
+upgrade procedure.
+
 ## Product Identity
 
 The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
@@ -551,11 +572,14 @@ Recommended starting points:
 
 ```text
 docs/deployment-operations-v0.8.md
+docs/getting-started.md
 docs/configuration-reference-v0.6.md
 docs/architecture-v0.8.md
 docs/graph-promotion-v0.8.md
 docs/opencti-coverage-matrix-v0.8.md
 docs/repository-structure.md
+docs/development-guide.md
+docs/community-issue-triage.md
 docs/release-v0.8.0.md
 docs/release-process.md
 docs/roadmap.md
@@ -571,6 +595,8 @@ NarrowCTI is open to community contributions. Start with:
 
 ```text
 CONTRIBUTING.md
+docs/development-guide.md
+docs/community-issue-triage.md
 CODE_OF_CONDUCT.md
 SUPPORT.md
 SECURITY.md

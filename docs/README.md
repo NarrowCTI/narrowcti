@@ -8,6 +8,7 @@ release source archives are curated through `.gitattributes`.
 
 Start here when installing, operating or evaluating NarrowCTI:
 
+- `getting-started.md`
 - `deployment-operations-v0.8.md`
 - `configuration-reference-v0.6.md`
 - `architecture-v0.8.md`
@@ -21,6 +22,15 @@ Start here when installing, operating or evaluating NarrowCTI:
 - `release-process.md`
 - `roadmap.md`
 - `../SUPPORT.md`
+
+## Community and Development
+
+- `../CONTRIBUTING.md`
+- `development-guide.md`
+- `community-issue-triage.md`
+- `repository-structure.md`
+- `../CODE_OF_CONDUCT.md`
+- `../SECURITY.md`
 
 ## Release Notes
 
