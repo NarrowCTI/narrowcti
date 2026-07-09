@@ -20,6 +20,8 @@ state/*
 # Local agent instructions
 AGENTS.md
 agents.md
+.codex/
+.agents/
 
 # Docker
 *.log

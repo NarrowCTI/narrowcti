@@ -27,6 +27,8 @@ upgrade guidance.
 - `.github/` issue, pull request and CI templates are present.
 - No `.env`, local state, raw feed payloads, credentials or `AGENTS.md` are
   tracked.
+- `.dockerignore` excludes local agent instructions, runtime state and local
+  secrets from Docker build context.
 - Full validation passes.
 
 ## Validation

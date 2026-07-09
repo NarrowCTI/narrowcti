@@ -17,6 +17,7 @@ Start here when installing, operating or evaluating NarrowCTI:
 - `curation-reporting-v0.8.md`
 - `support-diagnostics-v0.8.md`
 - `open-source-strategy.md`
+- `repository-structure.md`
 - `release-process.md`
 - `roadmap.md`
 - `../SUPPORT.md`

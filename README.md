@@ -555,6 +555,7 @@ docs/configuration-reference-v0.6.md
 docs/architecture-v0.8.md
 docs/graph-promotion-v0.8.md
 docs/opencti-coverage-matrix-v0.8.md
+docs/repository-structure.md
 docs/release-v0.8.0.md
 docs/release-process.md
 docs/roadmap.md
