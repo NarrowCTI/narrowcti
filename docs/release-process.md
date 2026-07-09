@@ -22,7 +22,8 @@ upgrade guidance.
 - `CHANGELOG.md` summarizes the release for public repository visitors.
 - `docs/release-vX.Y.Z.md` is product-facing and does not read like a lab log.
 - `docs/deployment-operations-vX.Y.md` is current.
-- `CONTRIBUTING.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md` are present.
+- `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md` are
+  present.
 - `.github/` issue, pull request and CI templates are present.
 - No `.env`, local state, raw feed payloads, credentials or `AGENTS.md` are
   tracked.

@@ -19,6 +19,7 @@ Start here when installing, operating or evaluating NarrowCTI:
 - `open-source-strategy.md`
 - `release-process.md`
 - `roadmap.md`
+- `../SUPPORT.md`
 
 ## Release Notes
 

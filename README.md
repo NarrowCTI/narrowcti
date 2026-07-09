@@ -571,6 +571,7 @@ NarrowCTI is open to community contributions. Start with:
 ```text
 CONTRIBUTING.md
 CODE_OF_CONDUCT.md
+SUPPORT.md
 SECURITY.md
 ```
 
