@@ -1,12 +1,12 @@
 # NarrowCTI Documentation
 
-This directory contains both public product documentation and development
-evidence. The repository keeps the development evidence for transparency, but
-release source archives are curated through `.gitattributes`.
+This directory contains public product documentation, community documentation
+and selected development evidence.
 
-## Product Documentation
+Start with `documentation-map.md` when deciding which document belongs in a
+release archive or community-facing page.
 
-Start here when installing, operating or evaluating NarrowCTI:
+## Product Entry Points
 
 - `getting-started.md`
 - `deployment-operations-v0.8.md`
@@ -17,20 +17,30 @@ Start here when installing, operating or evaluating NarrowCTI:
 - `opencti-coverage-matrix-v0.8.md`
 - `curation-reporting-v0.8.md`
 - `support-diagnostics-v0.8.md`
-- `open-source-strategy.md`
+- `roadmap.md`
+
+## Community and Governance
+
+- `documentation-map.md`
 - `repository-structure.md`
 - `release-process.md`
-- `roadmap.md`
-- `../SUPPORT.md`
-
-## Community and Development
-
+- `open-source-strategy.md`
 - `../CONTRIBUTING.md`
 - `development-guide.md`
 - `community-issue-triage.md`
-- `repository-structure.md`
+- `../SUPPORT.md`
 - `../CODE_OF_CONDUCT.md`
 - `../SECURITY.md`
+
+## Architecture and Design
+
+- `architecture-v0.8.md`
+- `graph-promotion-v0.8.md`
+- `infrastructure-correlation-v0.8.md`
+- `opencti-rules-engine-v0.8.md`
+- `mitre-curation-architecture-v0.7.md`
+- `source-ingestion-modes-v0.7.md`
+- `source-adapter-onboarding-v0.7.md`
 
 ## Release Notes
 
@@ -51,10 +61,18 @@ first documentation surface for operators:
 - `*-validation-v*.md`
 - `product-architecture-validation-v*.md`
 - `metadata-validation-v*.md`
+- `market-positioning-v*.md`
+- `post-v1-ml-roadmap.md`
+
+Many development-evidence files are excluded from release source archives by
+`.gitattributes`.
 
 ## Release Archive Policy
 
 GitHub releases generated from tags expose source archives. NarrowCTI keeps
-source code, tests and public product documentation in those archives, while
-excluding local evidence, development validation notes and strategy documents
-that are not needed to run or contribute to the released product.
+source code, tests, deployment templates, public product docs and community
+governance files in those archives.
+
+Local state, local agent instructions, secrets, raw feed payloads and selected
+development evidence are excluded through `.gitignore`, `.dockerignore` and
+`.gitattributes`.

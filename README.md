@@ -573,6 +573,7 @@ Recommended starting points:
 ```text
 docs/deployment-operations-v0.8.md
 docs/getting-started.md
+docs/documentation-map.md
 docs/configuration-reference-v0.6.md
 docs/architecture-v0.8.md
 docs/graph-promotion-v0.8.md

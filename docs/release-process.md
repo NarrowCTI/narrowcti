@@ -21,6 +21,7 @@ upgrade guidance.
 - `README.md` points to the current release and public docs.
 - `CHANGELOG.md` summarizes the release for public repository visitors.
 - `docs/getting-started.md` and `docs/development-guide.md` are current.
+- `docs/documentation-map.md` classifies public docs and development evidence.
 - `docs/release-vX.Y.Z.md` is product-facing and does not read like a lab log.
 - `docs/deployment-operations-vX.Y.md` is current.
 - `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md` are
