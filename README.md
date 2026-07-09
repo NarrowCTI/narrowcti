@@ -11,14 +11,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.8.0-dev
+v0.8.0
 ```
 
-`v0.8.0-dev` is the active graph promotion, analyst review and product
-operations development track. `v0.7.0` remains the latest stable foundation
-release with audit-first graph evidence, graph candidates, STIX preview
-summaries, contextual scoring evidence and a clear MITRE ATT&CK curation
-architecture.
+`v0.8.0` is the current graph promotion, analyst review and product operations
+release. It closes controlled graph promotion readiness with OpenCTI canonical
+lookup, bounded OTX/MISP validation evidence, relationship audit evidence,
+support diagnostics and deployment operations.
 
 ## Product Identity
 
@@ -535,7 +534,7 @@ feature/refactor branch -> dev -> main -> version tag
 Current development track:
 
 ```text
-v0.8.0-dev
+v0.8.0
 ```
 
 ## Documentation

@@ -192,7 +192,7 @@ Expected outcomes:
 
 ## v0.8.0 - Analyst Review And Product Operations
 
-Status: in development.
+Status: released.
 
 Detailed design and validation:
 

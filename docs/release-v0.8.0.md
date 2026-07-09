@@ -1,13 +1,13 @@
-# NarrowCTI v0.8.0 Development Notes
+# NarrowCTI v0.8.0 Release Notes
 
 ## Status
 
-`v0.8.0-dev` is the active graph promotion, analyst review and product
-operations development track.
+Status: released.
 
-`v0.7.0` remains the latest stable foundation release. It closed the audit-first
-graph enrichment layer, MITRE-aware curation posture, graph STIX preview,
-contextual scoring evidence and local graph deduplication planning.
+`v0.8.0` is the graph promotion, analyst review and product operations release.
+It closes the controlled graph promotion readiness track with OpenCTI canonical
+lookup, bounded OTX/MISP validation evidence, relationship audit evidence,
+support diagnostics and deployment operations.
 
 ## Purpose
 
