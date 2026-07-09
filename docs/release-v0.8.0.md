@@ -866,3 +866,37 @@ Current validation command:
 ```text
 .\scripts\validate-v0.6.ps1
 ```
+
+Final closure validation was executed inside the local product image:
+
+```text
+powershell -ExecutionPolicy Bypass -File scripts\validate-v0.6.ps1 -Image narrowcti/gateway:local
+```
+
+Result:
+
+```text
+Ran 476 tests in 2.989s
+OK
+```
+
+The final operational checklist was regenerated with OTX and MISP enabled,
+graph export in dry-run mode, OpenCTI graph lookup enabled, the local graph
+deduplication index configured and real OpenCTI relationship audit evidence
+attached. It completed with:
+
+```text
+overall_status=pass
+counts=fail:0,needs-evidence:0,pass:10,warn:0
+```
+
+The closure evidence confirms:
+
+- bounded OTX and MISP source evidence is recognized even when the decision
+  audit uses canonical source keys such as `alienvault:otx` and `misp:misp`;
+- OpenCTI relationship audit evidence is part of the operational checklist;
+- MirrorFace real-ingestion evidence has direct Capability, Victimology and
+  Kill Chain coverage;
+- resource posture was captured from the local Docker lab;
+- Windows-generated UTF-8 BOM evidence files and Unicode OpenCTI object names
+  are handled by the validation tools.

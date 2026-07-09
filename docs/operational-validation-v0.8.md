@@ -1831,3 +1831,70 @@ selected, NarrowCTI did not run real OTX ingestion in this cycle. This preserves
 the v0.8 operational rule: OTX must pass preflight with a bounded, known-size
 candidate before enrichment and export are allowed, especially after prior
 tests showed that generic OTX searches can return very large stale pulses.
+
+## July 9 2026 Closure Validation
+
+The final v0.8 closure run rebuilt the evidence after the MISP/OpenCTI lab had
+real curated graph materialization. The image validation command completed in
+the product container:
+
+```text
+powershell -ExecutionPolicy Bypass -File scripts\validate-v0.6.ps1 -Image narrowcti/gateway:local
+```
+
+Result:
+
+```text
+Ran 476 tests in 2.989s
+OK
+```
+
+The operational validation was then generated with both sources enabled, graph
+export in dry-run mode, OpenCTI graph lookup enabled, the local graph dedup
+index configured and the real OpenCTI relationship audit evidence attached:
+
+```text
+NARROWCTI_ENABLED_SOURCES=otx,misp
+NARROWCTI_GRAPH_EXPORT_MODE=dry-run
+NARROWCTI_GRAPH_DEDUP_STATE_FILE=state\graph_dedup_index.json
+NARROWCTI_OPENCTI_GRAPH_LOOKUP=true
+OTX_DRY_RUN=true
+MISP_DRY_RUN=true
+```
+
+Result:
+
+```text
+overall_status=pass
+counts=fail:0,needs-evidence:0,pass:10,warn:0
+```
+
+The final report passed:
+
+- full repository validation;
+- preflight graph controls;
+- bounded OTX and MISP dry-run evidence;
+- canonical ATT&CK lookup matching;
+- OpenCTI graph lookup metadata and aggregation;
+- held relationship validation;
+- duplicate ATT&CK object guardrail;
+- real OpenCTI relationship audit;
+- local Docker resource posture.
+
+The source-evidence check now recognizes the operational source names
+`otx/misp` and their canonical decision audit keys `alienvault:otx/misp:misp`.
+This avoids false `needs-evidence` results when the gateway preflight and the
+decision audit use different but intentional source identifiers.
+
+The real OpenCTI relationship audit used `MirrorFace` as the target object and
+returned `coverage.status=pass`, `relationship_count=47`, `capability=44`,
+`victimology=2`, and `kill_chain_present=true`. This confirms the v0.8 goal:
+NarrowCTI can promote source-backed graph context that OpenCTI renders as
+direct Diamond and Kill Chain evidence, while still keeping unproven facets out
+of export.
+
+Two Windows robustness fixes were validated during closure. Operational
+evidence files written with PowerShell UTF-8 BOM are now accepted by the
+validator, and the OpenCTI relationship auditor reconfigures stdout to UTF-8 so
+real OpenCTI names containing non-ASCII characters do not fail the command
+after the JSON evidence file is written.

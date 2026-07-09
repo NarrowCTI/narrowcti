@@ -56,6 +56,39 @@ class GatewayOperationalValidationTests(unittest.TestCase):
         self.assertIn("opencti-relationship-audit status=pass", text)
         json.dumps(data)
 
+    def test_bounded_sources_accept_canonical_decision_source_keys(self):
+        preflight = build_preflight_report(
+            validation_settings(enabled_sources=["otx", "misp"]),
+            env={"OTX_DRY_RUN": "true", "MISP_DRY_RUN": "true"},
+        )
+        decisions = build_decision_audit_report(
+            [
+                validation_decision("alienvault:otx"),
+                validation_decision("misp:misp"),
+            ]
+        )
+
+        report = build_operational_validation_report(
+            preflight,
+            decisions,
+            required_sources=("otx", "misp"),
+        )
+        checks = {item.code: item for item in report.checks}
+
+        self.assertEqual("pass", checks["bounded-source-dry-runs"].status)
+        self.assertEqual(
+            ["otx", "alienvault:otx"],
+            checks["bounded-source-dry-runs"].evidence["sources"]["otx"][
+                "decision_source_keys"
+            ],
+        )
+        self.assertEqual(
+            ["misp", "misp:misp"],
+            checks["bounded-source-dry-runs"].evidence["sources"]["misp"][
+                "decision_source_keys"
+            ],
+        )
+
     def test_reports_needs_evidence_for_missing_lab_artifacts(self):
         preflight = build_preflight_report(
             validation_settings(enabled_sources=["otx", "misp"]),
@@ -330,6 +363,21 @@ class GatewayOperationalValidationTests(unittest.TestCase):
         self.assertTrue(evidence_bool(evidence, "resource_posture_ok"))
         self.assertTrue(evidence["resource_posture"]["docker_stats_captured"])
         self.assertFalse(evidence_bool(evidence, "opencti_ui_duplicate_found"))
+
+    def test_loads_power_shell_utf8_bom_evidence_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evidence_file = os.path.join(tmpdir, "validation-evidence.json")
+            relationship_file = os.path.join(tmpdir, "relationship-audit.json")
+            with open(evidence_file, "w", encoding="utf-8-sig") as handle:
+                json.dump({"resource_posture_ok": True}, handle)
+            with open(relationship_file, "w", encoding="utf-8-sig") as handle:
+                json.dump({"coverage": {"status": "pass"}}, handle)
+
+            evidence = load_manual_evidence(evidence_file)
+            relationship_evidence = load_relationship_audit_evidence(relationship_file)
+
+        self.assertTrue(evidence_bool(evidence, "resource_posture_ok"))
+        self.assertEqual("pass", relationship_evidence["coverage"]["status"])
 
     def test_missing_manual_evidence_file_is_empty(self):
         self.assertEqual({}, load_manual_evidence("/missing/validation.json"))

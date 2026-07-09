@@ -15,6 +15,10 @@ STATUS_ORDER = {
     "warn": 2,
     "pass": 3,
 }
+DECISION_SOURCE_ALIASES = {
+    "otx": ("otx", "alienvault:otx"),
+    "misp": ("misp", "misp:misp"),
+}
 
 
 @dataclass(frozen=True)
@@ -157,12 +161,16 @@ def source_dry_run_check(preflight, decisions, required_sources):
     unsafe = []
     for source in required_sources or ():
         controls = source_controls.get(source) or {}
-        source_decisions = decision_sources.get(source) or {}
+        decision_source_keys = decision_keys_for_source(source)
         dry_run = bool(controls.get("dry_run", False))
-        records = int(source_decisions.get("records", 0) or 0)
+        records = sum(
+            int((decision_sources.get(key) or {}).get("records", 0) or 0)
+            for key in decision_source_keys
+        )
         per_source[source] = {
             "dry_run": dry_run,
             "decision_records": records,
+            "decision_source_keys": list(decision_source_keys),
         }
         if not dry_run:
             unsafe.append(source)
@@ -192,6 +200,11 @@ def source_dry_run_check(preflight, decisions, required_sources):
         "Required sources have dry-run controls and decision audit evidence.",
         evidence,
     )
+
+
+def decision_keys_for_source(source):
+    source = str(source or "").strip()
+    return DECISION_SOURCE_ALIASES.get(source, (source,))
 
 
 def canonical_attack_match_check(graph):
@@ -593,7 +606,7 @@ def load_manual_evidence(evidence_file):
     evidence_file = str(evidence_file or "").strip()
     if not evidence_file or not os.path.exists(evidence_file):
         return {}
-    with open(evidence_file, "r", encoding="utf-8") as handle:
+    with open(evidence_file, "r", encoding="utf-8-sig") as handle:
         data = json.load(handle)
     if not isinstance(data, dict):
         raise ValueError("operational validation evidence file must contain a JSON object")
@@ -604,7 +617,7 @@ def load_relationship_audit_evidence(evidence_file):
     evidence_file = str(evidence_file or "").strip()
     if not evidence_file or not os.path.exists(evidence_file):
         return {}
-    with open(evidence_file, "r", encoding="utf-8") as handle:
+    with open(evidence_file, "r", encoding="utf-8-sig") as handle:
         data = json.load(handle)
     if not isinstance(data, dict):
         raise ValueError("relationship audit evidence file must contain a JSON object")

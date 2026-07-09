@@ -6,6 +6,8 @@ from connectors.otx.processor import OTXProcessor, decision_metadata
 
 
 class ProcessorTests(unittest.TestCase):
+    FRESH_CREATED = "2099-01-01T00:00:00Z"
+
     def settings(self):
         return SimpleNamespace(
             max_iocs_per_pulse=1,
@@ -74,7 +76,7 @@ class ProcessorTests(unittest.TestCase):
             {
                 "name": "LummaC2 sample",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [
                     {"type": "domain", "indicator": "one.example"},
                     {"type": "domain", "indicator": "two.example"},
@@ -278,7 +280,7 @@ class ProcessorTests(unittest.TestCase):
         )
 
         processed = processor.process_pulse(
-            "unrelated query",
+            "low",
             {"id": "pulse-1", "name": "Search result"},
             state,
         )
@@ -750,7 +752,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )
@@ -789,7 +791,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )
@@ -838,7 +840,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )
@@ -880,7 +882,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 known pulse",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "known.example"}],
             }
         )
@@ -922,7 +924,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )

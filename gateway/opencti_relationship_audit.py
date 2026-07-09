@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import sys
 import urllib.request
 
 
@@ -419,7 +420,14 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
+def ensure_utf8_stdout():
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(encoding="utf-8")
+
+
 def main(argv=None):
+    ensure_utf8_stdout()
     args = parse_args(argv)
     if not args.opencti_url:
         raise SystemExit("Missing --opencti-url or OPENCTI_URL")
