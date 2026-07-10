@@ -30,4 +30,3 @@ community.
 If you see behavior that violates this code, contact the maintainers through a
 private channel when possible. Security-sensitive reports should follow
 `SECURITY.md`.
-

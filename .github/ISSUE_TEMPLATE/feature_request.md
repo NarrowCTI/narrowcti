@@ -38,4 +38,3 @@ How should NarrowCTI avoid bad inference, duplicates or noisy graph objects?
 ## Alternatives Considered
 
 Describe any alternative implementation or operational workaround.
-

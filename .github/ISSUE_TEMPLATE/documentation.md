@@ -24,4 +24,3 @@ What is unclear, missing or outdated?
 ## Suggested Improvement
 
 Describe the change that would make this easier for operators or contributors.
-

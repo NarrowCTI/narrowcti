@@ -33,4 +33,3 @@ python -m unittest discover -s tests -v
 - [ ] Documentation was updated when operator behavior changed.
 - [ ] OpenCTI graph hygiene was considered.
 - [ ] Release archive impact was considered for public-facing docs.
-

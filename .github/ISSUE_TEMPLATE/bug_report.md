@@ -47,4 +47,3 @@ Commands or checks already run:
 ```text
 python -m unittest discover -s tests -v
 ```
-
