@@ -595,13 +595,17 @@ docs/architecture.md
 docs/curation-decision-reference.md
 docs/environment-profiles.md
 docs/container-images.md
+docs/opencti-compatibility.md
+docs/security-quality-gates.md
 docs/community-standards.md
 docs/documentation-map.md
+docs/architecture-v0.9.md
 docs/graph-promotion-v0.8.md
 docs/opencti-coverage-matrix-v0.8.md
 docs/repository-structure.md
 docs/development-guide.md
 docs/community-issue-triage.md
+docs/release-v0.9.0.md
 docs/release-v0.8.0.md
 docs/release-process.md
 docs/roadmap.md
@@ -630,8 +634,8 @@ artifacts, raw customer data and private feed payloads.
 ## Roadmap
 
 - Open source product foundation with Apache-2.0 core distribution.
-- v0.8 preflight-visible capability inventory for transparent open source
-  operations.
+- v0.9 analyst operations, graph-quality hardening and governed source
+  expansion before the production-ready v1.0 release.
 - Multi-feed support beyond the reference OTX adapter.
 - Advanced correlation scoring and analyst-facing source evidence.
 - Richer scoring model with source-specific weighting.

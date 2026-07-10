@@ -3,10 +3,11 @@
 This is the current public architecture entry point for NarrowCTI Community
 Edition.
 
-The v0.8 release architecture snapshot is `architecture-v0.8.md`. Versioned
-architecture files remain in the repository as release history; operators and
-contributors should link to this unversioned document when they need the
-current product architecture.
+The latest released architecture snapshot is `architecture-v0.8.md`. Active
+v0.9 development is tracked in `architecture-v0.9.md`. Versioned architecture
+files remain in the repository as release history; operators and contributors
+should link to this unversioned document when they need the current product
+architecture entry point.
 
 ## Product Boundary
 
@@ -38,6 +39,8 @@ OpenCTI, why it should reach OpenCTI and which graph context is safe to promote.
 
 ## Current Architecture Documents
 
+- `architecture-v0.9.md`: active v0.9 analyst operations, graph quality and
+  release-gate design.
 - `architecture-v0.8.md`: v0.8 detailed architecture snapshot.
 - `graph-promotion-v0.8.md`: controlled OpenCTI graph promotion boundary.
 - `opencti-coverage-matrix-v0.8.md`: OpenCTI tab/object coverage.

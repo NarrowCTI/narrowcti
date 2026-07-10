@@ -1,11 +1,10 @@
-from pycti import OpenCTIApiClient
-
 from core.decision_audit import DecisionAuditLog
 from connectors.misp.client import MISPClient
 from connectors.misp.feed_adapter import MISPFeedAdapter
 from connectors.misp.processor import MISPProcessor
 from connectors.misp.runtime import run_processor_loop
 from connectors.misp.settings import load_settings
+from gateway.opencti_client import build_opencti_client
 
 
 def log(msg):
@@ -13,7 +12,7 @@ def log(msg):
 
 
 def build_processor(settings):
-    api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
+    api = build_opencti_client(settings.opencti_url, settings.opencti_token)
     misp = MISPClient(
         settings.misp_url,
         settings.misp_key,

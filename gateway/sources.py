@@ -1,8 +1,6 @@
 import os
 from dataclasses import replace
 
-from pycti import OpenCTIApiClient
-
 from connectors.misp.client import MISPClient
 from connectors.misp.feed_adapter import MISPFeedAdapter
 from connectors.misp.processor import MISPProcessor
@@ -17,6 +15,7 @@ from core.opencti_deduplication import (
     CompositeArtifactDeduplication,
     OpenCTIArtifactLookup,
 )
+from gateway.opencti_client import build_opencti_client
 from gateway.runtime import SourceRegistry
 
 
@@ -107,7 +106,7 @@ def build_otx_runner(
     gateway_settings=None,
 ):
     settings = apply_gateway_source_paths(load_otx_settings(), gateway_settings, "otx")
-    api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
+    api = build_opencti_client(settings.opencti_url, settings.opencti_token)
     dedup = build_source_dedup(api, artifact_dedup, opencti_dedup_lookup, logger)
     otx = OTXClient(
         settings.otx_api_key,
@@ -137,7 +136,7 @@ def build_misp_runner(
     gateway_settings=None,
 ):
     settings = apply_gateway_source_paths(load_misp_settings(), gateway_settings, "misp")
-    api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
+    api = build_opencti_client(settings.opencti_url, settings.opencti_token)
     dedup = build_source_dedup(api, artifact_dedup, opencti_dedup_lookup, logger)
     misp = MISPClient(
         settings.misp_url,

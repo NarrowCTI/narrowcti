@@ -249,6 +249,48 @@ Expected outcomes:
 - Operators and support teams can identify capability posture and configuration
   drift.
 
+## v0.9.0 - Analyst Operations And Graph Quality
+
+Status: in development.
+
+Detailed design and release tracking:
+
+- `docs/architecture-v0.9.md`
+- `docs/release-v0.9.0.md`
+
+Purpose:
+
+- Expose the existing analyst review service through a governed HTTP API with
+  authentication, authorization and audit continuity.
+- Improve canonical entity and relationship lookup, graph deduplication and
+  post-export state handling before the v1.0 production-ready release.
+- Close the highest-value OpenCTI coverage gaps for Diamond, victimology,
+  Timeline, Kill Chain and source-backed semantic relationships.
+- Validate richer ASN, CIDR, IP, infrastructure, actor, arsenal, ATT&CK and
+  victimology context without promoting weak source inference.
+- Add at least one governed direct source adapter beyond OTX and MISP, with
+  MalwareBazaar as the first candidate and URLHaus as the next priority.
+- Keep Community Edition reporting intentionally simple: operational totals,
+  decisions, source contribution and graph-quality indicators. Advanced
+  enterprise reporting remains outside the v0.9 Community scope.
+- Make SAST, applicable DAST, code quality, dependency review and container
+  image scanning explicit release gates.
+
+Expected outcomes:
+
+- Analysts can review quarantine records and perform release, partial release
+  or rejection through one audited service boundary.
+- Repeated ingestion converges on canonical OpenCTI objects and relationships
+  with measurable duplicate prevention.
+- Source-backed OpenCTI graph views receive richer and safer adversary,
+  capability, infrastructure and victimology context.
+- A new direct adapter proves that source onboarding remains governed by the
+  shared candidate, policy, audit and export contracts.
+- Operators receive a concise operational report without exposing a future
+  advanced enterprise reporting capability prematurely.
+- The release cannot be published until CI/CD security, quality, image and
+  end-to-end validation gates pass.
+
 ## v1.0.0 - Open Source Production-Ready Release
 
 Purpose:

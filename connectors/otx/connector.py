@@ -1,6 +1,5 @@
-from pycti import OpenCTIApiClient
-
 from core.decision_audit import DecisionAuditLog
+from gateway.opencti_client import build_opencti_client
 from otx_client import OTXClient
 from processor import OTXProcessor
 from runtime import run_processor_loop
@@ -12,7 +11,7 @@ def log(msg):
 
 
 def build_processor(settings):
-    api = OpenCTIApiClient(settings.opencti_url, settings.opencti_token)
+    api = build_opencti_client(settings.opencti_url, settings.opencti_token)
     otx = OTXClient(
         settings.otx_api_key,
         search_timeout=settings.otx_search_timeout,

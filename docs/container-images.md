@@ -65,5 +65,16 @@ Publication requires:
 - a clean Docker build from `Dockerfile.gateway`;
 - CI validation kept green before creating a release tag.
 
+The v0.9 publication gate uses this order for the exact candidate image:
+
+```text
+build -> smoke test -> Trivy scan -> CycloneDX SBOM -> registry login -> push
+```
+
+Pull requests and `dev` builds exercise the build, smoke, scan and SBOM path but
+do not publish stable image tags. `main` and version tags publish only after the
+same job has passed the image gates. See `docs/security-quality-gates.md` for
+the blocking policy.
+
 Docker Hub mirroring can be added later with explicit repository secrets and the
 same tag policy. Until then, GHCR is the canonical public registry.

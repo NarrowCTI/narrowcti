@@ -39,7 +39,7 @@ class GatewayQuarantineCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             repository_path = os.path.join(tmpdir, "quarantine.jsonl")
             audit_path = os.path.join(tmpdir, "releases.jsonl")
-            record = seed_record(repository_path)
+            seed_record(repository_path)
 
             output = run_cli(
                 "--repository",

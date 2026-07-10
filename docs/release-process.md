@@ -25,6 +25,8 @@ upgrade guidance.
   `docs/configuration-reference.md`, `docs/curation-decision-reference.md` and
   `docs/environment-profiles.md` describe the current product behavior.
 - `docs/container-images.md` describes the current image naming and tag policy.
+- `docs/security-quality-gates.md` describes the current security, quality,
+  image and DAST release policy.
 - `docs/documentation-map.md` classifies public docs and development evidence.
 - `docs/release-vX.Y.Z.md` is product-facing and does not read like a lab log.
 - Versioned docs such as `docs/deployment-operations-vX.Y.md` are kept only as
@@ -36,6 +38,15 @@ upgrade guidance.
   tracked.
 - `.dockerignore` excludes local agent instructions, runtime state and local
   secrets from Docker build context.
+- SAST, code-quality and dependency-audit workflows pass.
+- Secret scanning and push protection are enabled, and release-history secret
+  scan evidence is current.
+- The exact release image passes vulnerability scanning and has a generated
+  SBOM before publication.
+- DAST passes against a disposable deployment when the release exposes an HTTP
+  surface; otherwise the release evidence records why the gate is not
+  applicable.
+- Controlled OpenCTI end-to-end, upgrade and recovery validation pass.
 - Full validation passes.
 
 ## Validation
@@ -51,6 +62,9 @@ Run image validation when Docker is available:
 ```text
 powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
+
+Security and quality policy, blocking thresholds and required evidence are
+defined in `docs/security-quality-gates.md`.
 
 ## Source Archive Policy
 

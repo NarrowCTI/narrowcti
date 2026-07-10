@@ -4,6 +4,21 @@ All notable NarrowCTI Community Edition changes are summarized here.
 
 Detailed operator-facing release notes remain in `docs/release-v*.md`.
 
+## Unreleased - v0.9.0
+
+Analyst operations and graph-quality release in development.
+
+- Formalizes the governed analyst review API, graph-quality hardening and
+  direct-source expansion tracks.
+- Keeps Community reporting operational and concise while reserving advanced
+  enterprise reporting for a future separately scoped capability.
+- Makes SAST, applicable DAST, code quality, dependency review and container
+  image scanning mandatory release gates.
+- Pins `pycti 7.260710.0` and adds a centralized, fail-closed compatibility
+  boundary for live-validated OpenCTI `6.9.x` ingestion.
+
+See `docs/release-v0.9.0.md`.
+
 ## v0.8.0
 
 Graph promotion, analyst review and product operations release.

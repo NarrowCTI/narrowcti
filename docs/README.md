@@ -15,6 +15,9 @@ release archive or community-facing page.
 - `curation-decision-reference.md`
 - `environment-profiles.md`
 - `container-images.md`
+- `opencti-compatibility.md`
+- `security-quality-gates.md`
+- `architecture-v0.9.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
 - `opencti-coverage-matrix-v0.8.md`
@@ -39,6 +42,8 @@ release archive or community-facing page.
 ## Architecture and Design
 
 - `architecture.md`
+- `architecture-v0.9.md`
+- `opencti-compatibility.md`
 - `architecture-v0.8.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
@@ -51,6 +56,7 @@ release archive or community-facing page.
 ## Release Notes
 
 - `../CHANGELOG.md`
+- `release-v0.9.0.md` (in development)
 - `release-v0.8.0.md`
 - `release-v0.7.0.md`
 - `release-v0.6.0.md`
