@@ -50,13 +50,13 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml build narrowct
 Run the release validation helper:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\validate-v0.6.ps1 -Image narrowcti/gateway:local
+powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
 
 To inspect Docker commands without executing them:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\validate-v0.6.ps1 -Image narrowcti/gateway:local -Preview
+powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local -Preview
 ```
 
 The public GitHub CI compiles supported modules and runs:

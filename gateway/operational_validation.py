@@ -102,13 +102,13 @@ def full_validation_check(full_validation_passed):
             "full-validation",
             "pass",
             "Full repository validation was reported as passed.",
-            {"command": ".\\scripts\\validate-v0.6.ps1"},
+            {"command": ".\\scripts\\validate-release.ps1"},
         )
     return check(
         "full-validation",
         "needs-evidence",
-        "Run .\\scripts\\validate-v0.6.ps1 and record this check as passed after it succeeds.",
-        {"command": ".\\scripts\\validate-v0.6.ps1"},
+        "Run .\\scripts\\validate-release.ps1 and record this check as passed after it succeeds.",
+        {"command": ".\\scripts\\validate-release.ps1"},
     )
 
 
@@ -677,7 +677,7 @@ def main():
     parser.add_argument(
         "--full-validation-passed",
         action="store_true",
-        help="Mark repository validation as passed after .\\scripts\\validate-v0.6.ps1 succeeds.",
+        help="Mark repository validation as passed after .\\scripts\\validate-release.ps1 succeeds.",
     )
     parser.add_argument(
         "--opencti-ui-no-duplicate",

@@ -543,14 +543,14 @@ Run validation from the repository root after building the Docker image:
 ```powershell
 $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\NarrowCTI"
-.\scripts\validate-v0.6.ps1
+.\scripts\validate-release.ps1
 ```
 
 The helper runs the same Docker-based syntax and unit validation commands used
 for the release. To inspect commands without executing Docker:
 
 ```powershell
-.\scripts\validate-v0.6.ps1 -Preview
+.\scripts\validate-release.ps1 -Preview
 ```
 
 Manual equivalent:

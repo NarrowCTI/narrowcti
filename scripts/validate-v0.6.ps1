@@ -111,7 +111,7 @@ function Invoke-DockerPython {
     }
 }
 
-Write-Host 'NarrowCTI v0.6 validation'
+Write-Host 'NarrowCTI release validation'
 Write-Host ('  repo={0}' -f $RepoDir)
 Write-Host ('  image={0}' -f $Image)
 Write-Host ('  skip_tests={0}' -f $SkipTests.IsPresent.ToString().ToLower())
@@ -126,4 +126,4 @@ if (-not $SkipTests) {
     Invoke-DockerPython -PythonArgs @('-m', 'unittest', 'discover', '-s', 'tests', '-v')
 }
 
-Write-Host 'NarrowCTI v0.6 validation completed'
+Write-Host 'NarrowCTI release validation completed'

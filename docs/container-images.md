@@ -51,7 +51,7 @@ docker build -f Dockerfile.gateway -t narrowcti/gateway:local .
 Then validate:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\validate-v0.6.ps1 -Image narrowcti/gateway:local
+powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
 
 ## Publish Workflow
