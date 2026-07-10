@@ -21,7 +21,8 @@ GitHub collaboration files live under `.github/`:
 
 - issue templates for bugs, feature requests and documentation issues;
 - pull request template;
-- continuous integration workflow.
+- continuous integration workflow;
+- container image publication workflow.
 
 ## Source Layout
 
@@ -32,6 +33,8 @@ GitHub collaboration files live under `.github/`:
 - `exporters/`: STIX and OpenCTI export logic.
 - `gateway/`: unified gateway runtime, preflight, reporting and operator CLIs.
 - `deployment/`: deployment templates and compose-facing material.
+- `docs/assets/`: public README and documentation assets such as the project
+  logo.
 - `scripts/`: validation and maintenance helpers.
 - `tests/`: unit and behavior tests.
 

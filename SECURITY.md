@@ -11,6 +11,10 @@ leaking credentials, customer data or sensitive feed payloads.
 | v0.8.x | Yes |
 | v0.7.x and older | Best effort |
 
+Until NarrowCTI reaches v1.0, the current minor release is the primary
+supported line. Older pre-1.0 lines receive best-effort guidance only unless a
+maintainer explicitly publishes a backport.
+
 ## Reporting a Vulnerability
 
 Do not open a public issue with exploit details, credentials, tokens, private
@@ -29,6 +33,15 @@ Please include:
 - whether OpenCTI, MISP, Docker or a source connector is involved;
 - suggested mitigation if known.
 
+Useful report categories include:
+
+- credential or token leakage;
+- unsafe `.env`, state or support bundle exposure;
+- OpenCTI graph pollution caused by malformed or malicious source payloads;
+- source adapter behavior that bypasses TLP, score, quarantine or dedup policy;
+- container image, dependency or build pipeline weaknesses;
+- denial-of-service conditions caused by unbounded feed ingestion.
+
 ## Sensitive Data Handling
 
 Never attach:
@@ -44,3 +57,13 @@ Never attach:
 Maintainers should acknowledge security reports, triage severity, prepare a fix
 or mitigation, and publish release notes once the issue can be safely disclosed.
 
+Target response expectations:
+
+- acknowledge receipt within 72 hours when maintainers are available;
+- validate impact and affected versions before public disclosure;
+- prepare a patch, mitigation or configuration workaround;
+- publish security release notes after users have a reasonable upgrade path;
+- credit reporters when requested and appropriate.
+
+NarrowCTI does not currently operate a bug bounty program. Security fixes are
+handled through coordinated disclosure and public release notes.

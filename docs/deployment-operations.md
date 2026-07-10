@@ -30,6 +30,17 @@ deployment/gateway.env.example
 The Compose template builds `Dockerfile.gateway`, joins an existing OpenCTI
 Docker network and stores runtime evidence in a Docker volume.
 
+For local validation, the default image is `narrowcti/gateway:local`. For
+release deployments, use a pinned published image such as:
+
+```text
+NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:0.8.0
+```
+
+Do not use `latest` for production-like environments unless you intentionally
+want the newest stable `main` image. The image tagging policy is documented in
+`container-images.md`.
+
 ## First Run
 
 ```powershell

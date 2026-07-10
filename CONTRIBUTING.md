@@ -15,6 +15,10 @@ intelligence before OpenCTI ingestion.
   export behavior.
 - Help triage issues and validate real-world feed behavior.
 
+Good first contribution areas are documentation corrections, reproducible bug
+reports, small tests for existing behavior, bounded source payload fixtures with
+sensitive values removed, and improvements to operator runbooks.
+
 ## Project Principles
 
 - Preserve OpenCTI graph hygiene. Do not create duplicate or weakly supported
@@ -24,6 +28,24 @@ intelligence before OpenCTI ingestion.
   metadata.
 - Keep secrets, local state, feed payload dumps and lab evidence out of commits.
 - Use small, focused changes with tests that match the risk of the change.
+- Treat image publishing, release notes and migration guidance as product
+  surfaces, not internal chores.
+
+## Issue Triage
+
+Use the GitHub issue templates whenever possible.
+
+- Bugs should include version, deployment mode, enabled sources, expected
+  behavior, actual behavior and sanitized logs or audit snippets.
+- Feature requests should explain the analyst/operator outcome, affected
+  OpenCTI areas and whether the feature changes ingestion, scoring,
+  deduplication, quarantine, graph export or reporting.
+- Security reports must follow `SECURITY.md` and should not be opened as public
+  issues with exploit details.
+
+Maintainers should prefer clear labels such as `bug`, `docs`, `feature`,
+`good first issue`, `source-adapter`, `graph-export`, `security`,
+`deployment`, `needs-evidence` and `blocked`.
 
 ## Branching Model
 
@@ -87,6 +109,20 @@ Examples:
 
 Common components are `gateway`, `core`, `connectors`, `exporters`, `docs`,
 `deployment`, `tests` and `ci`.
+
+## Release and Image Contributions
+
+Changes that affect the Docker image, deployment template, public configuration
+surface or release packaging should also update:
+
+- `docs/container-images.md`;
+- `docs/deployment-operations.md`;
+- `docs/configuration-reference.md`;
+- `docs/release-process.md`;
+- `.github/workflows/container-image.yml`, when image publishing changes.
+
+Container image tags are part of the public contract. Do not change tag naming
+or move `latest` semantics without documenting the migration.
 
 ## Security Reports
 

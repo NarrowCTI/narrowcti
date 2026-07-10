@@ -34,7 +34,7 @@ records the reason for every `ingest`, `drop`, `quarantine`, `skip`,
 
 | Variable | Default | Effect |
 | --- | --- | --- |
-| `NARROWCTI_GATEWAY_IMAGE` | `narrowcti/gateway:local` | Image tag used by all Compose services. |
+| `NARROWCTI_GATEWAY_IMAGE` | `narrowcti/gateway:local` | Image tag used by all Compose services. Use `ghcr.io/narrowcti/narrowcti-gateway:<version>` for release deployments. |
 | `NARROWCTI_GATEWAY_CONTAINER` | `narrowcti-gateway` | Container name for the gateway runtime service. |
 | `NARROWCTI_GATEWAY_ENV_FILE` | `./gateway.env.example` | Env file consumed by Compose. Set to `./gateway.env` for real local secrets. |
 | `NARROWCTI_GATEWAY_RESTART` | `no` | Restart policy for the gateway runtime. Keep `no` during validation. |

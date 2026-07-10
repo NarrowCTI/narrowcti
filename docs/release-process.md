@@ -24,6 +24,7 @@ upgrade guidance.
 - `docs/architecture.md`, `docs/deployment-operations.md`,
   `docs/configuration-reference.md`, `docs/curation-decision-reference.md` and
   `docs/environment-profiles.md` describe the current product behavior.
+- `docs/container-images.md` describes the current image naming and tag policy.
 - `docs/documentation-map.md` classifies public docs and development evidence.
 - `docs/release-vX.Y.Z.md` is product-facing and does not read like a lab log.
 - Versioned docs such as `docs/deployment-operations-vX.Y.md` are kept only as
@@ -89,3 +90,16 @@ Release notes should be concise and operator-facing:
 
 Do not paste raw lab logs, customer data, local file paths or internal agent
 instructions into release notes.
+
+## Container Image Release
+
+Official image publication follows the same release boundary as GitHub releases.
+
+- Feature branches may build local images, but should not publish stable tags.
+- Merges to `main` may publish `latest` and a `main` tracking tag.
+- Tags matching `vX.Y.Z` publish immutable release tags such as `X.Y.Z`, `X.Y`,
+  `X` and `sha-<short-sha>`.
+- Release notes should mention the canonical image for the release, for example
+  `ghcr.io/narrowcti/narrowcti-gateway:0.8.0`.
+- Operators should pin `NARROWCTI_GATEWAY_IMAGE` to a release tag for stable
+  deployments.

@@ -14,6 +14,7 @@ release archive or community-facing page.
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `container-images.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
 - `opencti-coverage-matrix-v0.8.md`
@@ -26,6 +27,7 @@ release archive or community-facing page.
 - `documentation-map.md`
 - `repository-structure.md`
 - `release-process.md`
+- `community-standards.md`
 - `open-source-strategy.md`
 - `../CONTRIBUTING.md`
 - `development-guide.md`

@@ -17,6 +17,7 @@ Use these docs first:
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `container-images.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
 - `opencti-coverage-matrix-v0.8.md`
@@ -38,6 +39,7 @@ Use these docs for contribution, support and repository governance:
 - `community-issue-triage.md`
 - `repository-structure.md`
 - `release-process.md`
+- `community-standards.md`
 - `../SUPPORT.md`
 - `../SECURITY.md`
 - `../CODE_OF_CONDUCT.md`
@@ -86,6 +88,8 @@ repository readers:
 - `configuration-reference.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `container-images.md`
+- `community-standards.md`
 
 When behavior changes, update these files first. Add or retain a versioned
 snapshot only when the release needs exact historical documentation.

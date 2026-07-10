@@ -1,4 +1,20 @@
-# NarrowCTI
+<p align="center">
+  <img src="docs/assets/narrowcti-logo.png" alt="NarrowCTI logo" width="180">
+</p>
+
+<h1 align="center">NarrowCTI</h1>
+
+<p align="center">
+  <strong>OpenCTI-native CTI curation gateway for governed, explainable and graph-ready intelligence.</strong>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+  <a href="https://github.com/NarrowCTI/narrowcti/actions/workflows/ci.yml"><img src="https://github.com/NarrowCTI/narrowcti/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="docs/README.md"><img src="https://img.shields.io/badge/docs-current-brightgreen.svg" alt="Documentation"></a>
+  <a href="docs/container-images.md"><img src="https://img.shields.io/badge/container-GHCR-blue.svg" alt="Container image"></a>
+  <a href="SECURITY.md"><img src="https://img.shields.io/badge/security-policy-informational.svg" alt="Security policy"></a>
+</p>
 
 NarrowCTI is an OpenCTI-native threat intelligence gateway designed to curate,
 score, deduplicate and govern threat intelligence before it reaches the OpenCTI
@@ -578,6 +594,8 @@ docs/configuration-reference.md
 docs/architecture.md
 docs/curation-decision-reference.md
 docs/environment-profiles.md
+docs/container-images.md
+docs/community-standards.md
 docs/documentation-map.md
 docs/graph-promotion-v0.8.md
 docs/opencti-coverage-matrix-v0.8.md
