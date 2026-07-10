@@ -864,13 +864,13 @@ context.
 Current validation command:
 
 ```text
-.\scripts\validate-v0.6.ps1
+.\scripts\validate-release.ps1
 ```
 
 Final closure validation was executed inside the local product image:
 
 ```text
-powershell -ExecutionPolicy Bypass -File scripts\validate-v0.6.ps1 -Image narrowcti/gateway:local
+powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
 
 Result:

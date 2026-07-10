@@ -80,7 +80,7 @@ python -m unittest discover -s tests -v
 Run the product validation script when Docker is available:
 
 ```text
-powershell -ExecutionPolicy Bypass -File scripts\validate-v0.6.ps1 -Image narrowcti/gateway:local
+powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
 
 ## Pull Requests

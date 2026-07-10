@@ -845,7 +845,7 @@ validated in a controlled lab run.
 
 The v0.8 graph lookup gate is acceptable when:
 
-- Full validation passes with `.\scripts\validate-v0.6.ps1`.
+- Full validation passes with `.\scripts\validate-release.ps1`.
 - Gateway preflight reports graph lookup controls.
 - OTX and MISP bounded dry-runs complete without graph writes.
 - At least one ATT&CK candidate is matched to a canonical OpenCTI object.
@@ -1839,7 +1839,7 @@ real curated graph materialization. The image validation command completed in
 the product container:
 
 ```text
-powershell -ExecutionPolicy Bypass -File scripts\validate-v0.6.ps1 -Image narrowcti/gateway:local
+powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
 
 Result:
