@@ -346,14 +346,27 @@ class GatewayQuarantineCliTests(unittest.TestCase):
 
 
 def run_cli(*args):
-    output = io.StringIO()
-    error = io.StringIO()
-    with contextlib.redirect_stdout(output), contextlib.redirect_stderr(error):
-        exit_code = main(list(args))
-    if exit_code:
-        raise AssertionError(f"CLI returned {exit_code}")
-    return output.getvalue()
+    cli_args = list(args)
 
+    def invoke():
+        output = io.StringIO()
+        error = io.StringIO()
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(error):
+            exit_code = main(cli_args)
+        if exit_code:
+            raise AssertionError(f"CLI returned {exit_code}")
+        return output.getvalue()
+
+    if "--release-audit-file" in cli_args or os.environ.get(
+        "NARROWCTI_RELEASE_AUDIT_FILE"
+    ):
+        return invoke()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with temporary_env(
+            NARROWCTI_RELEASE_AUDIT_FILE=os.path.join(tmpdir, "releases.jsonl")
+        ):
+            return invoke()
 
 def seed_record(repository_path):
     repository = QuarantineRepository(repository_path)

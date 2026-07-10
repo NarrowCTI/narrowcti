@@ -86,25 +86,8 @@ function Invoke-DockerPython {
         return
     }
 
-    $stdoutFile = [System.IO.Path]::GetTempFileName()
-    $stderrFile = [System.IO.Path]::GetTempFileName()
-    try {
-        $process = Start-Process `
-            -FilePath 'docker' `
-            -ArgumentList $dockerArgs `
-            -NoNewWindow `
-            -Wait `
-            -PassThru `
-            -RedirectStandardOutput $stdoutFile `
-            -RedirectStandardError $stderrFile
-
-        Get-Content -LiteralPath $stdoutFile
-        Get-Content -LiteralPath $stderrFile
-        $exitCode = $process.ExitCode
-    }
-    finally {
-        Remove-Item -LiteralPath $stdoutFile, $stderrFile -Force -ErrorAction SilentlyContinue
-    }
+    & docker @dockerArgs
+    $exitCode = $LASTEXITCODE
 
     if ($exitCode -ne 0) {
         throw "docker command failed with exit code $exitCode"
