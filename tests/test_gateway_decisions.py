@@ -6,11 +6,14 @@ import unittest
 from gateway.decisions import (
     build_contextual_scoring_summary,
     build_decision_audit_report,
+    build_graph_entity_summary,
     build_graph_export_summary,
     build_graph_stix_preview_summary,
     build_score_summary,
     format_text_report,
     read_decision_records,
+    render_report,
+    write_report,
 )
 
 
@@ -64,6 +67,10 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(
             2,
             report.sources["otx"]["score_summary"]["records_with_score"],
+        )
+        self.assertEqual(
+            {"below minimum score": 2},
+            report.sources["otx"]["action_reasons"]["drop"],
         )
         self.assertEqual(1, report.sources["misp"]["actions"]["skip"])
         self.assertEqual([], report.quarantined)
@@ -130,7 +137,8 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                         held_reasons={"entity_confidence_below_min": 1},
                         accepted_object_counts={"attack-pattern": 1, "malware": 1},
                         accepted_relationship_counts={"uses": 2},
-                    )
+                    ),
+                    "graph_export_plan_lookup_matches": graph_lookup_matches(),
                 },
                 query="lummac2",
             ),
@@ -167,6 +175,15 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(1, graph["deduplicated_relationship_count"])
         self.assertEqual(2, graph["would_create_object_count"])
         self.assertEqual(2, graph["would_create_relationship_count"])
+        self.assertEqual(0, graph["exported_object_count"])
+        self.assertEqual(0, graph["exported_relationship_count"])
+        self.assertEqual(1, graph["lookup_match_count"])
+        self.assertEqual({"attack-pattern": 1}, graph["lookup_match_object_counts"])
+        self.assertEqual({"mitre_attack_id": 1}, graph["lookup_match_type_counts"])
+        self.assertEqual(
+            {"Attack-Pattern": 1},
+            graph["lookup_canonical_entity_counts"],
+        )
         self.assertEqual({"audit": 1, "dry-run": 1}, graph["modes"])
         self.assertEqual({"audit-only": 1, "dry-run": 1}, graph["statuses"])
         self.assertEqual(
@@ -181,6 +198,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
             for item in graph["by_query"]
         }
         self.assertEqual(3, by_query[("otx", "lummac2")]["candidate_count"])
+        self.assertEqual(1, by_query[("otx", "lummac2")]["lookup_match_count"])
         self.assertEqual(1, by_query[("misp", "tlp:green")]["candidate_count"])
 
     def test_graph_export_summary_ignores_records_without_plan(self):
@@ -191,6 +209,37 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(0, summary["record_count"])
         self.assertEqual({}, summary["by_source"])
         self.assertEqual([], summary["by_query"])
+
+    def test_report_aggregates_exported_graph_counts(self):
+        report = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-22T10:00:00Z",
+                    "otx",
+                    "ingest",
+                    "ok",
+                    metadata={
+                        "graph_export_plan": graph_export_plan(
+                            mode="export",
+                            status="export",
+                            candidate_count=2,
+                            accepted_count=2,
+                            exported_object_count=1,
+                            exported_relationship_count=2,
+                            actions=["exported", "exported"],
+                        )
+                    },
+                )
+            ]
+        )
+
+        graph = report.graph_export
+
+        self.assertEqual({"export": 1}, graph["modes"])
+        self.assertEqual({"export": 1}, graph["statuses"])
+        self.assertEqual(1, graph["exported_object_count"])
+        self.assertEqual(2, graph["exported_relationship_count"])
+        self.assertEqual({"exported": 2}, graph["actions"])
 
     def test_report_aggregates_contextual_scoring_metadata(self):
         records = [
@@ -276,11 +325,13 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                         accepted_candidate_count=4,
                         bundle_object_count=8,
                         graph_object_count=3,
+                        existing_reference_count=1,
                         graph_relationship_count=3,
                         semantic_relationship_count=2,
                         report_relationship_count=1,
                         skipped_candidate_count=1,
                         object_counts={"attack-pattern": 1, "malware": 2},
+                        existing_reference_counts={"attack-pattern": 1},
                         relationship_counts={"related-to": 1, "uses": 2},
                         proposed_relationship_counts={"uses": 3},
                     )
@@ -315,6 +366,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(6, preview["accepted_candidate_count"])
         self.assertEqual(12, preview["bundle_object_count"])
         self.assertEqual(4, preview["graph_object_count"])
+        self.assertEqual(1, preview["existing_reference_count"])
         self.assertEqual(4, preview["graph_relationship_count"])
         self.assertEqual(2, preview["semantic_relationship_count"])
         self.assertEqual(2, preview["report_relationship_count"])
@@ -324,6 +376,10 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertEqual(
             {"attack-pattern": 1, "identity": 1, "malware": 2},
             preview["object_counts"],
+        )
+        self.assertEqual(
+            {"attack-pattern": 1},
+            preview["existing_reference_counts"],
         )
         self.assertEqual(
             {"related-to": 2, "uses": 2},
@@ -348,6 +404,98 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         )
 
         self.assertEqual(0, summary["record_count"])
+        self.assertEqual({}, summary["by_source"])
+        self.assertEqual([], summary["by_query"])
+
+    def test_report_aggregates_graph_entity_narrative_metadata(self):
+        records = [
+            decision_record(
+                "2026-06-22T10:00:00Z",
+                "otx",
+                "dry-run",
+                "ok",
+                metadata={
+                    "graph_evidence": graph_evidence(
+                        [
+                            graph_entity(
+                                "attack_pattern",
+                                "T1059",
+                                "Command and Scripting Interpreter",
+                            ),
+                            graph_entity("threat_actor", "APT Example"),
+                            graph_entity("target_sector", "Finance"),
+                        ]
+                    )
+                },
+                query="lummac2",
+            ),
+            decision_record(
+                "2026-06-22T10:01:00Z",
+                "otx",
+                "dry-run",
+                "ok",
+                metadata={
+                    "graph_evidence": graph_evidence(
+                        [
+                            graph_entity(
+                                "attack_pattern",
+                                "T1059",
+                                "Command and Scripting Interpreter",
+                            ),
+                            graph_entity("intrusion_set", "Intrusion Example"),
+                            graph_entity("target_sector", "Finance"),
+                            graph_entity("malware", "Loader Example"),
+                        ]
+                    )
+                },
+                query="lummac2",
+            ),
+            decision_record("2026-06-22T10:02:00Z", "misp", "drop", "old"),
+        ]
+
+        report = build_decision_audit_report(records)
+        entities = report.graph_entities
+        text = format_text_report(report)
+
+        self.assertEqual(2, entities["record_count"])
+        self.assertEqual(7, entities["entity_count"])
+        self.assertEqual(
+            {
+                "attack_patterns": 2,
+                "arsenal": 1,
+                "infrastructure": 0,
+                "target_sectors": 2,
+                "threat_actors": 2,
+            },
+            entities["counts"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "entity_type": "attack_pattern",
+                    "value": "T1059",
+                    "display_name": "Command and Scripting Interpreter",
+                    "count": 2,
+                }
+            ],
+            entities["top_attack_patterns"],
+        )
+        self.assertEqual(7, entities["by_source"]["otx"]["entity_count"])
+        self.assertEqual(2, entities["by_source"]["otx"]["counts"]["attack_patterns"])
+        self.assertEqual(1, entities["by_source"]["otx"]["counts"]["arsenal"])
+        self.assertEqual(2, entities["by_query"][0]["record_count"])
+        self.assertIn("graph_entities:", text)
+        self.assertIn("attack_patterns=Command and Scripting Interpreter=2", text)
+        self.assertIn("arsenal=Loader Example=1", text)
+        self.assertIn("sectors=Finance=2", text)
+
+    def test_graph_entity_summary_ignores_records_without_metadata(self):
+        summary = build_graph_entity_summary(
+            [decision_record("2026-06-22T10:00:00Z", "otx", "drop", "old")]
+        )
+
+        self.assertEqual(0, summary["record_count"])
+        self.assertEqual(0, summary["entity_count"])
         self.assertEqual({}, summary["by_source"])
         self.assertEqual([], summary["by_query"])
 
@@ -519,6 +667,32 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("- otx query=sample records=1", text)
         self.assertIn("- otx records=1", text)
 
+    def test_renders_and_writes_decision_report_files(self):
+        report = build_decision_audit_report(
+            [
+                decision_record(
+                    "2026-06-22T10:00:00Z",
+                    "otx",
+                    "dry-run",
+                    "would ingest",
+                )
+            ]
+        )
+
+        text = render_report(report, output_format="text")
+        data = json.loads(render_report(report, output_format="json"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_file = os.path.join(tmpdir, "reports", "decisions.json")
+            result = write_report(report, output_file, output_format="json")
+            with open(output_file, "r", encoding="utf-8") as handle:
+                written = json.load(handle)
+
+        self.assertIn("NarrowCTI decision audit report", text)
+        self.assertEqual(1, data["record_count"])
+        self.assertEqual(output_file, result)
+        self.assertEqual(1, written["record_count"])
+
     def test_text_report_includes_graph_export_summary(self):
         report = build_decision_audit_report(
             [
@@ -542,7 +716,8 @@ class GatewayDecisionAuditTests(unittest.TestCase):
                             actions=["would_create", "would_create"],
                             accepted_object_counts={"attack-pattern": 2},
                             accepted_relationship_counts={"uses": 1},
-                        )
+                        ),
+                        "graph_export_plan_lookup_matches": graph_lookup_matches(),
                     },
                 )
             ]
@@ -553,6 +728,9 @@ class GatewayDecisionAuditTests(unittest.TestCase):
         self.assertIn("graph_export:", text)
         self.assertIn("deduplicated=1", text)
         self.assertIn("would_create_objects=2", text)
+        self.assertIn("exported_objects=0", text)
+        self.assertIn("lookup_matches=1", text)
+        self.assertIn("lookup_match_types=mitre_attack_id:1", text)
         self.assertIn("actions=would_create:2", text)
         self.assertIn("graph_export_by_source:", text)
 
@@ -612,6 +790,7 @@ class GatewayDecisionAuditTests(unittest.TestCase):
 
         self.assertIn("graph_stix_preview:", text)
         self.assertIn("bundle_objects=6", text)
+        self.assertIn("existing_references=0", text)
         self.assertIn("skipped_candidates=1", text)
         self.assertIn("objects=attack-pattern:1", text)
         self.assertIn("graph_stix_preview_by_source:", text)
@@ -652,6 +831,8 @@ def graph_export_plan(
     deduplicated_relationship_count=0,
     would_create_object_count=0,
     would_create_relationship_count=0,
+    exported_object_count=0,
+    exported_relationship_count=0,
     actions=None,
     held_reasons=None,
     accepted_object_counts=None,
@@ -673,8 +854,29 @@ def graph_export_plan(
         "accepted_relationship_counts": accepted_relationship_counts or {},
         "would_create_object_count": would_create_object_count,
         "would_create_relationship_count": would_create_relationship_count,
+        "exported_object_count": exported_object_count,
+        "exported_relationship_count": exported_relationship_count,
         "actions": [{"action": action} for action in actions or []],
     }
+
+
+def graph_lookup_matches():
+    return [
+        {
+            "entity_key": "entity:attack-pattern:t1059",
+            "stix_object_type": "attack-pattern",
+            "value": "T1059",
+            "match": {
+                "opencti_id": "internal--1",
+                "standard_id": "attack-pattern--1111",
+                "entity_type": "Attack-Pattern",
+                "name": "Command and Scripting Interpreter",
+                "x_mitre_id": "T1059",
+                "match_type": "mitre_attack_id",
+                "match_value": "T1059",
+            },
+        }
+    ]
 
 
 def contextual_scoring(
@@ -709,11 +911,13 @@ def graph_stix_preview(
     accepted_candidate_count=0,
     bundle_object_count=0,
     graph_object_count=0,
+    existing_reference_count=0,
     graph_relationship_count=0,
     semantic_relationship_count=0,
     report_relationship_count=0,
     skipped_candidate_count=0,
     object_counts=None,
+    existing_reference_counts=None,
     relationship_counts=None,
     proposed_relationship_counts=None,
 ):
@@ -724,14 +928,39 @@ def graph_stix_preview(
         "accepted_candidate_count": accepted_candidate_count,
         "bundle_object_count": bundle_object_count,
         "graph_object_count": graph_object_count,
+        "existing_reference_count": existing_reference_count,
         "graph_relationship_count": graph_relationship_count,
         "semantic_relationship_count": semantic_relationship_count,
         "report_relationship_count": report_relationship_count,
         "skipped_candidate_count": skipped_candidate_count,
         "object_counts": object_counts or {},
+        "existing_reference_counts": existing_reference_counts or {},
         "relationship_counts": relationship_counts or {},
         "proposed_relationship_counts": proposed_relationship_counts or {},
         "skipped_candidates": [],
+    }
+
+
+def graph_evidence(records):
+    return {
+        "version": "v0.7.0-dev",
+        "source_key": "otx",
+        "external_id": "external-1",
+        "title": "Sample intelligence",
+        "record_count": len(records),
+        "records": records,
+    }
+
+
+def graph_entity(entity_type, value, display_name=""):
+    return {
+        "entity_type": entity_type,
+        "value": value,
+        "display_name": display_name,
+        "source_key": "otx",
+        "source_name": "test",
+        "source_field": "fixture",
+        "confidence": 80,
     }
 
 

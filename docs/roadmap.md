@@ -28,8 +28,8 @@ Status: released.
 
 Purpose:
 
-- Define product positioning and commercial direction.
-- Add initial proprietary licensing foundation.
+- Define product positioning and open source direction.
+- Add Apache-2.0 licensing foundation.
 - Track third-party dependency notices.
 - Introduce a shared feed contract for multi-feed development.
 - Add an OTX feed adapter as the reference contract implementation.
@@ -41,7 +41,7 @@ Purpose:
 Expected outcomes:
 
 - The project reads as NarrowCTI Gateway, not an OTX custom connector.
-- Licensing and distribution boundaries are explicit.
+- Open source distribution boundaries are explicit.
 - Future feed adapters have a stable contract to follow.
 - The OTX feed can be normalized through the shared feed contract.
 - Ingest, drop, quarantine and skip outcomes can be audited.
@@ -192,33 +192,69 @@ Expected outcomes:
 
 ## v0.8.0 - Analyst Review And Product Operations
 
+Status: released.
+
+Detailed design and validation:
+
+- `docs/graph-promotion-v0.8.md`
+- `docs/operational-validation-v0.8.md`
+- `docs/deployment-operations-v0.8.md`
+- `docs/analyst-review-v0.8.md`
+- `docs/curation-reporting-v0.8.md`
+- `docs/support-diagnostics-v0.8.md`
+- `docs/infrastructure-correlation-v0.8.md`
+- `docs/opencti-coverage-matrix-v0.8.md`
+
 Purpose:
 
-- Add analyst review API/UI for quarantine, release and policy tuning.
-- Prepare the reporting model for analyst-facing CTI curation reports.
+- Add analyst review API/UI for quarantine, release and policy tuning. v0.8
+  starts with an internal analyst review service used by the CLI; HTTP/UI
+  surfaces remain future work.
+- Prepare the reporting model for analyst-facing CTI curation reports. v0.8
+  starts with a read-only curation report model over gateway, decision,
+  quarantine and graph-readiness evidence.
 - Provide a cleaner installation and upgrade path.
-- Add deployment templates.
+- Add read-only support diagnostics for preflight, evidence inventory and
+  curation posture. v0.8 includes support and external redaction profiles for
+  shareable diagnostic snapshots and customer-safe report delivery.
+- Add deployment templates. v0.8 starts with a safe gateway compose template
+  and env example for existing OpenCTI Docker networks.
 - Add controlled graph promotion with OpenCTI entity/relationship lookup,
   including canonical ATT&CK lookup by external id or STIX id.
+- Validate the Infrastructure/ASN/IP correlation model so NarrowCTI can enrich
+  actor and malware infrastructure with IP, CIDR and ASN relationships without
+  turning raw IOCs into low-context graph entities.
+- Add MISP graph-only replay for improved curation mappings so already-known
+  events can add missing semantic edges without replaying indicator bundles.
+  The v0.8 gate is opt-in through `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP`
+  or `MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` and remains bounded to export-mode
+  validation.
+- Add an operational validation checklist for v0.8 graph lookup evidence,
+  OpenCTI duplicate review and local resource posture.
 - Harden configuration defaults.
 - Document customer installation procedures.
-- Add technical license enforcement and feature gates by feed, environment or
-  capability.
+- Add preflight-visible capability inventory by feed, environment or capability
+  declaration. v0.8 keeps the core open source and does not add runtime
+  commercial activation blocking.
+- Maintain a tab-level OpenCTI coverage matrix so export support, validation
+  status, held-by-design objects and backlog gaps remain visible as graph
+  promotion expands.
 
 Expected outcomes:
 
 - The product can be deployed repeatably outside the lab.
 - Upgrade steps are clear.
 - Customer onboarding becomes predictable.
-- Product use can be controlled without requiring internet access.
-- Support teams can identify customer and entitlement state.
+- Product use can be validated without requiring internet access.
+- Operators and support teams can identify capability posture and configuration
+  drift.
 
-## v1.0.0 - Commercial-Ready Release
+## v1.0.0 - Open Source Production-Ready Release
 
 Purpose:
 
 - Ship a stable, documented and installable product.
-- Finalize commercial license and support terms.
+- Finalize open source release posture and optional services/support guidance.
 - Ship the enterprise curation engine with quarantine release, graph enrichment,
   contextual scoring, explainable policy and measurable graph-quality outcomes.
 - Provide enterprise CTI reporting that explains what was ingested, what was
@@ -231,8 +267,9 @@ Purpose:
 
 Expected outcomes:
 
-- NarrowCTI is ready for controlled commercial delivery.
-- Product, engineering, licensing and operations are aligned.
+- NarrowCTI is ready for controlled open source production adoption.
+- Product, engineering, licensing and operations are aligned around the
+  Apache-2.0 core.
 - Operators and CTI teams can produce an enterprise-grade report from gateway
   evidence, decision audit, quarantine/release history and graph hygiene
   metrics.

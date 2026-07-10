@@ -33,6 +33,9 @@ class GatewaySettingsTests(unittest.TestCase):
             "NARROWCTI_DEDUP_MODE": "hybrid",
             "NARROWCTI_OPENCTI_DEDUP_LOOKUP": "1",
             "NARROWCTI_DEDUP_STATE_FILE": "/state/dedup.json",
+            "NARROWCTI_GRAPH_EXPORT_MODE": "dry_run",
+            "NARROWCTI_GRAPH_DEDUP_STATE_FILE": "/state/graph_dedup.json",
+            "NARROWCTI_OPENCTI_GRAPH_LOOKUP": "true",
             "NARROWCTI_RUN_SUMMARY_FILE": "/state/gateway-runs.jsonl",
             "NARROWCTI_QUARANTINE_REPOSITORY": "/state/quarantine.jsonl",
             "NARROWCTI_MIN_SCORE_TO_INGEST": "70",
@@ -57,6 +60,9 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertEqual("hybrid", settings.dedup_mode)
         self.assertTrue(settings.opencti_dedup_lookup)
         self.assertEqual("/state/dedup.json", settings.dedup_state_file)
+        self.assertEqual("dry-run", settings.graph_export_mode)
+        self.assertEqual("/state/graph_dedup.json", settings.graph_dedup_state_file)
+        self.assertTrue(settings.opencti_graph_lookup)
         self.assertEqual("/state/gateway-runs.jsonl", settings.run_summary_file)
         self.assertEqual(
             "/state/quarantine.jsonl",
@@ -104,6 +110,9 @@ class GatewaySettingsTests(unittest.TestCase):
                 dedup_mode="source",
                 opencti_dedup_lookup=False,
                 dedup_state_file="/state/dedup.json",
+                graph_export_mode="audit",
+                graph_dedup_state_file="",
+                opencti_graph_lookup=False,
             )
 
 

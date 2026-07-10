@@ -9,6 +9,8 @@ from gateway.report import (
     build_operational_report,
     format_text_report,
     read_gateway_summary_file,
+    render_report,
+    write_report,
 )
 
 
@@ -277,6 +279,27 @@ class GatewayReportTests(unittest.TestCase):
         self.assertIn("quarantine_review:", text)
         self.assertIn("records=2 pending=1 released=1", text)
         self.assertIn("source=otx records=2", text)
+
+    def test_renders_and_writes_operational_report_files(self):
+        report = build_operational_report(
+            [gateway_record("2026-06-22T10:00:00Z", [source_result("otx", True)])]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            text_path = os.path.join(tmpdir, "reports", "gateway-report.txt")
+            json_path = os.path.join(tmpdir, "reports", "gateway-report.json")
+
+            write_report(report, text_path)
+            write_report(report, json_path, output_format="json")
+
+            with open(text_path, "r", encoding="utf-8") as file_obj:
+                text = file_obj.read()
+            with open(json_path, "r", encoding="utf-8") as file_obj:
+                json_report = json.loads(file_obj.read())
+
+        self.assertIn("NarrowCTI gateway operational report", text)
+        self.assertIn("run_count=1", render_report(report))
+        self.assertEqual(1, json_report["run_count"])
 
 
 def gateway_record(recorded_at, results):

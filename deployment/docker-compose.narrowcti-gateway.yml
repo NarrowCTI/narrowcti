@@ -1,0 +1,246 @@
+services:
+  narrowcti-gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    container_name: ${NARROWCTI_GATEWAY_CONTAINER:-narrowcti-gateway}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command: ["python", "-m", "gateway.connector"]
+    restart: ${NARROWCTI_GATEWAY_RESTART:-no}
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+  narrowcti-preflight:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command: ["python", "-m", "gateway.preflight"]
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+  narrowcti-gateway-report:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.report
+      - --file
+      - /app/state/gateway_runs.jsonl
+      - --quarantine-file
+      - /app/state/quarantine.jsonl
+      - --output-file
+      - /app/state/gateway-operational-report.txt
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+  narrowcti-curation-report:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.curation_report
+      - --output-file
+      - /app/state/curation-report.txt
+      - --json-file
+      - /app/state/curation-report.json
+      - --html-file
+      - /app/state/curation-report.html
+      - --relationship-audit-file
+      - ${NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE:-/app/state/opencti-relationship-audit.json}
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+  narrowcti-decision-report:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.decisions
+      - --dir
+      - /app/state/audit
+      - --output-file
+      - /app/state/decision-audit-report.txt
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+  narrowcti-correlation-report:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.correlation
+      - --file
+      - /app/state/dedup_index.json
+      - --output-file
+      - /app/state/artifact-correlation-report.txt
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+  narrowcti-operational-validation:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.operational_validation
+      - --decision-path
+      - /app/state/audit
+      - --required-sources
+      - ${NARROWCTI_OPERATIONAL_VALIDATION_SOURCES:-otx,misp}
+      - --evidence-file
+      - ${NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE:-/app/state/operational-validation-evidence.json}
+      - --relationship-audit-file
+      - ${NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE:-/app/state/opencti-relationship-audit.json}
+      - --format
+      - html
+      - --output-file
+      - /app/state/operational-validation.html
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+  narrowcti-support-diagnostics:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    command:
+      - python
+      - -m
+      - gateway.diagnostics
+      - --redaction-profile
+      - support
+      - --operational-validation-evidence-file
+      - ${NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE:-/app/state/operational-validation-evidence.json}
+      - --opencti-relationship-audit-file
+      - ${NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE:-/app/state/opencti-relationship-audit.json}
+      - --html-file
+      - /app/state/support-diagnostics.html
+      - --bundle-file
+      - /app/state/support-diagnostics.zip
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+  narrowcti-opencti-relationship-audit:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+      NARROWCTI_OPENCTI_AUDIT_TYPE: ${NARROWCTI_OPENCTI_AUDIT_TYPE:-}
+      NARROWCTI_OPENCTI_AUDIT_SEARCH: ${NARROWCTI_OPENCTI_AUDIT_SEARCH:-}
+      NARROWCTI_OPENCTI_AUDIT_FIRST: ${NARROWCTI_OPENCTI_AUDIT_FIRST:-100}
+      NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE: ${NARROWCTI_OPENCTI_AUDIT_OUTPUT_FILE:-/app/state/opencti-relationship-audit.json}
+      NARROWCTI_OPENCTI_AUDIT_EXPECTED_QUADRANTS: ${NARROWCTI_OPENCTI_AUDIT_EXPECTED_QUADRANTS:-}
+      NARROWCTI_OPENCTI_AUDIT_REQUIRE_KILL_CHAIN: ${NARROWCTI_OPENCTI_AUDIT_REQUIRE_KILL_CHAIN:-false}
+    command: ["python", "-m", "gateway.opencti_relationship_audit"]
+    restart: "no"
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-state:/app/state
+    networks:
+      - opencti
+
+networks:
+  opencti:
+    external: true
+    name: ${NARROWCTI_DOCKER_NETWORK:-opencti_default}
+
+volumes:
+  narrowcti-state:

@@ -125,9 +125,9 @@ The remaining gap is not basic extraction; it is intelligent promotion:
 | `description` | Stored in normalized cache | Technique description / note / relationship context | Implemented in v0.7 |
 | `external_references.url` | Stored as `url` and emitted as `external_reference` candidate | External reference to ATT&CK page | Candidate audit-ready |
 | `kill_chain_phases` | Normalized into tactics and kill chain phase attributes | Tactic filters and ATT&CK phase context | Candidate audit-ready |
-| `x_mitre_platforms` | Stored as `platforms` and emitted as `attack_platform` candidates | Target platform filters and detection context | Candidate audit-ready |
-| `x_mitre_data_sources` | Stored as `data_sources` and emitted as `attack_data_source` candidates | Hunting/detection guidance context | Candidate audit-ready |
-| `x_mitre_detection` | Stored as `detection` and emitted as `detection_guidance` note candidates | Analyst guidance and future detection mapping; accepted note candidates can be represented in STIX preview | Preview-ready |
+| `x_mitre_platforms` | Stored as `platforms` and emitted as `attack_platform` candidates anchored to the source technique | Target platform filters and detection context | Candidate/context-ready; not in default export gate |
+| `x_mitre_data_sources` | Stored as `data_sources` and emitted as `attack_data_source` candidates anchored to the source technique | Hunting/detection guidance context | Export-ready in v0.8 when policy accepts graph context |
+| `x_mitre_detection` | Stored as `detection` and emitted as `detection_guidance` note candidates anchored to the source technique | Analyst guidance and detection mapping | Export-ready in v0.8 when policy accepts graph context |
 | `x_mitre_domains` | Stored as `domains` | Enterprise/mobile/ICS scope filter | Implemented in v0.7 |
 | `x_mitre_version` | Stored as `version` | ATT&CK object lifecycle provenance | Implemented in v0.7 |
 | `x_mitre_attack_spec_version` | Stored as `attack_spec_version` | Parser compatibility/audit | Implemented in v0.7 |
@@ -138,9 +138,9 @@ The remaining gap is not basic extraction; it is intelligent promotion:
 | ATT&CK groups | Not imported today | `intrusion-set`, aliases, relationships | Pending |
 | ATT&CK software | Not imported today | `malware` / `tool`, arsenal relationships | Pending |
 | ATT&CK campaigns | Not imported today | `campaign`, attribution and uses relationships | Pending |
-| ATT&CK data sources/components | Not imported as objects today | Detection/hunting graph context | Pending |
+| ATT&CK data sources/components | Technique data sources are exportable as curated `x-mitre-data-source` context; data components remain future scope | Detection/hunting graph context | Partial in v0.8 |
 | ATT&CK relationship objects | Not imported today | `uses`, `subtechnique-of`, `attributed-to` graph | Pending |
-| ATT&CK tactics as objects | Not imported today | `x-mitre-tactic` or OpenCTI tactic context | Pending |
+| ATT&CK tactics as objects | Technique tactics remain preserved as candidate evidence and kill-chain context | OpenCTI tactic/kill-chain context | Candidate/context-ready; not in default export gate |
 
 ## MITRE Findings
 

@@ -55,6 +55,9 @@ def build_graph_export_plan(
     create_actions = [
         action for action in accepted_actions if action.get("action") == "would_create"
     ]
+    export_actions = [
+        action for action in accepted_actions if action.get("action") == "exported"
+    ]
     duplicate_actions = [
         action
         for action in accepted_actions
@@ -65,7 +68,7 @@ def build_graph_export_plan(
         "version": GRAPH_EXPORT_PLAN_VERSION,
         "mode": mode,
         "status": plan_status(mode),
-        "export_enabled": False,
+        "export_enabled": mode == "export",
         "candidate_count": int(
             policy.get("candidate_count") or len(accepted) + len(held)
         ),
@@ -102,6 +105,23 @@ def build_graph_export_plan(
         )
         if would_create
         else 0,
+        "exported_object_count": len(
+            [
+                action
+                for action in export_actions
+                if not action.get("deduplication", {}).get("entity_duplicate")
+            ]
+        ),
+        "exported_relationship_count": len(
+            [
+                action
+                for action in export_actions
+                if action.get("deduplication", {}).get("relationship_key")
+                and not action.get("deduplication", {}).get(
+                    "relationship_duplicate"
+                )
+            ]
+        ),
         "actions": actions,
     }
 
@@ -139,7 +159,11 @@ def planned_accepted_actions(
     known_entity_keys=None,
     known_relationship_keys=None,
 ):
-    entity_keys = {clean_string(key) for key in known_entity_keys or [] if clean_string(key)}
+    entity_keys = {
+        clean_string(key)
+        for key in known_entity_keys or []
+        if clean_string(key)
+    }
     relationship_keys = {
         clean_string(key)
         for key in known_relationship_keys or []
@@ -189,7 +213,7 @@ def planned_accepted_action(mode, entity_duplicate=False, relationship_duplicate
     if mode == "dry-run":
         return "would_create"
     if mode == "export":
-        return "blocked"
+        return "exported"
     return "audit_only"
 
 
@@ -203,7 +227,7 @@ def planned_accepted_reason(mode, entity_duplicate=False, relationship_duplicate
     if mode == "dry-run":
         return "graph_export_dry_run"
     if mode == "export":
-        return "graph_export_not_implemented"
+        return "graph_export_enabled"
     return "graph_export_mode_audit"
 
 
@@ -221,8 +245,142 @@ def plan_status(mode):
     if mode == "dry-run":
         return "dry-run"
     if mode == "export":
-        return "blocked"
+        return "export"
     return "audit-only"
+
+
+def exportable_graph_candidate_policy(
+    graph_candidate_policy,
+    graph_export_plan,
+    known_graph_keys=None,
+):
+    policy = mapping_from(graph_candidate_policy)
+    if not mapping_from(graph_export_plan).get("export_enabled"):
+        return policy_with_accepted(policy, [])
+
+    known = normalize_known_graph_keys(known_graph_keys or {})
+    known_entity_keys = set(known["entity_keys"])
+    known_relationship_keys = set(known["relationship_keys"])
+    known_matches = known_matches_by_entity_key(known.get("matches"))
+    accepted_by_fingerprint = {
+        clean_string(candidate.get("fingerprint")): candidate
+        for candidate in clean_candidates(policy.get("accepted"))
+        if clean_string(candidate.get("fingerprint"))
+    }
+    accepted = []
+
+    for action in plan_actions(graph_export_plan):
+        if clean_string(action.get("action")) != "exported":
+            continue
+        deduplication = mapping_from(action.get("deduplication"))
+        entity_key = clean_string(deduplication.get("entity_key"))
+        relationship_key = clean_string(deduplication.get("relationship_key"))
+        if relationship_key and relationship_key in known_relationship_keys:
+            continue
+        fingerprint = clean_string(
+            mapping_from(action.get("candidate")).get("fingerprint")
+        )
+        candidate = accepted_by_fingerprint.get(fingerprint)
+        if not candidate:
+            continue
+        if entity_key and entity_key in known_entity_keys:
+            annotated = candidate_with_existing_opencti_ref(
+                candidate,
+                known_matches.get(entity_key),
+            )
+            if annotated:
+                accepted.append(annotated)
+            continue
+        accepted.append(candidate)
+
+    return policy_with_accepted(policy, accepted)
+
+
+def known_matches_by_entity_key(matches):
+    indexed = {}
+    for match in matches or []:
+        match = mapping_from(match)
+        entity_key = clean_string(match.get("entity_key"))
+        if entity_key:
+            indexed[entity_key] = match
+    return indexed
+
+
+def candidate_with_existing_opencti_ref(candidate, match):
+    match = mapping_from(match)
+    canonical = mapping_from(match.get("match"))
+    existing_ref = clean_string(canonical.get("standard_id"))
+    if not valid_existing_ref(existing_ref, candidate):
+        return {}
+
+    annotated = dict(candidate)
+    attributes = mapping_from(annotated.get("attributes"))
+    attributes["opencti_existing_ref"] = existing_ref
+    for source_field, target_field in (
+        ("opencti_id", "opencti_existing_id"),
+        ("entity_type", "opencti_existing_entity_type"),
+        ("name", "opencti_existing_name"),
+        ("observable_value", "opencti_existing_observable_value"),
+        ("match_type", "opencti_match_type"),
+        ("match_value", "opencti_match_value"),
+    ):
+        value = clean_string(canonical.get(source_field))
+        if value:
+            attributes[target_field] = value
+    annotated["attributes"] = attributes
+    return annotated
+
+
+def valid_existing_ref(existing_ref, candidate):
+    if not existing_ref:
+        return False
+    return any(
+        existing_ref.startswith(f"{prefix}--")
+        for prefix in candidate_existing_ref_prefixes(candidate)
+    )
+
+
+def candidate_existing_ref_prefixes(candidate):
+    candidate = mapping_from(candidate)
+    stix_object_type = clean_string(candidate.get("stix_object_type")).lower()
+    canonical_prefixes = {
+        "security-platform": ["identity", "security-platform"],
+        "x-mitre-data-component": ["data-component", "x-mitre-data-component"],
+        "x-mitre-data-source": ["data-source", "x-mitre-data-source"],
+    }
+    if stix_object_type in canonical_prefixes:
+        return canonical_prefixes[stix_object_type]
+    if stix_object_type != "observable":
+        return [stix_object_type] if stix_object_type else []
+
+    attributes = mapping_from(candidate.get("attributes"))
+    observable_type = clean_string(attributes.get("observable_type")).lower()
+    supported = {
+        "artifact",
+        "domain-name",
+        "email-addr",
+        "file",
+        "ipv4-addr",
+        "ipv6-addr",
+        "url",
+    }
+    return [observable_type] if observable_type in supported else []
+
+
+def policy_with_accepted(policy, accepted):
+    updated = dict(policy)
+    updated["accepted"] = accepted
+    updated["accepted_count"] = len(accepted)
+    return updated
+
+
+def plan_actions(plan):
+    plan = mapping_from(plan)
+    return [
+        dict(action)
+        for action in plan.get("actions") or []
+        if isinstance(action, Mapping)
+    ]
 
 
 def clean_candidates(value):
@@ -314,13 +472,69 @@ def graph_relationship_key(candidate, entity_key=""):
     relationship_type = clean_string(candidate.get("relationship_type")).lower()
     if not relationship_type or not entity_key:
         return ""
+    source_type, source_value = graph_relationship_source_anchor(candidate)
     return stable_key(
         "relationship",
         clean_string(candidate.get("source_key")).lower(),
         clean_string(candidate.get("external_id")).lower(),
         relationship_type,
+        source_type,
+        source_value,
         entity_key,
     )
+
+
+def graph_relationship_source_anchor(candidate):
+    candidate = mapping_from(candidate)
+    attributes = mapping_from(candidate.get("attributes"))
+    source_type = first_clean_value(
+        attributes.get("relationship_source_stix_object_type"),
+        attributes.get("source_stix_object_type"),
+        parent_cluster_stix_object_type(attributes),
+    ).lower()
+    source_value = first_clean_value(
+        attributes.get("relationship_source_value"),
+        attributes.get("source_value"),
+        attributes.get("parent_cluster_value"),
+    ).lower()
+    return source_type, source_value
+
+
+def parent_cluster_stix_object_type(attributes):
+    kind = " ".join(
+        clean_string(attributes.get(field)).casefold()
+        for field in (
+            "parent_cluster_type",
+            "parent_galaxy_type",
+            "parent_galaxy_name",
+        )
+        if clean_string(attributes.get(field))
+    )
+    if "attack-pattern" in kind or "mitre-attack-pattern" in kind:
+        return "attack-pattern"
+    if "campaign" in kind:
+        return "campaign"
+    if "intrusion-set" in kind:
+        return "intrusion-set"
+    if "threat-actor" in kind or "threat actor" in kind:
+        return "threat-actor"
+    if "malpedia" in kind or "ransomware" in kind or "malware" in kind:
+        return "malware"
+    if "tool" in kind:
+        return "tool"
+    if "sector" in kind:
+        return "identity"
+    if "country" in kind or "region" in kind:
+        return "location"
+    return ""
+
+
+def first_clean_value(*values):
+    for value in values:
+        cleaned = clean_string(value)
+        if cleaned:
+            return cleaned
+    return ""
 
 
 def stable_key(*parts):
@@ -354,7 +568,51 @@ def normalize_known_graph_keys(value):
             for key in known.get("relationship_keys") or []
             if clean_string(key)
         ],
+        "matches": [
+            summary
+            for summary in (
+                lookup_match_summary(match) for match in known.get("matches") or []
+            )
+            if summary
+        ],
     }
+
+
+def lookup_match_summary(value):
+    match = mapping_from(value)
+    if not match:
+        return {}
+    summary = {}
+    for field in (
+        "entity_key",
+        "relationship_key",
+        "stix_object_type",
+        "value",
+    ):
+        cleaned = clean_string(match.get(field))
+        if cleaned:
+            summary[field] = cleaned
+
+    canonical = mapping_from(match.get("match"))
+    if canonical:
+        canonical_summary = {}
+        for field in (
+            "opencti_id",
+            "standard_id",
+            "entity_type",
+            "name",
+            "observable_value",
+            "x_mitre_id",
+            "match_type",
+            "match_value",
+        ):
+            cleaned = clean_string(canonical.get(field))
+            if cleaned:
+                canonical_summary[field] = cleaned
+        if canonical_summary:
+            summary["match"] = canonical_summary
+
+    return summary
 
 
 def clean_string(value):

@@ -59,24 +59,136 @@ graph enrichment layer.
 | `NARROWCTI_MIN_ENTITY_CONFIDENCE` | Minimum entity confidence required for a graph candidate to be accepted by graph candidate policy. Lower-confidence candidates are held in audit metadata. |
 | `NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE` | Minimum relationship confidence required for a graph candidate relationship to be accepted by graph candidate policy. |
 | `NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE` | Requires graph candidates to carry source provenance before they are accepted by graph candidate policy. |
-| `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES` | Optional allow-list for NarrowCTI graph entity types such as `attack_pattern`, `malware`, `threat_actor`, `source_identity` or `marking`. Empty allows all current candidate types. |
-| `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Optional allow-list for STIX/OpenCTI object types such as `attack-pattern`, `malware`, `threat-actor`, `identity` or `marking-definition`. Empty allows all current candidate object types. |
-| `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export planning mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` is currently blocked until graph-aware STIX export is implemented. |
-| `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a read-only known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. v0.7 does not mark plans as exported from this setting. |
+| `NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES` | Optional allow-list for NarrowCTI graph entity types such as `attack_pattern`, `malware`, `threat_actor`, `target_sector`, `infrastructure` or `autonomous_system`. In `audit` and `dry-run`, empty keeps all current candidate types visible. In real `export`, empty uses the safe export default and holds feed bookkeeping candidates such as `collector`, `source_identity`, `tag` and `marking`. |
+| `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Optional allow-list for STIX/OpenCTI object types such as `attack-pattern`, `malware`, `threat-actor`, `identity`, `infrastructure`, `observable` or `autonomous-system`. In `audit` and `dry-run`, empty keeps all current candidate object types visible. In real `export`, empty uses the safe export default and excludes `label`, `marking-definition` and source bookkeeping unless explicitly allowed. |
+| `NARROWCTI_GRAPH_EXPORT_MODE` | Graph export mode. `audit` records audit-only actions, `dry-run` records `would_create` object and relationship counts, and `export` enables controlled graph promotion for accepted candidates. |
+| `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Optional local graph deduplication index used as a known-key lookup when building `graph_export_plan`. Empty disables persisted graph lookup. Exported graph state is marked only after a successful OpenCTI import. |
+| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | v0.8 opt-in OpenCTI graph lookup. `false` keeps only local graph deduplication state. `true` lets OTX and MISP planning query OpenCTI for canonical graph objects, including ATT&CK attack-patterns, malware, tools, infrastructure, CVE vulnerabilities, threat actors, intrusion sets, controlled locations/countries/systems, autonomous systems, channels, narratives, events and supported cyber observables, before graph promotion creates new objects. |
+| `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` | v0.8 opt-in MISP graph replay gate. When `true` and `NARROWCTI_GRAPH_EXPORT_MODE=export`, a MISP event whose indicators are all already known by artifact deduplication can still export accepted graph objects and relationships with an empty indicator list. Keep `false` unless replaying improved curation mappings in a bounded lab. `MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` can override the global value for MISP only. |
+| `NARROWCTI_IP_ASN_ENRICHMENT_FILE` | Optional offline IP-to-ASN mapping file for MISP infrastructure enrichment. Empty disables enrichment. CSV, JSON list, JSON object with `records`/`prefixes`, or JSONL rows are supported with fields such as `cidr`, `asn`, `as_name`, `rir` and `source`. Matches add explicit `IP/CIDR -> belongs-to -> ASN` evidence only; they do not invent actor or infrastructure attribution. |
 
-Current graph controls do not create new OpenCTI graph objects. They make the
-future graph promotion decision visible in decision audit and quarantine
-metadata through `graph_candidate_policy` and `graph_export_plan`. The
-decision audit report also aggregates graph export plan evidence so operators
-can review modes, statuses, actions, would-create counts, held reasons and
-source/query rollups without reading raw JSONL records. v0.7 graph export
-plans also include local intra-plan entity and relationship deduplication
-evidence. This reduces duplicate dry-run intent inside one decision record, but
-does not replace future OpenCTI graph lookup. When
+Use `export` only with explicit graph thresholds, allow-lists and validation
+evidence. The first promotion gate can create supported STIX objects such as
+`threat-actor`, `intrusion-set`, `infrastructure`, `malware`, `tool`,
+`vulnerability`, `attack-pattern`, `identity` sectors, `location`, `channel`,
+`narrative`, `event`, `indicator`, `note` and basic observables. Infrastructure
+should be allowed only when the
+source provides explicit infrastructure evidence or the candidate has been
+curated for release; raw observables alone should remain Observables or
+Indicators. When local or OpenCTI lookup reports a known graph key with a valid
+canonical STIX `standard_id`, the export gate references that existing object
+instead of duplicating it.
+
+When `NARROWCTI_GRAPH_EXPORT_MODE=export` and no explicit graph allow-list is
+provided, NarrowCTI applies a safe export default. It accepts source-backed CTI
+objects and relationships such as infrastructure, ASN, observables, sectors,
+locations, arsenal, ATT&CK, vulnerabilities, reports and sightings, while
+holding provenance/bookkeeping candidates such as `collector`,
+`source_identity`, labels and markings. Operators can still explicitly
+allow-list those candidate types when a specific deployment wants them in the
+OpenCTI graph.
+
+## v0.8 Open Source Capability Inventory
+
+These controls expose the technical capability inventory for open source
+operations. They are intentionally preflight-visible and are not runtime
+license blockers. This lets operators and support teams identify available
+runtime surfaces, declared capabilities and configuration drift without
+commercial activation.
+
+| Variable | Purpose |
+| --- | --- |
+| `NARROWCTI_CAPABILITIES` | Optional comma-separated list of capabilities intentionally declared for this deployment. Unknown values are reported as warnings; known capabilities remain enabled in the open source core. |
+| `NARROWCTI_OPERATIONAL_VALIDATION_SOURCES` | Optional compose-runner helper for the v0.8 operational validation service. It controls the comma-separated source list passed to `gateway.operational_validation --required-sources`. |
+| `NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE` | Optional compose-runner helper for the v0.8 operational validation and support diagnostics services. It points to a local JSON file with operator-recorded manual checks such as full validation, OpenCTI duplicate review and resource posture. |
+
+Known v0.8 capability identifiers:
+
+```text
+source.otx
+source.misp
+enrichment.otx_entities
+enrichment.mitre_attack
+quarantine.review
+reports.operational
+reports.operational_validation
+reports.support_diagnostics
+graph.export.audit
+graph.export.dry_run
+graph.lookup.opencti
+graph.export.controlled
+deployment.templates
+mssp.multi_environment
+```
+
+Graph controls make promotion decisions visible in decision audit and
+quarantine metadata through `graph_candidate_policy` and `graph_export_plan`.
+The decision audit report also aggregates graph export plan evidence so
+operators can review modes, statuses, actions, would-create counts, exported
+counts, held reasons and source/query rollups without reading raw JSONL
+records. v0.7 graph export plans also include local intra-plan entity and
+relationship deduplication evidence. This reduces duplicate dry-run intent
+inside one decision record, but does not replace OpenCTI graph lookup. When
 `NARROWCTI_GRAPH_DEDUP_STATE_FILE` is configured, OTX and MISP can read known
 local graph keys and mark matching candidates as deduplicated in the plan. This
-is a read-only planning aid in v0.7; real graph export and post-export marking
-remain pending.
+is read-only in audit/dry-run modes. In v0.8,
+`NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` extends this planning aid to canonical
+OpenCTI graph lookup. When canonical matches are found, OTX and MISP decision
+metadata can include `graph_export_plan_lookup_matches` so operators can audit
+which OpenCTI object was matched. In `export` mode, known local/OpenCTI graph
+keys with canonical STIX ids are referenced by the curated bundle, and newly
+promoted graph keys are marked locally only after successful OpenCTI import.
+Graph SDOs created by NarrowCTI use deterministic STIX ids derived from object
+type, identity class and normalized value/name so repeated exports converge on
+the same OpenCTI `standard_id` when the curated object is unchanged.
+For MISP replay operations, `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true`
+allows graph-only enrichment after artifact deduplication has identified all
+indicators as already known. The replay uses the same graph policy, OpenCTI
+lookup and graph deduplication controls, records `graph_replay_only=true` in
+decision metadata and sends no indicator objects in that replay bundle.
+Target identity candidates are scoped to victimology and use OpenCTI-native
+collections for lookup before creation: `target_sector` uses `sectors`,
+`target_organization` uses `organizations`, `target_system` uses `systems` and
+`target_individual` uses `individuals`. Source identities, collectors, feed
+authors and provenance identities remain outside automatic identity promotion.
+Threat Actor Individual candidates are separate from target Individuals. They
+use `entity_type=threat_actor_individual`, `stix_object_type=threat-actor`,
+are looked up through `threatActorsIndividuals`, are excluded from the generic
+STIX `threat-actor` bundle path, and are created in export mode through the
+OpenCTI-native `threatActorIndividualAdd(update=true)` mutation. NarrowCTI then
+links the native object to the imported Report with relationship type `object`
+for container visibility.
+For cyber observables, OpenCTI stores the concrete SCO type rather than the
+generic NarrowCTI candidate type. For example, a NarrowCTI `observable`
+candidate can resolve to an existing `ipv4-addr--...`, `domain-name--...` or
+`url--...` STIX id, while an ASN candidate resolves to
+`autonomous-system--...` through `stixCyberObservables`.
+Explicit Artifact candidates are also resolved through
+`stixCyberObservables`, but only when source metadata marks the observable as
+`artifact` and provides a supported hash algorithm/value. Generic file hashes
+remain file observables or Indicators unless a source mapper supplies
+artifact-level metadata such as `artifact_url`, `mime_type`, `payload_bin` or
+encryption fields.
+Security Platform candidates are different from normal STIX graph objects:
+they use `entity_type=security_platform` and
+`stix_object_type=security-platform`, are looked up through
+`securityPlatforms`, and are created in export mode through the OpenCTI-native
+`securityPlatformAdd(update=true)` mutation. This avoids the local OpenCTI
+behavior where STIX Identity `identity_class=securityplatform` materialized as
+Organization.
+Because Security Platform is exported outside the STIX bundle path, NarrowCTI
+also resolves the imported Report and attaches each native Security Platform to
+that Report with OpenCTI `reportEdit.relationAdd` and relationship type
+`object`. This preserves container/report visibility without inventing a
+semantic relationship such as `related-to`.
+The STIX Author / OpenCTI Author is resolved from the logical upstream source
+and the NarrowCTI curation path. New exported bundles should use the
+`<logical upstream source> via NarrowCTI` naming convention, for example
+`OTX AlienVault via NarrowCTI` for `alienvault:otx` and
+`MISP via NarrowCTI` for `misp:misp`. NarrowCTI also remains visible through
+decision audit, curation reports, export plans and `x_narrowcti_*` graph
+metadata. Existing OpenCTI objects keep their previous author; the source-aware
+identity mapping is applied to new exported bundles and newly created objects.
 
 ## Source Examples
 
@@ -106,10 +218,18 @@ Graph candidate audit posture:
 NARROWCTI_MIN_ENTITY_CONFIDENCE=50
 NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE=60
 NARROWCTI_REQUIRE_RELATIONSHIP_PROVENANCE=true
-NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=attack_pattern,malware,threat_actor,source_identity,marking
-NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=attack-pattern,malware,threat-actor,identity,marking-definition
+NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=attack_pattern,malware,threat_actor,infrastructure,autonomous_system,target_sector,target_country,target_region,target_administrative_area,target_city,target_position,observable
+NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=attack-pattern,malware,threat-actor,infrastructure,autonomous-system,identity,location,observable
 NARROWCTI_GRAPH_EXPORT_MODE=dry-run
 NARROWCTI_GRAPH_DEDUP_STATE_FILE=/app/state/graph_dedup.json
+NARROWCTI_OPENCTI_GRAPH_LOOKUP=false
+NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=false
+```
+
+Open source capability inventory posture:
+
+```env
+NARROWCTI_CAPABILITIES=source.otx,source.misp,graph.lookup.opencti,reports.operational,reports.operational_validation,reports.support_diagnostics
 ```
 
 MISP-specific review posture:
@@ -126,6 +246,18 @@ MISP_OVERSIZED_EVENT_ACTION=skip
 
 For constrained labs, keep MISP dry-run and bounded until decision audit,
 quarantine volume and OpenCTI/Elasticsearch capacity are understood.
+
+For bounded replay of one known MISP event, `MISP_QUERIES` accepts direct event
+selectors:
+
+```env
+MISP_QUERIES=event:4390
+# also accepted: event-id:4390, id:4390 or uuid:<misp-event-uuid>
+```
+
+Direct event lookup loads the event by id/uuid and avoids broad
+`events/restSearch` scans, which is useful for OpenCTI import validation,
+source-mapping tests and constrained local labs.
 
 ## Operational Commands
 
@@ -151,9 +283,16 @@ Before promoting v0.6, run:
 .\scripts\validate-v0.6.ps1
 python -m gateway.preflight
 python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state\quarantine.jsonl
+python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state\quarantine.jsonl --output-file state\gateway-operational-report.txt
 python -m gateway.quarantine --release-audit-file state\audit\releases.jsonl audit --limit 20
 ```
 
 The validation goal is to prove that quarantine records are created, review
 actions are audited, released records remain dry-run by default and enrichment
 gaps such as a missing MITRE cache are warnings instead of ingest blockers.
+In the v0.8 development track, `gateway.preflight` also reports
+`NARROWCTI_GRAPH_EXPORT_MODE`, `NARROWCTI_GRAPH_DEDUP_STATE_FILE` and
+`NARROWCTI_OPENCTI_GRAPH_LOOKUP` so operators can confirm the graph promotion
+gate before running OTX or MISP sources. It also reports
+`distribution_model=open_source`, `open_source=true`, declared capabilities,
+unknown declared capabilities and the full enabled capability inventory.

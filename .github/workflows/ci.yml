@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+jobs:
+  python-tests:
+    name: Python tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r connectors/otx/requirements.txt
+
+      - name: Compile modules
+        run: |
+          python -m py_compile \
+            connectors/otx/connector.py \
+            connectors/otx/entity_extraction.py \
+            connectors/otx/feed_adapter.py \
+            connectors/otx/models.py \
+            connectors/otx/processor.py \
+            connectors/otx/runtime.py \
+            connectors/otx/settings.py \
+            connectors/otx/otx_client.py \
+            connectors/misp/client.py \
+            connectors/misp/connector.py \
+            connectors/misp/feed_adapter.py \
+            connectors/misp/models.py \
+            connectors/misp/processor.py \
+            connectors/misp/runtime.py \
+            connectors/misp/settings.py \
+            core/contextual_scoring.py \
+            core/decision_audit.py \
+            core/feed_contract.py \
+            core/graph_candidates.py \
+            core/graph_deduplication.py \
+            core/graph_evidence.py \
+            core/graph_export_plan.py \
+            core/indicator_policy.py \
+            core/ip_asn_enrichment.py \
+            core/mitre_attack.py \
+            core/opencti_deduplication.py \
+            core/opencti_graph_lookup.py \
+            core/policy.py \
+            core/quarantine.py \
+            core/scoring.py \
+            core/source_identity.py \
+            core/state_repository.py \
+            core/tlp.py \
+            exporters/opencti.py \
+            exporters/stix_builder.py \
+            gateway/connector.py \
+            gateway/correlation.py \
+            gateway/curation_report.py \
+            gateway/decisions.py \
+            gateway/diagnostics.py \
+            gateway/feature_gates.py \
+            gateway/mitre.py \
+            gateway/opencti_relationship_audit.py \
+            gateway/operational_validation.py \
+            gateway/preflight.py \
+            gateway/quarantine.py \
+            gateway/quarantine_export.py \
+            gateway/report.py \
+            gateway/review.py \
+            gateway/runtime.py \
+            gateway/settings.py \
+            gateway/sources.py
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v

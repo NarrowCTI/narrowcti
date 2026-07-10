@@ -44,7 +44,7 @@ MISP and adapter contract validation.
 - Removing the direct OTX adapter.
 - Building a customer-facing admin UI.
 - Adding advanced correlation before the second adapter is stable.
-- Adding runtime license enforcement.
+- Adding commercial activation or feature blocking to the open source core.
 
 
 ## Runtime Validation Findings

@@ -18,6 +18,26 @@ ACTION_ORDER = (
     "error",
 )
 
+GRAPH_ENTITY_CATEGORIES = {
+    "attack_pattern": "attack_patterns",
+    "autonomous_system": "infrastructure",
+    "infrastructure": "infrastructure",
+    "threat_actor": "threat_actors",
+    "intrusion_set": "threat_actors",
+    "target_sector": "target_sectors",
+    "malware": "arsenal",
+    "tool": "arsenal",
+    "vulnerability": "arsenal",
+}
+
+GRAPH_ENTITY_TOP_FIELDS = {
+    "attack_patterns": "top_attack_patterns",
+    "threat_actors": "top_threat_actors",
+    "target_sectors": "top_target_sectors",
+    "arsenal": "top_arsenal",
+    "infrastructure": "top_infrastructure",
+}
+
 
 @dataclass(frozen=True)
 class DecisionAuditReport:
@@ -32,6 +52,7 @@ class DecisionAuditReport:
     graph_export: dict
     contextual_scoring: dict
     graph_stix_preview: dict
+    graph_entities: dict
     sources: dict
 
     def to_dict(self):
@@ -47,6 +68,7 @@ class DecisionAuditReport:
             "graph_export": self.graph_export,
             "contextual_scoring": self.contextual_scoring,
             "graph_stix_preview": self.graph_stix_preview,
+            "graph_entities": self.graph_entities,
             "sources": self.sources,
         }
 
@@ -94,6 +116,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
             graph_export=build_graph_export_summary([]),
             contextual_scoring=build_contextual_scoring_summary([]),
             graph_stix_preview=build_graph_stix_preview_summary([]),
+            graph_entities=build_graph_entity_summary([]),
             sources={},
         )
 
@@ -121,12 +144,15 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
                 "records": 0,
                 "actions": empty_actions(),
                 "reasons": {},
+                "action_reasons": {},
                 "score_summary": {},
             },
         )
         source_report["records"] += 1
         source_report["actions"][action] = source_report["actions"].get(action, 0) + 1
         source_report["reasons"][reason] = source_report["reasons"].get(reason, 0) + 1
+        source_action_reasons = source_report["action_reasons"].setdefault(action, {})
+        source_action_reasons[reason] = source_action_reasons.get(reason, 0) + 1
         query_report = queries.setdefault(
             (source_key, query),
             {
@@ -146,6 +172,12 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
 
     for source_key, source_records in records_by_source.items():
         sources[source_key]["score_summary"] = build_score_summary(source_records)
+        sources[source_key]["action_reasons"] = {
+            action: dict(sorted(reasons.items()))
+            for action, reasons in sorted(
+                (sources[source_key].get("action_reasons") or {}).items()
+            )
+        }
 
     return DecisionAuditReport(
         record_count=len(records),
@@ -165,6 +197,7 @@ def build_decision_audit_report(records, reason_limit=10, quarantine_limit=10):
         graph_export=build_graph_export_summary(records),
         contextual_scoring=build_contextual_scoring_summary(records),
         graph_stix_preview=build_graph_stix_preview_summary(records),
+        graph_entities=build_graph_entity_summary(records),
         sources=sources,
     )
 
@@ -263,10 +296,12 @@ def build_graph_export_summary(records):
             continue
         source_key = normalize_value(record.get("source_key"), "unknown")
         query = normalize_value(record.get("query"), "(none)")
-        merge_graph_export_plan(summary, plan)
+        lookup_matches = graph_lookup_matches(record)
+        merge_graph_export_plan(summary, plan, lookup_matches)
         merge_graph_export_plan(
             by_source.setdefault(source_key, empty_graph_export_summary(False)),
             plan,
+            lookup_matches,
         )
         merge_graph_export_plan(
             by_query.setdefault(
@@ -278,6 +313,7 @@ def build_graph_export_summary(records):
                 },
             ),
             plan,
+            lookup_matches,
         )
 
     summary["modes"] = dict(sorted(summary["modes"].items()))
@@ -289,6 +325,15 @@ def build_graph_export_summary(records):
     )
     summary["accepted_relationship_counts"] = dict(
         sorted(summary["accepted_relationship_counts"].items())
+    )
+    summary["lookup_match_object_counts"] = dict(
+        sorted(summary["lookup_match_object_counts"].items())
+    )
+    summary["lookup_match_type_counts"] = dict(
+        sorted(summary["lookup_match_type_counts"].items())
+    )
+    summary["lookup_canonical_entity_counts"] = dict(
+        sorted(summary["lookup_canonical_entity_counts"].items())
     )
     summary["by_source"] = {
         source: normalize_graph_export_summary(source_summary)
@@ -319,12 +364,18 @@ def empty_graph_export_summary(include_breakdowns=True):
         "deduplicated_relationship_count": 0,
         "would_create_object_count": 0,
         "would_create_relationship_count": 0,
+        "exported_object_count": 0,
+        "exported_relationship_count": 0,
         "modes": {},
         "statuses": {},
         "actions": {},
         "held_reasons": {},
         "accepted_object_counts": {},
         "accepted_relationship_counts": {},
+        "lookup_match_count": 0,
+        "lookup_match_object_counts": {},
+        "lookup_match_type_counts": {},
+        "lookup_canonical_entity_counts": {},
     }
     if include_breakdowns:
         summary["by_source"] = {}
@@ -340,6 +391,9 @@ def normalize_graph_export_summary(summary):
         "held_reasons",
         "accepted_object_counts",
         "accepted_relationship_counts",
+        "lookup_match_object_counts",
+        "lookup_match_type_counts",
+        "lookup_canonical_entity_counts",
     ):
         summary[field] = dict(sorted(summary.get(field, {}).items()))
     return summary
@@ -353,7 +407,15 @@ def graph_export_plan(record):
     return dict(plan) if isinstance(plan, Mapping) else {}
 
 
-def merge_graph_export_plan(summary, plan):
+def graph_lookup_matches(record):
+    metadata = record.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return []
+    matches = metadata.get("graph_export_plan_lookup_matches")
+    return [dict(match) for match in matches or [] if isinstance(match, Mapping)]
+
+
+def merge_graph_export_plan(summary, plan, lookup_matches=None):
     summary["record_count"] += 1
     summary["candidate_count"] += int(plan.get("candidate_count", 0) or 0)
     summary["accepted_count"] += int(plan.get("accepted_count", 0) or 0)
@@ -373,6 +435,12 @@ def merge_graph_export_plan(summary, plan):
     summary["would_create_relationship_count"] += int(
         plan.get("would_create_relationship_count", 0) or 0
     )
+    summary["exported_object_count"] += int(
+        plan.get("exported_object_count", 0) or 0
+    )
+    summary["exported_relationship_count"] += int(
+        plan.get("exported_relationship_count", 0) or 0
+    )
     increment_count(summary["modes"], normalize_value(plan.get("mode"), "unknown"))
     increment_count(summary["statuses"], normalize_value(plan.get("status"), "unknown"))
     merge_counts(summary["held_reasons"], plan.get("held_reasons"))
@@ -381,6 +449,23 @@ def merge_graph_export_plan(summary, plan):
         summary["accepted_relationship_counts"],
         plan.get("accepted_relationship_counts"),
     )
+    lookup_matches = lookup_matches or []
+    summary["lookup_match_count"] += len(lookup_matches)
+    for match in lookup_matches:
+        increment_count(
+            summary["lookup_match_object_counts"],
+            normalize_value(match.get("stix_object_type"), "unknown"),
+        )
+        canonical = match.get("match")
+        if isinstance(canonical, Mapping):
+            increment_count(
+                summary["lookup_match_type_counts"],
+                normalize_value(canonical.get("match_type"), "unknown"),
+            )
+            increment_count(
+                summary["lookup_canonical_entity_counts"],
+                normalize_value(canonical.get("entity_type"), "unknown"),
+            )
     for action in plan.get("actions") or []:
         if isinstance(action, Mapping):
             increment_count(
@@ -553,6 +638,7 @@ def empty_graph_stix_preview_summary(include_breakdowns=True):
         "accepted_candidate_count": 0,
         "bundle_object_count": 0,
         "graph_object_count": 0,
+        "existing_reference_count": 0,
         "graph_relationship_count": 0,
         "semantic_relationship_count": 0,
         "report_relationship_count": 0,
@@ -561,6 +647,7 @@ def empty_graph_stix_preview_summary(include_breakdowns=True):
         "statuses": {},
         "bundle_types": {},
         "object_counts": {},
+        "existing_reference_counts": {},
         "relationship_counts": {},
         "proposed_relationship_counts": {},
     }
@@ -575,6 +662,7 @@ def normalize_graph_stix_preview_summary(summary):
         "statuses",
         "bundle_types",
         "object_counts",
+        "existing_reference_counts",
         "relationship_counts",
         "proposed_relationship_counts",
     ):
@@ -597,6 +685,9 @@ def merge_graph_stix_preview(summary, preview):
     )
     summary["bundle_object_count"] += int(preview.get("bundle_object_count", 0) or 0)
     summary["graph_object_count"] += int(preview.get("graph_object_count", 0) or 0)
+    summary["existing_reference_count"] += int(
+        preview.get("existing_reference_count", 0) or 0
+    )
     summary["graph_relationship_count"] += int(
         preview.get("graph_relationship_count", 0) or 0
     )
@@ -617,11 +708,215 @@ def merge_graph_stix_preview(summary, preview):
         normalize_value(preview.get("bundle_type"), "unknown"),
     )
     merge_counts(summary["object_counts"], preview.get("object_counts"))
+    merge_counts(
+        summary["existing_reference_counts"],
+        preview.get("existing_reference_counts"),
+    )
     merge_counts(summary["relationship_counts"], preview.get("relationship_counts"))
     merge_counts(
         summary["proposed_relationship_counts"],
         preview.get("proposed_relationship_counts"),
     )
+
+
+def build_graph_entity_summary(records):
+    summary = empty_graph_entity_summary()
+    by_source = {}
+    by_query = {}
+
+    for record in records or ():
+        entities = graph_entity_entries(record)
+        if not entities:
+            continue
+        source_key = normalize_value(record.get("source_key"), "unknown")
+        query = normalize_value(record.get("query"), "(none)")
+        merge_graph_entity_entries(summary, entities)
+        merge_graph_entity_entries(
+            by_source.setdefault(source_key, empty_graph_entity_summary(False)),
+            entities,
+        )
+        merge_graph_entity_entries(
+            by_query.setdefault(
+                (source_key, query),
+                {
+                    "source_key": source_key,
+                    "query": query,
+                    **empty_graph_entity_summary(False),
+                },
+            ),
+            entities,
+        )
+
+    normalize_graph_entity_summary(summary)
+    summary["by_source"] = {
+        source: normalize_graph_entity_summary(source_summary)
+        for source, source_summary in sorted(by_source.items())
+    }
+    summary["by_query"] = [
+        normalize_graph_entity_summary(query_summary)
+        for _, query_summary in sorted(
+            by_query.items(),
+            key=lambda item: (
+                -int(item[1].get("record_count", 0) or 0),
+                item[1].get("source_key", ""),
+                item[1].get("query", ""),
+            ),
+        )
+    ]
+    return summary
+
+
+def empty_graph_entity_summary(include_breakdowns=True):
+    summary = {
+        "record_count": 0,
+        "entity_count": 0,
+        "counts": {
+            "attack_patterns": 0,
+            "arsenal": 0,
+            "infrastructure": 0,
+            "threat_actors": 0,
+            "target_sectors": 0,
+        },
+        "overlap_counts": {},
+        "top_attack_patterns": [],
+        "top_arsenal": [],
+        "top_infrastructure": [],
+        "top_threat_actors": [],
+        "top_target_sectors": [],
+        "_entities": Counter(),
+    }
+    if include_breakdowns:
+        summary["by_source"] = {}
+        summary["by_query"] = []
+    return summary
+
+
+def graph_entity_entries(record):
+    metadata = record.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return []
+    evidence = metadata.get("graph_evidence")
+    if not isinstance(evidence, Mapping):
+        return []
+    entries = []
+    for item in evidence.get("records") or ():
+        if not isinstance(item, Mapping):
+            continue
+        entry = graph_entity_entry(item)
+        if entry:
+            entries.append(entry)
+    return entries
+
+
+def graph_entity_entry(item):
+    entity_type = normalize_value(item.get("entity_type"), "")
+    category = graph_entity_category(item, entity_type)
+    if not category:
+        return {}
+    value = normalize_value(item.get("value"), "")
+    display_name = normalize_value(item.get("display_name"), value)
+    if not value and not display_name:
+        return {}
+    return {
+        "category": category,
+        "entity_type": entity_type,
+        "value": value or display_name,
+        "display_name": display_name or value,
+    }
+
+
+def graph_entity_category(item, entity_type):
+    if entity_type == "observable" and observable_is_infrastructure_context(item):
+        return "infrastructure"
+    return GRAPH_ENTITY_CATEGORIES.get(entity_type)
+
+
+def observable_is_infrastructure_context(item):
+    attributes = item.get("attributes")
+    if not isinstance(attributes, Mapping):
+        return False
+    observable_type = normalize_value(attributes.get("observable_type"), "")
+    if observable_type not in {"domain-name", "ipv4-addr", "ipv6-addr", "url"}:
+        return False
+    return (
+        normalize_value(attributes.get("relationship_source_stix_object_type"), "")
+        == "infrastructure"
+    )
+
+
+def merge_graph_entity_entries(summary, entries):
+    summary["record_count"] += 1
+    for key in graph_entity_overlap_keys({entry["category"] for entry in entries}):
+        summary["overlap_counts"][key] = int(summary["overlap_counts"].get(key, 0)) + 1
+    for entry in entries:
+        category = entry["category"]
+        summary["entity_count"] += 1
+        summary["counts"][category] = int(summary["counts"].get(category, 0) or 0) + 1
+        summary["_entities"][
+            (
+                category,
+                entry["entity_type"],
+                entry["value"],
+                entry["display_name"],
+            )
+        ] += 1
+
+
+def normalize_graph_entity_summary(summary):
+    summary["counts"] = dict(sorted((summary.get("counts") or {}).items()))
+    summary["overlap_counts"] = dict(sorted((summary.get("overlap_counts") or {}).items()))
+    counters = summary.pop("_entities", Counter())
+    for category, field_name in GRAPH_ENTITY_TOP_FIELDS.items():
+        summary[field_name] = top_graph_entity_entries(counters, category)
+    return summary
+
+
+def graph_entity_overlap_keys(categories):
+    categories = set(categories or ())
+    overlaps = []
+    if {"threat_actors", "infrastructure"}.issubset(categories):
+        overlaps.append("threat_infrastructure")
+    if {"arsenal", "infrastructure"}.issubset(categories):
+        overlaps.append("arsenal_infrastructure")
+    if {"attack_patterns", "infrastructure"}.issubset(categories):
+        overlaps.append("ttp_infrastructure")
+    if {"threat_actors", "arsenal", "infrastructure"}.issubset(categories):
+        overlaps.append("threat_arsenal_infrastructure")
+    return overlaps
+
+
+def top_graph_entity_entries(counter, category, limit=5):
+    items = [
+        (key, count)
+        for key, count in (counter or {}).items()
+        if key[0] == category and int(count or 0) > 0
+    ]
+    items.sort(
+        key=lambda item: (
+            -item[1],
+            graph_entity_type_priority(item[0][1]),
+            item[0][3],
+            item[0][2],
+            item[0][1],
+        )
+    )
+    return [
+        {
+            "entity_type": entity_type,
+            "value": value,
+            "display_name": display_name,
+            "count": count,
+        }
+        for (_, entity_type, value, display_name), count in items[:limit]
+    ]
+
+
+def graph_entity_type_priority(entity_type):
+    return {
+        "autonomous_system": 0,
+        "infrastructure": 1,
+        "observable": 2,
+    }.get(entity_type, 10)
 
 
 def merge_counts(target, counts):
@@ -749,6 +1044,24 @@ def format_text_report(report):
                     f"- {query['source_key']} query={query['query']} "
                     f"{format_graph_stix_preview_summary(query)}"
                 )
+    if report.graph_entities.get("record_count", 0):
+        entities = report.graph_entities
+        lines.append("graph_entities:")
+        lines.append("- " + format_graph_entity_summary(entities))
+        if entities.get("by_source"):
+            lines.append("graph_entities_by_source:")
+            for source_key, source in entities["by_source"].items():
+                lines.append(
+                    f"- source={source_key} "
+                    f"{format_graph_entity_summary(source)}"
+                )
+        if entities.get("by_query"):
+            lines.append("graph_entities_by_query:")
+            for query in entities["by_query"]:
+                lines.append(
+                    f"- {query['source_key']} query={query['query']} "
+                    f"{format_graph_entity_summary(query)}"
+                )
     if report.quarantined:
         lines.append("quarantine_candidates:")
         for item in report.quarantined:
@@ -812,10 +1125,18 @@ def format_graph_export_summary(summary):
         f"would_create_objects={summary.get('would_create_object_count', 0)} "
         f"would_create_relationships="
         f"{summary.get('would_create_relationship_count', 0)} "
+        f"exported_objects={summary.get('exported_object_count', 0)} "
+        f"exported_relationships="
+        f"{summary.get('exported_relationship_count', 0)} "
+        f"lookup_matches={summary.get('lookup_match_count', 0)} "
         f"modes={format_compact_counts(summary.get('modes', {}))} "
         f"statuses={format_compact_counts(summary.get('statuses', {}))} "
         f"actions={format_compact_counts(summary.get('actions', {}))} "
-        f"held_reasons={format_compact_counts(summary.get('held_reasons', {}))}"
+        f"held_reasons={format_compact_counts(summary.get('held_reasons', {}))} "
+        f"lookup_objects="
+        f"{format_compact_counts(summary.get('lookup_match_object_counts', {}))} "
+        f"lookup_match_types="
+        f"{format_compact_counts(summary.get('lookup_match_type_counts', {}))}"
     )
 
 
@@ -843,6 +1164,7 @@ def format_graph_stix_preview_summary(summary):
         f"accepted_candidates={summary.get('accepted_candidate_count', 0)} "
         f"bundle_objects={summary.get('bundle_object_count', 0)} "
         f"graph_objects={summary.get('graph_object_count', 0)} "
+        f"existing_references={summary.get('existing_reference_count', 0)} "
         f"graph_relationships={summary.get('graph_relationship_count', 0)} "
         f"semantic_relationships={summary.get('semantic_relationship_count', 0)} "
         f"report_relationships={summary.get('report_relationship_count', 0)} "
@@ -851,10 +1173,40 @@ def format_graph_stix_preview_summary(summary):
         f"statuses={format_compact_counts(summary.get('statuses', {}))} "
         f"bundle_types={format_compact_counts(summary.get('bundle_types', {}))} "
         f"objects={format_compact_counts(summary.get('object_counts', {}))} "
+        f"existing_reference_objects="
+        f"{format_compact_counts(summary.get('existing_reference_counts', {}))} "
         f"relationships="
         f"{format_compact_counts(summary.get('relationship_counts', {}))} "
         f"proposed_relationships="
         f"{format_compact_counts(summary.get('proposed_relationship_counts', {}))}"
+    )
+
+
+def format_graph_entity_summary(summary):
+    return (
+        f"records={summary.get('record_count', 0)} "
+        f"entities={summary.get('entity_count', 0)} "
+        f"counts={format_compact_counts(summary.get('counts', {}))} "
+        f"attack_patterns="
+        f"{format_entity_entries(summary.get('top_attack_patterns'))} "
+        f"arsenal={format_entity_entries(summary.get('top_arsenal'))} "
+        f"infrastructure={format_entity_entries(summary.get('top_infrastructure'))} "
+        f"threats={format_entity_entries(summary.get('top_threat_actors'))} "
+        f"sectors={format_entity_entries(summary.get('top_target_sectors'))} "
+        f"overlaps={format_compact_counts(summary.get('overlap_counts', {}))}"
+    )
+
+
+def format_entity_entries(entries):
+    entries = list(entries or [])
+    if not entries:
+        return "(none)"
+    return ",".join(
+        "{}={}".format(
+            entry.get("display_name") or entry.get("value") or "(unknown)",
+            entry.get("count", 0),
+        )
+        for entry in entries
     )
 
 
@@ -866,6 +1218,32 @@ def format_compact_counts(counts):
 
 def format_optional(value):
     return "(none)" if value is None else str(value)
+
+
+def render_report(report, output_format="text"):
+    output_format = normalize_output_format(output_format)
+    if output_format == "json":
+        return json.dumps(report.to_dict(), sort_keys=True)
+    return format_text_report(report)
+
+
+def normalize_output_format(value):
+    output_format = str(value or "text").strip().lower()
+    if output_format not in ("text", "json"):
+        raise ValueError("output_format must be one of: text,json")
+    return output_format
+
+
+def write_report(report, output_file, output_format="text"):
+    output_file = str(output_file or "").strip()
+    if not output_file:
+        raise ValueError("output_file is required")
+    directory = os.path.dirname(output_file)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(output_file, "w", encoding="utf-8") as handle:
+        handle.write(render_report(report, output_format=output_format) + "\n")
+    return output_file
 
 
 def main():
@@ -901,6 +1279,11 @@ def main():
         default=10,
         help="Maximum quarantined candidates to include. Zero includes all candidates.",
     )
+    parser.add_argument(
+        "--output-file",
+        default="",
+        help="Optional file path to write the rendered decision audit report.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -916,10 +1299,11 @@ def main():
         reason_limit=args.reason_limit,
         quarantine_limit=args.quarantine_limit,
     )
-    if args.json:
-        print(json.dumps(report.to_dict(), sort_keys=True))
-    else:
-        print(format_text_report(report))
+    output_format = "json" if args.json else "text"
+    rendered = render_report(report, output_format=output_format)
+    if args.output_file:
+        write_report(report, args.output_file, output_format=output_format)
+    print(rendered)
 
 
 if __name__ == "__main__":

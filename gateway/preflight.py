@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 
 from core.mitre_attack import load_attack_cache
+from gateway.feature_gates import build_feature_gate_state
 from gateway.settings import load_settings
 
 
@@ -116,6 +117,19 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             )
         )
 
+    feature_gate_state = build_feature_gate_state(
+        requested_capabilities=getattr(settings, "declared_capabilities", []),
+    )
+    if feature_gate_state.unknown_capabilities:
+        issues.append(
+            PreflightIssue(
+                "warning",
+                "unknown-capability",
+                "NARROWCTI_CAPABILITIES contains unknown capabilities: "
+                + ",".join(feature_gate_state.unknown_capabilities),
+            )
+        )
+
     if not settings.run_summary_file:
         issues.append(
             PreflightIssue(
@@ -222,6 +236,15 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             "dedup_mode": settings.dedup_mode,
             "opencti_dedup_lookup": settings.opencti_dedup_lookup,
             "dedup_state_file": settings.dedup_state_file,
+            "graph_export_mode": getattr(settings, "graph_export_mode", "audit"),
+            "graph_dedup_state_file": getattr(settings, "graph_dedup_state_file", ""),
+            "opencti_graph_lookup": getattr(settings, "opencti_graph_lookup", False),
+            "distribution_model": feature_gate_state.distribution_model,
+            "open_source": feature_gate_state.open_source,
+            "declared_capabilities": list(
+                getattr(settings, "declared_capabilities", [])
+            ),
+            "capability_inventory": feature_gate_state.to_dict(),
         },
         evidence_paths=evidence_paths,
         source_controls=source_controls,
@@ -242,6 +265,7 @@ def build_evidence_paths(enabled_sources, settings, env):
         "mitre_cache_file": getattr(settings, "mitre_cache_file", ""),
         "run_summary_file": settings.run_summary_file,
         "dedup_state_file": settings.dedup_state_file,
+        "graph_dedup_state_file": getattr(settings, "graph_dedup_state_file", ""),
         "sources": {
             source: build_source_evidence_paths(source, settings, env)
             for source in enabled_sources
@@ -392,6 +416,17 @@ def format_text_report(report):
         f"available_sources={','.join(report.available_sources)}",
         f"dedup_mode={report.settings['dedup_mode']}",
         f"opencti_dedup_lookup={str(report.settings['opencti_dedup_lookup']).lower()}",
+        f"graph_export_mode={report.settings.get('graph_export_mode', 'audit')}",
+        "graph_dedup_state_file="
+        f"{report.evidence_paths.get('graph_dedup_state_file') or '(disabled)'}",
+        "opencti_graph_lookup="
+        f"{str(report.settings.get('opencti_graph_lookup', False)).lower()}",
+        f"distribution_model={report.settings.get('distribution_model', 'open_source')}",
+        f"open_source={str(report.settings.get('open_source', True)).lower()}",
+        "enabled_capabilities="
+        f"{','.join(report.settings.get('capability_inventory', {}).get('enabled_capabilities', [])) or '(none)'}",
+        "disabled_capabilities="
+        f"{','.join(report.settings.get('capability_inventory', {}).get('disabled_capabilities', [])) or '(none)'}",
         f"state_dir={report.evidence_paths.get('state_dir') or '(disabled)'}",
         "decision_audit_dir="
         f"{report.evidence_paths.get('decision_audit_dir') or '(disabled)'}",

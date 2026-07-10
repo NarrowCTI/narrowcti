@@ -335,6 +335,7 @@ class SettingsTests(unittest.TestCase):
             "NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES": "attack-pattern, malware",
             "NARROWCTI_GRAPH_EXPORT_MODE": "dry_run",
             "NARROWCTI_GRAPH_DEDUP_STATE_FILE": "/app/state/graph_dedup.json",
+            "NARROWCTI_OPENCTI_GRAPH_LOOKUP": "true",
             "NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION": "false",
             "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION": "false",
             "NARROWCTI_MITRE_CACHE_FILE": "/app/state/mitre_attack_cache.json",
@@ -371,6 +372,7 @@ class SettingsTests(unittest.TestCase):
             "/app/state/graph_dedup.json",
             settings.graph_dedup_state_file,
         )
+        self.assertTrue(settings.opencti_graph_lookup)
         self.assertFalse(settings.enable_otx_entity_extraction)
         self.assertFalse(settings.enable_mitre_attack_resolution)
         self.assertEqual(
@@ -486,6 +488,31 @@ class StixBuilderTests(unittest.TestCase):
         identities = [item for item in data["objects"] if item["type"] == "identity"]
 
         self.assertEqual("Custom Connector", identities[0]["name"])
+
+    def test_build_report_bundle_uses_stable_identity_id(self):
+        first_bundle, _ = build_report_bundle(
+            "Example report",
+            "description",
+            80,
+            identity_name="OTX AlienVault",
+        )
+        second_bundle, _ = build_report_bundle(
+            "Another report",
+            "other description",
+            80,
+            identity_name="OTX AlienVault",
+        )
+
+        first_data = json.loads(first_bundle.serialize())
+        second_data = json.loads(second_bundle.serialize())
+        first_identity = [
+            item for item in first_data["objects"] if item["type"] == "identity"
+        ][0]
+        second_identity = [
+            item for item in second_data["objects"] if item["type"] == "identity"
+        ][0]
+
+        self.assertEqual(first_identity["id"], second_identity["id"])
 
 
 if __name__ == "__main__":

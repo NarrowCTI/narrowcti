@@ -284,6 +284,10 @@ metrics and quarantine review workflows.
 
 ## Docker Compose Operation
 
+This section is retained as v0.5 historical context. The current v0.8
+deployment and upgrade procedure is centralized in
+`docs/deployment-operations-v0.8.md`.
+
 The local OpenCTI compose workspace can expose the gateway through a dedicated
 profile:
 
@@ -362,7 +366,7 @@ The v0.5 runtime must preserve the safety posture established in v0.4:
 - Removing the MISP validation/backfill runtime.
 - Building a customer-facing admin UI.
 - Running broad MISP historical backfill by default.
-- Adding technical license enforcement.
+- Adding commercial activation or feature blocking to the open source core.
 - Replacing MISP or OpenCTI.
 
 ## Implementation Plan

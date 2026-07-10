@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from dataclasses import dataclass
 
 from core.deduplication import (
@@ -108,6 +109,32 @@ def format_text_report(report):
     return "\n".join(lines)
 
 
+def render_report(report, output_format="text"):
+    output_format = normalize_output_format(output_format)
+    if output_format == "json":
+        return json.dumps(report.to_dict(), sort_keys=True)
+    return format_text_report(report)
+
+
+def normalize_output_format(value):
+    output_format = str(value or "text").strip().lower()
+    if output_format not in ("text", "json"):
+        raise ValueError("output_format must be one of: text,json")
+    return output_format
+
+
+def write_report(report, output_file, output_format="text"):
+    output_file = str(output_file or "").strip()
+    if not output_file:
+        raise ValueError("output_file is required")
+    directory = os.path.dirname(output_file)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(output_file, "w", encoding="utf-8") as handle:
+        handle.write(render_report(report, output_format=output_format) + "\n")
+    return output_file
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Summarize NarrowCTI local artifact correlation state."
@@ -123,6 +150,11 @@ def main():
         default=20,
         help="Maximum correlated artifacts to print. Zero prints all.",
     )
+    parser.add_argument(
+        "--output-file",
+        default="",
+        help="Optional file path to write the rendered correlation report.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args()
 
@@ -131,10 +163,11 @@ def main():
         load_artifact_state(state_file),
         limit=args.limit,
     )
-    if args.json:
-        print(json.dumps(report.to_dict(), sort_keys=True))
-    else:
-        print(format_text_report(report))
+    output_format = "json" if args.json else "text"
+    rendered = render_report(report, output_format=output_format)
+    if args.output_file:
+        write_report(report, args.output_file, output_format=output_format)
+    print(rendered)
 
 
 if __name__ == "__main__":
