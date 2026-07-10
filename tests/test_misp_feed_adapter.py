@@ -175,6 +175,38 @@ class MISPFeedAdapterTests(unittest.TestCase):
         self.assertEqual(1, adapter.last_search_skipped)
         self.assertIn("big-event", logs[0])
 
+    def test_search_can_load_direct_event_id_without_rest_search(self):
+        calls = []
+
+        def get_event(event_id):
+            calls.append(("get_event", event_id))
+            return {
+                "id": event_id,
+                "uuid": "event-uuid",
+                "info": "Direct validation event",
+                "Attribute": [
+                    {"type": "domain", "value": "example.com", "to_ids": True}
+                ],
+            }
+
+        def search_events(*args, **kwargs):
+            calls.append(("search_events", args, kwargs))
+            return []
+
+        misp_client = SimpleNamespace(
+            get_event=get_event,
+            search_events=search_events,
+        )
+        adapter = MISPFeedAdapter(misp_client)
+
+        candidates = adapter.search("event:4390")
+
+        self.assertEqual([("get_event", "4390")], calls)
+        self.assertEqual(1, adapter.last_search_available)
+        self.assertEqual(0, adapter.last_search_skipped)
+        self.assertEqual(["4390"], [candidate.external_id for candidate in candidates])
+        self.assertEqual("Direct validation event", candidates[0].title)
+
     def test_enrich_returns_normalized_candidate(self):
         misp_client = SimpleNamespace(
             get_event=lambda event_id: {

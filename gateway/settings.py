@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 
+from core.graph_export_plan import normalize_graph_export_mode
 from core.mitre_attack import DEFAULT_MITRE_STIX_URL
 
 
@@ -24,6 +25,10 @@ class GatewaySettings:
     dedup_mode: str
     opencti_dedup_lookup: bool
     dedup_state_file: str
+    graph_export_mode: str
+    graph_dedup_state_file: str
+    opencti_graph_lookup: bool
+    declared_capabilities: list[str] = None
     release_audit_file: str = ""
     enable_mitre_attack_resolution: bool = True
     mitre_cache_file: str = ""
@@ -36,6 +41,8 @@ class GatewaySettings:
             raise ValueError("source_interval_seconds must be greater than zero")
         if self.dedup_mode not in ["off", "source", "artifact", "hybrid"]:
             raise ValueError("dedup_mode must be off, source, artifact or hybrid")
+        if self.declared_capabilities is None:
+            object.__setattr__(self, "declared_capabilities", [])
 
 
 def env_int(name, default):
@@ -120,6 +127,12 @@ def load_settings():
             "NARROWCTI_DEDUP_STATE_FILE",
             "/app/state/dedup_index.json",
         ),
+        graph_export_mode=normalize_graph_export_mode(
+            os.getenv("NARROWCTI_GRAPH_EXPORT_MODE", "audit")
+        ),
+        graph_dedup_state_file=os.getenv("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
+        opencti_graph_lookup=env_bool("NARROWCTI_OPENCTI_GRAPH_LOOKUP", False),
+        declared_capabilities=env_list("NARROWCTI_CAPABILITIES"),
         release_audit_file=os.getenv(
             "NARROWCTI_RELEASE_AUDIT_FILE",
             os.path.join(state_dir, "audit", "releases.jsonl"),

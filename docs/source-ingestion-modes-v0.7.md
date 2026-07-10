@@ -135,7 +135,7 @@ NarrowCTI                     -> OpenCTI
 
 This mode lets an organization keep MISP for operational collection while
 using direct NarrowCTI adapters for sources where richer source metadata,
-better rate control, commercial licensing, latency or graph enrichment matters.
+better rate control, source API terms, latency or graph enrichment matters.
 
 Examples:
 

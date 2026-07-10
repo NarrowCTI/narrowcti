@@ -97,6 +97,31 @@ class GraphDeduplicationIndex:
         }
 
     def mark_plan(self, plan, source_key="", external_id="", title=""):
+        return self._mark_plan_actions(
+            plan,
+            source_key=source_key,
+            external_id=external_id,
+            title=title,
+            allowed_actions=("would_create", "exported"),
+        )
+
+    def mark_exported_plan(self, plan, source_key="", external_id="", title=""):
+        return self._mark_plan_actions(
+            plan,
+            source_key=source_key,
+            external_id=external_id,
+            title=title,
+            allowed_actions=("exported",),
+        )
+
+    def _mark_plan_actions(
+        self,
+        plan,
+        source_key="",
+        external_id="",
+        title="",
+        allowed_actions=(),
+    ):
         self.refresh()
         changed = False
         now = utc_now()
@@ -109,7 +134,7 @@ class GraphDeduplicationIndex:
         }
 
         for action in plan_actions(plan):
-            if clean_string(action.get("action")) not in ("would_create", "exported"):
+            if clean_string(action.get("action")) not in allowed_actions:
                 continue
             candidate = mapping_from(action.get("candidate"))
             dedup = action_deduplication(action)

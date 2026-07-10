@@ -1,0 +1,16 @@
+# Keep generated source archives focused on product source and public docs.
+# Development evidence remains versioned when useful to contributors, but is not
+# shipped in tag/release source archives.
+
+AGENTS.md export-ignore
+agents.md export-ignore
+state/ export-ignore
+state/** export-ignore
+
+docs/operational-validation-v*.md export-ignore
+docs/*-official-connector-mapping-v*.md export-ignore
+docs/*-validation-v*.md export-ignore
+docs/product-architecture-validation-v*.md export-ignore
+docs/metadata-validation-v*.md export-ignore
+docs/market-positioning-v*.md export-ignore
+docs/post-v1-ml-roadmap.md export-ignore

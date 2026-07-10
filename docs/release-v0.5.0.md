@@ -199,7 +199,7 @@ docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narr
 - Broad MISP historical backfill is not part of this release.
 - The quarantine repository and analyst release workflow move to v0.6.
 - MITRE cache, entity extraction and graph enrichment move to later releases.
-- Customer-facing UI, license enforcement and enterprise CTI report output are
+- Customer-facing UI, commercial activation and enterprise CTI report output are
   not included in v0.5.0.
 
 ## Next Release Direction

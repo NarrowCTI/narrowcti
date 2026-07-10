@@ -47,4 +47,4 @@ The bounded local MISP operational evidence is documented in
 - Direct OTX remains supported as the reference adapter.
 - Runtime containers remain split by source in v0.4.
 - The unified gateway runtime begins in v0.5.
-- No customer-facing admin UI or license enforcement is added in this release.
+- No customer-facing admin UI or commercial activation is added in this release.

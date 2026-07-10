@@ -6,6 +6,8 @@ from connectors.otx.processor import OTXProcessor, decision_metadata
 
 
 class ProcessorTests(unittest.TestCase):
+    FRESH_CREATED = "2099-01-01T00:00:00Z"
+
     def settings(self):
         return SimpleNamespace(
             max_iocs_per_pulse=1,
@@ -74,7 +76,7 @@ class ProcessorTests(unittest.TestCase):
             {
                 "name": "LummaC2 sample",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [
                     {"type": "domain", "indicator": "one.example"},
                     {"type": "domain", "indicator": "two.example"},
@@ -278,7 +280,7 @@ class ProcessorTests(unittest.TestCase):
         )
 
         processed = processor.process_pulse(
-            "unrelated query",
+            "low",
             {"id": "pulse-1", "name": "Search result"},
             state,
         )
@@ -380,9 +382,9 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(1, graph_evidence["counts"]["detection_rule"])
         self.assertTrue(
             any(
-                record["entity_type"] == "threat_actor"
+                record["entity_type"] == "intrusion_set"
                 and record["value"] == "APT Example"
-                and record["stix_object_type"] == "threat-actor"
+                and record["stix_object_type"] == "intrusion-set"
                 for record in graph_evidence["records"]
             )
         )
@@ -421,7 +423,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(1, graph_candidates["counts"]["detection_rule"])
         self.assertTrue(
             any(
-                candidate["entity_type"] == "threat_actor"
+                candidate["entity_type"] == "intrusion_set"
                 and candidate["value"] == "APT Example"
                 and candidate["relationship_type"] == "attributed-to"
                 for candidate in graph_candidates["candidates"]
@@ -511,6 +513,51 @@ class ProcessorTests(unittest.TestCase):
         )
         self.assertGreaterEqual(graph_plan["would_create_relationship_count"], 1)
         self.assertIn("graph_export_plan_known_keys", metadata)
+        self.assertEqual(
+            "internal--1",
+            metadata["graph_export_plan_lookup_matches"][0]["match"]["opencti_id"],
+        )
+
+    def test_decision_metadata_export_preview_references_known_graph_keys(self):
+        candidate = SimpleNamespace(
+            pulse={
+                "id": "pulse-1",
+                "name": "Technique pulse",
+                "attack_ids": ["T1059"],
+                "indicators": [],
+            },
+            name="Technique pulse",
+            score_details={},
+        )
+        mitre_resolver = SimpleNamespace(
+            resolve=lambda attack_ids: [
+                {
+                    "attack_id": attack_ids[0],
+                    "found": True,
+                    "name": "Command and Scripting Interpreter",
+                    "tactics": ["execution"],
+                }
+            ]
+        )
+
+        metadata = decision_metadata(
+            candidate,
+            mitre_resolver=mitre_resolver,
+            source_key="alienvault:otx",
+            external_id="pulse-1",
+            title="Technique pulse",
+            graph_export_mode="export",
+            graph_deduplication_index=FirstActionEntityKnownIndex(),
+        )
+
+        graph_preview = metadata["graph_stix_preview"]
+
+        self.assertTrue(graph_preview["export_enabled"])
+        self.assertEqual(1, graph_preview["existing_reference_count"])
+        self.assertEqual(
+            {"attack-pattern": 1},
+            graph_preview["existing_reference_counts"],
+        )
 
     def test_process_pulse_writes_quarantine_record(self):
         records = []
@@ -705,7 +752,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )
@@ -744,7 +791,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )
@@ -783,7 +830,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertTrue(processed)
         self.assertEqual(["pulse-1"], marked)
         self.assertEqual("LummaC2 fresh", export_calls[0]["name"])
-        self.assertEqual("Test Connector", export_calls[0]["identity_name"])
+        self.assertEqual("OTX AlienVault via NarrowCTI", export_calls[0]["identity_name"])
         self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)
 
     def test_process_pulse_does_not_mark_state_when_export_fails(self):
@@ -793,7 +840,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )
@@ -835,7 +882,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 known pulse",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "known.example"}],
             }
         )
@@ -877,7 +924,7 @@ class ProcessorTests(unittest.TestCase):
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
                 "description": "description",
-                "created": "2026-04-01T00:00:00Z",
+                "created": self.FRESH_CREATED,
                 "indicators": [{"type": "domain", "indicator": "one.example"}],
             }
         )
@@ -916,6 +963,22 @@ class FirstActionEntityKnownIndex:
         return {
             "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
             "relationship_keys": [],
+            "matches": [
+                {
+                    "entity_key": plan["actions"][0]["deduplication"]["entity_key"],
+                    "stix_object_type": "attack-pattern",
+                    "value": "T1059",
+                    "match": {
+                        "opencti_id": "internal--1",
+                        "standard_id": (
+                            "attack-pattern--11111111-1111-4111-8111-"
+                            "111111111111"
+                        ),
+                        "entity_type": "Attack-Pattern",
+                        "name": "Command and Scripting Interpreter",
+                    },
+                }
+            ],
         }
 
 

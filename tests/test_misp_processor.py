@@ -1,8 +1,16 @@
+import json
+import ipaddress
 import unittest
 from types import SimpleNamespace
 
-from connectors.misp.processor import MISPProcessor, decision_metadata
+from connectors.misp.processor import (
+    MISPProcessor,
+    decision_metadata,
+    graph_candidate_policy_from_settings,
+)
 from core.feed_contract import FeedCandidate, FeedRunSummary, FeedSource
+from core.ip_asn_enrichment import IPASNRecord, OfflineIPASNEnricher
+from exporters.stix_builder import build_graph_report_bundle
 
 
 MISP_TEST_SOURCE = FeedSource(name="MISP", source_type="external_import", provider="MISP")
@@ -71,6 +79,26 @@ class MISPProcessorTests(unittest.TestCase):
             search=lambda query: search_candidates or [],
             enrich=lambda event: enriched,
         )
+
+    def test_export_mode_uses_safe_graph_policy_defaults(self):
+        settings = SimpleNamespace(
+            graph_export_mode="export",
+            graph_min_entity_confidence=0,
+            graph_min_relationship_confidence=0,
+            graph_require_relationship_provenance=False,
+            graph_allowed_entity_types=[],
+            graph_allowed_stix_object_types=[],
+        )
+
+        policy = graph_candidate_policy_from_settings(settings)
+
+        self.assertIn("infrastructure", policy["allowed_entity_types"])
+        self.assertIn("autonomous_system", policy["allowed_entity_types"])
+        self.assertIn("target_sector", policy["allowed_entity_types"])
+        self.assertNotIn("source_identity", policy["allowed_entity_types"])
+        self.assertNotIn("collector", policy["allowed_entity_types"])
+        self.assertIn("identity", policy["allowed_stix_object_types"])
+        self.assertNotIn("marking-definition", policy["allowed_stix_object_types"])
 
     def test_run_once_builds_state_repository_and_processes_queries(self):
         states = []
@@ -390,20 +418,220 @@ class MISPProcessorTests(unittest.TestCase):
                 for candidate in graph_candidates["candidates"]
             )
         )
+        finance_sector = next(
+            candidate
+            for candidate in graph_candidates["candidates"]
+            if candidate["entity_type"] == "target_sector"
+            and candidate["value"] == "Finance"
+            and candidate["source_field"] == "Object[0].GalaxyCluster"
+        )
+        self.assertEqual(
+            "threat-actor",
+            finance_sector["attributes"]["relationship_source_stix_object_type"],
+        )
+        self.assertEqual(
+            "APT Example",
+            finance_sector["attributes"]["relationship_source_value"],
+        )
+        target_sector = next(
+            candidate
+            for candidate in graph_candidates["candidates"]
+            if candidate["entity_type"] == "target_sector"
+            and candidate["value"] == "Activists"
+            and candidate["source_field"] == "Galaxy.meta.targeted-sector"
+        )
+        self.assertEqual(
+            "APT Example",
+            target_sector["attributes"]["parent_cluster_value"],
+        )
+        self.assertEqual(
+            "threat-actor",
+            target_sector["attributes"]["relationship_source_stix_object_type"],
+        )
+        self.assertEqual(
+            "APT Example",
+            target_sector["attributes"]["relationship_source_value"],
+        )
+        malware = next(
+            candidate
+            for candidate in graph_candidates["candidates"]
+            if candidate["entity_type"] == "malware"
+        )
+        self.assertEqual(
+            "threat-actor",
+            malware["attributes"]["relationship_source_stix_object_type"],
+        )
+        self.assertEqual(
+            "APT Example",
+            malware["attributes"]["relationship_source_value"],
+        )
+        attack_pattern = next(
+            candidate
+            for candidate in graph_candidates["candidates"]
+            if candidate["entity_type"] == "attack_pattern"
+        )
+        self.assertEqual(
+            "threat-actor",
+            attack_pattern["attributes"]["relationship_source_stix_object_type"],
+        )
+        accepted = [
+            candidate
+            for candidate in metadata["graph_candidate_policy"]["accepted"]
+            if candidate["entity_type"] in {
+                "threat_actor",
+                "malware",
+                "target_sector",
+            }
+        ]
+        bundle, summary = build_graph_report_bundle(
+            "Curated graph report",
+            "graph context",
+            80,
+            graph_candidate_policy={"accepted": accepted},
+        )
+        data = json.loads(bundle.serialize())
+        actor_object = next(
+            item for item in data["objects"] if item["type"] == "threat-actor"
+        )
+        malware_object = next(
+            item for item in data["objects"] if item["type"] == "malware"
+        )
+        sector_object = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "identity" and item["name"] == "Activists"
+        )
+        uses_relationship = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "relationship" and item["relationship_type"] == "uses"
+        )
+        targets_relationship = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "relationship" and item["relationship_type"] == "targets"
+            and item["target_ref"] == sector_object["id"]
+        )
+        target_relationships = [
+            item
+            for item in data["objects"]
+            if item["type"] == "relationship" and item["relationship_type"] == "targets"
+        ]
+        self.assertEqual(actor_object["id"], uses_relationship["source_ref"])
+        self.assertEqual(malware_object["id"], uses_relationship["target_ref"])
+        self.assertEqual(
+            "semantic",
+            uses_relationship["x_narrowcti_relationship_mode"],
+        )
+        self.assertEqual(actor_object["id"], targets_relationship["source_ref"])
+        self.assertEqual(sector_object["id"], targets_relationship["target_ref"])
+        self.assertEqual(
+            "semantic",
+            targets_relationship["x_narrowcti_relationship_mode"],
+        )
+        self.assertEqual(2, len(target_relationships))
+        self.assertEqual(3, summary["semantic_relationship_count"])
+
+    def test_decision_metadata_does_not_anchor_galaxy_arsenal_to_multiple_actors(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Galaxy"] = [
+            {
+                "type": "threat-actor",
+                "name": "Threat Actor",
+                "GalaxyCluster": [
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Alpha",
+                        "uuid": "cluster-actor-alpha",
+                    },
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Beta",
+                        "uuid": "cluster-actor-beta",
+                    },
+                ],
+            },
+            {
+                "type": "malware",
+                "name": "Malware",
+                "GalaxyCluster": {
+                    "type": "malware",
+                    "value": "Example Malware",
+                    "uuid": "cluster-malware",
+                },
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        malware = next(
+            candidate
+            for candidate in metadata["graph_candidates"]["candidates"]
+            if candidate["entity_type"] == "malware"
+        )
+        self.assertNotIn(
+            "relationship_source_stix_object_type",
+            malware["attributes"],
+        )
+        self.assertNotIn("relationship_source_value", malware["attributes"])
+
+    def test_decision_metadata_extracts_misp_operational_meta_candidates(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Galaxy"] = {
+            "type": "campaign",
+            "name": "Campaign",
+            "GalaxyCluster": {
+                "type": "campaign",
+                "value": "Operation Example",
+                "uuid": "cluster-campaign",
+                "meta": {
+                    "c2-channel": ["Telegram"],
+                    "objective": ["Credential theft"],
+                    "incident-name": ["Observed phishing wave"],
+                    "security-platform": ["Microsoft Defender for Endpoint"],
+                    "targeted-system": ["Windows Workstations"],
+                },
+            },
+        }
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["campaign"])
+        self.assertEqual(1, graph_evidence["counts"]["channel"])
+        self.assertEqual(1, graph_evidence["counts"]["event"])
+        self.assertEqual(1, graph_evidence["counts"]["narrative"])
+        self.assertEqual(1, graph_evidence["counts"]["security_platform"])
+        self.assertEqual(1, graph_evidence["counts"]["target_system"])
+        graph_candidates = metadata["graph_candidates"]
         self.assertTrue(
             any(
-                candidate["entity_type"] == "target_sector"
-                and candidate["value"] == "Finance"
-                and candidate["source_field"] == "Object[0].GalaxyCluster"
+                candidate["entity_type"] == "channel"
+                and candidate["value"] == "Telegram"
+                and candidate["stix_object_type"] == "channel"
+                and candidate["attributes"]["channel_types"] == ["c2"]
                 for candidate in graph_candidates["candidates"]
             )
         )
         self.assertTrue(
             any(
-                candidate["entity_type"] == "target_sector"
-                and candidate["value"] == "Activists"
-                and candidate["source_field"] == "Galaxy.meta.targeted-sector"
-                and candidate["attributes"]["parent_cluster_value"] == "APT Example"
+                candidate["entity_type"] == "security_platform"
+                and candidate["value"] == "Microsoft Defender for Endpoint"
+                and candidate["stix_object_type"] == "security-platform"
+                and candidate["attributes"]["security_platform_type"]
+                == "Detection Platform"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "target_system"
+                and candidate["value"] == "Windows Workstations"
+                and candidate["stix_object_type"] == "identity"
                 for candidate in graph_candidates["candidates"]
             )
         )
@@ -464,9 +692,261 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_explicit_misp_campaigns(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-campaign-1",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "Operation Example",
+                "Tag": [{"name": "tlp:green"}],
+            },
+            {
+                "uuid": "attribute-campaign-ioc",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "c2.example.test",
+            },
+        ]
+        event["Object"] = [
+            {
+                "uuid": "object-campaign-1",
+                "name": "campaign",
+                "meta-category": "attribution",
+                "Attribute": [
+                    {
+                        "uuid": "object-attribute-campaign-1",
+                        "object_relation": "operation-name",
+                        "type": "text",
+                        "category": "Attribution",
+                        "value": "Operation Backup",
+                    }
+                ],
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(2, len(metadata["misp_campaigns"]))
+        self.assertEqual(
+            {"Operation Backup", "Operation Example"},
+            {campaign["value"] for campaign in metadata["misp_campaigns"]},
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(2, graph_evidence["counts"]["campaign"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(2, graph_candidates["counts"]["campaign"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "campaign"
+                and candidate["value"] == "Operation Example"
+                and candidate["attributes"]["attribute_uuid"]
+                == "attribute-campaign-1"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "campaign"
+                and candidate["value"] == "c2.example.test"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_extracts_explicit_misp_victimology(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-target-org",
+                "type": "target-org",
+                "category": "Attribution",
+                "value": "Banamex",
+                "Tag": [{"name": "tlp:green"}],
+            },
+            {
+                "uuid": "attribute-target-machine",
+                "type": "target-machine",
+                "category": "Payload delivery",
+                "value": "Windows Workstations",
+            },
+            {
+                "uuid": "attribute-target-machine-package",
+                "type": "target-machine",
+                "category": "Payload delivery",
+                "value": "com.paypal.android.p2pmobile",
+            },
+            {
+                "uuid": "attribute-target-location",
+                "type": "target-location",
+                "category": "Attribution",
+                "value": "Belgium",
+            },
+            {
+                "uuid": "attribute-target-user-ambiguous",
+                "type": "target-user",
+                "category": "Attribution",
+                "value": "Westpac",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertEqual(4, len(metadata["misp_victimology"]))
+        self.assertEqual(
+            {
+                ("target_organization", "Banamex"),
+                ("target_system", "Windows Workstations"),
+                ("target_system", "com.paypal.android.p2pmobile"),
+                ("target_country", "Belgium"),
+            },
+            {
+                (item["entity_type"], item["value"])
+                for item in metadata["misp_victimology"]
+            },
+        )
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["target_organization"])
+        self.assertEqual(1, graph_evidence["counts"]["target_system"])
+        self.assertEqual(1, graph_evidence["counts"]["target_country"])
+        self.assertNotIn("target_individual", graph_evidence["counts"])
+        self.assertTrue(
+            any(
+                record["entity_type"] == "target_organization"
+                and record["value"] == "Banamex"
+                and record["source_name"] == "misp-attribute"
+                and record["source_field"] == "Attribute[0]"
+                and record["attributes"]["attribute_type"] == "target-org"
+                and record["attributes"]["attribute_uuid"] == "attribute-target-org"
+                for record in graph_evidence["records"]
+            )
+        )
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(1, graph_candidates["counts"]["target_organization"])
+        self.assertEqual(1, graph_candidates["counts"]["target_system"])
+        self.assertEqual(1, graph_candidates["counts"]["target_country"])
+        self.assertFalse(
+            any(
+                item["entity_type"] == "target_individual"
+                or item["value"] == "Westpac"
+                or item["value"] == "com.paypal.android.p2pmobile"
+                for item in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_anchors_explicit_victimology_to_single_campaign(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-campaign-1",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "Operation Example",
+            },
+            {
+                "uuid": "attribute-target-org",
+                "type": "target-org",
+                "category": "Targeting data",
+                "value": "Example Energy Co",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        accepted = [
+            item
+            for item in metadata["graph_candidate_policy"]["accepted"]
+            if item["entity_type"] in {"campaign", "target_organization"}
+        ]
+        organization = next(
+            item for item in accepted if item["entity_type"] == "target_organization"
+        )
+        self.assertEqual(
+            "campaign",
+            organization["attributes"]["relationship_source_stix_object_type"],
+        )
+        self.assertEqual(
+            "Operation Example",
+            organization["attributes"]["relationship_source_value"],
+        )
+        bundle, summary = build_graph_report_bundle(
+            "Curated graph report",
+            "graph context",
+            80,
+            graph_candidate_policy={"accepted": accepted},
+        )
+
+        data = json.loads(bundle.serialize())
+        campaign_object = next(
+            item for item in data["objects"] if item["type"] == "campaign"
+        )
+        organization_object = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "identity" and item["name"] == "Example Energy Co"
+        )
+        target_relationship = next(
+            item
+            for item in data["objects"]
+            if item["type"] == "relationship" and item["relationship_type"] == "targets"
+        )
+        self.assertEqual(campaign_object["id"], target_relationship["source_ref"])
+        self.assertEqual(organization_object["id"], target_relationship["target_ref"])
+        self.assertEqual(
+            "semantic",
+            target_relationship["x_narrowcti_relationship_mode"],
+        )
+        self.assertEqual(1, summary["semantic_relationship_count"])
+
+    def test_decision_metadata_does_not_anchor_victimology_to_multiple_campaigns(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-campaign-1",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "Operation Alpha",
+            },
+            {
+                "uuid": "attribute-campaign-2",
+                "type": "campaign-name",
+                "category": "Attribution",
+                "value": "Operation Beta",
+            },
+            {
+                "uuid": "attribute-target-org",
+                "type": "target-org",
+                "category": "Targeting data",
+                "value": "Example Energy Co",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        organization = next(
+            item
+            for item in metadata["graph_candidates"]["candidates"]
+            if item["entity_type"] == "target_organization"
+        )
+        self.assertNotIn(
+            "relationship_source_stix_object_type",
+            organization["attributes"],
+        )
+        self.assertNotIn("relationship_source_value", organization["attributes"])
+
     def test_decision_metadata_extracts_misp_event_reports(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         event = enriched_event()
+        event["timestamp"] = "1782004900"
+        event["date"] = "2026-06-20"
         event["EventReport"] = [
             {
                 "uuid": "event-report-1",
@@ -498,6 +978,8 @@ class MISPProcessorTests(unittest.TestCase):
                 and record["stix_object_type"] == "note"
                 and record["attributes"]["content"]
                 == "The event describes exploitation activity."
+                and record["attributes"]["source_created"] == "2099-01-01T00:00:00Z"
+                and record["attributes"]["source_date"] == "2026-06-20"
                 for record in graph_evidence["records"]
             )
         )
@@ -527,6 +1009,7 @@ class MISPProcessorTests(unittest.TestCase):
                         "type": "0",
                         "date_sighting": "1782004900",
                         "source": "SOC",
+                        "confidence": "82",
                         "Organisation": {
                             "uuid": "org-1",
                             "name": "Example Org",
@@ -547,6 +1030,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(1, len(metadata["misp_sightings"]))
         self.assertEqual("evil.example", metadata["misp_sightings"][0]["value"])
         self.assertEqual("Example Org", metadata["misp_sightings"][0]["organization"])
+        self.assertEqual("82", metadata["misp_sightings"][0]["confidence"])
         graph_evidence = metadata["graph_evidence"]
         self.assertEqual(1, graph_evidence["counts"]["sighting"])
         self.assertTrue(
@@ -554,6 +1038,7 @@ class MISPProcessorTests(unittest.TestCase):
                 record["entity_type"] == "sighting"
                 and record["stix_object_type"] == "sighting"
                 and record["attributes"]["organization"] == "Example Org"
+                and record["confidence"] == 82
                 for record in graph_evidence["records"]
             )
         )
@@ -564,6 +1049,7 @@ class MISPProcessorTests(unittest.TestCase):
                 candidate["entity_type"] == "sighting"
                 and candidate["value"] == "evil.example"
                 and candidate["relationship_type"] == "sighting-of"
+                and candidate["confidence"] == 82
                 for candidate in graph_candidates["candidates"]
             )
         )
@@ -624,6 +1110,299 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
 
+    def test_decision_metadata_extracts_misp_infrastructure_objects(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Object"] = [
+            {
+                "uuid": "object-domain-ip",
+                "name": "domain-ip",
+                "meta-category": "network",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-domain",
+                        "object_relation": "domain",
+                        "type": "domain",
+                        "value": "c2.example.com",
+                    },
+                    {
+                        "uuid": "attribute-ip",
+                        "object_relation": "ip",
+                        "type": "ip-dst",
+                        "value": "203.0.113.10",
+                    },
+                    {
+                        "uuid": "attribute-port",
+                        "object_relation": "port",
+                        "type": "port",
+                        "value": "443",
+                    },
+                ],
+            },
+            {
+                "uuid": "object-netblock",
+                "name": "netblock",
+                "meta-category": "network",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-cidr",
+                        "object_relation": "subnet-announced",
+                        "type": "ip-src",
+                        "value": "203.0.113.0/24",
+                        "first_seen": "2026-06-20T10:00:00Z",
+                        "last_seen": "2026-06-21T10:00:00Z",
+                    },
+                    {
+                        "uuid": "attribute-asn",
+                        "object_relation": "asn",
+                        "type": "AS",
+                        "value": "AS64512",
+                        "first_seen": "2026-06-20T11:00:00Z",
+                        "last_seen": "2026-06-22T11:00:00Z",
+                    },
+                    {
+                        "uuid": "attribute-as-name",
+                        "object_relation": "as-name",
+                        "type": "text",
+                        "value": "NarrowCTI Validation ASN",
+                    },
+                    {
+                        "uuid": "attribute-rir",
+                        "object_relation": "rir",
+                        "type": "text",
+                        "value": "PRIVATE",
+                    },
+                ],
+            },
+            {
+                "uuid": "object-asn",
+                "name": "asn",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-asn-only",
+                        "object_relation": "asn",
+                        "type": "AS",
+                        "value": "AS64513",
+                    }
+                ],
+            },
+            {
+                "uuid": "object-ip-port",
+                "name": "ip-port",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-ip-port",
+                        "object_relation": "ip",
+                        "type": "ip-dst|port",
+                        "value": "203.0.113.20|443",
+                    }
+                ],
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        self.assertIn("misp_infrastructure", metadata)
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(3, graph_evidence["counts"]["infrastructure"])
+        self.assertEqual(4, graph_evidence["counts"]["observable"])
+        self.assertEqual(3, graph_evidence["counts"]["autonomous_system"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertEqual(3, graph_candidates["counts"]["infrastructure"])
+        self.assertEqual(4, graph_candidates["counts"]["observable"])
+        self.assertEqual(3, graph_candidates["counts"]["autonomous_system"])
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "observable"
+                and candidate["value"] == "203.0.113.0/24"
+                and candidate["relationship_type"] == "consists-of"
+                and candidate["attributes"]["relationship_source_value"]
+                == "MISP netblock 203.0.113.0/24"
+                and candidate["attributes"]["first_seen"] == "2026-06-20T10:00:00Z"
+                and candidate["attributes"]["last_seen"] == "2026-06-21T10:00:00Z"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512 NarrowCTI Validation ASN"
+                and candidate["relationship_type"] == "belongs-to"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "observable"
+                and candidate["attributes"]["relationship_source_value"]
+                == "203.0.113.0/24"
+                and candidate["attributes"]["first_seen"] == "2026-06-20T11:00:00Z"
+                and candidate["attributes"]["last_seen"] == "2026-06-22T11:00:00Z"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "observable"
+                and candidate["value"] == "203.0.113.20"
+                and candidate["attributes"]["port"] == "443"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64513"
+                and candidate["relationship_type"] == "related-to"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS443"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_extracts_top_level_misp_infrastructure_attributes(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-ip-src-port",
+                "type": "ip-src|port",
+                "category": "Network activity",
+                "value": "196.53.114.199|80",
+            },
+            {
+                "uuid": "attribute-asn",
+                "type": "AS",
+                "category": "Network activity",
+                "value": "AS64512",
+            },
+            {
+                "uuid": "attribute-raw-ip",
+                "type": "ip-src",
+                "category": "Network activity",
+                "value": "203.0.113.30",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        graph_evidence = metadata["graph_evidence"]
+        self.assertEqual(1, graph_evidence["counts"]["infrastructure"])
+        self.assertEqual(1, graph_evidence["counts"]["observable"])
+        self.assertEqual(1, graph_evidence["counts"]["autonomous_system"])
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "infrastructure"
+                and candidate["value"] == "MISP ip-port 196.53.114.199"
+                and candidate["source_field"] == "Attribute[0]"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "observable"
+                and candidate["value"] == "196.53.114.199"
+                and candidate["relationship_type"] == "consists-of"
+                and candidate["attributes"]["port"] == "80"
+                and candidate["attributes"]["relationship_source_value"]
+                == "MISP ip-port 196.53.114.199"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512"
+                and candidate["relationship_type"] == "related-to"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "infrastructure"
+                and candidate["value"] == "203.0.113.30"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertFalse(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS80"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_links_misp_galaxy_tags_to_infrastructure_context(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["tags"] = [
+            "tlp:green",
+            'misp-galaxy:mitre-intrusion-set="APT32"',
+            'misp-galaxy:mitre-attack-pattern="PowerShell - T1059.001"',
+            'misp-galaxy:malpedia="Lorenz"',
+        ]
+        event["Attribute"] = [
+            {
+                "uuid": "attribute-domain-ip",
+                "type": "domain|ip",
+                "category": "Network activity",
+                "value": "c2.example|203.0.113.10",
+            },
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+
+        metadata = decision_metadata(candidate_ref, prepared)
+
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "infrastructure"
+                and candidate["value"] == "MISP domain-ip c2.example"
+                and candidate["source_name"] == "misp-context"
+                and candidate["relationship_type"] == "uses"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "intrusion-set"
+                and candidate["attributes"]["relationship_source_value"] == "APT32"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "infrastructure"
+                and candidate["value"] == "MISP domain-ip c2.example"
+                and candidate["source_name"] == "misp-context"
+                and candidate["relationship_type"] == "uses"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "malware"
+                and candidate["attributes"]["relationship_source_value"] == "Lorenz"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "attack_pattern"
+                and candidate["value"] == "T1059.001"
+                and candidate["source_name"] == "misp-context"
+                and candidate["relationship_type"] == "related-to"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "infrastructure"
+                and candidate["attributes"]["relationship_source_value"]
+                == "MISP domain-ip c2.example"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
     def test_decision_metadata_extracts_misp_detection_rules(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
         event = enriched_event()
@@ -632,7 +1411,15 @@ class MISPProcessorTests(unittest.TestCase):
                 "uuid": "attribute-rule-1",
                 "type": "sigma",
                 "category": "Payload delivery",
-                "value": "title: Suspicious PowerShell",
+                "value": (
+                    "title: Suspicious PowerShell\n"
+                    "logsource:\n"
+                    "  product: windows\n"
+                    "detection:\n"
+                    "  selection:\n"
+                    "    EventID: 1\n"
+                    "  condition: selection"
+                ),
                 "comment": "Suspicious PowerShell",
                 "Tag": [{"name": "tlp:green"}],
             },
@@ -642,19 +1429,112 @@ class MISPProcessorTests(unittest.TestCase):
                 "value": "rule DeletedRule { condition: true }",
                 "deleted": "1",
             },
+            {
+                "uuid": "attribute-snort-1",
+                "type": "snort",
+                "category": "Network activity",
+                "value": 'alert tcp any any -> any any (msg:"Adobe Flash Exploit"; sid:1;)',
+            },
+            {
+                "uuid": "attribute-sigma-2",
+                "type": "sigma",
+                "category": "Payload delivery",
+                "value": (
+                    "title: WannaCry Ransomware\n"
+                    "description: Detects activity\n"
+                    "logsource:\n"
+                    "  product: windows\n"
+                    "detection:\n"
+                    "  selection:\n"
+                    "    EventID: 1\n"
+                    "  condition: selection"
+                ),
+            },
+            {
+                "uuid": "attribute-invalid-sigma",
+                "type": "sigma",
+                "category": "Payload delivery",
+                "value": (
+                    "title: Broken Sigma\n"
+                    "logsource:\n"
+                    "    produc%WINDIR%\\\n"
+                    "detection:\n"
+                    "    condition: selection"
+                ),
+            },
+        ]
+        event["Object"] = [
+            {
+                "uuid": "object-suricata-1",
+                "name": "suricata",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-suricata-ref",
+                        "type": "link",
+                        "object_relation": "ref",
+                        "value": "https://example.com/rule",
+                    },
+                    {
+                        "uuid": "attribute-suricata-1",
+                        "type": "snort",
+                        "object_relation": "suricata",
+                        "category": "Network activity",
+                        "value": (
+                            'alert http any any -> any any '
+                            '(msg:"Suricata HTTP Beacon"; sid:2;)'
+                        ),
+                    },
+                ],
+            }
         ]
         prepared = SimpleNamespace(event=event, score_details={})
 
         metadata = decision_metadata(candidate_ref, prepared)
 
-        self.assertEqual(1, len(metadata["misp_detection_rules"]))
+        self.assertEqual(5, len(metadata["misp_detection_rules"]))
         self.assertEqual("sigma", metadata["misp_detection_rules"][0]["rule_type"])
         self.assertEqual(
-            "title: Suspicious PowerShell",
+            (
+                "title: Suspicious PowerShell\n"
+                "logsource:\n"
+                "  product: windows\n"
+                "detection:\n"
+                "  selection:\n"
+                "    EventID: 1\n"
+                "  condition: selection"
+            ),
             metadata["misp_detection_rules"][0]["pattern"],
         )
+        self.assertEqual("snort", metadata["misp_detection_rules"][1]["rule_type"])
+        self.assertEqual(
+            "Adobe Flash Exploit",
+            metadata["misp_detection_rules"][1]["value"],
+        )
+        self.assertEqual("WannaCry Ransomware", metadata["misp_detection_rules"][2]["value"])
+        self.assertEqual(
+            (
+                "title: WannaCry Ransomware\n"
+                "description: Detects activity\n"
+                "logsource:\n"
+                "  product: windows\n"
+                "detection:\n"
+                "  selection:\n"
+                "    EventID: 1\n"
+                "  condition: selection"
+            ),
+            metadata["misp_detection_rules"][2]["pattern"],
+        )
+        self.assertEqual("Broken Sigma", metadata["misp_detection_rules"][3]["value"])
+        self.assertFalse(
+            metadata["misp_detection_rules"][3]["opencti_indicator_compatible"]
+        )
+        self.assertEqual("suricata", metadata["misp_detection_rules"][4]["rule_type"])
+        self.assertEqual(
+            "Suricata HTTP Beacon",
+            metadata["misp_detection_rules"][4]["value"],
+        )
         graph_evidence = metadata["graph_evidence"]
-        self.assertEqual(1, graph_evidence["counts"]["detection_rule"])
+        self.assertEqual(5, graph_evidence["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 record["entity_type"] == "detection_rule"
@@ -664,15 +1544,176 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
         graph_candidates = metadata["graph_candidates"]
-        self.assertEqual(1, graph_candidates["counts"]["detection_rule"])
+        self.assertEqual(5, graph_candidates["counts"]["detection_rule"])
         self.assertTrue(
             any(
                 candidate["entity_type"] == "detection_rule"
                 and candidate["relationship_type"] == "detects"
-                and candidate["attributes"]["pattern"] == "title: Suspicious PowerShell"
+                and candidate["attributes"]["pattern"]
+                == (
+                    "title: Suspicious PowerShell\n"
+                    "logsource:\n"
+                    "  product: windows\n"
+                    "detection:\n"
+                    "  selection:\n"
+                    "    EventID: 1\n"
+                    "  condition: selection"
+                )
                 for candidate in graph_candidates["candidates"]
             )
         )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["value"] == "Adobe Flash Exploit"
+                and candidate["attributes"]["pattern_type"] == "snort"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["value"] == "WannaCry Ransomware"
+                and candidate["attributes"]["pattern_type"] == "sigma"
+                and candidate["attributes"]["pattern"]
+                == (
+                    "title: WannaCry Ransomware\n"
+                    "description: Detects activity\n"
+                    "logsource:\n"
+                    "  product: windows\n"
+                    "detection:\n"
+                    "  selection:\n"
+                    "    EventID: 1\n"
+                    "  condition: selection"
+                )
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["value"] == "Broken Sigma"
+                and candidate["attributes"]["pattern_type"] == "sigma"
+                and candidate["attributes"]["opencti_indicator_compatible"] is False
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "detection_rule"
+                and candidate["value"] == "Suricata HTTP Beacon"
+                and candidate["attributes"]["pattern_type"] == "suricata"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+
+    def test_decision_metadata_enriches_misp_ip_with_offline_asn(self):
+        candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
+        event = enriched_event()
+        event["Object"] = [
+            {
+                "uuid": "object-domain-ip",
+                "name": "domain-ip",
+                "Attribute": [
+                    {
+                        "uuid": "attribute-domain",
+                        "object_relation": "domain",
+                        "type": "domain",
+                        "value": "c2.example.com",
+                    },
+                    {
+                        "uuid": "attribute-ip",
+                        "object_relation": "ip",
+                        "type": "ip-dst",
+                        "value": "203.0.113.10",
+                    },
+                ],
+            }
+        ]
+        prepared = SimpleNamespace(event=event, score_details={})
+        enricher = OfflineIPASNEnricher(
+            [
+                IPASNRecord(
+                    network=ipaddress.ip_network("203.0.113.0/24"),
+                    asn=64512,
+                    as_name="Offline Validation ASN",
+                    rir="TEST",
+                    source="unit-test",
+                )
+            ]
+        )
+
+        metadata = decision_metadata(
+            candidate_ref,
+            prepared,
+            ip_asn_enricher=enricher,
+        )
+
+        graph_candidates = metadata["graph_candidates"]
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512 Offline Validation ASN"
+                and candidate["relationship_type"] == "belongs-to"
+                and candidate["attributes"]["relationship_source_value"]
+                == "203.0.113.10"
+                and candidate["attributes"]["enrichment_source"] == "unit-test"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        self.assertTrue(
+            any(
+                candidate["entity_type"] == "autonomous_system"
+                and candidate["value"] == "AS64512 Offline Validation ASN"
+                and candidate["relationship_type"] == "consists-of"
+                and candidate["attributes"]["relationship_source_stix_object_type"]
+                == "infrastructure"
+                and candidate["attributes"]["relationship_source_value"]
+                == "MISP domain-ip c2.example.com"
+                and candidate["attributes"]["enrichment_source"] == "unit-test"
+                for candidate in graph_candidates["candidates"]
+            )
+        )
+        accepted = [
+            candidate
+            for candidate in metadata["graph_candidate_policy"]["accepted"]
+            if candidate["entity_type"] in {"autonomous_system", "infrastructure", "observable"}
+        ]
+        bundle, summary = build_graph_report_bundle(
+            "Curated infrastructure report",
+            "offline ASN context",
+            80,
+            graph_candidate_policy={"accepted": accepted},
+        )
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+        infrastructure = objects_by_type["infrastructure"][0]
+        autonomous_system = objects_by_type["autonomous-system"][0]
+        ip_address = next(
+            item
+            for item in objects_by_type["ipv4-addr"]
+            if item["value"] == "203.0.113.10"
+        )
+        relationships = objects_by_type["relationship"]
+        self.assertTrue(
+            any(
+                relationship["source_ref"] == infrastructure["id"]
+                and relationship["relationship_type"] == "consists-of"
+                and relationship["target_ref"] == autonomous_system["id"]
+                for relationship in relationships
+            )
+        )
+        self.assertTrue(
+            any(
+                relationship["source_ref"] == ip_address["id"]
+                and relationship["relationship_type"] == "belongs-to"
+                and relationship["target_ref"] == autonomous_system["id"]
+                for relationship in relationships
+            )
+        )
+        self.assertEqual(4, summary["semantic_relationship_count"])
 
     def test_decision_metadata_builds_dry_run_graph_export_plan(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
@@ -713,6 +1754,10 @@ class MISPProcessorTests(unittest.TestCase):
             graph_plan["would_create_object_count"],
         )
         self.assertIn("graph_export_plan_known_keys", metadata)
+        self.assertEqual(
+            "internal--1",
+            metadata["graph_export_plan_lookup_matches"][0]["match"]["opencti_id"],
+        )
 
     def test_process_event_skips_when_all_artifacts_are_known(self):
         records = []
@@ -745,6 +1790,90 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual("skip", records[0].action)
         self.assertEqual("all indicators already known", records[0].reason)
         self.assertIn("MISP artifact dedup: tlp green event duplicates=1", logs)
+
+    def test_process_event_replays_graph_when_artifacts_are_known(self):
+        records = []
+        marked = []
+        logs = []
+        exports = []
+        settings = self.settings()
+        settings.graph_export_mode = "export"
+        settings.graph_replay_on_artifact_dedup = True
+        settings.graph_min_entity_confidence = 0
+        settings.graph_min_relationship_confidence = 0
+        settings.graph_require_relationship_provenance = False
+        settings.graph_allowed_entity_types = []
+        settings.graph_allowed_stix_object_types = []
+        state = SimpleNamespace(
+            has_event=lambda event_id: False,
+            mark_event=lambda event_id: marked.append(event_id),
+        )
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators: ([], len(indicators)),
+            mark_indicators=lambda indicators, **kwargs: self.fail(
+                "artifacts should not be marked during graph-only replay"
+            ),
+        )
+        event = enriched_event(indicator_count=1)
+        event["Galaxy"] = [
+            {
+                "type": "threat-actor",
+                "name": "Threat Actor",
+                "GalaxyCluster": [
+                    {
+                        "type": "threat-actor",
+                        "value": "Replay Actor",
+                        "uuid": "cluster-replay-actor",
+                        "meta": {
+                            "targeted-sector": ["Finance"],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        def exporter(api_client, name, description, score, indicators, **kwargs):
+            exports.append(
+                {
+                    "indicators": indicators,
+                    "kwargs": kwargs,
+                }
+            )
+            return len(indicators)
+
+        processor = MISPProcessor(
+            settings,
+            misp_client=None,
+            api_client="api",
+            logger=logs.append,
+            exporter=exporter,
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=self.adapter(enriched=candidate(raw=event)),
+            artifact_dedup=artifact_dedup,
+        )
+
+        outcome = processor.process_event_outcome("tlp:green", candidate(), state)
+
+        self.assertEqual("ingest", outcome)
+        self.assertEqual(["event-1"], marked)
+        self.assertEqual(1, len(exports))
+        self.assertEqual([], exports[0]["indicators"])
+        self.assertEqual("export", exports[0]["kwargs"]["graph_export_mode"])
+        self.assertGreater(
+            len(exports[0]["kwargs"]["graph_candidate_policy"]["accepted"]),
+            0,
+        )
+        self.assertEqual("ingest", records[-1].action)
+        self.assertEqual(
+            "all indicators already known; graph replay only",
+            records[-1].reason,
+        )
+        self.assertEqual(0, records[-1].indicator_count)
+        self.assertTrue(records[-1].metadata["guardrails"]["graph_replay_only"])
+        self.assertIn(
+            "MISP artifact dedup graph replay: tlp green event objects=2 relationships=2",
+            logs,
+        )
 
     def test_process_event_drops_disallowed_tlp(self):
         records = []
@@ -945,7 +2074,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(10, records[0].indicator_count)
         self.assertEqual(records[0].score, records[0].metadata["scoring"]["final_score"])
         self.assertEqual("tlp green event", export_calls[0]["name"])
-        self.assertEqual("Test Connector", export_calls[0]["identity_name"])
+        self.assertEqual("MISP via NarrowCTI", export_calls[0]["identity_name"])
         self.assertEqual(1, len(export_calls[0]["indicators"]))
 
     def test_process_event_does_not_mark_state_when_export_fails(self):
@@ -983,6 +2112,19 @@ class FirstActionEntityKnownIndex:
         return {
             "entity_keys": [plan["actions"][0]["deduplication"]["entity_key"]],
             "relationship_keys": [],
+            "matches": [
+                {
+                    "entity_key": plan["actions"][0]["deduplication"]["entity_key"],
+                    "stix_object_type": "attack-pattern",
+                    "value": "T1059",
+                    "match": {
+                        "opencti_id": "internal--1",
+                        "standard_id": "attack-pattern--1111",
+                        "entity_type": "Attack-Pattern",
+                        "name": "Command and Scripting Interpreter",
+                    },
+                }
+            ],
         }
 
 

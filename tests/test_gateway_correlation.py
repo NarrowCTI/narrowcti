@@ -1,8 +1,15 @@
 import json
+import os
+import tempfile
 import unittest
 
 from core.deduplication import ARTIFACT_RECORDS_KEY, ARTIFACTS_KEY
-from gateway.correlation import build_correlation_report, format_text_report
+from gateway.correlation import (
+    build_correlation_report,
+    format_text_report,
+    render_report,
+    write_report,
+)
 
 
 class GatewayCorrelationTests(unittest.TestCase):
@@ -57,6 +64,23 @@ class GatewayCorrelationTests(unittest.TestCase):
         self.assertIn("correlated_count=1", text)
         self.assertIn("- alienvault:otx artifacts=2", text)
         self.assertIn("domain:shared.example", text)
+
+    def test_renders_and_writes_correlation_report_files(self):
+        report = build_correlation_report(sample_state())
+
+        text = render_report(report, output_format="text")
+        data = json.loads(render_report(report, output_format="json"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_file = os.path.join(tmpdir, "reports", "correlation.json")
+            result = write_report(report, output_file, output_format="json")
+            with open(output_file, "r", encoding="utf-8") as handle:
+                written = json.load(handle)
+
+        self.assertIn("NarrowCTI artifact correlation report", text)
+        self.assertEqual(1, data["correlated_count"])
+        self.assertEqual(output_file, result)
+        self.assertEqual(1, written["correlated_count"])
 
 
 def sample_state():

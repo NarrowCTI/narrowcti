@@ -114,6 +114,21 @@ class GraphDeduplicationIndexTests(unittest.TestCase):
             self.assertEqual({}, state[GRAPH_ENTITIES_KEY])
             self.assertEqual({}, state[GRAPH_RELATIONSHIPS_KEY])
 
+    def test_mark_exported_plan_ignores_dry_run_actions(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_file = os.path.join(tmpdir, "graph.json")
+            index = GraphDeduplicationIndex(state_file)
+
+            dry_run = index.mark_exported_plan(graph_plan())
+            exported = index.mark_exported_plan({"actions": [graph_action("exported")]})
+
+            self.assertEqual({"entities": 0, "relationships": 0}, dry_run)
+            self.assertEqual({"entities": 1, "relationships": 1}, exported)
+            self.assertTrue(index.has_entity("entity:attack-pattern:t1059"))
+            self.assertTrue(
+                index.has_relationship("relationship:pulse-1:uses:t1059")
+            )
+
 
 def graph_plan():
     return {"actions": [graph_action("would_create")]}

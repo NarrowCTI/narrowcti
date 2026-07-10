@@ -1,4 +1,20 @@
-# NarrowCTI
+<p align="center">
+  <img src="docs/assets/narrowcti-logo.png" alt="NarrowCTI logo" width="180">
+</p>
+
+<h1 align="center">NarrowCTI</h1>
+
+<p align="center">
+  <strong>OpenCTI-native CTI curation gateway for governed, explainable and graph-ready intelligence.</strong>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+  <a href="https://github.com/NarrowCTI/narrowcti/actions/workflows/ci.yml"><img src="https://github.com/NarrowCTI/narrowcti/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="docs/README.md"><img src="https://img.shields.io/badge/docs-current-brightgreen.svg" alt="Documentation"></a>
+  <a href="docs/container-images.md"><img src="https://img.shields.io/badge/container-GHCR-blue.svg" alt="Container image"></a>
+  <a href="SECURITY.md"><img src="https://img.shields.io/badge/security-policy-informational.svg" alt="Security policy"></a>
+</p>
 
 NarrowCTI is an OpenCTI-native threat intelligence gateway designed to curate,
 score, deduplicate and govern threat intelligence before it reaches the OpenCTI
@@ -11,13 +27,37 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.7.0
+v0.8.0
 ```
 
-`v0.7.0` is the graph enrichment and enterprise-filter foundation release. It
-keeps the stable curated `Report + Indicator` OpenCTI export path while adding
-audit-first graph evidence, graph candidates, STIX preview summaries,
-contextual scoring evidence and a clear MITRE ATT&CK curation architecture.
+`v0.8.0` is the current graph promotion, analyst review and product operations
+release. It closes controlled graph promotion readiness with OpenCTI canonical
+lookup, bounded OTX/MISP validation evidence, relationship audit evidence,
+support diagnostics and deployment operations.
+
+Release history is summarized in `CHANGELOG.md`; detailed operator-facing
+release notes are maintained under `docs/release-v*.md`.
+
+## Quick Start
+
+For a first safe evaluation, start with the current operator guide:
+
+```text
+docs/getting-started.md
+```
+
+The default deployment posture is dry-run, run-once and audit-first. Build the
+gateway image, run preflight, then execute one bounded run before enabling real
+OpenCTI graph export:
+
+```powershell
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml build narrowcti-gateway
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narrowcti-gateway
+```
+
+Use `docs/deployment-operations.md` for the authoritative deployment and
+upgrade procedure.
 
 ## Product Identity
 
@@ -68,7 +108,7 @@ connectors/misp/     MISP client, feed adapter, settings and processor foundatio
 core/                Feed contracts, scoring, policy and persistent state handling
 exporters/           OpenCTI export and STIX bundle construction
 tests/               Unit coverage for the processor and shared pipeline logic
-docs/                Release and implementation documentation
+docs/                Product, operations, architecture and release documentation
 ```
 
 ## Product Positioning
@@ -234,6 +274,25 @@ tracked in `docs/contextual-scoring-reference-v0.7.md`.
 The direct source, MISP collector and hybrid ingestion architecture is tracked
 in `docs/source-ingestion-modes-v0.7.md`.
 
+## v0.8 Release
+
+The v0.8 release starts the controlled promotion gate after v0.7. It adds
+read-only OpenCTI graph lookup so NarrowCTI can detect canonical ATT&CK objects,
+such as existing `attack-pattern` entries loaded by the official MITRE
+connector, before controlled graph promotion is enabled.
+
+The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`, and
+the release notes are tracked in `docs/release-v0.8.0.md`. Deployment, analyst
+review, curation reporting and support diagnostics are tracked in the dedicated
+v0.8 documents under `docs/`.
+
+The relationship between NarrowCTI curation and OpenCTI post-ingestion
+inference rules is documented in `docs/opencti-rules-engine-v0.8.md`.
+NarrowCTI owns source-backed pre-ingestion decisions; OpenCTI Rules Engine can
+optionally infer additional relationships after the curated graph exists.
+OpenCTI tab coverage, current export status and backlog boundaries are tracked
+in `docs/opencti-coverage-matrix-v0.8.md`.
+
 ## Curation Configuration
 
 Curation controls must be visible in configuration and then applied
@@ -246,22 +305,78 @@ enterprise controls should cover actor, arsenal, ATT&CK, victimology, graph
 state and quarantine release workflows without hiding those policy choices from
 operators.
 
-The v0.7 graph layer currently records `graph_candidate_policy` and
-`graph_export_plan` metadata. `NARROWCTI_GRAPH_EXPORT_MODE=audit` keeps the
-plan audit-only, while `dry-run` records what graph objects and relationships
-would be attempted later. The first graph-aware STIX builder foundation can
-convert accepted candidates into STIX objects for validation, and OTX/MISP
-decision metadata now records a safe `graph_stix_preview` summary with bundle,
-object, relationship and skipped-candidate counts. Real graph export remains
-blocked until controlled export wiring, deduplication promotion and OpenCTI
-validation are complete. The local graph deduplication state can be read with
+The graph layer records `graph_candidate_policy` and `graph_export_plan`
+metadata. `NARROWCTI_GRAPH_EXPORT_MODE=audit` keeps the plan audit-only, while
+`dry-run` records what graph objects and relationships would be attempted. In
+v0.8, `NARROWCTI_GRAPH_EXPORT_MODE=export` enables the first controlled graph
+promotion gate: OTX and MISP still export the legacy report and indicators, but
+also add accepted graph entities and relationships to the same STIX bundle.
+This can feed OpenCTI areas such as Threats, Arsenal, Techniques, Sectors,
+Locations and Observations when source metadata supports those entities. The
+local graph deduplication state can be read with
 `NARROWCTI_GRAPH_DEDUP_STATE_FILE` so OTX and MISP export plans can mark known
-local graph keys as deduplicated. This is read-only planning evidence; dry-run
-plans are not marked as exported knowledge.
+local graph keys as deduplicated. Dry-run plans are not marked as exported
+knowledge, and export state is marked only after the OpenCTI import call
+succeeds. In v0.8,
+`NARROWCTI_OPENCTI_GRAPH_LOOKUP=true` can also be enabled so OTX and MISP
+planning query OpenCTI for canonical graph objects, starting with ATT&CK
+attack-patterns, malware, tools, infrastructure, CVE vulnerabilities, threat
+actors and intrusion sets, and controlled locations/countries, before promotion
+creates new graph knowledge. Canonical matches are exposed as bounded
+`graph_export_plan_lookup_matches` metadata for audit and future enterprise
+reporting. When a canonical match includes a valid STIX `standard_id`, the
+export gate references that existing OpenCTI object in the curated STIX bundle
+instead of duplicating it. Graph SDOs created by NarrowCTI also use
+deterministic STIX ids so repeated exports of the same curated object converge
+on the same OpenCTI `standard_id`.
 
-The full configuration reference is tracked in
-`docs/configuration-reference-v0.6.md`, extending the base v0.5 reference in
-`docs/configuration-reference-v0.5.md`.
+For bounded MISP curation replay,
+`NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP=true` can be combined with
+`NARROWCTI_GRAPH_EXPORT_MODE=export` so events whose indicators are already
+known still export accepted graph context without replaying indicator objects.
+
+When real graph export is enabled without an explicit allow-list, NarrowCTI
+uses a safe default allow-list. It promotes source-backed CTI objects such as
+infrastructure, ASN, observables, sectors, locations, arsenal, ATT&CK,
+vulnerabilities and reports, while keeping feed bookkeeping such as collector,
+source identity, labels and markings in author/audit metadata unless the
+operator explicitly opts into those graph candidate types.
+
+The v0.8 graph bundle also activates richer export targets when they are
+resolvable: MITRE data-source context can travel as a curated Data Source
+anchored to the ATT&CK technique; detection guidance and MISP EventReports
+travel as Notes; YARA/Sigma/Snort/Suricata/PCRE rules travel as pattern-aware
+Indicators; MISP ObjectReferences become STIX Relationships when both UUID
+endpoints resolve to graph objects; and MISP sightings become STIX Sightings
+when the sighted value resolves to an Indicator. MITRE tactic and platform
+values remain preserved as curated context/evidence and are not part of the
+default export gate until OpenCTI import behavior is validated for those as
+first-class objects. Unresolved relationship-only evidence stays out of the
+bundle instead of creating unsafe OpenCTI edges.
+
+Infrastructure promotion is intentionally conservative: raw domains, IPs and
+URLs continue to be handled as Indicators or Observables unless source metadata
+or review policy explicitly supports a STIX `infrastructure` candidate. This
+keeps `Observations / Infrastructures` useful for curated threat infrastructure
+instead of turning it into another raw IOC bucket.
+
+For audit visibility, exported STIX bundles now use a source-aware OpenCTI
+Author naming convention:
+
+```text
+<logical upstream source> via NarrowCTI
+```
+
+OTX exports appear as `OTX AlienVault via NarrowCTI`, MISP exports appear as
+`MISP via NarrowCTI`, and future adapters should define their own source
+identity mapping with the same suffix. NarrowCTI also remains visible through
+decision audit records, curation reports, export plans and `x_narrowcti_*`
+graph metadata.
+
+The full current configuration reference is tracked in
+`docs/configuration-reference.md`. Versioned configuration references remain
+available as release snapshots when a release note needs exact historical
+behavior.
 
 ## NarrowCTI Gateway Runtime
 
@@ -323,6 +438,10 @@ MISP_PUBLISHED_ONLY=true
 MISP_OVERSIZED_EVENT_ACTION=skip
 ```
 
+For precise replay of a known MISP event during validation, use
+`MISP_QUERIES=event:<id>` or `MISP_QUERIES=uuid:<uuid>` instead of a broad
+search.
+
 
 Initial v0.5 gateway runtime command for development validation:
 
@@ -359,6 +478,7 @@ $LAB_ROOT = "<path-to-lab-root>"
 cd "$LAB_ROOT\NarrowCTI"
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.report --file state\gateway_runs.jsonl
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.report --file state\gateway_runs.jsonl --json
+docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state\quarantine.jsonl --output-file state\gateway-operational-report.txt
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.decisions --dir state\audit
 docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.correlation --file state\dedup_index.json
 ```
@@ -383,81 +503,38 @@ The unified gateway entrypoint composes enabled source runtimes and isolates
 source failures. Keep source-specific runtimes available for debugging and
 bounded backfills while the v0.5 gateway matures.
 
-## Docker Runtime
+## Deployment
 
-This repository is expected to sit next to the OpenCTI Compose workspace:
-
-```text
-<lab-root>/
-  NarrowCTI/
-  opencti/
-```
-
-The OpenCTI Compose file owns the connector service definitions. The v0.5
-default product runtime is the gateway service, while source-specific runtimes
-remain available for troubleshooting and bounded validation:
+The authoritative current deployment and upgrade procedure is centralized in:
 
 ```text
-narrowcti-gateway         Unified NarrowCTI Gateway runtime
-connector-narrowcti       OTX reference/debug runtime
-connector-narrowcti-misp  MISP dry-run/backfill/debug runtime
+docs/deployment-operations.md
 ```
 
-Safe gateway validation commands:
+The deployment assets are:
 
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\opencti"
-docker compose --profile narrowcti-gateway build narrowcti-gateway
-docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.preflight
-docker compose --profile narrowcti-gateway up --force-recreate narrowcti-gateway
-docker compose --profile narrowcti-gateway logs --tail 120 narrowcti-gateway
-docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.report --file /app/state/gateway_runs.jsonl
-docker compose --profile narrowcti-gateway run --rm narrowcti-gateway python -m gateway.correlation --file /app/state/dedup_index.json
+```text
+deployment/docker-compose.narrowcti-gateway.yml
+deployment/gateway.env.example
 ```
 
-The local compose profile keeps `NARROWCTI_RUN_ONCE=true` and
-`NARROWCTI_DRY_RUN=true` by default. For continuous operation, explicitly set
-`NARROWCTI_RUN_ONCE=false`, review source guardrails and change the service
-restart policy only after preflight and dry-run results are acceptable.
+The v0.8 template is dry-run/run-once by default, joins an existing OpenCTI
+Docker network and must be validated with `gateway.preflight` before any source
+execution. Its `ops` profile can run preflight, curation reporting,
+decision audit reporting, artifact correlation reporting, operational
+validation and support diagnostics without starting continuous ingestion. The
+curation report service persists text, JSON and HTML artifacts under the
+gateway state volume, while support diagnostics can produce a redacted HTML
+snapshot and support bundle for review. Older deployment snippets in
+release-specific documents are
+historical context; use `docs/deployment-operations.md` for the current
+procedure.
 
-Common OTX commands:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\opencti"
-docker compose --profile narrowcti build connector-narrowcti
-docker compose --profile narrowcti up -d --force-recreate connector-narrowcti
-docker compose --profile narrowcti logs --tail 120 connector-narrowcti
-```
-
-Safe MISP runtime validation commands:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\opencti"
-docker compose --profile narrowcti-misp build connector-narrowcti-misp
-docker compose --profile narrowcti-misp up --force-recreate connector-narrowcti-misp
-docker compose --profile narrowcti-misp logs --tail 120 connector-narrowcti-misp
-```
-
-Safe MISP backfill helper:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\NarrowCTI"
-.\scripts\misp-backfill-window.ps1 -FromDate 2016-01-01 -ToDate 2016-12-31 -Tags tlp:green -Preview
-.\scripts\misp-backfill-window.ps1 -FromDate 2016-01-01 -ToDate 2016-12-31 -Tags tlp:green
-.\scripts\misp-backfill-window.ps1 -FromDate 2026-01-02 -ToDate 2026-01-02 -Tags type:OSINT
-```
-
-The helper always runs `MISP_DRY_RUN=true`, `MISP_RUN_ONCE=true` and
-ephemeral `/tmp` state. Use `-Preview` to inspect the Compose command before
-execution. It also caps `MaxEvents` at 5 and defaults to `MaxEvents=1`.
-
-When the MISP runtime runs inside the shared Docker network, use
-`MISP_URL=http://misp-core` in `connectors/misp/.env`. Use `misp.local` only
-for host-side browser or API access through Caddy.
+Source-specific OTX and MISP runtimes remain available for debugging and
+bounded backfill investigations, but they are not the current deployment source
+of truth. Use `docs/deployment-operations.md` for deployment and upgrade
+steps, and `scripts/misp-backfill-window.ps1 -Preview` only for controlled MISP
+backfill command inspection.
 
 ## Validation
 
@@ -487,59 +564,74 @@ docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narr
 ## Release Flow
 
 The project uses `dev` as the integration branch and `main` as the stable branch.
-Official versions should be marked with Git tags.
+Official versions should be published from `main` with both a Git tag and a
+GitHub Release containing curated release notes.
 
 ```text
-feature/refactor branch -> dev -> main -> version tag
+feature/* -> dev -> main -> version tag -> GitHub Release
 ```
 
 Current release:
 
 ```text
-v0.7.0
+v0.8.0
 ```
 
 ## Documentation
 
-Detailed implementation notes for this release are available in:
+The documentation index is available in:
 
 ```text
-docs/otx-adapter-foundation-v0.2.md
+docs/README.md
 ```
 
-Product and expansion documents:
+Recommended starting points:
 
 ```text
-docs/product-foundation-v0.3.md
-docs/multi-feed-expansion-v0.4.md
-docs/misp-validation-v0.4.md
-docs/release-v0.4.0.md
-docs/release-v0.5.0.md
-docs/release-v0.6.0.md
-docs/release-v0.7.0.md
-docs/quarantine-enrichment-v0.6.md
-docs/architecture-v0.7.md
-docs/graph-enrichment-v0.7.md
-docs/mitre-curation-architecture-v0.7.md
-docs/metadata-validation-v0.7.md
-docs/contextual-scoring-reference-v0.7.md
-docs/source-ingestion-modes-v0.7.md
-docs/misp-official-connector-mapping-v0.7.md
-docs/otx-official-connector-mapping-v0.7.md
-docs/gateway-runtime-v0.5.md
-docs/configuration-reference-v0.6.md
-docs/configuration-reference-v0.5.md
-docs/enterprise-intelligence-gateway-v0.5.md
-docs/product-architecture-validation-v0.5.md
-docs/market-positioning-v1.0.md
-docs/post-v1-ml-roadmap.md
+docs/getting-started.md
+docs/deployment-operations.md
+docs/configuration-reference.md
+docs/architecture.md
+docs/curation-decision-reference.md
+docs/environment-profiles.md
+docs/container-images.md
+docs/community-standards.md
+docs/documentation-map.md
+docs/graph-promotion-v0.8.md
+docs/opencti-coverage-matrix-v0.8.md
+docs/repository-structure.md
+docs/development-guide.md
+docs/community-issue-triage.md
+docs/release-v0.8.0.md
+docs/release-process.md
 docs/roadmap.md
-docs/licensing-strategy.md
 ```
+
+Development evidence and lab validation notes may remain in the repository for
+transparency, but release source archives are curated through `.gitattributes`
+so operators receive product-focused documentation.
+
+## Contributing
+
+NarrowCTI is open to community contributions. Start with:
+
+```text
+CONTRIBUTING.md
+docs/development-guide.md
+docs/community-issue-triage.md
+CODE_OF_CONDUCT.md
+SUPPORT.md
+SECURITY.md
+```
+
+Issues and pull requests should avoid secrets, `.env` files, local `state/`
+artifacts, raw customer data and private feed payloads.
 
 ## Roadmap
 
-- Product foundation and commercial licensing structure.
+- Open source product foundation with Apache-2.0 core distribution.
+- v0.8 preflight-visible capability inventory for transparent open source
+  operations.
 - Multi-feed support beyond the reference OTX adapter.
 - Advanced correlation scoring and analyst-facing source evidence.
 - Richer scoring model with source-specific weighting.
@@ -559,15 +651,17 @@ docs/licensing-strategy.md
 - Preserve `state/state.json` unless reprocessing old pulses is intentional.
 - Avoid destructive Docker cleanup commands against persistent OpenCTI or MISP
   volumes unless backups are confirmed.
+- Report vulnerabilities privately when possible. See `SECURITY.md`.
 
 ## License
 
-NarrowCTI is being prepared as proprietary commercial software. See:
+NarrowCTI core is open source under Apache-2.0. See:
 
 ```text
 LICENSE
 THIRD_PARTY_NOTICES.md
+docs/open-source-strategy.md
 ```
 
-The current license notice is an initial product foundation and should be
-reviewed by qualified legal counsel before commercial distribution.
+Future paid services, managed deployments or optional separate modules should
+sit around the open source core rather than restricting the core gateway.

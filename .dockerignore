@@ -8,3 +8,8 @@ __pycache__/
 connectors/otx/.env
 state/*
 !state/.gitkeep
+AGENTS.md
+agents.md
+.codex/
+.agents/
+*.log

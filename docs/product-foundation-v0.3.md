@@ -2,8 +2,8 @@
 
 ## Purpose
 
-The v0.3.0 track moves NarrowCTI from a single functional OTX connector toward a
-commercial gateway product foundation.
+The v0.3.0 track moves NarrowCTI from a single functional OTX connector toward an
+open source gateway product foundation.
 
 The v0.3.0 naming decision is explicit: the product is NarrowCTI Gateway, while
 OTX is only the first reference feed adapter. The v0.2 line can still be described
@@ -74,14 +74,14 @@ NarrowCTI should deliver value through:
 This version should establish:
 
 - Product positioning and documentation in English.
-- Initial proprietary licensing foundation.
+- Apache-2.0 open source licensing foundation.
 - Third-party dependency notice tracking.
 - Shared feed contract for future connectors.
 - OTX feed adapter as the reference implementation of the shared contract.
 - Structured decision audit records for ingest, drop, quarantine and skip
   outcomes.
 - Per-query operational summaries for feed-noise reduction review.
-- Roadmap from product foundation to commercial-ready release.
+- Roadmap from product foundation to production-ready open source release.
 - Runtime, Compose service and documentation naming aligned to NarrowCTI Gateway.
 - OTX remains the reference implementation, not the product name.
 
@@ -91,7 +91,7 @@ This version should not rush into:
 
 - A full MISP connector before the feed contract is stable.
 - A customer-facing admin interface.
-- A final commercial EULA.
+- Commercial activation or paid feature blocking in the core gateway.
 - Online activation or hosted licensing service.
 - Advanced correlation that has not yet been modeled or tested.
 
@@ -100,7 +100,8 @@ This version should not rush into:
 v0.3.0 is successful when:
 
 - The repository clearly communicates product direction.
-- The licensing posture is explicit enough for private/commercial planning.
+- The licensing posture is explicit enough for open source adoption and future
+  optional services planning.
 - Future feeds have a common contract to implement.
 - OTX has an adapter that maps source data into the common feed model.
 - Decisions can be captured as structured operational evidence.

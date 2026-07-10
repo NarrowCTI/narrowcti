@@ -35,6 +35,26 @@ class GatewayQuarantineCliTests(unittest.TestCase):
             self.assertIn("source_key=alienvault:otx", show_output)
             self.assertIn("domain=example.com", show_output)
 
+    def test_summary_reports_review_queue_counts(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository_path = os.path.join(tmpdir, "quarantine.jsonl")
+            audit_path = os.path.join(tmpdir, "releases.jsonl")
+            record = seed_record(repository_path)
+
+            output = run_cli(
+                "--repository",
+                repository_path,
+                "--release-audit-file",
+                audit_path,
+                "summary",
+            )
+
+            self.assertIn("NarrowCTI quarantine review summary", output)
+            self.assertIn("records=1", output)
+            self.assertIn("pending=1", output)
+            self.assertIn("- pending=1", output)
+            self.assertIn("- alienvault:otx=1", output)
+
     def test_reject_updates_record_and_writes_audit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             repository_path = os.path.join(tmpdir, "quarantine.jsonl")
