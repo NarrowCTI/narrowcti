@@ -60,8 +60,12 @@ $GatewayModules = @(
     'gateway/decisions.py',
     'gateway/correlation.py',
     'gateway/mitre.py',
+    'gateway/opencti_client.py',
+    'gateway/opencti_client_validation.py',
     'gateway/quarantine.py',
-    'gateway/quarantine_export.py'
+    'gateway/quarantine_export.py',
+    'gateway/review_api.py',
+    'gateway/review_auth.py'
 )
 
 function Invoke-DockerPython {

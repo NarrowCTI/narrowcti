@@ -133,6 +133,7 @@ class AnalystReviewService:
         identity_name="NarrowCTI Gateway",
         logger=None,
         dry_run=True,
+        exported_by="gateway.quarantine",
     ):
         exporter = QuarantineExporter(
             self.repository,
@@ -141,6 +142,7 @@ class AnalystReviewService:
             identity_name=identity_name,
             logger=logger,
             dry_run=dry_run,
+            exported_by=exported_by,
         )
         return exporter.export_pending(quarantine_id, limit=limit)
 

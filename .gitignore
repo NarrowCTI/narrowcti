@@ -12,6 +12,7 @@ __pycache__/
 !*.env.example
 *.lic
 licenses/
+deployment/review-api-credentials.json
 
 # State (NUNCA versionar)
 state/*

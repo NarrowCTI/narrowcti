@@ -1,0 +1,145 @@
+name: DAST
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review-api-dast:
+    name: Analyst review API OWASP ZAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build disposable API image
+        run: docker build --file Dockerfile.gateway --tag narrowcti-gateway:dast .
+
+      - name: Prepare disposable credentials and state
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="${RUNNER_TEMP}/narrowcti-dast"
+          mkdir -p "${root}/state/audit" "${root}/reports"
+          token="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+          echo "::add-mask::${token}"
+          token_hash="$(TOKEN="${token}" python -c 'import hashlib, os; print(hashlib.sha256(os.environ["TOKEN"].encode()).hexdigest())')"
+          TOKEN_HASH="${token_hash}" CREDENTIALS_PATH="${root}/credentials.json" python - <<'PY'
+          import json
+          import os
+
+          document = {
+              "credentials": [
+                  {
+                      "credential_id": "dast-admin",
+                      "principal": "dast-admin",
+                      "token_sha256": os.environ["TOKEN_HASH"],
+                      "roles": ["admin"],
+                  }
+              ]
+          }
+          with open(os.environ["CREDENTIALS_PATH"], "w", encoding="utf-8") as file_obj:
+              json.dump(document, file_obj)
+          PY
+          chmod 0444 "${root}/credentials.json"
+          chmod -R 0777 "${root}/state" "${root}/reports"
+          echo "NARROWCTI_DAST_ROOT=${root}" >> "${GITHUB_ENV}"
+          echo "NARROWCTI_DAST_TOKEN=${token}" >> "${GITHUB_ENV}"
+
+      - name: Start disposable review API
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker network create narrowcti-dast
+          docker run --detach \
+            --name narrowcti-review-api-dast \
+            --network narrowcti-dast \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --tmpfs /tmp \
+            --env NARROWCTI_REVIEW_API_HOST=0.0.0.0 \
+            --env NARROWCTI_REVIEW_API_PORT=8081 \
+            --env NARROWCTI_REVIEW_API_DOCS_ENABLED=true \
+            --env NARROWCTI_REVIEW_API_ALLOW_EXPORT=false \
+            --env NARROWCTI_REVIEW_API_ALLOWED_HOSTS=narrowcti-review-api-dast,127.0.0.1,localhost \
+            --env NARROWCTI_REVIEW_API_CREDENTIALS_FILE=/run/secrets/credentials.json \
+            --env NARROWCTI_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl \
+            --env NARROWCTI_RELEASE_AUDIT_FILE=/app/state/audit/releases.jsonl \
+            --volume "${NARROWCTI_DAST_ROOT}/state:/app/state" \
+            --volume "${NARROWCTI_DAST_ROOT}/credentials.json:/run/secrets/credentials.json:ro" \
+            narrowcti-gateway:dast \
+            python -m gateway.review_api
+
+      - name: Wait for API and verify authentication boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for _ in $(seq 1 30); do
+            if docker exec narrowcti-review-api-dast curl --fail --silent http://127.0.0.1:8081/healthz >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "${ready}" != "true" ]; then
+            docker logs narrowcti-review-api-dast
+            exit 1
+          fi
+          unauthorized="$(docker exec narrowcti-review-api-dast curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8081/api/v1/review/summary)"
+          test "${unauthorized}" = "401"
+          authorized="$(docker exec --env TOKEN="${NARROWCTI_DAST_TOKEN}" narrowcti-review-api-dast sh -c 'curl --silent --output /dev/null --write-out "%{http_code}" --header "Authorization: Bearer ${TOKEN}" http://127.0.0.1:8081/api/v1/review/summary')"
+          test "${authorized}" = "200"
+
+      - name: Run OWASP ZAP OpenAPI scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --network narrowcti-dast \
+            --env ZAP_AUTH_HEADER=Authorization \
+            --env ZAP_AUTH_HEADER_VALUE="Bearer ${NARROWCTI_DAST_TOKEN}" \
+            --env ZAP_AUTH_HEADER_SITE=narrowcti-review-api-dast \
+            --volume "${NARROWCTI_DAST_ROOT}/reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:2.17.0 \
+            zap-api-scan.py \
+            -t http://narrowcti-review-api-dast:8081/openapi.json \
+            -f openapi \
+            -J narrowcti-review-api-zap.json \
+            -r narrowcti-review-api-zap.html \
+            -w narrowcti-review-api-zap.md \
+            -T 10
+
+      - name: Upload DAST evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: narrowcti-review-api-dast-${{ github.sha }}
+          path: ${{ env.NARROWCTI_DAST_ROOT }}/reports
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Clean up disposable deployment
+        if: always()
+        shell: bash
+        run: |
+          docker rm --force narrowcti-review-api-dast >/dev/null 2>&1 || true
+          docker network rm narrowcti-dast >/dev/null 2>&1 || true

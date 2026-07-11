@@ -27,13 +27,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.8.0
+v0.9.0 (release candidate)
 ```
 
-`v0.8.0` is the current graph promotion, analyst review and product operations
-release. It closes controlled graph promotion readiness with OpenCTI canonical
-lookup, bounded OTX/MISP validation evidence, relationship audit evidence,
-support diagnostics and deployment operations.
+`v0.9.0` is the analyst operations and graph-quality release candidate. It adds
+governed analyst review API operations, canonical relationship reuse, release
+gates and OpenCTI compatibility validation. Formal publication remains
+maintainer-controlled after the final merge and tag review.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
@@ -594,14 +594,19 @@ docs/configuration-reference.md
 docs/architecture.md
 docs/curation-decision-reference.md
 docs/environment-profiles.md
+docs/analyst-review-api.md
 docs/container-images.md
+docs/opencti-compatibility.md
+docs/security-quality-gates.md
 docs/community-standards.md
 docs/documentation-map.md
+docs/architecture-v0.9.md
 docs/graph-promotion-v0.8.md
 docs/opencti-coverage-matrix-v0.8.md
 docs/repository-structure.md
 docs/development-guide.md
 docs/community-issue-triage.md
+docs/release-v0.9.0.md
 docs/release-v0.8.0.md
 docs/release-process.md
 docs/roadmap.md
@@ -630,8 +635,8 @@ artifacts, raw customer data and private feed payloads.
 ## Roadmap
 
 - Open source product foundation with Apache-2.0 core distribution.
-- v0.8 preflight-visible capability inventory for transparent open source
-  operations.
+- v0.9 analyst operations, graph-quality hardening and governed source
+  expansion before the production-ready v1.0 release.
 - Multi-feed support beyond the reference OTX adapter.
 - Advanced correlation scoring and analyst-facing source evidence.
 - Richer scoring model with source-specific weighting.

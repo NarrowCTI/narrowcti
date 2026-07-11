@@ -17,13 +17,18 @@ Use these docs first:
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `analyst-review-api.md`
 - `container-images.md`
+- `opencti-compatibility.md`
+- `security-quality-gates.md`
+- `architecture-v0.9.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
 - `opencti-coverage-matrix-v0.8.md`
 - `analyst-review-v0.8.md`
 - `curation-reporting-v0.8.md`
 - `support-diagnostics-v0.8.md`
+- `release-v0.9.0.md`
 - `release-v0.8.0.md`
 - `roadmap.md`
 
@@ -51,6 +56,7 @@ These files are public and should be included in release source archives.
 Current architecture:
 
 - `architecture.md`
+- `architecture-v0.9.md`
 - `architecture-v0.8.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
@@ -88,7 +94,10 @@ repository readers:
 - `configuration-reference.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `analyst-review-api.md`
 - `container-images.md`
+- `opencti-compatibility.md`
+- `security-quality-gates.md`
 - `community-standards.md`
 
 When behavior changes, update these files first. Add or retain a versioned
@@ -97,6 +106,7 @@ snapshot only when the release needs exact historical documentation.
 ## Release Notes Path
 
 - `../CHANGELOG.md`
+- `release-v0.9.0.md` (release candidate)
 - `release-v0.8.0.md`
 - `release-v0.7.0.md`
 - `release-v0.6.0.md`

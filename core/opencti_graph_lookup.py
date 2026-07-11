@@ -3,7 +3,7 @@ import re
 from collections.abc import Mapping
 
 from core.graph_deduplication import action_deduplication, plan_actions
-from core.graph_export_plan import graph_entity_key
+from core.graph_export_plan import graph_entity_key, graph_relationship_source_anchor
 
 
 ATTACK_PATTERN_LOOKUP_QUERY = """
@@ -480,6 +480,24 @@ query NarrowCTIStixCyberObservableGraphSearch($search: String) {
 }
 """
 
+RELATIONSHIP_LOOKUP_QUERY = """
+query NarrowCTIRelationshipGraphLookup(
+  $fromIds: [String]
+  $toIds: [String]
+  $first: Int!
+) {
+  stixCoreRelationships(first: $first, fromId: $fromIds, toId: $toIds) {
+    edges {
+      node {
+        id
+        standard_id
+        relationship_type
+      }
+    }
+  }
+}
+"""
+
 ATTACK_ID_RE = re.compile(r"\bT\d{4}(?:\.\d{3})?\b", re.IGNORECASE)
 VULNERABILITY_ID_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 AUTONOMOUS_SYSTEM_RE = re.compile(r"\bAS\s*(\d{1,10})\b", re.IGNORECASE)
@@ -519,12 +537,14 @@ class OpenCTIGraphLookup:
         entity_keys = set()
         relationship_keys = set()
         matches = []
+        candidate_matches = {}
+        relationship_matches = {}
 
         for action in plan_actions(plan):
             candidate = mapping_from(action.get("candidate"))
             if not candidate:
                 continue
-            match = self.find_candidate(candidate)
+            match = self.find_candidate_cached(candidate, candidate_matches)
             if not match:
                 continue
 
@@ -535,8 +555,20 @@ class OpenCTIGraphLookup:
             relationship_key = clean_string(dedup.get("relationship_key"))
             if entity_key:
                 entity_keys.add(entity_key)
-            if relationship_key and match.get("relationship_exists"):
-                relationship_keys.add(relationship_key)
+            if relationship_key:
+                relationship_match = self.find_candidate_relationship(
+                    candidate,
+                    match,
+                    candidate_matches,
+                    relationship_matches,
+                )
+                if relationship_match:
+                    relationship_keys.add(relationship_key)
+                    match = {
+                        **match,
+                        "relationship_exists": True,
+                        "relationship_match": relationship_match,
+                    }
 
             matches.append(
                 {
@@ -555,6 +587,72 @@ class OpenCTIGraphLookup:
             "relationship_keys": sorted(relationship_keys),
             "matches": matches,
         }
+
+    def find_candidate_cached(self, candidate, cache):
+        key = candidate_lookup_key(candidate)
+        if key not in cache:
+            cache[key] = self.find_candidate(candidate)
+        return cache[key]
+
+    def find_candidate_relationship(
+        self,
+        candidate,
+        target_match,
+        candidate_matches,
+        relationship_matches,
+    ):
+        source_candidate = relationship_source_candidate(candidate)
+        relationship_type = clean_string(candidate.get("relationship_type")).lower()
+        target_id = clean_string(target_match.get("opencti_id"))
+        if not source_candidate or not relationship_type or not target_id:
+            return None
+
+        source_match = self.find_candidate_cached(source_candidate, candidate_matches)
+        source_id = clean_string((source_match or {}).get("opencti_id"))
+        if not source_id:
+            return None
+
+        key = (source_id, target_id, relationship_type)
+        if key not in relationship_matches:
+            relationship_matches[key] = self.query_relationship(
+                source_id,
+                target_id,
+                relationship_type,
+            )
+        relationship_match = relationship_matches[key]
+        if not relationship_match:
+            return None
+        return {
+            **relationship_match,
+            "source_opencti_id": source_id,
+            "target_opencti_id": target_id,
+        }
+
+    def query_relationship(self, source_id, target_id, relationship_type):
+        variables = {
+            "fromIds": [source_id],
+            "toIds": [target_id],
+            "first": 20,
+        }
+        try:
+            result = self.api_client.query(RELATIONSHIP_LOOKUP_QUERY, variables)
+        except Exception as exc:
+            self.logger(
+                "OpenCTI relationship lookup failed: "
+                f"from={source_id} to={target_id} "
+                f"type={relationship_type} error={exc}"
+            )
+            return None
+
+        for node in nodes_from(result, "stixCoreRelationships"):
+            existing_type = clean_string(node.get("relationship_type")).lower()
+            if existing_type == relationship_type:
+                return {
+                    "opencti_id": clean_string(node.get("id")),
+                    "standard_id": clean_string(node.get("standard_id")),
+                    "relationship_type": existing_type,
+                }
+        return None
 
     def find_candidate(self, candidate):
         candidate = mapping_from(candidate)
@@ -1539,6 +1637,27 @@ def normalize_attack_pattern_stix_id(value):
 
 def mapping_from(value):
     return dict(value) if isinstance(value, Mapping) else {}
+
+
+def candidate_lookup_key(candidate):
+    candidate = mapping_from(candidate)
+    return (
+        clean_string(candidate.get("stix_object_type")).lower(),
+        clean_string(candidate.get("value") or candidate.get("name")).casefold(),
+        clean_string(candidate.get("standard_id") or candidate.get("stix_id")),
+    )
+
+
+def relationship_source_candidate(candidate):
+    source_type, source_value = graph_relationship_source_anchor(candidate)
+    if not source_type or not source_value:
+        return {}
+    return {
+        "stix_object_type": source_type,
+        "entity_type": source_type,
+        "value": source_value,
+        "name": source_value,
+    }
 
 
 def clean_string(value):

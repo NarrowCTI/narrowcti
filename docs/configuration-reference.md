@@ -92,6 +92,24 @@ See `curation-decision-reference.md` for the decision matrix.
 | `NARROWCTI_REVIEWER` | `operator` | Default reviewer identity for CLI actions. |
 | `NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES` | `65536` | Maximum raw snapshot retained in quarantine evidence. |
 
+### Analyst Review API
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `NARROWCTI_REVIEW_API_CREDENTIALS_FILE` | Required by the API process | Container path to the JSON file containing hashed API credentials. |
+| `NARROWCTI_REVIEW_API_CREDENTIALS_SOURCE` | Example file in Compose | Compose host interpolation for the path mounted read-only as credentials. Set it in the shell or Compose interpolation env, not only the service `env_file`. |
+| `NARROWCTI_REVIEW_API_HOST` | `127.0.0.1`; Compose uses `0.0.0.0` inside the container | API listen address. Compose still publishes only to host loopback. |
+| `NARROWCTI_REVIEW_API_PORT` | `8081` | API listen port inside the runtime. |
+| `NARROWCTI_REVIEW_API_PUBLISHED_PORT` | `8081` | Compose host interpolation for the loopback port. Set it before invoking Compose. |
+| `NARROWCTI_REVIEW_API_DOCS_ENABLED` | `false` | Enables `/docs` and `/openapi.json`. Keep disabled unless needed in a controlled environment. |
+| `NARROWCTI_REVIEW_API_ALLOW_EXPORT` | `false` | Allows `exporter` or `admin` credentials to perform real OpenCTI export. Preview remains available while false. |
+| `NARROWCTI_REVIEW_API_IDENTITY_NAME` | `NarrowCTI Gateway` | STIX identity name used by API-triggered quarantine export. |
+| `NARROWCTI_REVIEW_API_ALLOWED_HOSTS` | `127.0.0.1,localhost,testserver` in code | Comma-separated accepted HTTP Host values. Add the reverse-proxy hostname explicitly. |
+| `NARROWCTI_REVIEW_API_MAX_BODY_BYTES` | `16384` | Rejects requests with a larger declared body before model parsing. Must be at least `1024`. |
+
+Credential format, roles and endpoint behavior are documented in
+`analyst-review-api.md`.
+
 ## OTX Source
 
 | Variable | Default | Effect |
@@ -154,7 +172,7 @@ See `curation-decision-reference.md` for the decision matrix.
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Empty | Optional STIX/OpenCTI object allow-list. In export, empty uses safe defaults. |
 | `NARROWCTI_GRAPH_EXPORT_MODE` | `audit` | `audit`, `dry-run` or `export`. Controls graph promotion behavior. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Empty | Local graph known-key index. |
-| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | `false` | Read-only OpenCTI canonical graph lookup before creating objects. |
+| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | `false` | Read-only canonical lookup before creation. Existing entities are reused; relationships are deduplicated only after exact source, target, direction and relationship-type confirmation. Errors fail open and are logged. |
 
 ## Reporting and Validation
 

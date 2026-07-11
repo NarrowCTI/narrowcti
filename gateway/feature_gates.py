@@ -7,6 +7,7 @@ AVAILABLE_CAPABILITIES = (
     "enrichment.otx_entities",
     "enrichment.mitre_attack",
     "quarantine.review",
+    "quarantine.review_api",
     "reports.operational",
     "reports.operational_validation",
     "reports.support_diagnostics",

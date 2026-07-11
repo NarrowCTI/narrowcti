@@ -2,7 +2,9 @@ import argparse
 import json
 import os
 import sys
-import urllib.request
+from urllib.parse import urlparse
+
+import requests
 
 
 OPENCTI_GRAPHQL_PATH = "/graphql"
@@ -163,17 +165,20 @@ query RelationshipAuditTarget($search: String!, $first: Int!) {{
 
 def graphql_request(opencti_url, token, query, variables):
     endpoint = opencti_url.rstrip("/") + OPENCTI_GRAPHQL_PATH
-    body = json.dumps({"query": query, "variables": variables}).encode("utf-8")
-    request = urllib.request.Request(
+    parsed_endpoint = urlparse(endpoint)
+    if parsed_endpoint.scheme not in {"http", "https"} or not parsed_endpoint.netloc:
+        raise ValueError("OpenCTI URL must use an HTTP or HTTPS endpoint")
+    response = requests.post(
         endpoint,
-        data=body,
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
+        json={"query": query, "variables": variables},
+        timeout=30,
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    response.raise_for_status()
+    payload = response.json()
     if payload.get("errors"):
         raise RuntimeError(json.dumps(payload["errors"], ensure_ascii=False))
     return payload.get("data") or {}

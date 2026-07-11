@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from gateway.opencti_relationship_audit import (
     coverage_summary,
+    graphql_request,
     normalize_quadrants,
     object_ref,
     parse_args,
@@ -12,6 +13,15 @@ from gateway.opencti_relationship_audit import (
 
 
 class OpenCTIRelationshipAuditTests(unittest.TestCase):
+    def test_rejects_non_http_graphql_endpoint(self):
+        with self.assertRaisesRegex(ValueError, "HTTP or HTTPS"):
+            graphql_request(
+                "file:///tmp/opencti",
+                "token",
+                "query { me { id } }",
+                {},
+            )
+
     def test_classifies_opencti_objects_into_diamond_quadrants(self):
         self.assertEqual(
             "adversary",

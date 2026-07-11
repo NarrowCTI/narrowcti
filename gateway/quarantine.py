@@ -251,13 +251,13 @@ def format_review_summary(summary):
 
 
 def build_opencti_client():
-    from pycti import OpenCTIApiClient
+    from gateway.opencti_client import build_opencti_client as create_client
 
     opencti_url = os.getenv("OPENCTI_URL")
     opencti_token = os.getenv("OPENCTI_TOKEN")
     if not opencti_url or not opencti_token:
         raise ValueError("OPENCTI_URL and OPENCTI_TOKEN are required for export")
-    return OpenCTIApiClient(opencti_url, opencti_token)
+    return create_client(opencti_url, opencti_token)
 
 
 def build_artifact_dedup(args, api_client=None):

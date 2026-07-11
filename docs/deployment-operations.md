@@ -55,11 +55,39 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narro
 Keep the first run dry-run, run-once and audit-first. Review reports before any
 continuous execution or graph export.
 
+## Optional Analyst Review API
+
+v0.9 adds an isolated `review-api` Compose profile. It shares only the
+NarrowCTI state volume and OpenCTI network with the gateway, runs with a
+read-only root filesystem, drops Linux capabilities and publishes its port to
+host loopback only.
+
+Create a hashed credential file before starting it. The versioned example is
+deliberately unusable.
+
+```powershell
+python -m gateway.review_auth
+Copy-Item deployment\review-api-credentials.example.json deployment\review-api-credentials.json
+```
+
+Replace the example principal, roles and token hash. The credentials source is
+a Compose host interpolation, so set it in the shell and start the service:
+
+```powershell
+$env:NARROWCTI_REVIEW_API_CREDENTIALS_SOURCE = "./review-api-credentials.json"
+$env:NARROWCTI_REVIEW_API_PUBLISHED_PORT = "8081"
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile review-api up -d --build narrowcti-review-api
+```
+
+Keep real export disabled until preview and deduplication checks pass. See
+`analyst-review-api.md` for the complete security and role model.
+
 ## Current Operational References
 
 - `deployment-operations-v0.8.md`: detailed v0.8 deployment snapshot.
 - `environment-profiles.md`: safe profiles for lab, validation, continuous
   operation and controlled graph export.
 - `configuration-reference.md`: configuration variable reference.
+- `analyst-review-api.md`: authenticated review API operations and security.
 - `curation-decision-reference.md`: decision behavior reference.
 - `support-diagnostics-v0.8.md`: support bundle and redaction behavior.
