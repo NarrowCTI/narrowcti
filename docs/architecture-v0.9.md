@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: release candidate.
+Status: released with v0.9.0.
 
 v0.9 preserves the product boundary established from v0.2 through v0.8:
 NarrowCTI is the curation and decision gateway, while OpenCTI remains the

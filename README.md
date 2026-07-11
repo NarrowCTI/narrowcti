@@ -27,13 +27,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.9.0 (release candidate)
+v0.9.0
 ```
 
-`v0.9.0` is the analyst operations and graph-quality release candidate. It adds
+`v0.9.0` is the analyst operations and graph-quality release. It adds
 governed analyst review API operations, canonical relationship reuse, release
-gates and OpenCTI compatibility validation. Formal publication remains
-maintainer-controlled after the final merge and tag review.
+gates and OpenCTI compatibility validation. It was published on 2026-07-11
+from the tagged main commit recorded in the GitHub Release.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.

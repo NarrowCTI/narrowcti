@@ -2,11 +2,11 @@
 
 ## Status
 
-Status: release candidate.
+Status: released on 2026-07-11.
 
-v0.9 is the analyst operations and graph-quality release. These notes must be
-updated as each capability is implemented and validated; planned work must not
-be presented as released behavior.
+v0.9 is the analyst operations and graph-quality release. This document records
+the released behavior and its validation evidence; deferred work remains listed
+as a non-goal or future roadmap item.
 
 ## Purpose
 
@@ -69,9 +69,10 @@ Compatibility behavior and validation commands are documented in
 Analyst API security and operation are documented in
 `docs/analyst-review-api.md`.
 
-## Candidate Validation Evidence
+## Release Validation Evidence
 
-The current v0.9 candidate was validated locally on July 10, 2026 with:
+The v0.9 release was validated locally on July 10, 2026 and in GitHub Actions
+on July 11, 2026 with:
 
 - 503 passing unit and integration tests in the rebuilt runtime image;
 - runtime module smoke imports passing;
@@ -85,18 +86,23 @@ The current v0.9 candidate was validated locally on July 10, 2026 with:
   exactly one deterministic Report;
 - disposable API boundary validation with `401` unauthenticated and `200`
   authenticated responses.
-- GitHub Actions `CI`, `Security and Quality`, `Container Image` and `DAST`
-  workflows passed for commit `17965e6`.
+- GitHub Actions `CI`, `Security and Quality`, `Container Image`, `DAST`,
+  `Code Quality`, `Push on main` and `Graph Update` workflows passed for the
+  release commit `ab2f73a8cee7b94bac96c488c6aa837c94141d3f`.
 
 Workflow evidence:
 
-- [CI](https://github.com/NarrowCTI/narrowcti/actions/runs/29161969818)
-- [Security and Quality](https://github.com/NarrowCTI/narrowcti/actions/runs/29161969793)
-- [Container Image](https://github.com/NarrowCTI/narrowcti/actions/runs/29161969810)
-- [DAST](https://github.com/NarrowCTI/narrowcti/actions/runs/29161969792)
+- [CI](https://github.com/NarrowCTI/narrowcti/actions/runs/29162472127)
+- [Security and Quality](https://github.com/NarrowCTI/narrowcti/actions/runs/29162472128)
+- [Container Image](https://github.com/NarrowCTI/narrowcti/actions/runs/29162472126)
+- [DAST](https://github.com/NarrowCTI/narrowcti/actions/runs/29162472129)
+- [Code Quality](https://github.com/NarrowCTI/narrowcti/actions/runs/29162471899)
+- [Push on main](https://github.com/NarrowCTI/narrowcti/actions/runs/29162471873)
+- [Graph Update](https://github.com/NarrowCTI/narrowcti/actions/runs/29162473757)
 
-The full OWASP ZAP execution passed in CI. These notes must not be changed to
-`Released` until the final merge, tag and GitHub Release checks are approved.
+The full OWASP ZAP execution passed in CI. The release is Apache License 2.0
+and its publication record is maintained by the annotated tag and GitHub
+Release for `v0.9.0`.
 
 ## Mandatory Release Gates
 
@@ -114,12 +120,18 @@ The full OWASP ZAP execution passed in CI. These notes must not be changed to
 
 ## Release Boundary
 
-`VERSION` is now `v0.9.0` on the release-candidate branch. The public flow is
-ready but has not been executed yet:
+`VERSION` is `v0.9.0` on the release commit. The public flow was executed as:
 
 ```text
 feature/* -> dev -> main -> v0.9.0 tag -> GitHub Release
 ```
+
+Publication record:
+
+- Release commit: `ab2f73a8cee7b94bac96c488c6aa837c94141d3f`
+- Merge message: `NarrowCTI v0.9.0 - release anterior ao início do vínculo empregatício`
+- Publication date: 2026-07-11
+- License: Apache License 2.0
 
 ## Non-Goals
 

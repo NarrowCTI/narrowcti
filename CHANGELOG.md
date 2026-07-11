@@ -4,11 +4,16 @@ All notable NarrowCTI Community Edition changes are summarized here.
 
 Detailed operator-facing release notes remain in `docs/release-v*.md`.
 
-## v0.9.0 - Release Candidate
+## v0.9.0 - 2026-07-11
 
-Analyst operations and graph-quality release candidate. All four GitHub Actions
-workflows passed for commit `17965e6`; merge, tag and publication remain
-maintainer-controlled.
+Analyst operations and graph-quality release. The release was published from
+main commit `ab2f73a8cee7b94bac96c488c6aa837c94141d3f` under the traceability
+message `NarrowCTI v0.9.0 - release anterior ao início do vínculo empregatício`.
+NarrowCTI Community Edition is distributed under Apache License 2.0.
+
+All required GitHub Actions workflows passed for the release commit, including
+CI, code quality, security and dependency review, container image validation,
+DAST and Graph Update.
 
 - Formalizes the governed analyst review API, graph-quality hardening and the
   governed source-onboarding boundary. A new direct adapter remains a v1.0
