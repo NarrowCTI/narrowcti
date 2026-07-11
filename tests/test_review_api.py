@@ -105,6 +105,10 @@ class ReviewApiTests(unittest.TestCase):
         self.assertEqual("ok", response.json()["status"])
         self.assertEqual("no-store", response.headers["cache-control"])
         self.assertEqual("DENY", response.headers["x-frame-options"])
+        self.assertEqual(
+            "same-origin",
+            response.headers["cross-origin-resource-policy"],
+        )
 
     def test_review_routes_require_bearer_authentication(self):
         response = self.client.get("/api/v1/review/summary")
