@@ -49,6 +49,7 @@ expansion.
 - Source and artifact deduplication.
 - Quarantine repository and governed CLI/API analyst review.
 - Canonical OpenCTI entity and exact directed relationship lookup.
+- Atomic checkpoint and deduplication-state writes for restart-safe recovery.
 - Graph-safe STIX/OpenCTI export and source-aware author naming.
 - Operational, decision, curation and support reports in machine-readable and
   operator-readable formats.

@@ -98,6 +98,8 @@ The unified runtime must provide:
 - bounded retries with backoff and jitter;
 - explicit request, processing and shutdown timeouts;
 - durable checkpoints written only after successful handling;
+- atomic state replacement so interrupted JSON writes do not destroy the last
+  complete checkpoint or deduplication index;
 - bounded batches and resource guardrails;
 - health and readiness evidence;
 - restart-safe state and idempotent replay;
