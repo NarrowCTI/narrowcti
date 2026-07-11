@@ -27,6 +27,17 @@ deployment/docker-compose.narrowcti-gateway.yml
 deployment/gateway.env.example
 ```
 
+The public template defaults to `opencti_default`. In the current NarrowCTI
+lab, OpenCTI and MISP share the externally managed `threat-net` network, so set
+the override before running Compose:
+
+```powershell
+$env:NARROWCTI_DOCKER_NETWORK = "threat-net"
+```
+
+Use the network name returned by the target OpenCTI Compose project in other
+deployments; do not create a second isolated network for the gateway.
+
 The Compose template builds `Dockerfile.gateway`, joins an existing OpenCTI
 Docker network and stores runtime evidence in a Docker volume.
 
