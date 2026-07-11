@@ -54,7 +54,10 @@ The initial v0.9 audit established:
   dependency audit reported no known vulnerabilities.
 - A version-scoped, fail-closed compatibility client was live-validated against
   OpenCTI `6.9.4`: two imports, zero rejected objects and exactly one Report.
-- DAST is not applicable until the v0.9 analyst HTTP API is implemented.
+- The v0.9 analyst HTTP API now has a dedicated DAST workflow. It creates an
+  isolated API deployment, validates unauthenticated and authenticated access,
+  runs OWASP ZAP `2.17.0` against its OpenAPI contract, archives JSON/HTML
+  evidence and removes the deployment after every run.
 
 This baseline is audit evidence, not a permanent claim. Every release must
 refresh the checks against the release commit and image.
@@ -65,10 +68,10 @@ DAST must run only against a disposable test deployment created for CI or an
 isolated release-validation environment. It must not target production or a
 shared OpenCTI/MISP lab containing operational data.
 
-Until the analyst HTTP API exists, the DAST gate is recorded as not applicable,
-not as passed. Once the API is introduced, the release cannot close until the
-DAST workflow starts the service, waits for its health endpoint, runs the
-baseline scan and archives the result.
+The release cannot close until the DAST workflow starts the disposable service,
+waits for its health endpoint, proves protected endpoints reject missing
+credentials, exercises authenticated access, scans the OpenAPI surface and
+archives the result.
 
 ## Container Publication Order
 

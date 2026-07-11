@@ -14,6 +14,7 @@ release archive or community-facing page.
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`
 - `security-quality-gates.md`
@@ -43,6 +44,7 @@ release archive or community-facing page.
 
 - `architecture.md`
 - `architecture-v0.9.md`
+- `analyst-review-api.md`
 - `opencti-compatibility.md`
 - `architecture-v0.8.md`
 - `graph-promotion-v0.8.md`

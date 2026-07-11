@@ -16,6 +16,10 @@ Analyst operations and graph-quality release in development.
   image scanning mandatory release gates.
 - Pins `pycti 7.260710.0` and adds a centralized, fail-closed compatibility
   boundary for live-validated OpenCTI `6.9.x` ingestion.
+- Adds an authenticated, role-governed analyst review API and isolated Compose
+  profile with real export disabled by default.
+- Adds a blocking, disposable OWASP ZAP OpenAPI DAST workflow for the review
+  API.
 
 See `docs/release-v0.9.0.md`.
 

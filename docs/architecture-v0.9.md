@@ -35,6 +35,11 @@ OTX / MISP / governed direct sources
 - Preserve mandatory reasons, immutable audit records and source evidence.
 - Do not let an API or future UI bypass quarantine transition policy.
 
+The v0.9 HTTP foundation implements this boundary with hashed bearer
+credentials, role-based permissions, authenticated reviewer identity, raw
+snapshot protection and a disabled-by-default real export gate. The public
+operation contract is `docs/analyst-review-api.md`.
+
 ### Graph Quality
 
 - Resolve canonical entities and relationships before graph creation.

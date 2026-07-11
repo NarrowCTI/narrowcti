@@ -50,4 +50,6 @@ jobs:
         run: bandit --quiet --recursive --severity-level medium connectors core exporters gateway
 
       - name: Audit Python dependencies
-        run: pip-audit --strict --requirement connectors/otx/requirements.txt
+        run: |
+          pip-audit --strict --requirement connectors/otx/requirements.txt
+          pip-audit --strict --requirement requirements-dev.txt

@@ -55,9 +55,18 @@ capability.
 - Live-validated OpenCTI `6.9.4` authentication and idempotent Report import:
   two imports, zero rejected objects and exactly one resulting Report.
 - Passed 485 tests in the rebuilt v0.9 development image.
+- Added the authenticated analyst review API with `reader`, `reviewer`,
+  `exporter` and `admin` roles, hashed bearer credentials, strict request
+  models, protected raw snapshots and disabled-by-default real export.
+- Added an isolated `review-api` Compose profile bound to host loopback with a
+  read-only root filesystem, dropped capabilities and healthcheck.
+- Added a disposable OWASP ZAP `2.17.0` OpenAPI DAST workflow with temporary
+  authentication, boundary checks, archived evidence and guaranteed cleanup.
 
 Compatibility behavior and validation commands are documented in
 `docs/opencti-compatibility.md`.
+Analyst API security and operation are documented in
+`docs/analyst-review-api.md`.
 
 ## Mandatory Release Gates
 

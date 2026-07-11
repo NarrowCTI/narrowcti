@@ -6,6 +6,7 @@ __pycache__/
 .env
 .env.*
 connectors/otx/.env
+deployment/review-api-credentials.json
 state/*
 !state/.gitkeep
 AGENTS.md

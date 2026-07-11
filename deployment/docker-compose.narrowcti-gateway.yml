@@ -237,6 +237,46 @@ services:
     networks:
       - opencti
 
+  narrowcti-review-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    container_name: ${NARROWCTI_REVIEW_API_CONTAINER:-narrowcti-review-api}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+      NARROWCTI_REVIEW_API_HOST: 0.0.0.0
+      NARROWCTI_REVIEW_API_PORT: 8081
+      NARROWCTI_REVIEW_API_CREDENTIALS_FILE: /run/secrets/narrowcti-review-api-credentials.json
+    command: ["python", "-m", "gateway.review_api"]
+    restart: ${NARROWCTI_REVIEW_API_RESTART:-no}
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    ports:
+      - "127.0.0.1:${NARROWCTI_REVIEW_API_PUBLISHED_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    profiles:
+      - review-api
+    volumes:
+      - narrowcti-state:/app/state
+      - ${NARROWCTI_REVIEW_API_CREDENTIALS_SOURCE:-./review-api-credentials.example.json}:/run/secrets/narrowcti-review-api-credentials.json:ro
+    networks:
+      - opencti
+
 networks:
   opencti:
     external: true

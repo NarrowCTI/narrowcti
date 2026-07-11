@@ -17,6 +17,7 @@ Use these docs first:
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`
 - `security-quality-gates.md`
@@ -93,6 +94,7 @@ repository readers:
 - `configuration-reference.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`
 - `security-quality-gates.md`

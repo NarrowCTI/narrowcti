@@ -88,6 +88,8 @@ jobs:
             gateway/quarantine_export.py \
             gateway/report.py \
             gateway/review.py \
+            gateway/review_api.py \
+            gateway/review_auth.py \
             gateway/runtime.py \
             gateway/settings.py \
             gateway/sources.py

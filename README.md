@@ -594,6 +594,7 @@ docs/configuration-reference.md
 docs/architecture.md
 docs/curation-decision-reference.md
 docs/environment-profiles.md
+docs/analyst-review-api.md
 docs/container-images.md
 docs/opencti-compatibility.md
 docs/security-quality-gates.md
