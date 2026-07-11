@@ -39,6 +39,9 @@ class MISPSettingsTests(unittest.TestCase):
             "NARROWCTI_GRAPH_DEDUP_STATE_FILE": "/app/state/graph_dedup.json",
             "NARROWCTI_OPENCTI_GRAPH_LOOKUP": "true",
             "NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP": "true",
+            "NARROWCTI_CONTEXTUAL_SCORING_MODE": "enforce",
+            "NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT": "75",
+            "NARROWCTI_CONTEXTUAL_SCORING_IMPACTS": "toolbox:20,ttp:15",
             "MISP_STATE_FILE": "/app/state/misp.json",
             "MISP_DECISION_AUDIT_FILE": "/app/state/misp-decisions.jsonl",
         }
@@ -87,6 +90,12 @@ class MISPSettingsTests(unittest.TestCase):
         )
         self.assertTrue(settings.opencti_graph_lookup)
         self.assertTrue(settings.graph_replay_on_artifact_dedup)
+        self.assertEqual("enforce", settings.contextual_scoring_mode)
+        self.assertEqual(75, settings.contextual_scoring_max_impact)
+        self.assertEqual(
+            {"toolbox": 20, "ttp": 15},
+            settings.contextual_scoring_impacts,
+        )
         self.assertEqual("/app/state/misp.json", settings.state_file)
         self.assertEqual("/app/state/misp-decisions.jsonl", settings.decision_audit_file)
 

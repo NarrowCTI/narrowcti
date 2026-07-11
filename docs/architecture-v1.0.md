@@ -59,9 +59,10 @@ Contextual scoring modes:
 | `shadow` | Calculate and audit contextual score without changing the decision. |
 | `enforce` | Use contextual score in the decision path while preserving base score, delta and reasons. |
 
-Contextual scoring must never bypass TLP, marking, data-age, indicator-type or
-explicit deny policy. Every applied adjustment must record its category,
-source-backed value, impact, cap, version and final decision effect.
+Contextual scoring must never bypass TLP, marking, the hard age cutoff,
+indicator-type or explicit deny policy. Every applied adjustment must record
+its category, source-backed value, impact, cap, version and final decision
+effect.
 
 Target configuration:
 
@@ -149,10 +150,11 @@ not implemented, the release notes must record the residual supply-chain gap.
 
 ## Implementation Backlog
 
-1. Correct v0.9 publication metadata and freeze v1.0 scope.
-2. Establish v1.0 architecture, release notes and Definition of Done.
-3. Implement contextual scoring `off`, `shadow` and `enforce` modes.
-4. Document and validate contextual scoring configuration and decision effects.
+1. Done: correct v0.9 publication metadata and freeze v1.0 scope.
+2. Done: establish v1.0 architecture, release notes and Definition of Done.
+3. Done: implement contextual scoring `off`, `shadow` and `enforce` modes.
+4. Done: document and validate contextual scoring configuration and decision
+   effects.
 5. Close priority Diamond, victimology, Timeline and Kill Chain gaps.
 6. Add runtime retry, backoff, timeout, checkpoint and health controls.
 7. Consolidate the Community curation report.

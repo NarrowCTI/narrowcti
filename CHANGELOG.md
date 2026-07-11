@@ -10,8 +10,8 @@ Production-ready Community Edition scope for the existing OTX and MISP gateway
 paths. This section records planned work and must not be presented as released
 behavior until the final validation gates pass.
 
-- Integrate contextual scoring with explicit `off`, `shadow` and `enforce`
-  modes, visible configuration and decision audit evidence.
+- Added contextual scoring with explicit `off`, `shadow` and `enforce` modes,
+  visible configuration, preflight posture and decision audit evidence.
 - Close priority graph-quality gaps for Diamond, infrastructure victimology,
   Timeline and Kill Chain without promoting source-weak inference.
 - Harden runtime recovery, retries, checkpoints, resource controls and health

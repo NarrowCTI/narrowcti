@@ -1,7 +1,12 @@
 import time
+from dataclasses import replace
 
 from core.decision_audit import DecisionAuditLog, DecisionRecord
-from core.contextual_scoring import build_contextual_score_evidence
+from core.contextual_scoring import (
+    build_contextual_score_evidence,
+    contextual_scoring_config_from_settings,
+    finalize_contextual_score_evidence,
+)
 from core.graph_candidates import (
     apply_graph_candidate_policy,
     build_graph_candidates,
@@ -57,6 +62,8 @@ def decision_metadata(
     graph_candidate_policy=None,
     graph_export_mode="audit",
     graph_deduplication_index=None,
+    contextual_scoring_config=None,
+    include_export_plan=True,
 ):
     score_details = getattr(candidate, "score_details", None)
     if not candidate:
@@ -81,9 +88,12 @@ def decision_metadata(
     ).to_dict()
     metadata["graph_candidate_policy"] = graph_policy
     metadata["contextual_scoring"] = build_contextual_score_evidence(
-        candidate_score(candidate),
+        base_candidate_score(candidate),
         graph_policy,
+        **(contextual_scoring_config or {}),
     )
+    if not include_export_plan:
+        return metadata
     graph_plan, known_keys, lookup_error = build_graph_export_plan_with_known_keys(
         graph_policy,
         mode=graph_export_mode,
@@ -135,6 +145,10 @@ def graph_stix_preview(
 
 
 def candidate_score(candidate):
+    return getattr(candidate, "score", base_candidate_score(candidate))
+
+
+def base_candidate_score(candidate):
     score_details = getattr(candidate, "score_details", {}) or {}
     return score_details.get("final_score", getattr(candidate, "score", 50))
 
@@ -202,6 +216,9 @@ class OTXProcessor:
             max_days_hard_filter=settings.max_days_hard_filter,
         )
         self.graph_candidate_policy = graph_candidate_policy_from_settings(settings)
+        self.contextual_scoring_config = contextual_scoring_config_from_settings(
+            settings
+        )
 
     def build_quarantine_repository(self, settings):
         repository_file = getattr(settings, "quarantine_repository_file", "")
@@ -332,6 +349,7 @@ class OTXProcessor:
             self.record_decision(query, candidate_ref, action, reason, candidate)
             return action
 
+        candidate = self.apply_contextual_scoring(candidate_ref, candidate)
         action, reason = self.candidate_policy_decision(candidate)
         if action != "ingest":
             self.record_decision(query, candidate_ref, action, reason, candidate)
@@ -399,6 +417,27 @@ class OTXProcessor:
         action, reason = self.candidate_policy_decision(candidate)
         return action == "ingest", reason
 
+    def apply_contextual_scoring(self, candidate_ref, candidate):
+        metadata = decision_metadata(
+            candidate,
+            getattr(self.settings, "enable_otx_entity_extraction", True),
+            self.mitre_resolver,
+            source_key=candidate_ref.source.key,
+            external_id=candidate_ref.external_id,
+            title=candidate.name or candidate_ref.title,
+            graph_candidate_policy=self.graph_candidate_policy,
+            contextual_scoring_config=self.contextual_scoring_config,
+            include_export_plan=False,
+        )
+        evidence = metadata.get("contextual_scoring", {})
+        decision_score = int(evidence.get("decision_score", candidate.score))
+        if decision_score != candidate.score:
+            self.log(
+                f"Contextual score applied: {candidate.name} "
+                f"base={candidate.score} decision={decision_score}"
+            )
+        return replace(candidate, score=decision_score)
+
     def candidate_policy_decision(self, candidate):
         decision, reason = should_ingest(
             candidate.pulse,
@@ -435,6 +474,26 @@ class OTXProcessor:
         score = candidate.score if candidate else None
         candidate_age = candidate.age if candidate else None
 
+        metadata = decision_metadata(
+            candidate,
+            getattr(self.settings, "enable_otx_entity_extraction", True),
+            self.mitre_resolver,
+            source_key=candidate_ref.source.key,
+            external_id=candidate_ref.external_id,
+            title=title,
+            graph_candidate_policy=self.graph_candidate_policy,
+            graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
+            graph_deduplication_index=self.graph_deduplication_index,
+            contextual_scoring_config=self.contextual_scoring_config,
+        )
+        if metadata.get("contextual_scoring"):
+            metadata["contextual_scoring"] = finalize_contextual_score_evidence(
+                metadata["contextual_scoring"],
+                score,
+                action,
+                reason,
+            )
+
         decision = DecisionRecord(
             action=action,
             reason=reason,
@@ -445,17 +504,7 @@ class OTXProcessor:
             score=score,
             age_days=candidate_age,
             indicator_count=indicator_count,
-            metadata=decision_metadata(
-                candidate,
-                getattr(self.settings, "enable_otx_entity_extraction", True),
-                self.mitre_resolver,
-                source_key=candidate_ref.source.key,
-                external_id=candidate_ref.external_id,
-                title=title,
-                graph_candidate_policy=self.graph_candidate_policy,
-                graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
-                graph_deduplication_index=self.graph_deduplication_index,
-            ),
+            metadata=metadata,
         )
 
         try:
@@ -487,7 +536,15 @@ class OTXProcessor:
             graph_candidate_policy=self.graph_candidate_policy,
             graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
             graph_deduplication_index=self.graph_deduplication_index,
+            contextual_scoring_config=self.contextual_scoring_config,
         )
+        if metadata.get("contextual_scoring"):
+            metadata["contextual_scoring"] = finalize_contextual_score_evidence(
+                metadata["contextual_scoring"],
+                candidate.score if candidate else None,
+                "quarantine",
+                reason,
+            )
         if truncated:
             metadata["raw_snapshot_truncated"] = True
 
@@ -643,6 +700,7 @@ class OTXProcessor:
             graph_candidate_policy=self.graph_candidate_policy,
             graph_export_mode=getattr(self.settings, "graph_export_mode", "audit"),
             graph_deduplication_index=self.graph_deduplication_index,
+            contextual_scoring_config=self.contextual_scoring_config,
         )
         graph_policy = exportable_graph_candidate_policy(
             metadata.get("graph_candidate_policy", {}),

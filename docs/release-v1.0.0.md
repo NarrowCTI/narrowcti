@@ -38,6 +38,12 @@ expansion.
 
 ## Implemented Foundation
 
+- Added contextual scoring `off`, `shadow` and `enforce` modes to OTX and MISP.
+- Added validated category-impact configuration, maximum-impact bounds,
+  preflight visibility and decision audit fields for configured versus applied
+  scoring behavior.
+- Kept `shadow` as the default and preserved TLP, hard age cutoff, graph holds
+  and indicator-type controls as independent blocking policy.
 - Unified OTX/MISP gateway runtime and source contracts.
 - Base scoring, explicit policy, TLP, data-age and indicator-type controls.
 - Source and artifact deduplication.
@@ -57,6 +63,16 @@ defined in `docs/architecture-v1.0.md` and `docs/security-quality-gates.md`.
 Source-dependent gaps such as PCRE or OTX ASN/netblock real-feed examples may be
 recorded as contract-tested but not real-feed validated when the available
 sources do not provide the required shape.
+
+Local container validation on July 11, 2026 passed:
+
+- 516 unit and integration tests;
+- Python compilation for connectors, core, exporters, gateway and tests;
+- Ruff checks across the repository;
+- Bandit with the same medium-severity blocking threshold used by CI.
+
+GitHub Actions and controlled OpenCTI runtime evidence remain pending for this
+development branch.
 
 ## Upgrade Boundary
 

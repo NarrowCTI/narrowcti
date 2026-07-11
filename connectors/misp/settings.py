@@ -2,6 +2,11 @@ import os
 from dataclasses import dataclass
 
 from connectors.misp.feed_adapter import MISPAdapterLimits
+from core.contextual_scoring import (
+    normalize_contextual_scoring_max_impact,
+    normalize_contextual_scoring_mode,
+    parse_contextual_scoring_impacts,
+)
 from core.graph_export_plan import normalize_graph_export_mode
 
 
@@ -53,6 +58,9 @@ class MISPSettings:
     decision_audit_file: str
     quarantine_repository_file: str = ""
     quarantine_raw_snapshot_max_bytes: int = 65536
+    contextual_scoring_mode: str = "shadow"
+    contextual_scoring_max_impact: int = 100
+    contextual_scoring_impacts: dict[str, int] = None
 
     def __post_init__(self):
         if self.max_iocs_per_event < 1:
@@ -207,6 +215,15 @@ def load_settings():
         quarantine_raw_snapshot_max_bytes=env_int(
             "NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES",
             65536,
+        ),
+        contextual_scoring_mode=normalize_contextual_scoring_mode(
+            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_MODE", "shadow")
+        ),
+        contextual_scoring_max_impact=normalize_contextual_scoring_max_impact(
+            env_int("NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT", 100)
+        ),
+        contextual_scoring_impacts=parse_contextual_scoring_impacts(
+            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_IMPACTS", "")
         ),
     )
     _ = settings.adapter_limits

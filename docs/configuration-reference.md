@@ -62,6 +62,9 @@ records the reason for every `ingest`, `drop`, `quarantine`, `skip`,
 | `NARROWCTI_QUARANTINE_SCORE_THRESHOLD` | `50` | Candidates below this score become `quarantine` when quarantine is enabled, otherwise `drop`. Legacy `QUARANTINE_SCORE_THRESHOLD` overrides source-specific runtimes. |
 | `NARROWCTI_ENABLE_QUARANTINE` | `true` | Enables `quarantine` for very low scores instead of immediate `drop`. Legacy `ENABLE_QUARANTINE` overrides source-specific runtimes. |
 | `NARROWCTI_MAX_DAYS_OLD` | `1095` | Old candidates need `MIN_SCORE_FOR_OLD_PULSE` or `MIN_SCORE_FOR_OLD_EVENT` to pass. Legacy `MAX_DAYS_OLD` overrides source-specific runtimes. |
+| `NARROWCTI_CONTEXTUAL_SCORING_MODE` | `shadow` | `off` disables contextual adjustments, `shadow` calculates and audits them without changing decisions, and `enforce` uses the contextual score for score-threshold decisions. |
+| `NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT` | `100` | Caps the combined contextual impact ratio. Valid range is `0..100`. A lower value limits how far context can lift the base score. |
+| `NARROWCTI_CONTEXTUAL_SCORING_IMPACTS` | Built-in category defaults | Comma-separated `category:points` overrides for `threat`, `toolbox`, `ttp`, `sector`, `location`, `vulnerability`, `author` and `graph_state`. Each value must be `0..100`. |
 | `MAX_DAYS_HARD_FILTER` | `0` | `0` disables hard cutoff. Positive values drop candidates older than this many days regardless of score. |
 | `MIN_SCORE_FOR_OLD_PULSE` | `80` | OTX score required when an old pulse exceeds `MAX_DAYS_OLD`. |
 | `MIN_SCORE_FOR_OLD_EVENT` | `80` | MISP score required when an old event exceeds `MAX_DAYS_OLD`. |
@@ -69,6 +72,13 @@ records the reason for every `ingest`, `drop`, `quarantine`, `skip`,
 | `NARROWCTI_ALLOWED_INDICATOR_TYPES` | Empty in code | Filters exportable indicator types. If all indicators are removed, the candidate is skipped. |
 
 See `curation-decision-reference.md` for the decision matrix.
+
+Contextual scoring is forward-only: it can preserve or increase the base score,
+never reduce it. `enforce` can change outcomes controlled by score thresholds,
+including minimum-score and quarantine boundaries. It cannot override a denied
+TLP, the positive `MAX_DAYS_HARD_FILTER`, an explicit graph hold or an
+indicator-type filter that removes every exportable indicator. Start with
+`shadow`, compare decision evidence, then activate `enforce` deliberately.
 
 ## Deduplication
 

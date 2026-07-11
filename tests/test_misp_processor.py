@@ -8,6 +8,7 @@ from connectors.misp.processor import (
     decision_metadata,
     graph_candidate_policy_from_settings,
 )
+from connectors.misp.models import MISPEventCandidate
 from core.feed_contract import FeedCandidate, FeedRunSummary, FeedSource
 from core.ip_asn_enrichment import IPASNRecord, OfflineIPASNEnricher
 from exporters.stix_builder import build_graph_report_bundle
@@ -329,7 +330,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(2, graph_plan["accepted_count"])
         self.assertEqual(1, graph_plan["held_count"])
         contextual_scoring = metadata["contextual_scoring"]
-        self.assertEqual("dry-run", contextual_scoring["mode"])
+        self.assertEqual("shadow", contextual_scoring["mode"])
         self.assertFalse(contextual_scoring["applied_to_decision"])
         self.assertEqual(2, contextual_scoring["accepted_candidate_count"])
         self.assertGreaterEqual(contextual_scoring["contextual_score"], 100)
@@ -341,6 +342,49 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual(2, graph_preview["accepted_candidate_count"])
         self.assertGreaterEqual(graph_preview["graph_object_count"], 1)
         self.assertGreaterEqual(graph_preview["bundle_object_count"], 2)
+
+    def test_enforce_contextual_scoring_changes_policy_score(self):
+        settings = self.settings()
+        settings.contextual_scoring_mode = "enforce"
+        settings.contextual_scoring_max_impact = 100
+        settings.contextual_scoring_impacts = {"threat": 100}
+        processor = MISPProcessor(
+            settings,
+            misp_client=None,
+            api_client=None,
+            logger=lambda message: None,
+            feed_adapter=self.adapter(),
+        )
+        event = enriched_event(indicator_count=0)
+        event["Galaxy"] = [
+            {
+                "type": "threat-actor",
+                "name": "Threat Actor",
+                "GalaxyCluster": [
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Example",
+                        "uuid": "cluster-contextual",
+                    }
+                ],
+            }
+        ]
+        candidate_ref = candidate(external_id="event-contextual", raw=event)
+        event_candidate = MISPEventCandidate(
+            event=event,
+            name=event["name"],
+            description="",
+            indicators=[],
+            ioc_count=0,
+            age=0,
+            score=40,
+            score_details={"final_score": 40},
+        )
+
+        scored = processor.apply_contextual_scoring(candidate_ref, event_candidate)
+
+        self.assertEqual(100, scored.score)
+        self.assertEqual(("ingest", "ok"), processor.candidate_policy_decision(scored))
 
     def test_decision_metadata_extracts_misp_galaxies(self):
         candidate_ref = candidate(external_id="event-1", raw={"tags": ["tlp:green"]})
@@ -1881,12 +1925,26 @@ class MISPProcessorTests(unittest.TestCase):
         logs = []
         settings = self.settings()
         settings.allowed_tlp = ["green"]
+        settings.contextual_scoring_mode = "enforce"
+        settings.contextual_scoring_impacts = {"threat": 100}
         state = SimpleNamespace(
             has_event=lambda event_id: False,
             mark_event=lambda event_id: marked.append(event_id),
         )
         event = enriched_event(name="tlp red event")
         event["tags"] = ["tlp:red"]
+        event["Galaxy"] = [
+            {
+                "type": "threat-actor",
+                "GalaxyCluster": [
+                    {
+                        "type": "threat-actor",
+                        "value": "APT Example",
+                        "uuid": "cluster-tlp",
+                    }
+                ],
+            }
+        ]
 
         processor = MISPProcessor(
             settings,
@@ -1904,6 +1962,10 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertEqual([], marked)
         self.assertEqual("drop", records[0].action)
         self.assertEqual("tlp not allowed: red", records[0].reason)
+        contextual = records[0].metadata["contextual_scoring"]
+        self.assertTrue(contextual["configured_to_apply"])
+        self.assertFalse(contextual["applied_to_decision"])
+        self.assertEqual("drop", contextual["decision_action"])
         self.assertIn("MISP drop: tlp red event reason=tlp not allowed: red", logs)
 
     def test_process_event_writes_quarantine_record(self):
