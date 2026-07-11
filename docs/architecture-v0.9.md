@@ -84,6 +84,10 @@ until a source-specific real-data validation is available keeps the release
 boundary honest and avoids promoting an untested source path into the
 Community Edition runtime.
 
+Post-release roadmap decision: v1.0 is now frozen without new direct adapters.
+MalwareBazaar and URLHaus move to v1.1 while v1.0 focuses on production
+hardening of the validated OTX and MISP paths.
+
 ### Reporting Boundary
 
 The v0.9 Community report remains deliberately small. It may summarize run
@@ -137,7 +141,8 @@ production OpenCTI, MISP or NarrowCTI environment.
 - The v0.9 scope and configuration are documented in public product docs.
 - Every new API transition is authorized, auditable and covered by tests.
 - Graph-quality changes include duplicate and relationship regression coverage.
-- At least one new direct source follows the governed adapter contract.
+- The governed adapter contract remains regression-covered for future sources;
+  no new direct adapter is required by the frozen v1.0 scope.
 - Real OpenCTI validation covers the promoted graph paths claimed by the
   release.
 - CI/CD security and quality gates pass before merge to `main`, version tag and

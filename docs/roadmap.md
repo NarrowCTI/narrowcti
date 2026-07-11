@@ -251,7 +251,7 @@ Expected outcomes:
 
 ## v0.9.0 - Analyst Operations And Graph Quality
 
-Status: release candidate; formal publication pending maintainer approval.
+Status: released on 2026-07-11.
 
 Detailed design and release tracking:
 
@@ -268,10 +268,10 @@ Purpose:
   Timeline, Kill Chain and source-backed semantic relationships.
 - Validate richer ASN, CIDR, IP, infrastructure, actor, arsenal, ATT&CK and
   victimology context without promoting weak source inference.
-- Keep governed direct source onboarding ready for the next adapter. MalwareBazaar
-  is the first v1.0 candidate and URLHaus is the next infrastructure-oriented
-  priority; neither is claimed as a v0.9 runtime feature without real-data
-  validation.
+- Keep governed direct source onboarding ready for future adapters without
+  claiming an unvalidated source path as a runtime capability. The v1.0 scope
+  is frozen on the existing OTX and MISP source paths; MalwareBazaar and
+  URLHaus are deferred to v1.1.
 - Keep Community Edition reporting intentionally simple: operational totals,
   decisions, source contribution and graph-quality indicators. Advanced
   enterprise reporting remains outside the v0.9 Community scope.
@@ -287,7 +287,7 @@ Expected outcomes:
 - Source-backed OpenCTI graph views receive richer and safer adversary,
   capability, infrastructure and victimology context.
 - The source-onboarding boundary remains governed by the shared candidate,
-  policy, audit and export contracts, ready for the first v1.0 direct adapter.
+  policy, audit and export contracts, ready for post-v1.0 adapters.
 - Operators receive a concise operational report without exposing a future
   advanced enterprise reporting capability prematurely.
 - The release cannot be published until CI/CD security, quality, image and
@@ -295,15 +295,29 @@ Expected outcomes:
 
 ## v1.0.0 - Open Source Production-Ready Release
 
+Status: in development.
+
+Scope freeze:
+
+- No new direct source adapter is required for v1.0.
+- OTX and MISP remain the validated ingestion sources.
+- MITRE ATT&CK remains canonical reference context, preferably loaded through
+  the official OpenCTI connector and reused by NarrowCTI curation.
+- MalwareBazaar and URLHaus are deferred to v1.1 so production hardening is not
+  traded for source expansion.
+- The Community report remains concise, operational and audit-focused.
+  Executive narratives, tenant-specific templates and polished PDF packs stay
+  outside the v1.0 Community release.
+
 Purpose:
 
 - Ship a stable, documented and installable product.
 - Finalize open source release posture and optional services/support guidance.
 - Ship the enterprise curation engine with quarantine release, graph enrichment,
   contextual scoring, explainable policy and measurable graph-quality outcomes.
-- Provide enterprise CTI reporting that explains what was ingested, what was
-  filtered, how policy was applied, which sources contributed, and how graph
-  quality improved.
+- Provide Community CTI curation reporting that explains what was ingested,
+  filtered or quarantined, how policy was applied, which sources contributed,
+  and how graph quality improved.
 - Provide validated deployment guidance.
 - Maintain a clear changelog and upgrade path.
 - Carry the v1.0 market position: NarrowCTI as an OpenCTI-native CTI
@@ -314,9 +328,9 @@ Expected outcomes:
 - NarrowCTI is ready for controlled open source production adoption.
 - Product, engineering, licensing and operations are aligned around the
   Apache-2.0 core.
-- Operators and CTI teams can produce an enterprise-grade report from gateway
-  evidence, decision audit, quarantine/release history and graph hygiene
-  metrics.
+- Operators and CTI teams can produce an audit-ready operational report from
+  gateway evidence, decision audit, quarantine/release history and graph
+  hygiene metrics.
 - Release messaging is aligned with `docs/market-positioning-v1.0.md`.
 
 ## Post-v1.0 - ML-Assisted Curation

@@ -128,7 +128,7 @@ feature/* -> dev -> main -> v0.9.0 tag -> GitHub Release
 
 Publication record:
 
-- Release commit: `ab2f73a8cee7b94bac96c488c6aa837c94141d3f`
+- Release commit: `abe19e599ffec4c03755b96e7ae70ff1ada2b228`
 - Merge message: `NarrowCTI v0.9.0 - release anterior ao início do vínculo empregatício`
 - Publication date: 2026-07-11
 - License: Apache License 2.0
