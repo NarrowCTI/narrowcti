@@ -21,6 +21,7 @@ Use these docs first:
 - `container-images.md`
 - `opencti-compatibility.md`
 - `security-quality-gates.md`
+- `architecture-v1.0.md`
 - `architecture-v0.9.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
@@ -28,6 +29,7 @@ Use these docs first:
 - `analyst-review-v0.8.md`
 - `curation-reporting-v0.8.md`
 - `support-diagnostics-v0.8.md`
+- `release-v1.0.0.md`
 - `release-v0.9.0.md`
 - `release-v0.8.0.md`
 - `roadmap.md`
@@ -56,6 +58,7 @@ These files are public and should be included in release source archives.
 Current architecture:
 
 - `architecture.md`
+- `architecture-v1.0.md`
 - `architecture-v0.9.md`
 - `architecture-v0.8.md`
 - `graph-promotion-v0.8.md`
@@ -106,6 +109,7 @@ snapshot only when the release needs exact historical documentation.
 ## Release Notes Path
 
 - `../CHANGELOG.md`
+- `release-v1.0.0.md` (in development)
 - `release-v0.9.0.md` (released)
 - `release-v0.8.0.md`
 - `release-v0.7.0.md`

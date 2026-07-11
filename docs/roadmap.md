@@ -297,6 +297,12 @@ Expected outcomes:
 
 Status: in development.
 
+Detailed design and release tracking:
+
+- `docs/architecture-v1.0.md`
+- `docs/release-v1.0.0.md`
+- `docs/market-positioning-v1.0.md`
+
 Scope freeze:
 
 - No new direct source adapter is required for v1.0.

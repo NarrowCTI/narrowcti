@@ -27,13 +27,14 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.9.0
+v1.0.0-dev.0
 ```
 
-`v0.9.0` is the analyst operations and graph-quality release. It adds
-governed analyst review API operations, canonical relationship reuse, release
-gates and OpenCTI compatibility validation. It was published on 2026-07-11
-from the tagged main commit recorded in the GitHub Release.
+`v1.0.0` is in development as the first production-ready Community Edition.
+The frozen scope hardens the validated OTX and MISP gateway paths, integrates
+governed contextual scoring, closes priority graph-quality gaps and validates
+installation, upgrade, recovery and release gates. New source adapters are
+deferred to v1.1.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
@@ -635,9 +636,11 @@ artifacts, raw customer data and private feed payloads.
 ## Roadmap
 
 - Open source product foundation with Apache-2.0 core distribution.
-- v0.9 analyst operations, graph-quality hardening and governed source
-  expansion before the production-ready v1.0 release.
-- Multi-feed support beyond the reference OTX adapter.
+- v1.0 production hardening for the validated OTX and MISP gateway paths.
+- Governed contextual scoring with observable `shadow` and decision-bearing
+  `enforce` modes.
+- Controlled Diamond, victimology, Timeline and Kill Chain graph validation.
+- Post-v1.0 source expansion through the governed adapter contract.
 - Advanced correlation scoring and analyst-facing source evidence.
 - Richer scoring model with source-specific weighting.
 - Sigma or detection-rule generation.

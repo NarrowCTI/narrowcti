@@ -142,7 +142,7 @@ production OpenCTI, MISP or NarrowCTI environment.
 - Every new API transition is authorized, auditable and covered by tests.
 - Graph-quality changes include duplicate and relationship regression coverage.
 - The governed adapter contract remains regression-covered for future sources;
-  no new direct adapter is required by the frozen v1.0 scope.
+  the v0.9 release does not claim an unvalidated direct adapter.
 - Real OpenCTI validation covers the promoted graph paths claimed by the
   release.
 - CI/CD security and quality gates pass before merge to `main`, version tag and

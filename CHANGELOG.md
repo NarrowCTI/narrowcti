@@ -4,11 +4,32 @@ All notable NarrowCTI Community Edition changes are summarized here.
 
 Detailed operator-facing release notes remain in `docs/release-v*.md`.
 
+## v1.0.0 - In Development
+
+Production-ready Community Edition scope for the existing OTX and MISP gateway
+paths. This section records planned work and must not be presented as released
+behavior until the final validation gates pass.
+
+- Integrate contextual scoring with explicit `off`, `shadow` and `enforce`
+  modes, visible configuration and decision audit evidence.
+- Close priority graph-quality gaps for Diamond, infrastructure victimology,
+  Timeline and Kill Chain without promoting source-weak inference.
+- Harden runtime recovery, retries, checkpoints, resource controls and health
+  reporting.
+- Validate clean installation, upgrade from v0.9, backup/restore and the full
+  security and software-supply-chain release gates.
+- Keep Community reporting concise and audit-ready. Advanced executive report
+  packs remain outside the v1.0 Community scope.
+- Defer MalwareBazaar, URLHaus and other new adapters to v1.1.
+
+See `docs/release-v1.0.0.md`.
+
 ## v0.9.0 - 2026-07-11
 
-Analyst operations and graph-quality release. The release was published from
-main commit `ab2f73a8cee7b94bac96c488c6aa837c94141d3f` under the traceability
-message `NarrowCTI v0.9.0 - release anterior ao início do vínculo empregatício`.
+Analyst operations and graph-quality release. Tag `v0.9.0` points to release
+commit `abe19e599ffec4c03755b96e7ae70ff1ada2b228`. Integration merge commit
+`ab2f73a8cee7b94bac96c488c6aa837c94141d3f` records the traceability message
+`NarrowCTI v0.9.0 - release anterior ao início do vínculo empregatício`.
 NarrowCTI Community Edition is distributed under Apache License 2.0.
 
 All required GitHub Actions workflows passed for the release commit, including
@@ -16,8 +37,8 @@ CI, code quality, security and dependency review, container image validation,
 DAST and Graph Update.
 
 - Formalizes the governed analyst review API, graph-quality hardening and the
-  governed source-onboarding boundary. A new direct adapter remains a v1.0
-  backlog item until it has source-specific validation evidence.
+  governed source-onboarding boundary. Post-release planning moved new direct
+  adapters to v1.1 so v1.0 can focus on production hardening.
 - Keeps Community reporting operational and concise while reserving advanced
   enterprise reporting for a future separately scoped capability.
 - Makes SAST, applicable DAST, code quality, dependency review and container
