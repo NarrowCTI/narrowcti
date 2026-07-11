@@ -209,5 +209,5 @@ def load_settings():
             65536,
         ),
     )
-    settings.adapter_limits
+    _ = settings.adapter_limits
     return settings

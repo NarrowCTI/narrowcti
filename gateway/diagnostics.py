@@ -940,13 +940,13 @@ def main():
         try:
             bundle_result = write_support_bundle(snapshot, args.bundle_file)
         except ValueError as exc:
-            raise SystemExit(str(exc))
+            raise SystemExit(str(exc)) from None
     html_result = None
     if args.html_file:
         try:
             html_result = write_html_snapshot(snapshot, args.html_file)
         except ValueError as exc:
-            raise SystemExit(str(exc))
+            raise SystemExit(str(exc)) from None
     if args.json:
         output = snapshot.to_dict()
         if bundle_result:

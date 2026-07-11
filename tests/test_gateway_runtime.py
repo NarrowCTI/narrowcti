@@ -160,12 +160,15 @@ class GatewaySettingsTests(unittest.TestCase):
                 "misp",
             )
 
-        self.assertEqual("/state/otx_state.json", otx.state_file)
-        self.assertEqual("/state/audit/otx_decisions.jsonl", otx.decision_audit_file)
-        self.assertEqual("/state/quarantine.jsonl", otx.quarantine_repository_file)
-        self.assertEqual("/state/misp_state.json", misp.state_file)
+        self.assertEqual(os.path.join("/state", "otx_state.json"), otx.state_file)
         self.assertEqual(
-            "/state/audit/misp_decisions.jsonl",
+            os.path.join("/state/audit", "otx_decisions.jsonl"),
+            otx.decision_audit_file,
+        )
+        self.assertEqual("/state/quarantine.jsonl", otx.quarantine_repository_file)
+        self.assertEqual(os.path.join("/state", "misp_state.json"), misp.state_file)
+        self.assertEqual(
+            os.path.join("/state/audit", "misp_decisions.jsonl"),
             misp.decision_audit_file,
         )
         self.assertEqual("/state/quarantine.jsonl", misp.quarantine_repository_file)
