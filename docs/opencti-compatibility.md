@@ -65,7 +65,7 @@ On July 10, 2026, the v0.9 development image was validated with:
 - two imports of the same controlled STIX bundle;
 - zero rejected objects;
 - exactly one resulting Report;
-- 485 passing containerized tests;
+- 503 passing containerized tests;
 - no known dependency vulnerabilities reported by `pip-audit`.
 
 This evidence must be refreshed against the final release commit and image.

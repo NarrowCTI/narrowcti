@@ -8,8 +8,9 @@ Detailed operator-facing release notes remain in `docs/release-v*.md`.
 
 Analyst operations and graph-quality release in development.
 
-- Formalizes the governed analyst review API, graph-quality hardening and
-  direct-source expansion tracks.
+- Formalizes the governed analyst review API, graph-quality hardening and the
+  governed source-onboarding boundary. A new direct adapter remains a v1.0
+  backlog item until it has source-specific validation evidence.
 - Keeps Community reporting operational and concise while reserving advanced
   enterprise reporting for a future separately scoped capability.
 - Makes SAST, applicable DAST, code quality, dependency review and container
@@ -20,6 +21,9 @@ Analyst operations and graph-quality release in development.
   profile with real export disabled by default.
 - Adds a blocking, disposable OWASP ZAP OpenAPI DAST workflow for the review
   API.
+- Separates OpenCTI entity reuse from directed relationship deduplication and
+  requires an exact existing edge and relationship type before suppressing a
+  graph relationship export.
 
 See `docs/release-v0.9.0.md`.
 

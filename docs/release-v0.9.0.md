@@ -24,7 +24,8 @@ Detailed design is tracked in `docs/architecture-v0.9.md`.
 - Graph deduplication and post-export state hardening.
 - Controlled Infrastructure victimology and broader Diamond validation.
 - Timeline, Kill Chain and priority OpenCTI coverage validation.
-- At least one additional governed direct source adapter.
+- Governed source onboarding contracts, with new direct adapters deferred until
+  source-specific real-data evidence is available.
 - Simple Community operational and graph-quality reporting.
 - CI/CD security and quality release gates.
 - Upgrade, recovery and controlled end-to-end validation from v0.8.
@@ -54,7 +55,7 @@ capability.
   empty GraphQL fields introduced by `pycti 7`.
 - Live-validated OpenCTI `6.9.4` authentication and idempotent Report import:
   two imports, zero rejected objects and exactly one resulting Report.
-- Passed 485 tests in the rebuilt v0.9 development image.
+- Passed 503 tests in the rebuilt v0.9 development image.
 - Added the authenticated analyst review API with `reader`, `reviewer`,
   `exporter` and `admin` roles, hashed bearer credentials, strict request
   models, protected raw snapshots and disabled-by-default real export.
@@ -67,6 +68,27 @@ Compatibility behavior and validation commands are documented in
 `docs/opencti-compatibility.md`.
 Analyst API security and operation are documented in
 `docs/analyst-review-api.md`.
+
+## Candidate Validation Evidence
+
+The current v0.9 candidate was validated locally on July 10, 2026 with:
+
+- 503 passing unit and integration tests in the rebuilt runtime image;
+- runtime module smoke imports passing;
+- Ruff and Bandit passing;
+- `pip-audit` reporting no known vulnerabilities for runtime and development
+  requirements;
+- Trivy HIGH/CRITICAL image scan passing for digest
+  `sha256:498bb08200e7e9fc9e62b2a723497ce9ae7d77adf68b4248711aeb0f2fa4c49f`;
+- CycloneDX SBOM generated for that same image digest;
+- live OpenCTI 6.9.4 validation with two imports, zero rejected objects and
+  exactly one deterministic Report;
+- disposable API boundary validation with `401` unauthenticated and `200`
+  authenticated responses.
+
+The full OWASP ZAP execution remains a CI release gate. These notes must not be
+changed to `Released` until the CI workflow, final image and GitHub Release
+checks are green.
 
 ## Mandatory Release Gates
 

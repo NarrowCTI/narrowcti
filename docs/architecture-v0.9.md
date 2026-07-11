@@ -51,6 +51,14 @@ operation contract is `docs/analyst-review-api.md`.
 - Keep weak attribution and ambiguous multi-anchor evidence in Report, Note,
   quarantine or audit context.
 
+OpenCTI graph lookup treats entity and relationship reuse as separate proofs.
+Finding the target entity does not imply that its proposed relationship already
+exists. For a relationship to be deduplicated, NarrowCTI resolves both source
+and target to OpenCTI internal identifiers, queries the directed edge and
+requires an exact `relationship_type` match. Lookup results are cached for the
+current plan, while lookup failures fail open and remain visible in logs so an
+uncertain read cannot silently discard source-backed intelligence.
+
 ### OpenCTI Coverage
 
 - Validate Infrastructure victimology before enabling broad semantic export.
@@ -65,10 +73,16 @@ operation contract is `docs/analyst-review-api.md`.
 
 - Add direct adapters only through the shared feed candidate and source
   onboarding contracts.
-- Prioritize MalwareBazaar for malware family, sample, Artifact and hash
-  context; keep URLHaus as the next infrastructure-oriented source.
+- Keep MalwareBazaar as the first v1.0 adapter candidate for malware family,
+  sample, Artifact and hash context; keep URLHaus as the next infrastructure-
+  oriented source.
 - Preserve the original logical source in the OpenCTI author convention:
   `<Source display name> via NarrowCTI`.
+
+The v0.9 candidate does not claim a new direct adapter. Deferring that adapter
+until a source-specific real-data validation is available keeps the release
+boundary honest and avoids promoting an untested source path into the
+Community Edition runtime.
 
 ### Reporting Boundary
 
@@ -101,6 +115,10 @@ The authoritative policy and evidence contract is
 
 The version-scoped OpenCTI client boundary and compatibility evidence are
 defined in `docs/opencti-compatibility.md`.
+
+The local candidate validation has already covered the API authentication
+boundary (`401` without a token and `200` with a valid token). The full ZAP
+scan remains a CI gate and must be green before the version tag is created.
 
 DAST must target a disposable test deployment. It must not run against a
 production OpenCTI, MISP or NarrowCTI environment.

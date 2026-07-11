@@ -268,8 +268,10 @@ Purpose:
   Timeline, Kill Chain and source-backed semantic relationships.
 - Validate richer ASN, CIDR, IP, infrastructure, actor, arsenal, ATT&CK and
   victimology context without promoting weak source inference.
-- Add at least one governed direct source adapter beyond OTX and MISP, with
-  MalwareBazaar as the first candidate and URLHaus as the next priority.
+- Keep governed direct source onboarding ready for the next adapter. MalwareBazaar
+  is the first v1.0 candidate and URLHaus is the next infrastructure-oriented
+  priority; neither is claimed as a v0.9 runtime feature without real-data
+  validation.
 - Keep Community Edition reporting intentionally simple: operational totals,
   decisions, source contribution and graph-quality indicators. Advanced
   enterprise reporting remains outside the v0.9 Community scope.
@@ -284,8 +286,8 @@ Expected outcomes:
   with measurable duplicate prevention.
 - Source-backed OpenCTI graph views receive richer and safer adversary,
   capability, infrastructure and victimology context.
-- A new direct adapter proves that source onboarding remains governed by the
-  shared candidate, policy, audit and export contracts.
+- The source-onboarding boundary remains governed by the shared candidate,
+  policy, audit and export contracts, ready for the first v1.0 direct adapter.
 - Operators receive a concise operational report without exposing a future
   advanced enterprise reporting capability prematurely.
 - The release cannot be published until CI/CD security, quality, image and

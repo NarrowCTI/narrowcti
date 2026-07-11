@@ -14,6 +14,143 @@ from core.opencti_graph_lookup import (
 
 
 class OpenCTIGraphLookupTests(unittest.TestCase):
+    def test_known_keys_for_plan_resolves_exact_existing_relationship_once(self):
+        calls = []
+
+        def query(query_text, variables):
+            calls.append((query_text, variables))
+            if "malwares" in query_text:
+                return graph_node_response(
+                    "malwares", "target--1", "Malware", "Lumma Stealer"
+                )
+            if "intrusionSets" in query_text:
+                return graph_node_response(
+                    "intrusionSets", "source--1", "Intrusion-Set", "APT Example"
+                )
+            if "stixCoreRelationships" in query_text:
+                return {
+                    "data": {
+                        "stixCoreRelationships": {
+                            "edges": [
+                                {
+                                    "node": {
+                                        "id": "relationship--1",
+                                        "standard_id": "relationship--standard-1",
+                                        "relationship_type": "uses",
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            return {}
+
+        candidate = relationship_candidate()
+        action = {
+            "candidate": candidate,
+            "deduplication": {
+                "entity_key": "entity:malware:lumma",
+                "relationship_key": "relationship:apt-uses-lumma",
+            },
+        }
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query))
+
+        known = lookup.known_keys_for_plan({"actions": [action, action]})
+
+        self.assertEqual(["entity:malware:lumma"], known["entity_keys"])
+        self.assertEqual(
+            ["relationship:apt-uses-lumma"], known["relationship_keys"]
+        )
+        self.assertTrue(known["matches"][0]["match"]["relationship_exists"])
+        relationship = known["matches"][0]["match"]["relationship_match"]
+        self.assertEqual("source--1", relationship["source_opencti_id"])
+        self.assertEqual("target--1", relationship["target_opencti_id"])
+        relationship_calls = [
+            call for call in calls if "stixCoreRelationships" in call[0]
+        ]
+        self.assertEqual(1, len(relationship_calls))
+        self.assertEqual(["source--1"], relationship_calls[0][1]["fromIds"])
+        self.assertEqual(["target--1"], relationship_calls[0][1]["toIds"])
+
+    def test_known_keys_for_plan_does_not_deduplicate_different_relationship_type(self):
+        def query(query_text, variables):
+            if "malwares" in query_text:
+                return graph_node_response(
+                    "malwares", "target--1", "Malware", "Lumma Stealer"
+                )
+            if "intrusionSets" in query_text:
+                return graph_node_response(
+                    "intrusionSets", "source--1", "Intrusion-Set", "APT Example"
+                )
+            if "stixCoreRelationships" in query_text:
+                return {
+                    "data": {
+                        "stixCoreRelationships": {
+                            "edges": [
+                                {
+                                    "node": {
+                                        "id": "relationship--1",
+                                        "relationship_type": "related-to",
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            return {}
+
+        known = OpenCTIGraphLookup(
+            SimpleNamespace(query=query)
+        ).known_keys_for_plan(
+            {
+                "actions": [
+                    {
+                        "candidate": relationship_candidate(),
+                        "deduplication": {
+                            "entity_key": "entity:malware:lumma",
+                            "relationship_key": "relationship:apt-uses-lumma",
+                        },
+                    }
+                ]
+            }
+        )
+
+        self.assertEqual(["entity:malware:lumma"], known["entity_keys"])
+        self.assertEqual([], known["relationship_keys"])
+        self.assertNotIn("relationship_exists", known["matches"][0]["match"])
+
+    def test_relationship_lookup_fails_open_when_opencti_query_errors(self):
+        logs = []
+
+        def query(query_text, variables):
+            if "malwares" in query_text:
+                return graph_node_response(
+                    "malwares", "target--1", "Malware", "Lumma Stealer"
+                )
+            if "intrusionSets" in query_text:
+                return graph_node_response(
+                    "intrusionSets", "source--1", "Intrusion-Set", "APT Example"
+                )
+            raise RuntimeError("relationship service unavailable")
+
+        lookup = OpenCTIGraphLookup(SimpleNamespace(query=query), logger=logs.append)
+        known = lookup.known_keys_for_plan(
+            {
+                "actions": [
+                    {
+                        "candidate": relationship_candidate(),
+                        "deduplication": {
+                            "entity_key": "entity:malware:lumma",
+                            "relationship_key": "relationship:apt-uses-lumma",
+                        },
+                    }
+                ]
+            }
+        )
+
+        self.assertEqual([], known["relationship_keys"])
+        self.assertIn("OpenCTI relationship lookup failed", logs[0])
+
     def test_known_keys_for_plan_resolves_attack_pattern_by_mitre_id(self):
         calls = []
 
@@ -1690,6 +1827,41 @@ def accepted_attack_pattern_policy():
         min_entity_confidence=50,
         min_relationship_confidence=60,
     ).to_dict()
+
+
+def graph_node_response(collection, opencti_id, entity_type, name):
+    return {
+        "data": {
+            collection: {
+                "edges": [
+                    {
+                        "node": {
+                            "id": opencti_id,
+                            "standard_id": f"{entity_type.lower()}--standard",
+                            "entity_type": entity_type,
+                            "name": name,
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+
+def relationship_candidate():
+    return {
+        "entity_type": "malware",
+        "value": "Lumma Stealer",
+        "name": "Lumma Stealer",
+        "stix_object_type": "malware",
+        "relationship_type": "uses",
+        "source_key": "alienvault:otx",
+        "external_id": "pulse-1",
+        "attributes": {
+            "relationship_source_stix_object_type": "intrusion-set",
+            "relationship_source_value": "APT Example",
+        },
+    }
 
 
 def accepted_named_object_policy(

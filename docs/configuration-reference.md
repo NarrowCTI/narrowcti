@@ -172,7 +172,7 @@ Credential format, roles and endpoint behavior are documented in
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Empty | Optional STIX/OpenCTI object allow-list. In export, empty uses safe defaults. |
 | `NARROWCTI_GRAPH_EXPORT_MODE` | `audit` | `audit`, `dry-run` or `export`. Controls graph promotion behavior. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Empty | Local graph known-key index. |
-| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | `false` | Read-only OpenCTI canonical graph lookup before creating objects. |
+| `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | `false` | Read-only canonical lookup before creation. Existing entities are reused; relationships are deduplicated only after exact source, target, direction and relationship-type confirmation. Errors fail open and are logged. |
 
 ## Reporting and Validation
 
