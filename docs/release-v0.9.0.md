@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: in development.
+Status: release candidate.
 
 v0.9 is the analyst operations and graph-quality release. These notes must be
 updated as each capability is implemented and validated; planned work must not
@@ -85,10 +85,18 @@ The current v0.9 candidate was validated locally on July 10, 2026 with:
   exactly one deterministic Report;
 - disposable API boundary validation with `401` unauthenticated and `200`
   authenticated responses.
+- GitHub Actions `CI`, `Security and Quality`, `Container Image` and `DAST`
+  workflows passed for commit `5d665ad`.
 
-The full OWASP ZAP execution remains a CI release gate. These notes must not be
-changed to `Released` until the CI workflow, final image and GitHub Release
-checks are green.
+Workflow evidence:
+
+- [CI](https://github.com/NarrowCTI/narrowcti/actions/runs/29136096186)
+- [Security and Quality](https://github.com/NarrowCTI/narrowcti/actions/runs/29136096216)
+- [Container Image](https://github.com/NarrowCTI/narrowcti/actions/runs/29136096202)
+- [DAST](https://github.com/NarrowCTI/narrowcti/actions/runs/29136096182)
+
+The full OWASP ZAP execution passed in CI. These notes must not be changed to
+`Released` until the final merge, tag and GitHub Release checks are approved.
 
 ## Mandatory Release Gates
 
@@ -106,9 +114,8 @@ checks are green.
 
 ## Release Boundary
 
-`VERSION` remains `v0.8.0` during development. It moves to `v0.9.0` only when
-the release gates pass and the release branch is ready to follow the public
-flow:
+`VERSION` is now `v0.9.0` on the release-candidate branch. The public flow is
+ready but has not been executed yet:
 
 ```text
 feature/* -> dev -> main -> v0.9.0 tag -> GitHub Release

@@ -251,7 +251,7 @@ Expected outcomes:
 
 ## v0.9.0 - Analyst Operations And Graph Quality
 
-Status: in development.
+Status: release candidate; formal publication pending maintainer approval.
 
 Detailed design and release tracking:
 

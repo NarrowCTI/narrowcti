@@ -31,6 +31,8 @@ NARROWCTI_GATEWAY_IMAGE
 | `0.8.0` | Git tag `v0.8.0` | Immutable release tag. |
 | `0.8` | Git tag `v0.8.0` | Moving latest patch in minor line. |
 | `0` | Git tag `v0.8.0` | Moving latest release in major line. |
+| `0.9.0` | Git tag `v0.9.0` | Immutable release tag after publication. |
+| `0.9` | Git tag `v0.9.0` | Moving latest patch in minor line after publication. |
 | `sha-<short-sha>` | Every published build | Immutable traceability tag. |
 
 Operators should pin production-like environments to an immutable release tag,

@@ -4,9 +4,11 @@ All notable NarrowCTI Community Edition changes are summarized here.
 
 Detailed operator-facing release notes remain in `docs/release-v*.md`.
 
-## Unreleased - v0.9.0
+## v0.9.0 - Release Candidate
 
-Analyst operations and graph-quality release in development.
+Analyst operations and graph-quality release candidate. All four GitHub Actions
+workflows passed for commit `5d665ad`; merge, tag and publication remain
+maintainer-controlled.
 
 - Formalizes the governed analyst review API, graph-quality hardening and the
   governed source-onboarding boundary. A new direct adapter remains a v1.0

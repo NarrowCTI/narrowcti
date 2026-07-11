@@ -27,13 +27,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.8.0
+v0.9.0 (release candidate)
 ```
 
-`v0.8.0` is the current graph promotion, analyst review and product operations
-release. It closes controlled graph promotion readiness with OpenCTI canonical
-lookup, bounded OTX/MISP validation evidence, relationship audit evidence,
-support diagnostics and deployment operations.
+`v0.9.0` is the analyst operations and graph-quality release candidate. It adds
+governed analyst review API operations, canonical relationship reuse, release
+gates and OpenCTI compatibility validation. Formal publication remains
+maintainer-controlled after the final merge and tag review.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
