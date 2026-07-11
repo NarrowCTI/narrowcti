@@ -8,6 +8,7 @@ from core.contextual_scoring import (
 )
 from core.graph_export_plan import normalize_graph_export_mode
 from core.mitre_attack import DEFAULT_MITRE_STIX_URL
+from core.runtime_config import require_nonnegative, require_positive
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,12 @@ class Settings:
     enable_mitre_attack_resolution: bool = True
     mitre_cache_file: str = ""
     mitre_stix_url: str = DEFAULT_MITRE_STIX_URL
+
+    def __post_init__(self):
+        for name in ("otx_timeout", "otx_search_timeout", "otx_retries"):
+            require_positive(name, getattr(self, name))
+        for name in ("otx_retry_backoff_seconds", "otx_retry_jitter_seconds"):
+            require_nonnegative(name, getattr(self, name))
 
 
 def env_required(name):

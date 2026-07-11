@@ -115,6 +115,20 @@ class MISPSettingsTests(unittest.TestCase):
 
         self.assertTrue(settings.dry_run)
 
+    def test_load_settings_rejects_invalid_misp_retry_configuration(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "MISP_URL": "http://misp.local",
+            "MISP_KEY": "misp-key",
+            "MISP_QUERIES": "tlp:green",
+            "MISP_RETRY_JITTER_SECONDS": "-1",
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaisesRegex(ValueError, "misp_retry_jitter_seconds"):
+                load_settings()
+
     def test_load_settings_accepts_gateway_policy_fallbacks(self):
         env = {
             "OPENCTI_URL": "http://opencti:8080",

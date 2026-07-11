@@ -442,6 +442,19 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(65, settings.min_score_to_ingest)
         self.assertTrue(settings.enable_quarantine)
 
+    def test_load_settings_rejects_invalid_otx_retry_configuration(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "OTX_API_KEY": "key",
+            "OTX_QUERIES": "lummac2",
+            "OTX_RETRIES": "0",
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaisesRegex(ValueError, "otx_retries"):
+                load_settings()
+
 
 class RuntimeTests(unittest.TestCase):
     def test_run_processor_loop_runs_cycle_and_sleeps(self):

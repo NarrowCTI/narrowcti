@@ -8,6 +8,7 @@ from core.contextual_scoring import (
     parse_contextual_scoring_impacts,
 )
 from core.graph_export_plan import normalize_graph_export_mode
+from core.runtime_config import require_nonnegative, require_positive
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,10 @@ class MISPSettings:
     def __post_init__(self):
         if self.max_iocs_per_event < 1:
             raise ValueError("max_iocs_per_event must be greater than zero")
+        for name in ("misp_search_timeout", "misp_enrich_timeout", "misp_retries"):
+            require_positive(name, getattr(self, name))
+        for name in ("misp_retry_backoff_seconds", "misp_retry_jitter_seconds"):
+            require_nonnegative(name, getattr(self, name))
 
     @property
     def adapter_limits(self):
