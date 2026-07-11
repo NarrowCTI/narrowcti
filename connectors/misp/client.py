@@ -1,7 +1,10 @@
+import random
 import time
 from urllib.parse import quote
 
 import requests
+
+from core.retry import retry_delay
 
 
 class MISPClient:
@@ -13,8 +16,11 @@ class MISPClient:
         enrich_timeout=60,
         retries=3,
         retry_backoff_seconds=3,
+        retry_jitter_seconds=1,
         verify_tls=True,
         logger=None,
+        sleeper=time.sleep,
+        random_fn=random.uniform,
     ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -22,8 +28,11 @@ class MISPClient:
         self.enrich_timeout = enrich_timeout
         self.retries = retries
         self.retry_backoff_seconds = retry_backoff_seconds
+        self.retry_jitter_seconds = retry_jitter_seconds
         self.verify_tls = verify_tls
         self.logger = logger or (lambda msg: None)
+        self.sleeper = sleeper
+        self.random_fn = random_fn
 
     def headers(self):
         return {
@@ -70,7 +79,14 @@ class MISPClient:
             except requests.exceptions.RequestException as exc:
                 self.logger(f"MISP HTTP error: {exc}")
 
-            time.sleep((attempt + 1) * self.retry_backoff_seconds)
+            self.sleeper(
+                retry_delay(
+                    attempt + 1,
+                    self.retry_backoff_seconds,
+                    self.retry_jitter_seconds,
+                    self.random_fn,
+                )
+            )
 
         self.logger("MISP request failed completely")
         return None

@@ -20,6 +20,7 @@ from core.indicator_policy import (
     normalize_allowed_indicator_types,
 )
 from core.policy import PolicyConfig, should_ingest
+from core.retry import retry_delay
 from core.scoring import calculate_score, calculate_score_details
 from core.state_repository import (
     MISPEventStateRepository,
@@ -212,6 +213,10 @@ class ScoringTests(unittest.TestCase):
 
 
 class StateRepositoryTests(unittest.TestCase):
+    def test_retry_delay_adds_bounded_jitter(self):
+        self.assertEqual(6, retry_delay(2, 3, 0))
+        self.assertEqual(7, retry_delay(2, 3, 2, random_fn=lambda _low, _high: 1))
+
     def test_mark_pulse_is_idempotent_and_persistent(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = os.path.join(tmpdir, "state.json")

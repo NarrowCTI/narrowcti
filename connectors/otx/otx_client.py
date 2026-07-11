@@ -1,6 +1,9 @@
+import random
 import time
 
 import requests
+
+from core.retry import retry_delay
 
 
 class OTXClient:
@@ -14,14 +17,20 @@ class OTXClient:
         enrich_timeout=60,
         retries=3,
         retry_backoff_seconds=3,
+        retry_jitter_seconds=1,
         logger=None,
+        sleeper=time.sleep,
+        random_fn=random.uniform,
     ):
         self.api_key = api_key
         self.search_timeout = search_timeout
         self.enrich_timeout = enrich_timeout
         self.retries = retries
         self.retry_backoff_seconds = retry_backoff_seconds
+        self.retry_jitter_seconds = retry_jitter_seconds
         self.logger = logger or (lambda msg: None)
+        self.sleeper = sleeper
+        self.random_fn = random_fn
 
     def headers(self):
         return {
@@ -63,7 +72,14 @@ class OTXClient:
             except requests.exceptions.RequestException as exc:
                 self.logger(f"HTTP error: {exc}")
 
-            time.sleep((attempt + 1) * self.retry_backoff_seconds)
+            self.sleeper(
+                retry_delay(
+                    attempt + 1,
+                    self.retry_backoff_seconds,
+                    self.retry_jitter_seconds,
+                    self.random_fn,
+                )
+            )
 
         self.logger("Request failed completely")
         return None

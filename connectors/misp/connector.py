@@ -20,6 +20,7 @@ def build_processor(settings):
         enrich_timeout=settings.misp_enrich_timeout,
         retries=settings.misp_retries,
         retry_backoff_seconds=settings.misp_retry_backoff_seconds,
+        retry_jitter_seconds=settings.misp_retry_jitter_seconds,
         verify_tls=settings.misp_verify_tls,
         logger=log,
     )

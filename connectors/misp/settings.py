@@ -23,6 +23,7 @@ class MISPSettings:
     misp_enrich_timeout: int
     misp_retries: int
     misp_retry_backoff_seconds: int
+    misp_retry_jitter_seconds: int
     connector_run_interval: int
     ingest_pause_seconds: int
     dry_run: bool
@@ -146,6 +147,7 @@ def load_settings():
         misp_enrich_timeout=env_int("MISP_ENRICH_TIMEOUT", 60),
         misp_retries=env_int("MISP_RETRIES", 3),
         misp_retry_backoff_seconds=env_int("MISP_RETRY_BACKOFF_SECONDS", 3),
+        misp_retry_jitter_seconds=env_int("MISP_RETRY_JITTER_SECONDS", 1),
         connector_run_interval=env_int("CONNECTOR_RUN_INTERVAL", 3600),
         ingest_pause_seconds=env_int("INGEST_PAUSE_SECONDS", 2),
         dry_run=env_bool("MISP_DRY_RUN", True),

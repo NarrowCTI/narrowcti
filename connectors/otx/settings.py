@@ -21,6 +21,7 @@ class Settings:
     otx_search_timeout: int
     otx_retries: int
     otx_retry_backoff_seconds: int
+    otx_retry_jitter_seconds: int
     connector_run_interval: int
     max_days_old: int
     max_days_hard_filter: int
@@ -119,6 +120,7 @@ def load_settings():
         otx_search_timeout=env_int("OTX_SEARCH_TIMEOUT", 45),
         otx_retries=env_int("OTX_RETRIES", 3),
         otx_retry_backoff_seconds=env_int("OTX_RETRY_BACKOFF_SECONDS", 3),
+        otx_retry_jitter_seconds=env_int("OTX_RETRY_JITTER_SECONDS", 1),
         connector_run_interval=env_int("CONNECTOR_RUN_INTERVAL", 3600),
         max_days_old=env_int_with_gateway(
             "MAX_DAYS_OLD",

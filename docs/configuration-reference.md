@@ -130,6 +130,7 @@ Credential format, roles and endpoint behavior are documented in
 | `OTX_SEARCH_TIMEOUT` | `45` | OTX search timeout. |
 | `OTX_RETRIES` | `3` | OTX retry count. |
 | `OTX_RETRY_BACKOFF_SECONDS` | `3` | Delay between OTX retries. |
+| `OTX_RETRY_JITTER_SECONDS` | `1` | Maximum random delay added to each OTX retry backoff. Set `0` only for deterministic tests. |
 | `OTX_SOURCE_CONFIDENCE` | `50` | Source confidence adjustment. `50` is neutral. |
 | `MAX_SEARCH_RESULTS_PER_QUERY` | At least `MAX_PULSES_PER_QUERY` or `10` | Search candidates reviewed per query. |
 | `MAX_PULSES_PER_QUERY` | `5` | Accepted OTX pulses per query. |
@@ -150,6 +151,7 @@ Credential format, roles and endpoint behavior are documented in
 | `MISP_ENRICH_TIMEOUT` | `60` | MISP event enrichment timeout. |
 | `MISP_RETRIES` | `3` | MISP retry count. |
 | `MISP_RETRY_BACKOFF_SECONDS` | `3` | Delay between MISP retries. |
+| `MISP_RETRY_JITTER_SECONDS` | `1` | Maximum random delay added to each MISP retry backoff. Set `0` only for deterministic tests. |
 | `MISP_FROM_DATE` | Empty | Lower date bound for MISP search/backfill. |
 | `MISP_TO_DATE` | Empty | Upper date bound for MISP search/backfill. |
 | `MISP_TAGS` | Empty in code, `tlp:green` in templates | Tag filter for MISP search. |

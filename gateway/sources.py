@@ -114,6 +114,7 @@ def build_otx_runner(
         enrich_timeout=settings.otx_timeout,
         retries=settings.otx_retries,
         retry_backoff_seconds=settings.otx_retry_backoff_seconds,
+        retry_jitter_seconds=settings.otx_retry_jitter_seconds,
         logger=logger,
     )
     processor = OTXProcessor(
@@ -145,6 +146,7 @@ def build_misp_runner(
         enrich_timeout=settings.misp_enrich_timeout,
         retries=settings.misp_retries,
         retry_backoff_seconds=settings.misp_retry_backoff_seconds,
+        retry_jitter_seconds=settings.misp_retry_jitter_seconds,
         verify_tls=settings.misp_verify_tls,
         logger=logger,
     )
