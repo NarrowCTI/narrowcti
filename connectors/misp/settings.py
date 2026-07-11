@@ -61,6 +61,7 @@ class MISPSettings:
     contextual_scoring_mode: str = "shadow"
     contextual_scoring_max_impact: int = 100
     contextual_scoring_impacts: dict[str, int] = None
+    enable_infrastructure_victimology_export: bool = False
 
     def __post_init__(self):
         if self.max_iocs_per_event < 1:
@@ -224,6 +225,10 @@ def load_settings():
         ),
         contextual_scoring_impacts=parse_contextual_scoring_impacts(
             os.getenv("NARROWCTI_CONTEXTUAL_SCORING_IMPACTS", "")
+        ),
+        enable_infrastructure_victimology_export=env_bool(
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT",
+            False,
         ),
     )
     _ = settings.adapter_limits

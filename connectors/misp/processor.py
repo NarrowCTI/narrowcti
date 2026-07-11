@@ -2544,4 +2544,9 @@ def graph_candidate_policy_from_settings(settings):
             "graph_require_relationship_provenance",
             False,
         ),
+        "allow_infrastructure_victimology_export": getattr(
+            settings,
+            "enable_infrastructure_victimology_export",
+            False,
+        ),
     }

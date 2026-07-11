@@ -36,6 +36,7 @@ class GatewaySettings:
     contextual_scoring_mode: str = "shadow"
     contextual_scoring_max_impact: int = 100
     contextual_scoring_impacts: dict[str, int] = None
+    enable_infrastructure_victimology_export: bool = False
     declared_capabilities: list[str] = None
     release_audit_file: str = ""
     enable_mitre_attack_resolution: bool = True
@@ -165,6 +166,10 @@ def load_settings():
         ),
         contextual_scoring_impacts=parse_contextual_scoring_impacts(
             os.getenv("NARROWCTI_CONTEXTUAL_SCORING_IMPACTS", "")
+        ),
+        enable_infrastructure_victimology_export=env_bool(
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT",
+            False,
         ),
         declared_capabilities=env_list("NARROWCTI_CAPABILITIES"),
         release_audit_file=os.getenv(

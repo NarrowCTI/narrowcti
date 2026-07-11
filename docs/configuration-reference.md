@@ -183,6 +183,15 @@ Credential format, roles and endpoint behavior are documented in
 | `NARROWCTI_GRAPH_EXPORT_MODE` | `audit` | `audit`, `dry-run` or `export`. Controls graph promotion behavior. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Empty | Local graph known-key index. |
 | `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | `false` | Read-only canonical lookup before creation. Existing entities are reused; relationships are deduplicated only after exact source, target, direction and relationship-type confirmation. Errors fail open and are logged. |
+| `NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT` | `false` | Explicitly promotes a same-event MISP `Infrastructure -> targets -> victimology` candidate whose source evidence and inference are exact. Keep disabled until OpenCTI API/UI validation confirms the expected Diamond victimology behavior. It does not approve unrelated or unvalidated relationships. |
+
+Infrastructure victimology promotion is intentionally opt-in. With the default
+`false`, NarrowCTI keeps the candidate in audit evidence with
+`relationship_requires_opencti_validation`. Setting it to `true` only changes
+that exact source-backed candidate; TLP, age, score, provenance and all other
+graph policy controls remain active. Enable it for a bounded validation run,
+inspect the resulting OpenCTI relationship and Diamond view, then retain the
+decision and evidence in the operational report.
 
 ## Reporting and Validation
 

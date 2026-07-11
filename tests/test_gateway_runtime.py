@@ -45,6 +45,7 @@ class GatewaySettingsTests(unittest.TestCase):
             "NARROWCTI_CONTEXTUAL_SCORING_MODE": "enforce",
             "NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT": "80",
             "NARROWCTI_CONTEXTUAL_SCORING_IMPACTS": "threat:25,ttp:10",
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT": "true",
             "NARROWCTI_ALLOWED_TLP": "white, green",
             "NARROWCTI_ALLOWED_INDICATOR_TYPES": "domain, ipv4",
             "NARROWCTI_RELEASE_AUDIT_FILE": "/state/audit/releases.jsonl",
@@ -81,6 +82,7 @@ class GatewaySettingsTests(unittest.TestCase):
             {"threat": 25, "ttp": 10},
             settings.contextual_scoring_impacts,
         )
+        self.assertTrue(settings.enable_infrastructure_victimology_export)
         self.assertEqual(["white", "green"], settings.allowed_tlp)
         self.assertEqual(["domain", "ipv4"], settings.allowed_indicator_types)
         self.assertEqual("/state/audit/releases.jsonl", settings.release_audit_file)

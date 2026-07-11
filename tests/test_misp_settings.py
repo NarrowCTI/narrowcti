@@ -42,6 +42,7 @@ class MISPSettingsTests(unittest.TestCase):
             "NARROWCTI_CONTEXTUAL_SCORING_MODE": "enforce",
             "NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT": "75",
             "NARROWCTI_CONTEXTUAL_SCORING_IMPACTS": "toolbox:20,ttp:15",
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT": "true",
             "MISP_STATE_FILE": "/app/state/misp.json",
             "MISP_DECISION_AUDIT_FILE": "/app/state/misp-decisions.jsonl",
         }
@@ -96,6 +97,7 @@ class MISPSettingsTests(unittest.TestCase):
             {"toolbox": 20, "ttp": 15},
             settings.contextual_scoring_impacts,
         )
+        self.assertTrue(settings.enable_infrastructure_victimology_export)
         self.assertEqual("/app/state/misp.json", settings.state_file)
         self.assertEqual("/app/state/misp-decisions.jsonl", settings.decision_audit_file)
 

@@ -127,6 +127,26 @@ class GatewayPreflightTests(unittest.TestCase):
         rendered = format_text_report(report)
         self.assertIn("contextual_scoring_mode=enforce", rendered)
         self.assertIn("contextual_scoring_impacts=threat:25", rendered)
+
+    def test_preflight_reports_infrastructure_victimology_opt_in(self):
+        report = build_preflight_report(
+            make_settings(
+                graph_export_mode="export",
+                enable_infrastructure_victimology_export=True,
+            ),
+            env={"NARROWCTI_DRY_RUN": "true"},
+        )
+
+        issue = next(
+            issue
+            for issue in report.issues
+            if issue.code == "infrastructure-victimology-enabled"
+        )
+        self.assertEqual("warning", issue.severity)
+        self.assertIn(
+            "enable_infrastructure_victimology_export=true",
+            format_text_report(report),
+        )
         self.assertEqual("direct", report.to_dict()["ingestion_mode"])
 
     def test_preflight_reports_misp_collector_ingestion_mode(self):

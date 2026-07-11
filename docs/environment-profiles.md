@@ -157,6 +157,7 @@ NARROWCTI_MIN_ENTITY_CONFIDENCE=0
 NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE=0
 NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=
 NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=
+NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT=false
 ```
 
 Expected behavior:
@@ -165,6 +166,12 @@ Expected behavior:
 - canonical OpenCTI objects are reused when lookup finds them;
 - newly exported graph keys are marked only after successful import;
 - relationship audit can validate Diamond and Kill Chain coverage.
+
+Infrastructure victimology remains disabled in this baseline. For a bounded
+same-event MISP validation, set
+`NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT=true`, export one known
+event, and confirm the `Infrastructure -> targets -> Sector/Organization`
+relationship through the OpenCTI API and UI before widening the scope.
 
 ## Graph-Only MISP Replay
 

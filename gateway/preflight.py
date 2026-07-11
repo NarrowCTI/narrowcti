@@ -128,6 +128,23 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             )
         )
 
+    infrastructure_victimology_enabled = getattr(
+        settings,
+        "enable_infrastructure_victimology_export",
+        False,
+    )
+    if infrastructure_victimology_enabled:
+        issues.append(
+            PreflightIssue(
+                "warning"
+                if getattr(settings, "graph_export_mode", "audit") == "export"
+                else "info",
+                "infrastructure-victimology-enabled",
+                "Infrastructure victimology relationships are opt-in and require "
+                "controlled OpenCTI API/UI validation before broad export.",
+            )
+        )
+
     feature_gate_state = build_feature_gate_state(
         requested_capabilities=getattr(settings, "declared_capabilities", []),
     )
@@ -254,6 +271,11 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             ),
             "contextual_scoring_impacts": dict(
                 getattr(settings, "contextual_scoring_impacts", {}) or {}
+            ),
+            "enable_infrastructure_victimology_export": getattr(
+                settings,
+                "enable_infrastructure_victimology_export",
+                False,
             ),
             "allowed_tlp": list(settings.allowed_tlp),
             "allowed_indicator_types": list(settings.allowed_indicator_types),
@@ -484,6 +506,8 @@ def format_text_report(report):
             )
             or "(defaults)"
         ),
+        "enable_infrastructure_victimology_export="
+        f"{str(report.settings.get('enable_infrastructure_victimology_export', False)).lower()}",
         f"allowed_tlp={','.join(report.settings['allowed_tlp']) or '(any)'}",
         "allowed_indicator_types="
         f"{','.join(report.settings['allowed_indicator_types']) or '(any)'}",
