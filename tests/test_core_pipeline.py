@@ -1,5 +1,6 @@
 import json
 import os
+import glob
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -240,6 +241,11 @@ class StateRepositoryTests(unittest.TestCase):
 
             self.assertEqual(["pulse-1"], data["pulses"])
             self.assertEqual(["event-1"], data["misp_events"])
+
+            self.assertEqual(
+                [],
+                glob.glob(os.path.join(tmpdir, ".state.json.*.tmp")),
+            )
             self.assertTrue(MISPEventStateRepository(state_file).has_event("event-1"))
             self.assertFalse(MISPEventStateRepository(state_file).has_event("pulse-1"))
 
