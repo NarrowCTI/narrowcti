@@ -86,14 +86,14 @@ The current v0.9 candidate was validated locally on July 10, 2026 with:
 - disposable API boundary validation with `401` unauthenticated and `200`
   authenticated responses.
 - GitHub Actions `CI`, `Security and Quality`, `Container Image` and `DAST`
-  workflows passed for commit `5d665ad`.
+  workflows passed for commit `17965e6`.
 
 Workflow evidence:
 
-- [CI](https://github.com/NarrowCTI/narrowcti/actions/runs/29136096186)
-- [Security and Quality](https://github.com/NarrowCTI/narrowcti/actions/runs/29136096216)
-- [Container Image](https://github.com/NarrowCTI/narrowcti/actions/runs/29136096202)
-- [DAST](https://github.com/NarrowCTI/narrowcti/actions/runs/29136096182)
+- [CI](https://github.com/NarrowCTI/narrowcti/actions/runs/29161969818)
+- [Security and Quality](https://github.com/NarrowCTI/narrowcti/actions/runs/29161969793)
+- [Container Image](https://github.com/NarrowCTI/narrowcti/actions/runs/29161969810)
+- [DAST](https://github.com/NarrowCTI/narrowcti/actions/runs/29161969792)
 
 The full OWASP ZAP execution passed in CI. These notes must not be changed to
 `Released` until the final merge, tag and GitHub Release checks are approved.

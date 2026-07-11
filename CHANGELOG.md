@@ -7,7 +7,7 @@ Detailed operator-facing release notes remain in `docs/release-v*.md`.
 ## v0.9.0 - Release Candidate
 
 Analyst operations and graph-quality release candidate. All four GitHub Actions
-workflows passed for commit `5d665ad`; merge, tag and publication remain
+workflows passed for commit `17965e6`; merge, tag and publication remain
 maintainer-controlled.
 
 - Formalizes the governed analyst review API, graph-quality hardening and the
