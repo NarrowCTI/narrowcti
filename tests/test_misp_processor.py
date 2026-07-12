@@ -349,7 +349,7 @@ class MISPProcessorTests(unittest.TestCase):
         self.assertFalse(metadata["guardrails"]["oversized"])
         self.assertEqual(100, metadata["scoring"]["final_score"])
         graph_evidence = metadata["graph_evidence"]
-        self.assertEqual("v1.0.0-dev.0", graph_evidence["version"])
+        self.assertEqual("v1.0.0", graph_evidence["version"])
         self.assertEqual("misp:misp", graph_evidence["source_key"])
         self.assertEqual(3, graph_evidence["record_count"])
         self.assertEqual(1, graph_evidence["counts"]["marking"])
@@ -361,7 +361,7 @@ class MISPProcessorTests(unittest.TestCase):
             )
         )
         graph_candidates = metadata["graph_candidates"]
-        self.assertEqual("v1.0.0-dev.0", graph_candidates["version"])
+        self.assertEqual("v1.0.0", graph_candidates["version"])
         self.assertEqual("event-1", graph_candidates["external_id"])
         self.assertEqual(3, graph_candidates["candidate_count"])
         self.assertEqual(1, graph_candidates["counts"]["marking"])

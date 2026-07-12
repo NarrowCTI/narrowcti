@@ -25,23 +25,21 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v1.0.0-dev.0
+v1.0.0
 ```
 
-`v1.0.0` is in development as the first production-ready Community Edition.
-The frozen scope hardens the validated OTX and MISP gateway paths, integrates
-governed contextual scoring, closes priority graph-quality gaps and validates
-installation, upgrade, recovery and release gates. New source adapters are
-outside the current release scope.
+`v1.0.0` is the first production-ready Community Edition release. It hardens
+the validated OTX and MISP gateway paths, integrates governed contextual
+scoring, closes priority graph-quality gaps and validates installation,
+upgrade, recovery and release gates. New source adapters are outside the
+current release scope.
 
-The latest published release is `v0.9.0` (2026-07-11). `v0.8.0` and
-`v0.9.0` have GitHub Release pages; `v0.2.0` through `v0.7.0` remain
-historical tags without GitHub Release pages. No `v1.0.0` tag, image or
-GitHub Release exists until the final documentation and validation gates close.
+The latest published release is `v1.0.0` (2026-07-12). `v0.9.0` and `v0.8.0`
+remain available as historical release milestones, while `v0.2.0` through
+`v0.7.0` remain historical tags without GitHub Release pages.
 
 The release sequence is `v0.8.0` -> `v0.9.0` -> `v1.0.0`. The `v1.0.0`
-release is the intended final production release for the first Community
-Edition milestone; until publication, it remains the current development track.
+release is the final production milestone for the first Community Edition.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
@@ -300,14 +298,15 @@ contributor governance and blocking CI/CD security gates.
 The authoritative notes are in `docs/release-v0.9.0.md`. The published image
 and tag policy are in `docs/container-images.md`.
 
-## v1.0 Development Track
+## v1.0 Release
 
-The current development track hardens the existing OTX and MISP gateway paths
-for Community Edition. It covers deterministic contextual scoring,
+The v1.0 release hardens the existing OTX and MISP gateway paths for Community
+Edition. It covers deterministic contextual scoring,
 source-backed actor, campaign, infrastructure and victimology propagation,
 Diamond, Timeline and Kill Chain evidence, restart-safe operations, complete
 documentation and reproducible security, image and OpenCTI validation. It does
-New direct adapters are outside the current release scope.
+not expand the source catalog. New direct adapters are outside the current
+release scope.
 
 The current product contract is `docs/product-reference.md`, the current
 OpenCTI coverage matrix is `docs/opencti-coverage-matrix.md`, and the evolving
@@ -592,8 +591,8 @@ feature/* -> dev -> main -> version tag -> GitHub Release
 Current release:
 
 ```text
-Latest published: v0.9.0
-Next release: v1.0.0 (in development)
+Latest published: v1.0.0
+Previous stable milestone: v0.9.0
 ```
 
 ## Documentation

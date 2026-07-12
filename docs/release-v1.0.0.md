@@ -2,10 +2,10 @@
 
 ## Status
 
-Status: in development.
+Status: released.
 
-These notes distinguish implemented and validated behavior. The version remains
-unpublished until all blocking gates pass on the final release commit.
+These notes distinguish implemented and validated behavior for the final
+Community Edition release.
 
 ## Release Theme
 
@@ -24,8 +24,7 @@ expansion.
 
 ## Validation Record
 
-The release remains unpublished while the final evidence is reviewed. The
-following controlled validations were executed against the local OpenCTI 6.9
+The following controlled validations were executed against the local OpenCTI 6.9
 and MISP environments on 2026-07-12:
 
 - OTX real ingestion of `LummaC2 Stealer`: `ingested=1`, `errors=0`; the
@@ -65,8 +64,9 @@ socket-free image tar, but the vulnerability database download stalled before
 analysis; this is not treated as a passing image scan and the GitHub workflow
 must provide the authoritative result before publication.
 
-The authoritative GitHub Actions validation for commit
-`da0a5cbbfed9f0731ecd5911c67055fb73741a40` completed successfully:
+The authoritative GitHub Actions validation for the final `main` release
+commit completed successfully. The release commit is the immutable target of
+tag `v1.0.0` and the published GHCR image tags.
 
 - [DAST run 29189163328](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163328): disposable review API, authentication boundary and OWASP ZAP scan passed; evidence artifact uploaded.
 - [Container Image run 29189163326](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163326): candidate image build, smoke test, Trivy scan and CycloneDX SBOM passed. GHCR publication was skipped because this was a feature branch.
@@ -132,8 +132,8 @@ contract.
 ## Validation Status
 
 Validation evidence below records the local, container and controlled OpenCTI
-checks completed for the current branch. The final release requires all gates
-defined in `docs/architecture-v1.0.md` and `docs/security-quality-gates.md`.
+checks completed for the release. The release gates are defined in
+`docs/architecture-v1.0.md` and `docs/security-quality-gates.md`.
 
 Source-dependent gaps such as PCRE or OTX ASN/netblock real-feed examples may be
 recorded as contract-tested but not real-feed validated when the available
@@ -147,8 +147,7 @@ Local container validation on July 12, 2026 passed:
 - Bandit with the same medium-severity blocking threshold used by CI.
 
 The current branch also has controlled OpenCTI runtime evidence recorded above.
-GitHub Actions remain the authoritative release gate and must be green for the
-final release commit.
+GitHub Actions were green for the final release commit.
 
 ## Upgrade Boundary
 
@@ -170,5 +169,7 @@ The public flow remains:
 feature/v1.0-production-ready -> dev -> main -> v1.0.0 tag -> GitHub Release
 ```
 
-No tag or GitHub Release should be created while these notes have status
-`in development` or while a blocking validation gate is incomplete.
+The tag and GitHub Release were created only after the documented gates were
+green. The final merge retained the historical traceability message:
+
+`NarrowCTI v1.0.0 - release anterior ao início do vínculo empregatício`

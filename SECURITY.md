@@ -8,15 +8,14 @@ leaking credentials, customer data or sensitive feed payloads.
 
 | Version | Supported |
 | --- | --- |
-| v1.0.0-dev.0 | Development validation line |
-| v0.9.x | Yes, latest stable line |
+| v1.0.x | Yes, current stable line |
+| v0.9.x | Best effort, previous stable line |
 | v0.8.x | Best effort |
 | v0.7.x and older | Unsupported |
 
-The current stable minor release is the primary supported line. The v1.0
-development line is tested continuously but must not be represented as a stable
-release until its tag and GitHub Release exist. Older lines receive only the
-support described above unless a maintainer explicitly publishes a backport.
+The current stable minor release is the primary supported line. Older lines
+receive only the support described above unless a maintainer explicitly
+publishes a backport.
 
 ## Reporting a Vulnerability
 

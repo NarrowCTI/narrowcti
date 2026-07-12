@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from core.tlp import extract_tlp_values, normalize_tlp
 
 
-GRAPH_EVIDENCE_VERSION = "v1.0.0-dev.0"
+GRAPH_EVIDENCE_VERSION = "v1.0.0"
 
 ENTITY_TARGETS = {
     "campaign": ("campaign", "related-to"),

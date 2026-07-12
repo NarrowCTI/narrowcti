@@ -4,11 +4,11 @@ All notable NarrowCTI Community Edition changes are summarized here.
 
 Detailed operator-facing release notes remain in `docs/release-v*.md`.
 
-## v1.0.0 - In Development
+## v1.0.0 - 2026-07-12
 
-Production-ready Community Edition scope for the existing OTX and MISP gateway
-paths. This section records the current implementation and validation status;
-the version is not published until the release gates are complete.
+Production-ready Community Edition release for the existing OTX and MISP
+gateway paths. The release is published under Apache License 2.0 with the
+validated image and GitHub Release created from the final `main` commit.
 
 - Added contextual scoring with explicit `off`, `shadow` and `enforce` modes,
   visible configuration, preflight posture and decision audit evidence.

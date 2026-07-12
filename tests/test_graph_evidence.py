@@ -235,7 +235,7 @@ class GraphEvidenceTests(unittest.TestCase):
             title="Technique pulse",
         )
 
-        self.assertEqual("v1.0.0-dev.0", evidence["version"])
+        self.assertEqual("v1.0.0", evidence["version"])
         self.assertEqual("alienvault:otx", evidence["source_key"])
         self.assertEqual(10, evidence["record_count"])
         self.assertEqual(2, evidence["counts"]["attack_pattern"])

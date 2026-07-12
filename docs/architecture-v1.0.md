@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: in development.
+Status: released with v1.0.0.
 
 v1.0 is the first production-ready NarrowCTI Community Edition target. It does
 not expand the source catalog. It hardens the deterministic curation gateway

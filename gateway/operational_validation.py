@@ -90,7 +90,7 @@ def build_operational_validation_report(
     ]
     return OperationalValidationReport(
         schema_version="operational-validation/v1.0",
-        release="v1.0.0-dev.0",
+        release="v1.0.0",
         overall_status=overall_status(checks),
         checks=tuple(checks),
     )
