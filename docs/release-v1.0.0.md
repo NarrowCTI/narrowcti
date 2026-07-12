@@ -73,6 +73,14 @@ The authoritative GitHub Actions validation for commit
 - [Container Image run 29189163326](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163326): candidate image build, smoke test, Trivy scan and CycloneDX SBOM passed. GHCR publication was skipped because this was a feature branch.
 - [Security and Quality run 29189163357](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163357) and [CI run 29189163336](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163336): passed.
 
+The subsequent graph-context and documentation hardening commit
+`72e39ce26a99f81af7912af016e71307efde2d3d` also passed every blocking workflow:
+
+- [CI run 29191662937](https://github.com/NarrowCTI/narrowcti/actions/runs/29191662937): passed.
+- [Security and Quality run 29191662890](https://github.com/NarrowCTI/narrowcti/actions/runs/29191662890): Ruff, Bandit, dependency audit and SAST checks passed.
+- [Container Image run 29191662902](https://github.com/NarrowCTI/narrowcti/actions/runs/29191662902): image build, smoke test, Trivy and CycloneDX SBOM passed; publication remained disabled on the feature branch.
+- [DAST run 29191662910](https://github.com/NarrowCTI/narrowcti/actions/runs/29191662910): disposable review API authentication checks and OWASP ZAP passed.
+
 ## Evidence Boundaries
 
 The audits distinguish absent source evidence from a failed export. Lumma
