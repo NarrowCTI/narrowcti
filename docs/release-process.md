@@ -74,6 +74,13 @@ Run image validation when Docker is available:
 powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
 
+When tests are enabled, the release helper installs `requirements-dev.txt`
+inside the disposable validation container before running the suite. This keeps
+test-only dependencies out of the production image while making the local
+release check reproduce the CI dependency set. Use
+`-SkipTestDependencyInstall` only when the supplied image already contains the
+complete development dependency set.
+
 Security and quality policy, blocking thresholds and required evidence are
 defined in `docs/security-quality-gates.md`.
 

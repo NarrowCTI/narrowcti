@@ -246,7 +246,7 @@ promotion gate.
 Current validation:
 
 ```text
-.\scripts\validate-v0.6.ps1
+.\scripts\validate-release-runtime.ps1
 Ran 254 tests
 OK
 ```
