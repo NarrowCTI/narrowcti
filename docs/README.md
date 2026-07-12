@@ -14,6 +14,8 @@ release archive or community-facing page.
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `product-reference.md`
+- `opencti-coverage-matrix.md`
 - `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`
@@ -67,6 +69,14 @@ release archive or community-facing page.
 - `release-v0.6.0.md`
 - `release-v0.5.0.md`
 - `release-v0.4.0.md`
+
+## Release Status
+
+`v0.9.0` is the latest published stable release, dated 2026-07-11. The
+repository is currently preparing `v1.0.0-dev.0`; it has no public tag or
+GitHub Release yet. Tags `v0.2.0` through `v0.7.0` are historical version
+snapshots without GitHub Release pages. See `product-reference.md` for the
+single current status table and `release-process.md` for publication order.
 
 ## Release Snapshots
 

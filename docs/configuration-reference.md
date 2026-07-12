@@ -39,6 +39,7 @@ records the reason for every `ingest`, `drop`, `quarantine`, `skip`,
 | `NARROWCTI_GATEWAY_ENV_FILE` | `./gateway.env.example` | Env file consumed by Compose. Set to `./gateway.env` for real local secrets. |
 | `NARROWCTI_GATEWAY_RESTART` | `no` | Restart policy for the gateway runtime. Keep `no` during validation. |
 | `NARROWCTI_DOCKER_NETWORK` | `opencti_default` | External Docker network used to reach OpenCTI. |
+| `CONNECTOR_NAME` | `NarrowCTI Gateway` | Logical connector name used in runtime metadata and audit naming. Keep it stable across deployments. |
 
 ## Gateway Runtime
 
@@ -184,6 +185,7 @@ Credential format, roles and endpoint behavior are documented in
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Empty | Optional STIX/OpenCTI object allow-list. In export, empty uses safe defaults. |
 | `NARROWCTI_GRAPH_EXPORT_MODE` | `audit` | `audit`, `dry-run` or `export`. Controls graph promotion behavior. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Empty | Local graph known-key index. |
+| `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` | `false` | Allows graph-only replay when indicators are already known, subject to graph policy and source evidence. Source-specific `MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` can override it. |
 | `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | `false` | Read-only canonical lookup before creation. Existing entities are reused; relationships are deduplicated only after exact source, target, direction and relationship-type confirmation. Errors fail open and are logged. |
 | `NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT` | `false` | Explicitly promotes a same-event MISP `Infrastructure -> targets -> victimology` candidate whose source evidence and inference are exact. Keep disabled until OpenCTI API/UI validation confirms the expected Diamond victimology behavior. It does not approve unrelated or unvalidated relationships. |
 

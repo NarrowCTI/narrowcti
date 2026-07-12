@@ -1,6 +1,7 @@
 # Documentation Map
 
-NarrowCTI keeps documentation paths stable across pre-1.0 releases. Current
+NarrowCTI keeps documentation paths stable across historical and current
+development releases. Current
 operator documentation uses unversioned filenames, while versioned files preserve
 release-specific snapshots and historical design evidence.
 
@@ -17,6 +18,8 @@ Use these docs first:
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `product-reference.md`
+- `opencti-coverage-matrix.md`
 - `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`
@@ -36,6 +39,18 @@ Use these docs first:
 
 These files are product-facing and should be included in release source
 archives.
+
+## Release Status
+
+| State | Version | Public evidence |
+| --- | --- | --- |
+| Latest published stable | `v0.9.0` | GitHub Release and immutable tag, published 2026-07-11. |
+| In development | `v1.0.0-dev.0` | Branch and changelog only; no tag or GitHub Release. |
+| Historical tags | `v0.2.0` through `v0.7.0` | Tags exist, but no GitHub Release page was created. |
+
+`product-reference.md` is the current product and version source of truth.
+Versioned release notes remain historical or in-development evidence and must
+not override this status table.
 
 ## Community Path
 
@@ -97,6 +112,8 @@ repository readers:
 - `configuration-reference.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `product-reference.md`
+- `opencti-coverage-matrix.md`
 - `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`

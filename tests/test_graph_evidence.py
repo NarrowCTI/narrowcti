@@ -235,7 +235,7 @@ class GraphEvidenceTests(unittest.TestCase):
             title="Technique pulse",
         )
 
-        self.assertEqual("v0.7.0-dev", evidence["version"])
+        self.assertEqual("v1.0.0-dev.0", evidence["version"])
         self.assertEqual("alienvault:otx", evidence["source_key"])
         self.assertEqual(10, evidence["record_count"])
         self.assertEqual(2, evidence["counts"]["attack_pattern"])
@@ -1097,9 +1097,9 @@ class GraphEvidenceTests(unittest.TestCase):
             title="MISP event",
         )
 
-        self.assertEqual(6, evidence["record_count"])
+        self.assertEqual(7, evidence["record_count"])
         self.assertEqual(1, evidence["counts"]["campaign"])
-        self.assertEqual(1, evidence["counts"]["channel"])
+        self.assertEqual(2, evidence["counts"]["channel"])
         self.assertEqual(1, evidence["counts"]["event"])
         self.assertEqual(1, evidence["counts"]["narrative"])
         self.assertEqual(1, evidence["counts"]["security_platform"])
@@ -1793,6 +1793,119 @@ class GraphEvidenceTests(unittest.TestCase):
                 and record["attributes"]["relationship_validation_state"]
                 == "requires-opencti-validation"
                 for record in previews
+            )
+        )
+
+    def test_propagates_explicit_campaign_context_to_actor_infrastructure_and_victimology(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_campaigns": [
+                    {
+                        "value": "Dust Storm",
+                        "source_field": "Attribute[2]",
+                        "attribute_type": "campaign-name",
+                    }
+                ],
+                "misp_galaxies": [
+                    {
+                        "type": "intrusion-set",
+                        "value": "APT32",
+                        "uuid": "cluster-actor",
+                        "galaxy_type": "mitre-intrusion-set",
+                        "galaxy_name": "Intrusion Set",
+                        "source_field": "Galaxy",
+                    }
+                ],
+                "misp_infrastructure": [
+                    {
+                        "entity_type": "infrastructure",
+                        "value": "MISP C2 203.0.113.10",
+                        "stix_object_type": "infrastructure",
+                        "relationship_type": "uses",
+                        "source_field": "Object[0]",
+                        "confidence": 80,
+                    }
+                ],
+                "misp_victimology": [
+                    {
+                        "entity_type": "target_sector",
+                        "value": "Finance",
+                        "source_field": "Attribute[3]",
+                        "confidence": 75,
+                    }
+                ],
+            },
+            source_key="misp:misp",
+            external_id="event-dust-storm-context",
+            title="OSINT Dust Storm Campaign Targeting Japanese Critical Infrastructure",
+        )
+
+        contextual = [
+            record
+            for record in evidence["records"]
+            if record["source_name"] == "misp-context"
+        ]
+        self.assertTrue(
+            any(
+                record["entity_type"] == "intrusion_set"
+                and record["relationship_type"] == "attributed-to"
+                and record["attributes"]["relationship_source_value"] == "Dust Storm"
+                and record["attributes"]["relationship_inference"]
+                == "misp-event-campaign-adversary-context"
+                for record in contextual
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "infrastructure"
+                and record["relationship_type"] == "uses"
+                and record["attributes"]["relationship_source_value"] == "Dust Storm"
+                and record["attributes"]["relationship_inference"]
+                == "misp-event-campaign-infrastructure-context"
+                for record in contextual
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "target_sector"
+                and record["relationship_type"] == "targets"
+                and record["attributes"]["relationship_source_value"] == "Dust Storm"
+                and record["attributes"]["relationship_inference"]
+                == "misp-event-campaign-victimology-context"
+                for record in contextual
+            )
+        )
+        self.assertTrue(
+            any(
+                record["entity_type"] == "infrastructure"
+                and record["relationship_type"] == "uses"
+                and record["attributes"]["relationship_source_value"] == "APT32"
+                and record["attributes"]["relationship_inference"]
+                == "misp-event-infrastructure-adversary-context"
+                for record in contextual
+            )
+        )
+
+    def test_does_not_infer_campaign_victimology_from_event_title(self):
+        evidence = build_graph_evidence(
+            {
+                "misp_campaigns": [
+                    {
+                        "value": "Dust Storm",
+                        "source_field": "Attribute[2]",
+                        "attribute_type": "campaign-name",
+                    }
+                ]
+            },
+            source_key="misp:misp",
+            external_id="event-dust-storm-title-only",
+            title="OSINT Dust Storm Campaign Targeting Japanese Critical Infrastructure",
+        )
+
+        self.assertFalse(
+            any(
+                record["entity_type"].startswith("target_")
+                for record in evidence["records"]
             )
         )
 

@@ -33,13 +33,15 @@ NARROWCTI_GATEWAY_IMAGE
 | `0` | Git tag `v0.8.0` | Moving latest release in major line. |
 | `0.9.0` | Git tag `v0.9.0` | Immutable release tag after publication. |
 | `0.9` | Git tag `v0.9.0` | Moving latest patch in minor line after publication. |
+| `1.0.0` | Git tag `v1.0.0`, after final gate | Future immutable release tag; not published. |
+| `1.0` | Git tag `v1.0.0`, after final gate | Future moving latest patch in minor line. |
 | `sha-<short-sha>` | Every published build | Immutable traceability tag. |
 
 Operators should pin production-like environments to an immutable release tag,
 for example:
 
 ```text
-NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:0.8.0
+NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:0.9.0
 ```
 
 Use `latest` only when intentionally tracking the newest stable `main` build.
@@ -67,7 +69,8 @@ Publication requires:
 - a clean Docker build from `Dockerfile.gateway`;
 - CI validation kept green before creating a release tag.
 
-The v0.9 publication gate uses this order for the exact candidate image:
+The v1.0 candidate publication gate uses this order for the exact candidate
+image:
 
 ```text
 build -> smoke test -> Trivy scan -> CycloneDX SBOM -> registry login -> push

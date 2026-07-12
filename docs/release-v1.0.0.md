@@ -41,10 +41,21 @@ and MISP environments on 2026-07-12:
 - OpenCTI relationship audits confirmed Kill Chain coverage for Lumma Stealer
   and Sandworm Team. The infrastructure path confirmed
   `178.21.14.0/23 belongs-to AS49352` and retained the report relationship.
+- Contract-tested MISP campaign propagation for `Dust Storm` now relates an
+  explicit same-event actor, infrastructure and victimology to the campaign and
+  relates the infrastructure to the actor. A title-only `Dust Storm` event is
+  deliberately not given inferred targets. This boundary is documented in the
+  current coverage matrix and remains subject to real OpenCTI UI validation
+  before infrastructure-victimology export is enabled by default.
 - OpenCTI 6.9 partial-bundle failures are fail-closed: permanent worker import
   errors are surfaced as ingestion errors and are not marked as imported.
-- The complete test suite passed with 536 tests. Ruff, Bandit and both strict
+- The complete test suite passed with 538 tests. Ruff, Bandit and both strict
   `pip-audit` checks passed with no known vulnerabilities.
+- The current documentation audit confirmed all 94 variables in
+  `deployment/gateway.env.example` are described in
+  `docs/configuration-reference.md`; public entry points, release status,
+  analyst API, graph coverage and data-contract version boundaries are linked
+  from the documentation indexes.
 
 The repository CI/CD gates are present and versioned: `security-quality.yml`
 runs Ruff, Bandit and `pip-audit`; `dast.yml` runs the disposable review API

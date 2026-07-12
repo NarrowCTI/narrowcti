@@ -46,7 +46,7 @@ published stable release remains v0.9 while v1.0 is in development. For release
 deployments, use a pinned published image such as:
 
 ```text
-NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:0.8.0
+NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:0.9.0
 ```
 
 Do not use `latest` for production-like environments unless you intentionally
@@ -139,6 +139,8 @@ posture are understood.
 - `environment-profiles.md`: safe profiles for lab, validation, continuous
   operation and controlled graph export.
 - `configuration-reference.md`: configuration variable reference.
+- `product-reference.md`: current product, version and decision contract.
+- `opencti-coverage-matrix.md`: current graph coverage and evidence boundary.
 - `analyst-review-api.md`: authenticated review API operations and security.
 - `curation-decision-reference.md`: decision behavior reference.
 - `support-diagnostics-v0.8.md`: support bundle and redaction behavior.

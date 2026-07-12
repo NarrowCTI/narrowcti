@@ -36,6 +36,11 @@ governed contextual scoring, closes priority graph-quality gaps and validates
 installation, upgrade, recovery and release gates. New source adapters are
 deferred to v1.1.
 
+The latest published release is `v0.9.0` (2026-07-11). `v0.8.0` and
+`v0.9.0` have GitHub Release pages; `v0.2.0` through `v0.7.0` remain
+historical tags without GitHub Release pages. No `v1.0.0` tag, image or
+GitHub Release exists until the final documentation and validation gates close.
+
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
 
@@ -263,18 +268,12 @@ malware, tools, infrastructure, vulnerabilities, campaigns, sectors, locations,
 ATT&CK techniques and relationships, and keep those relationships explainable
 before they affect the OpenCTI graph.
 
-The consolidated architecture is tracked in `docs/architecture-v0.7.md`. The
-detailed graph-enrichment design is tracked in
-`docs/graph-enrichment-v0.7.md`, and the release notes are tracked in
-`docs/release-v0.7.0.md`. The MITRE curation architecture is tracked in
-`docs/mitre-curation-architecture-v0.7.md`. MISP
-compatibility with the official OpenCTI connector mapping is tracked in
-`docs/misp-official-connector-mapping-v0.7.md`, and OTX compatibility with the
-official AlienVault connector mapping is tracked in
-`docs/otx-official-connector-mapping-v0.7.md`. Contextual scoring research is
-tracked in `docs/contextual-scoring-reference-v0.7.md`.
-The direct source, MISP collector and hybrid ingestion architecture is tracked
-in `docs/source-ingestion-modes-v0.7.md`.
+The current operator contract is tracked in `docs/product-reference.md`, the
+active architecture in `docs/architecture-v1.0.md`, and current OpenCTI
+coverage in `docs/opencti-coverage-matrix.md`. Historical v0.7 source,
+MITRE, MISP and OTX mapping documents remain available through
+`docs/documentation-map.md`; they explain evolution but do not override the
+current product contract.
 
 ## v0.8 Release
 
@@ -294,6 +293,30 @@ NarrowCTI owns source-backed pre-ingestion decisions; OpenCTI Rules Engine can
 optionally infer additional relationships after the curated graph exists.
 OpenCTI tab coverage, current export status and backlog boundaries are tracked
 in `docs/opencti-coverage-matrix-v0.8.md`.
+
+## v0.9 Release
+
+The published v0.9 release turns the v0.8 graph and analyst foundations into a
+governed operator workflow. It adds the authenticated review API, exact
+relationship deduplication, OpenCTI compatibility boundaries, public
+contributor governance and blocking CI/CD security gates.
+
+The authoritative notes are in `docs/release-v0.9.0.md`. The published image
+and tag policy are in `docs/container-images.md`.
+
+## v1.0 Development Track
+
+The current development track hardens the existing OTX and MISP gateway paths
+for Community Edition. It covers deterministic contextual scoring,
+source-backed actor, campaign, infrastructure and victimology propagation,
+Diamond, Timeline and Kill Chain evidence, restart-safe operations, complete
+documentation and reproducible security, image and OpenCTI validation. It does
+not add MalwareBazaar, URLHaus or a new direct adapter; those remain post-v1.0
+scope.
+
+The current product contract is `docs/product-reference.md`, the current
+OpenCTI coverage matrix is `docs/opencti-coverage-matrix.md`, and the evolving
+release evidence is `docs/release-v1.0.0.md`.
 
 ## Curation Configuration
 
@@ -576,7 +599,8 @@ feature/* -> dev -> main -> version tag -> GitHub Release
 Current release:
 
 ```text
-v0.8.0
+Latest published: v0.9.0
+Next release: v1.0.0 (in development)
 ```
 
 ## Documentation
@@ -596,6 +620,8 @@ docs/configuration-reference.md
 docs/architecture.md
 docs/curation-decision-reference.md
 docs/environment-profiles.md
+docs/product-reference.md
+docs/opencti-coverage-matrix.md
 docs/analyst-review-api.md
 docs/container-images.md
 docs/opencti-compatibility.md
@@ -610,6 +636,7 @@ docs/development-guide.md
 docs/community-issue-triage.md
 docs/release-v0.9.0.md
 docs/release-v0.8.0.md
+docs/release-v1.0.0.md
 docs/release-process.md
 docs/roadmap.md
 ```

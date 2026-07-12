@@ -20,9 +20,9 @@ their applicable gates before a version tag and GitHub Release are created.
 | Secret protection | Prevent credentials from entering history | GitHub secret scanning/push protection and release-history scan evidence | Any verified secret blocks publication and requires rotation. |
 | Container scan | Detect operating-system and Python package vulnerabilities in the final image | Scan of the exact image before publication | Unaccepted high or critical findings block image push. |
 | SBOM | Record release image contents | Machine-readable SBOM attached to the workflow or release | Missing SBOM blocks the final release image. |
-| DAST | Test an exposed HTTP surface at runtime | Baseline scan of a disposable v0.9 analyst API deployment | Required once the HTTP API exists; alerts require triage before release. |
+| DAST | Test an exposed HTTP surface at runtime | Baseline scan of a disposable analyst review API deployment | Required once the HTTP API exists; alerts require triage before release. |
 | OpenCTI end-to-end | Validate claimed graph behavior | Controlled ingestion and relationship audit evidence | Missing evidence blocks the related release claim. |
-| Upgrade and recovery | Protect operator continuity | Documented v0.8 to v0.9 upgrade and rollback/recovery result | Failure blocks release. |
+| Upgrade and recovery | Protect operator continuity | Documented v0.9 to v1.0 upgrade and rollback/recovery result | Failure blocks release. |
 
 Exceptions must identify the finding, affected component, reason, compensating
 control, owner and expiration. A silent allow-list is not an accepted release

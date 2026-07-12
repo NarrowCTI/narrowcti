@@ -87,6 +87,33 @@ v1.0 keeps graph promotion source-backed and convergent:
 - validate Infrastructure victimology before broad activation;
 - validate Diamond, Timeline and Kill Chain claims through OpenCTI API and UI.
 
+### Context Propagation Contract
+
+MISP context propagation is same-event and evidence-bound. When the event has an
+explicit campaign, one unambiguous actor, explicit infrastructure and explicit
+victimology, the graph plan may emit:
+
+```text
+campaign -> attributed-to -> actor
+campaign -> uses -> infrastructure, malware, tool, channel or attack-pattern
+campaign -> targets -> sector, location, organization or system
+actor -> uses -> infrastructure
+infrastructure -> targets -> sector, location, organization or system
+```
+
+Every propagated edge carries the original source value, source field,
+`same-misp-event` scope and a named `relationship_inference`. Multiple
+actors, missing quadrants or title-only campaign language suppress the inferred
+edge. In particular, an event whose only signal is
+`campaign-name=Dust Storm` must produce the explicit campaign and Report
+relation, not invented actor, infrastructure or victimology. This is a
+correctness boundary, not an ingestion failure.
+
+Infrastructure victimology export remains opt-in through
+`NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT`. Before enabling it for a
+production-like instance, inspect the OpenCTI relationship audit and Diamond
+view and retain the result with the run evidence.
+
 Real source absence must be explicit. Contract or synthetic validation may
 prove supported behavior, but it cannot be described as real-feed validation.
 

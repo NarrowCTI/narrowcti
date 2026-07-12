@@ -14,6 +14,11 @@ behavior until the final validation gates pass.
   visible configuration, preflight posture and decision audit evidence.
 - Close priority graph-quality gaps for Diamond, infrastructure victimology,
   Timeline and Kill Chain without promoting source-weak inference.
+- Propagate explicit same-event Campaign context to one unambiguous actor,
+  infrastructure, capability and victimology relationships, with named
+  inference evidence and title-only inference prohibited.
+- Consolidate current product, OpenCTI coverage, API, configuration and release
+  status documentation before the v1.0 publication gate.
 - Harden runtime recovery, retries, checkpoints, resource controls and health
   reporting.
 - Validate clean installation, upgrade from v0.9, backup/restore and the full

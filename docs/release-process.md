@@ -114,6 +114,7 @@ Official image publication follows the same release boundary as GitHub releases.
 - Tags matching `vX.Y.Z` publish immutable release tags such as `X.Y.Z`, `X.Y`,
   `X` and `sha-<short-sha>`.
 - Release notes should mention the canonical image for the release, for example
-  `ghcr.io/narrowcti/narrowcti-gateway:0.8.0`.
+  `ghcr.io/narrowcti/narrowcti-gateway:0.9.0` while v1.0 remains in
+  development.
 - Operators should pin `NARROWCTI_GATEWAY_IMAGE` to a release tag for stable
   deployments.
