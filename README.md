@@ -2,8 +2,6 @@
   <img src="docs/assets/narrowcti-banner.png" alt="NarrowCTI banner" width="760">
 </p>
 
-<h1 align="center">NarrowCTI</h1>
-
 <p align="center">
   <strong>OpenCTI-native CTI curation gateway for governed, explainable and graph-ready intelligence.</strong>
 </p>
