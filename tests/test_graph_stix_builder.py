@@ -84,6 +84,8 @@ class GraphStixBuilderTests(unittest.TestCase):
         detection_indicator = objects_by_type["indicator"][0]
         self.assertEqual("SIGMA: Suspicious PowerShell", detection_indicator["name"])
         self.assertEqual("sigma", detection_indicator["pattern_type"])
+        self.assertIn("logsource:\n", detection_indicator["pattern"])
+        self.assertIn("  condition: selection", detection_indicator["pattern"])
         self.assertEqual(["malicious-activity"], detection_indicator["indicator_types"])
         self.assertIn("narrowcti:detection-rule", detection_indicator["labels"])
         self.assertIn("rule-type:sigma", detection_indicator["labels"])

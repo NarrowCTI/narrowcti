@@ -762,7 +762,11 @@ def graph_candidate_to_stix_object(candidate, identity_id, now):
             now,
         )
     if stix_object_type == "indicator":
-        pattern = clean_string(attributes.get("pattern")) or value
+        pattern = (
+            clean_multiline_string(attributes.get("pattern"))
+            if entity_type == "detection_rule"
+            else clean_string(attributes.get("pattern"))
+        ) or value
         pattern_type = clean_string(attributes.get("pattern_type")) or "stix"
         if not pattern:
             return None

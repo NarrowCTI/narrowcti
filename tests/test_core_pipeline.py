@@ -146,6 +146,11 @@ class TLPPolicyTests(unittest.TestCase):
             normalize_allowed_tlp(["tlp:white", "green"]),
         )
 
+    def test_tlp_clear_and_legacy_white_are_policy_equivalents(self):
+        self.assertEqual((True, ""), tlp_is_allowed(["tlp:clear"], ["white"]))
+        self.assertEqual((True, ""), tlp_is_allowed(["tlp:white"], ["clear"]))
+        self.assertEqual(("clear",), extract_tlp_values(["tlp:clear"]))
+
 
 class IndicatorTypePolicyTests(unittest.TestCase):
     def test_normalize_allowed_indicator_types_accepts_aliases(self):

@@ -2,11 +2,13 @@ import json
 import ipaddress
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from connectors.misp.processor import (
     MISPProcessor,
     decision_metadata,
     graph_candidate_policy_from_settings,
+    sigma_rule_opencti_compatibility,
 )
 from connectors.misp.models import MISPEventCandidate
 from core.feed_contract import FeedCandidate, FeedRunSummary, FeedSource
@@ -54,6 +56,58 @@ def enriched_event(name="tlp green event", indicator_count=10):
 
 
 class MISPProcessorTests(unittest.TestCase):
+    def test_sigma_compatibility_uses_opencti_parser(self):
+        rule = (
+            "title: Suspicious PowerShell\n"
+            "logsource:\n"
+            "  product: windows\n"
+            "detection:\n"
+            "  selection:\n"
+            "    EventID: 1\n"
+            "  condition: selection"
+        )
+
+        with patch("connectors.misp.processor.SigmaCollectionParser") as parser:
+            self.assertEqual((True, ""), sigma_rule_opencti_compatibility(rule))
+            parser.assert_called_once_with(rule)
+
+    def test_sigma_parser_rejection_fails_closed_to_note(self):
+        rule = (
+            "title: Parser Rejected\n"
+            "logsource:\n"
+            "  product: windows\n"
+            "detection:\n"
+            "  selection:\n"
+            "    EventID: 1\n"
+            "  condition: selection"
+        )
+
+        with patch(
+            "connectors.misp.processor.SigmaCollectionParser",
+            side_effect=ValueError("invalid Sigma"),
+        ):
+            self.assertEqual(
+                (False, "rejected by OpenCTI-compatible Sigma parser"),
+                sigma_rule_opencti_compatibility(rule),
+            )
+
+    def test_sigma_parser_unavailable_fails_closed_to_note(self):
+        rule = (
+            "title: Parser Missing\n"
+            "logsource:\n"
+            "  product: windows\n"
+            "detection:\n"
+            "  selection:\n"
+            "    EventID: 1\n"
+            "  condition: selection"
+        )
+
+        with patch("connectors.misp.processor.SigmaCollectionParser", None):
+            self.assertEqual(
+                (False, "OpenCTI-compatible Sigma parser unavailable"),
+                sigma_rule_opencti_compatibility(rule),
+            )
+
     def settings(self):
         return SimpleNamespace(
             max_events_per_run=10,

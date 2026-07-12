@@ -7,6 +7,10 @@ import requests
 from core.retry import retry_delay
 
 
+class MISPRequestError(RuntimeError):
+    pass
+
+
 class MISPClient:
     def __init__(
         self,
@@ -45,6 +49,7 @@ class MISPClient:
 
     def request_json(self, method, path, payload=None, timeout_seconds=30):
         url = f"{self.base_url}/{path.lstrip('/')}"
+        last_error = "unknown error"
 
         for attempt in range(self.retries):
             try:
@@ -64,6 +69,12 @@ class MISPClient:
 
                 if response.status_code in (401, 403):
                     self.logger("MISP auth error or invalid API key")
+                    raise MISPRequestError(
+                        f"MISP authentication failed with HTTP {response.status_code}"
+                    )
+
+                if response.status_code == 404:
+                    self.logger("MISP object not found")
                     return None
 
                 if response.status_code == 429:
@@ -72,24 +83,32 @@ class MISPClient:
                 if 500 <= response.status_code < 600:
                     self.logger("MISP upstream error")
 
+                last_error = f"HTTP {response.status_code}"
+
             except requests.exceptions.ReadTimeout:
                 self.logger("MISP read timeout")
+                last_error = "read timeout"
             except requests.exceptions.ConnectTimeout:
                 self.logger("MISP connect timeout")
+                last_error = "connect timeout"
             except requests.exceptions.RequestException as exc:
                 self.logger(f"MISP HTTP error: {exc}")
+                last_error = str(exc)
 
-            self.sleeper(
-                retry_delay(
-                    attempt + 1,
-                    self.retry_backoff_seconds,
-                    self.retry_jitter_seconds,
-                    self.random_fn,
+            if attempt + 1 < self.retries:
+                self.sleeper(
+                    retry_delay(
+                        attempt + 1,
+                        self.retry_backoff_seconds,
+                        self.retry_jitter_seconds,
+                        self.random_fn,
+                    )
                 )
-            )
 
         self.logger("MISP request failed completely")
-        return None
+        raise MISPRequestError(
+            f"MISP request failed after {self.retries} attempts: {last_error}"
+        )
 
     @staticmethod
     def event_records(data):

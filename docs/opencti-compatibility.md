@@ -28,10 +28,23 @@ their values are empty:
 - `noTriggerImport`
 - `embedded`
 - `upsertOperations`
+- observable inputs `AIPrompt`, `IMEI`, `ICCID` and `IMSI`, including their
+  GraphQL declarations and arguments because those types do not exist in the
+  OpenCTI `6.9.x` schema;
 
 If any unsupported field contains data, the operation fails before sending the
 request. NarrowCTI does not silently discard attachments, embedded content or
 upsert instructions to preserve compatibility.
+
+The exporter also treats every object returned in pycti's failed-import list as
+a failed export. Source state, artifact deduplication and graph deduplication are
+therefore not marked successful after a partial OpenCTI import.
+
+For Sigma Indicators, NarrowCTI applies the same `sigmatools 0.23.1`
+`SigmaCollectionParser` syntax gate used by OpenCTI `6.9.4`. A source rule that
+passes basic YAML checks but fails that parser is preserved as a labeled Note
+with its raw content and compatibility reason. If the parser is unavailable,
+the gate fails closed to a Note instead of attempting an unverified Indicator.
 
 OpenCTI `7.x` does not use this adaptation. The variables are sent through the
 native `pycti 7` path.

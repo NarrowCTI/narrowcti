@@ -9,6 +9,11 @@ try:
 except Exception:
     yaml = None
 
+try:
+    from sigma.parser.collection import SigmaCollectionParser
+except Exception:
+    SigmaCollectionParser = None
+
 from core.decision_audit import DecisionAuditLog, DecisionRecord
 from core.contextual_scoring import (
     build_contextual_score_evidence,
@@ -1804,7 +1809,7 @@ def sigma_rule_opencti_compatibility(rule_content):
         ]
         if not selections:
             return False, "missing detection selection"
-        return True, ""
+        return validate_sigma_with_opencti_parser(content)
 
     if not re.search(r"(?im)^\s*title\s*:", content):
         return False, "missing title"
@@ -1830,6 +1835,17 @@ def sigma_rule_opencti_compatibility(rule_content):
             return False, "invalid yaml-like line"
         if stripped.endswith("|") or stripped.endswith(">"):
             in_block_scalar = indent
+    return validate_sigma_with_opencti_parser(content)
+
+
+def validate_sigma_with_opencti_parser(content):
+    """Match the Sigma syntax gate used by the supported OpenCTI 6.9 runtime."""
+    if SigmaCollectionParser is None:
+        return False, "OpenCTI-compatible Sigma parser unavailable"
+    try:
+        SigmaCollectionParser(content)
+    except Exception:
+        return False, "rejected by OpenCTI-compatible Sigma parser"
     return True, ""
 
 

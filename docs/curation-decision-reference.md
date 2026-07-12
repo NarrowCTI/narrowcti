@@ -95,6 +95,10 @@ score-dependent and therefore uses `decision_score` in `enforce` mode.
 | Dry-run is enabled after policy passes | `dry-run` | Would ingest/export, but OpenCTI is not mutated. |
 | Policy passes, deduplication passes and dry-run is disabled | `ingest` / `export` | Candidate can be exported to OpenCTI. |
 
+TLP 2.0 `clear` and legacy `white` are equivalent for allow-list decisions.
+NarrowCTI still preserves the source-provided value in decision and graph
+evidence so the compatibility mapping remains auditable.
+
 ## Graph Export Matrix
 
 | `NARROWCTI_GRAPH_EXPORT_MODE` | Behavior |

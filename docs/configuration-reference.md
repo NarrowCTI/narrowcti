@@ -68,7 +68,7 @@ records the reason for every `ingest`, `drop`, `quarantine`, `skip`,
 | `MAX_DAYS_HARD_FILTER` | `0` | `0` disables hard cutoff. Positive values drop candidates older than this many days regardless of score. |
 | `MIN_SCORE_FOR_OLD_PULSE` | `80` | OTX score required when an old pulse exceeds `MAX_DAYS_OLD`. |
 | `MIN_SCORE_FOR_OLD_EVENT` | `80` | MISP score required when an old event exceeds `MAX_DAYS_OLD`. |
-| `NARROWCTI_ALLOWED_TLP` | Empty in code, `white,green` in templates | Candidates tagged with disallowed TLP are dropped before export. Empty means no TLP allow-list. |
+| `NARROWCTI_ALLOWED_TLP` | Empty in code, `white,green` in templates | Candidates tagged with disallowed TLP are dropped before export. Empty means no TLP allow-list. TLP 2.0 `clear` and legacy `white` are policy-equivalent while the source value remains unchanged in evidence. |
 | `NARROWCTI_ALLOWED_INDICATOR_TYPES` | Empty in code | Filters exportable indicator types. If all indicators are removed, the candidate is skipped. |
 
 See `curation-decision-reference.md` for the decision matrix.

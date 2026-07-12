@@ -174,6 +174,8 @@ def build_artifact_dedup(gateway_settings):
         return None
     if gateway_settings.dedup_mode not in ["artifact", "hybrid"]:
         return None
+    if not gateway_settings.dedup_state_file:
+        return None
     return ArtifactDeduplicationIndex(gateway_settings.dedup_state_file)
 
 

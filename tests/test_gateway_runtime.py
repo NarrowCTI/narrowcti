@@ -149,6 +149,11 @@ class GatewaySettingsTests(unittest.TestCase):
 
             self.assertIsNotNone(build_artifact_dedup(enabled))
             self.assertIsNone(build_artifact_dedup(disabled))
+
+    def test_build_artifact_dedup_disables_empty_state_path(self):
+        settings = SimpleNamespace(dedup_mode="hybrid", dedup_state_file="")
+
+        self.assertIsNone(build_artifact_dedup(settings))
     def test_build_source_dedup_can_enable_opencti_lookup_only(self):
         dedup = build_source_dedup(
             api_client="api",

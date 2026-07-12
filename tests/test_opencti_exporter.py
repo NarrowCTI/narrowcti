@@ -1,11 +1,51 @@
 import json
 import unittest
+from unittest.mock import patch
 
-from exporters.opencti import report_refs_from_bundle_json, send_bundle
+from exporters.opencti import (
+    OpenCTIImportRejectedError,
+    report_refs_from_bundle_json,
+    send_bundle,
+)
 from exporters.stix_builder import deterministic_graph_object_id
 
 
 class OpenCTIExporterTests(unittest.TestCase):
+    def test_rejected_bundle_objects_fail_the_export(self):
+        api_client = FakeOpenCTIClient()
+        api_client.stix2.failed = [{"error_message": "observable rejected"}]
+
+        with self.assertRaisesRegex(
+            OpenCTIImportRejectedError,
+            "OpenCTI rejected 1 bundle object",
+        ):
+            send_bundle(
+                api_client,
+                "Rejected validation",
+                "Must fail closed.",
+                70,
+                [],
+            )
+
+    def test_pycti_worker_errors_fail_the_export(self):
+        api_client = FakeOpenCTIClient()
+
+        with patch(
+            "exporters.opencti.capture_pycti_worker_errors",
+            return_value=([("worker failure",)], lambda: None),
+        ):
+            with self.assertRaisesRegex(
+                OpenCTIImportRejectedError,
+                "worker recorded 1 permanent import error",
+            ):
+                send_bundle(
+                    api_client,
+                    "Worker rejection",
+                    "Must fail closed.",
+                    70,
+                    [],
+                )
+
     def test_audit_mode_keeps_legacy_report_indicator_bundle(self):
         api_client = FakeOpenCTIClient()
 
@@ -765,9 +805,11 @@ class FakeOpenCTIClient:
 class FakeStix2:
     def __init__(self):
         self.imports = []
+        self.failed = []
 
     def import_bundle_from_json(self, bundle_json, update=True):
         self.imports.append({"bundle": json.loads(bundle_json), "update": update})
+        return [], self.failed
 
 
 def imported_objects(api_client):
