@@ -23,5 +23,7 @@ def write_json_atomic(path, value, *, normalize=None):
         try:
             os.unlink(temporary_path)
         except FileNotFoundError:
+            # The temporary file may already be absent.
+            # Suppress this cleanup failure intentionally.
             pass
         raise
