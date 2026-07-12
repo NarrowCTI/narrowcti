@@ -102,11 +102,11 @@ Release validation was performed with the existing
 `opencti-connector-narrowcti` test image:
 
 ```powershell
-.\scripts\validate-v0.6.ps1
+.\scripts\validate-release-runtime.ps1
 ```
 
 The helper executes the Docker-based syntax and unit validation. Use
-`.\scripts\validate-v0.6.ps1 -Preview` to inspect the Docker commands without
+`.\scripts\validate-release-runtime.ps1 -Preview` to inspect the Docker commands without
 running them.
 
 Manual equivalent:
@@ -120,7 +120,7 @@ docker run --rm -v "${PWD}:/repo" -w /repo opencti-connector-narrowcti python -m
 Latest complete suite result:
 
 ```text
-.\scripts\validate-v0.6.ps1
+.\scripts\validate-release-runtime.ps1
 Ran 190 tests
 OK
 ```
@@ -157,7 +157,7 @@ audit_action_export=ok
 Final release validation should also run:
 
 ```powershell
-.\scripts\validate-v0.6.ps1
+.\scripts\validate-release-runtime.ps1
 ```
 
 Manual equivalent:

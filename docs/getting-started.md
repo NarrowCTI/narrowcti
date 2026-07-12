@@ -116,6 +116,18 @@ Do not start with broad graph export. The safe sequence is:
 
 The current graph promotion design is in `docs/graph-promotion-v0.8.md`.
 
+## State And Recovery
+
+The gateway keeps checkpoints, deduplication indexes, quarantine records and
+reports in the `narrowcti-state` volume. Do not remove that volume when
+restarting or upgrading. Use the backup and restore procedure in
+`docs/deployment-operations.md` before changing the image or widening source
+scope.
+
+State JSON files are written atomically. A process interruption during a
+checkpoint update leaves the last complete state available for restart-safe
+replay.
+
 ## Next Reading
 
 - `docs/deployment-operations.md`

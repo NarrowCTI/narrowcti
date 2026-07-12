@@ -33,13 +33,15 @@ NARROWCTI_GATEWAY_IMAGE
 | `0` | Git tag `v0.8.0` | Moving latest release in major line. |
 | `0.9.0` | Git tag `v0.9.0` | Immutable release tag after publication. |
 | `0.9` | Git tag `v0.9.0` | Moving latest patch in minor line after publication. |
+| `1.0.0` | Git tag `v1.0.0`, after final gate | Future immutable release tag; not published. |
+| `1.0` | Git tag `v1.0.0`, after final gate | Future moving latest patch in minor line. |
 | `sha-<short-sha>` | Every published build | Immutable traceability tag. |
 
 Operators should pin production-like environments to an immutable release tag,
 for example:
 
 ```text
-NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:0.8.0
+NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:0.9.0
 ```
 
 Use `latest` only when intentionally tracking the newest stable `main` build.
@@ -58,25 +60,31 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image nar
 
 ## Publish Workflow
 
-The GitHub Actions workflow in `.github/workflows/container-image.yml` publishes
-to GitHub Container Registry on `main` and semantic version tags.
+The GitHub Actions workflow in `.github/workflows/container-image.yml` builds and
+scans candidates for pull requests, `dev`, `main` and feature branches. It
+publishes to GitHub Container Registry only on `main` and semantic version tags.
 
 Publication requires:
 
-- repository write permission to GitHub Packages;
 - a clean Docker build from `Dockerfile.gateway`;
-- CI validation kept green before creating a release tag.
+- CI validation kept green before creating a release tag;
+- the protected GitHub `release` environment approved for publication;
+- job-scoped write permission to GitHub Packages, available only to the
+  publication job.
 
-The v0.9 publication gate uses this order for the exact candidate image:
+The v1.0 candidate publication gate uses this order for the exact candidate
+image:
 
 ```text
-build -> smoke test -> Trivy scan -> CycloneDX SBOM -> registry login -> push
+build -> smoke test -> Trivy scan -> CycloneDX SBOM -> exact candidate artifact
+  -> protected release approval -> registry login -> push
 ```
 
 Pull requests and `dev` builds exercise the build, smoke, scan and SBOM path but
-do not publish stable image tags. `main` and version tags publish only after the
-same job has passed the image gates. See `docs/security-quality-gates.md` for
-the blocking policy.
+do not publish stable image tags. `main` and version tags first retain the exact
+scanned candidate as a short-lived artifact. A separate publication job then
+loads that same candidate and publishes only after the `release` environment
+allows it. See `docs/security-quality-gates.md` for the blocking policy.
 
 Docker Hub mirroring can be added later with explicit repository secrets and the
 same tag policy. Until then, GHCR is the canonical public registry.

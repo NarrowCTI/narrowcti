@@ -2,6 +2,8 @@ import json
 import os
 from datetime import datetime, timezone
 
+from core.atomic_io import write_json_atomic
+
 
 ARTIFACTS_KEY = "artifact_fingerprints"
 ARTIFACT_RECORDS_KEY = "artifact_records"
@@ -97,11 +99,7 @@ def load_artifact_state(state_file):
 
 
 def save_artifact_state(state_file, state):
-    directory = os.path.dirname(state_file)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    with open(state_file, "w") as f:
-        json.dump(normalize_artifact_state(state), f)
+    write_json_atomic(state_file, state, normalize=normalize_artifact_state)
 
 
 def source_sighting_key(sighting):

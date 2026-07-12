@@ -16,27 +16,26 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 env:
   IMAGE_NAME: ghcr.io/narrowcti/narrowcti-gateway
 
 jobs:
-  publish:
+  build-scan:
     name: Build, scan and publish gateway image
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
       - name: Extract image metadata
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
@@ -52,7 +51,7 @@ jobs:
             org.opencontainers.image.licenses=Apache-2.0
 
       - name: Build exact candidate image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: Dockerfile.gateway
@@ -69,7 +68,7 @@ jobs:
           python -c "import gateway.connector, gateway.preflight, gateway.review_api, exporters.stix_builder"
 
       - name: Scan candidate image
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: narrowcti-gateway:scan
           format: table
@@ -79,20 +78,68 @@ jobs:
           severity: CRITICAL,HIGH
 
       - name: Generate candidate image SBOM
-        uses: anchore/sbom-action@v0.24.0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
           image: narrowcti-gateway:scan
           format: cyclonedx-json
           artifact-name: narrowcti-gateway-${{ github.sha }}.cdx.json
 
-      - name: Log in to GitHub Container Registry
+      - name: Prepare exact release image artifact
         if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-        uses: docker/login-action@v4
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/narrowcti-image"
+          docker save narrowcti-gateway:scan --output "${RUNNER_TEMP}/narrowcti-image/narrowcti-gateway.tar"
+          printf '%s\n' "${{ steps.meta.outputs.tags }}" > "${RUNNER_TEMP}/narrowcti-image/image-tags.txt"
+
+      - name: Upload exact release image artifact
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: narrowcti-gateway-${{ github.sha }}
+          path: ${{ runner.temp }}/narrowcti-image
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish gateway image
+    needs: build-scan
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+    environment:
+      name: release
+
+    steps:
+      - name: Download exact release image artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: narrowcti-gateway-${{ github.sha }}
+          path: ${{ runner.temp }}/narrowcti-image
+
+      - name: Load exact scanned image
+        run: docker load --input "${{ runner.temp }}/narrowcti-image/narrowcti-gateway.tar"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Retag approved image
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [ -z "${tag}" ] && continue
+            docker tag narrowcti-gateway:scan "${tag}"
+          done < "${RUNNER_TEMP}/narrowcti-image/image-tags.txt"
+
       - name: Publish scanned image tags
-        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-        run: docker push --all-tags ${{ env.IMAGE_NAME }}
+        run: docker push --all-tags "${{ env.IMAGE_NAME }}"

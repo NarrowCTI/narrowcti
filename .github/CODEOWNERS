@@ -1,0 +1,12 @@
+# CODEOWNERS defines review responsibility. Branch protection must separately
+# enable "Require review from Code Owners" for this file to be enforced.
+* @fagner-fmlo
+
+# The repository owner remains the default reviewer until trusted maintainers
+# are deliberately added to the organization or a maintainer team.
+.github/ @fagner-fmlo
+core/ @fagner-fmlo
+connectors/ @fagner-fmlo
+exporters/ @fagner-fmlo
+gateway/ @fagner-fmlo
+deployment/ @fagner-fmlo

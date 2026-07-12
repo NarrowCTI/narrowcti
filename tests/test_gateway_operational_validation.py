@@ -400,8 +400,8 @@ class GatewayOperationalValidationTests(unittest.TestCase):
         text = render_report(report, output_format="text")
         data = json.loads(render_report(report, output_format="json"))
 
-        self.assertIn("NarrowCTI v0.8 operational validation", text)
-        self.assertEqual("operational-validation/v0.8", data["schema_version"])
+        self.assertIn("NarrowCTI v1.0 operational validation", text)
+        self.assertEqual("operational-validation/v1.0", data["schema_version"])
 
     def test_renders_html_report_with_escaped_dynamic_content(self):
         report = validation_report_with_dynamic_html()
@@ -409,7 +409,7 @@ class GatewayOperationalValidationTests(unittest.TestCase):
         html = format_html_report(report)
 
         self.assertIn("<!doctype html>", html)
-        self.assertIn("NarrowCTI v0.8 operational validation", html)
+        self.assertIn("NarrowCTI v1.0 operational validation", html)
         self.assertIn("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;", html)
         self.assertNotIn("<script>alert", html)
 
@@ -427,7 +427,7 @@ class GatewayOperationalValidationTests(unittest.TestCase):
                 data = json.load(handle)
 
         self.assertEqual(output_file, result)
-        self.assertEqual("operational-validation/v0.8", data["schema_version"])
+        self.assertEqual("operational-validation/v1.0", data["schema_version"])
 
 
 def validation_settings(**overrides):

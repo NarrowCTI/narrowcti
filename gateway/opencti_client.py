@@ -14,12 +14,23 @@ query NarrowCTIPlatformVersion {
 LEGACY_OPENCTI_PREFIXES = ("6.9.",)
 PYCTI7_INPUT_FIELDS = frozenset(
     {
+        "AIPrompt",
+        "ICCID",
+        "IMEI",
+        "IMSI",
         "embedded",
         "files",
         "filesMarkings",
         "noTriggerImport",
         "upsertOperations",
     }
+)
+PYCTI7_QUERY_INPUTS = (
+    "AIPrompt",
+    "ICCID",
+    "IMEI",
+    "IMSI",
+    "upsertOperations",
 )
 
 
@@ -57,6 +68,19 @@ def sanitize_legacy_variables(value, path="variables"):
     return deepcopy(value)
 
 
+def sanitize_legacy_query(query):
+    """Remove pycti 7 observable inputs absent from the OpenCTI 6.9 schema."""
+    lines = []
+    for line in str(query or "").splitlines(keepends=True):
+        if any(
+            f"${input_name}:" in line or f"{input_name}: ${input_name}" in line
+            for input_name in PYCTI7_QUERY_INPUTS
+        ):
+            continue
+        lines.append(line)
+    return "".join(lines)
+
+
 class NarrowCTIOpenCTIApiClient(OpenCTIApiClient):
     """OpenCTI client with an explicit, version-scoped 6.9 compatibility boundary."""
 
@@ -78,10 +102,13 @@ class NarrowCTIOpenCTIApiClient(OpenCTIApiClient):
         return self.platform_version.startswith(LEGACY_OPENCTI_PREFIXES)
 
     def query(self, query, variables=None, disable_impersonate=False):
+        query_text = query
         query_variables = variables
-        if self.uses_legacy_input_schema and variables:
-            query_variables = sanitize_legacy_variables(variables)
-        return super().query(query, query_variables, disable_impersonate)
+        if self.uses_legacy_input_schema:
+            query_text = sanitize_legacy_query(query)
+            if variables:
+                query_variables = sanitize_legacy_variables(variables)
+        return super().query(query_text, query_variables, disable_impersonate)
 
 
 def build_opencti_client(opencti_url, opencti_token, **kwargs):

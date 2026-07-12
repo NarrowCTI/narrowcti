@@ -5,14 +5,17 @@ governed by its own license terms.
 
 ## Runtime Dependencies
 
-The custom OTX connector currently pins these Python packages:
+The gateway image currently pins these direct Python packages:
 
 ```text
-pycti==6.4.8
+pycti==7.260710.0
+fastapi==0.139.0
+uvicorn==0.51.0
 stix2==3.0.1
-requests==2.32.3
+requests==2.33.0
 python-dateutil==2.9.0.post0
-urllib3==2.2.3
+urllib3==2.7.0
+sigmatools==0.23.1
 ```
 
 The package list is maintained in:
@@ -20,6 +23,10 @@ The package list is maintained in:
 ```text
 connectors/otx/requirements.txt
 ```
+
+`sigmatools 0.23.1` is used only to mirror the Sigma syntax validation boundary
+of supported OpenCTI `6.9.x` environments. It is distributed under LGPL-3.0;
+NarrowCTI does not modify or relicense that dependency.
 
 ## External Platforms
 

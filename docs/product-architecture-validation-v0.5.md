@@ -79,8 +79,9 @@ explicit:
   model.
 - `docs/misp-validation-v0.4.md` records operational evidence and guardrails.
 - `docs/gateway-runtime-v0.5.md` describes the unified gateway runtime target.
-- `docs/enterprise-intelligence-gateway-v0.5.md` defines the enterprise filter,
-  quarantine-release and graph-enrichment target.
+- Current filtering, quarantine-release and graph-enrichment behavior is
+  defined by `docs/curation-decision-reference.md` and
+  `docs/product-reference.md`.
 - This document records the v0.5 continuity check against the product vision.
 
 ## v0.5 Quality Bar
@@ -98,10 +99,11 @@ a gateway:
 - Dry-run mode remains trustworthy and non-exporting.
 - Tests prove registry, orchestration, failure isolation and summaries.
 - Documentation explains how the gateway improves CTI and hunting workflows.
-- Enterprise backlog separates safe v0.5 documentation from future quarantine,
-  entity extraction, ATT&CK resolver and graph enrichment implementation.
+- The historical v0.5 validation separated the runtime foundation from later
+  implementation work; current behavior is defined by the unversioned product
+  references.
 
-## Known Gaps To Preserve As Roadmap Items
+## Known Gaps In The Historical Validation
 
 - Scoring is still basic and must mature into source-specific weighting.
 - The unified gateway entrypoint and source registry exist; they still need
@@ -110,7 +112,7 @@ a gateway:
   artifact-correlation reports exist as local operator evidence for v0.5.
 - OpenCTI-side deduplication lookup and initial local cross-source artifact
   correlation records are implemented. Analyst-facing enrichment, confidence
-  uplift and reporting from those records remain roadmap items.
+  uplift and reporting from those records were outside the v0.5 validation.
 - There is no quarantine release workflow yet; today quarantine is recorded as
   a decision outcome, not a managed review queue.
 - There is no administrative UI for policy tuning.

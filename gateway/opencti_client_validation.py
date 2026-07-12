@@ -7,7 +7,7 @@ from exporters.stix_builder import build_report_bundle
 from gateway.opencti_client import build_opencti_client
 
 
-DEFAULT_REPORT_NAME = "NarrowCTI v0.9 OpenCTI client compatibility validation"
+DEFAULT_REPORT_NAME = "NarrowCTI v1.0 OpenCTI client compatibility validation"
 
 REPORT_LOOKUP_QUERY = """
 query NarrowCTIClientValidationReport($search: String!) {

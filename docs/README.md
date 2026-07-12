@@ -14,25 +14,27 @@ release archive or community-facing page.
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `product-reference.md`
+- `opencti-coverage-matrix.md`
 - `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`
 - `security-quality-gates.md`
+- `architecture-v1.0.md`
 - `architecture-v0.9.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
 - `opencti-coverage-matrix-v0.8.md`
 - `curation-reporting-v0.8.md`
 - `support-diagnostics-v0.8.md`
-- `roadmap.md`
 
 ## Community and Governance
 
 - `documentation-map.md`
 - `repository-structure.md`
 - `release-process.md`
+- `community-governance.md`
 - `community-standards.md`
-- `open-source-strategy.md`
 - `../CONTRIBUTING.md`
 - `development-guide.md`
 - `community-issue-triage.md`
@@ -43,6 +45,7 @@ release archive or community-facing page.
 ## Architecture and Design
 
 - `architecture.md`
+- `architecture-v1.0.md`
 - `architecture-v0.9.md`
 - `analyst-review-api.md`
 - `opencti-compatibility.md`
@@ -58,12 +61,25 @@ release archive or community-facing page.
 ## Release Notes
 
 - `../CHANGELOG.md`
+- `release-v1.0.0.md` (in development)
 - `release-v0.9.0.md` (released)
-- `release-v0.8.0.md`
+- `release-v0.8.0.md` (released)
 - `release-v0.7.0.md`
 - `release-v0.6.0.md`
 - `release-v0.5.0.md`
 - `release-v0.4.0.md`
+
+## Release Status
+
+The release sequence is `v0.8.0` -> `v0.9.0` -> `v1.0.0`. The first two are
+published release milestones, while `v1.0.0` is the intended final production
+release for the initial Community Edition milestone.
+
+`v0.9.0` is the latest published stable release, dated 2026-07-11. The
+repository is currently preparing `v1.0.0-dev.0`; it has no public tag or
+GitHub Release yet. Tags `v0.2.0` through `v0.7.0` are historical version
+snapshots without GitHub Release pages. See `product-reference.md` for the
+single current status table and `release-process.md` for publication order.
 
 ## Release Snapshots
 
@@ -85,8 +101,6 @@ first documentation surface for operators:
 - `*-validation-v*.md`
 - `product-architecture-validation-v*.md`
 - `metadata-validation-v*.md`
-- `market-positioning-v*.md`
-- `post-v1-ml-roadmap.md`
 
 Many development-evidence files are excluded from release source archives by
 `.gitattributes`.

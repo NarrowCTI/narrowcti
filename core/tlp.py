@@ -1,4 +1,8 @@
 TLP_PREFIX = "tlp:"
+TLP_EQUIVALENTS = {
+    "clear": frozenset(("clear", "white")),
+    "white": frozenset(("clear", "white")),
+}
 
 
 def normalize_tlp(value):
@@ -28,7 +32,9 @@ def extract_tlp_values(tags):
 
 
 def tlp_is_allowed(tags, allowed_tlp):
-    allowed = set(normalize_allowed_tlp(allowed_tlp))
+    allowed = set()
+    for value in normalize_allowed_tlp(allowed_tlp):
+        allowed.update(TLP_EQUIVALENTS.get(value, (value,)))
     if not allowed:
         return True, ""
 

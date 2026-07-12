@@ -204,7 +204,7 @@ def create_app(
     openapi_url = "/openapi.json" if settings.docs_enabled else None
     app = FastAPI(
         title="NarrowCTI Analyst Review API",
-        version="0.9.0-dev",
+        version="1.0.0-dev.0",
         docs_url=docs_url,
         redoc_url=None,
         openapi_url=openapi_url,

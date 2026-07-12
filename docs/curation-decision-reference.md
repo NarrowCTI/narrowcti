@@ -8,9 +8,11 @@ into operator-visible decisions.
 ```text
 source candidate
   -> source state and basic validation
-  -> TLP and indicator-type filters
-  -> scoring
+  -> base scoring and graph evidence
+  -> TLP policy
+  -> contextual scoring mode
   -> policy decision
+  -> indicator-type filter
   -> deduplication
   -> dry-run / quarantine / export
   -> audit evidence
@@ -33,9 +35,47 @@ The base score starts at `40`.
 
 The final score is clamped to `0..100`.
 
-Contextual scoring evidence can also be recorded from graph candidates, but in
-the current v0.8 posture it is audit/report evidence and does not silently
-bypass policy.
+## Contextual Scoring
+
+Contextual scoring uses accepted, source-backed graph candidates to measure how
+much useful context accompanies the source item. The default impacts are:
+
+| Category | Default impact | Examples |
+| --- | --- | --- |
+| `threat` | `20` | Threat actor or intrusion set. |
+| `toolbox` | `15` | Malware, tool or detection rule. |
+| `ttp` | `15` | ATT&CK technique, tactic or detection context. |
+| `sector` | `10` | Target sector. |
+| `location` | `10` | Target country or region. |
+| `vulnerability` | `15` | Source-backed vulnerability. |
+| `author` | `5` | Source identity evidence. |
+| `graph_state` | `5` | Observable, sighting or object-reference context. |
+
+Repeated category/entity/value matches are deduplicated before impact is
+calculated. The combined impact is capped by
+`NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT` and applied with:
+
+```text
+contextual_score = base_score + ((100 - base_score) * impact_ratio)
+```
+
+The result is clamped to `0..100` and never lowers the base score.
+
+| Mode | Decision effect |
+| --- | --- |
+| `off` | Uses base score and emits no contextual adjustments. |
+| `shadow` | Calculates full evidence but keeps `decision_score=base_score`. This is the default. |
+| `enforce` | Sets `decision_score=contextual_score` for score-based policy checks. |
+
+Example: base score `40` with `threat:20` and `ttp:15` has combined impact
+`35%` and contextual score `61`. In `shadow`, policy still sees `40`; in
+`enforce`, policy sees `61`. Audit retains both scores, the `21`-point delta,
+matched values and every adjustment.
+
+Contextual scoring runs only after TLP acceptance. It cannot override denied
+TLP, a positive hard age cutoff, explicit graph-policy holds or a type filter
+that leaves no exportable indicator. The soft old-item rule remains
+score-dependent and therefore uses `decision_score` in `enforce` mode.
 
 ## Policy Matrix
 
@@ -44,16 +84,20 @@ bypass policy.
 | Candidate missing required source id or enrichment fails | `skip` or `error` | Source item cannot be safely processed. |
 | Candidate already processed in source state | `skip` | Source deduplication prevents repeated processing. |
 | `MAX_DAYS_HARD_FILTER > 0` and candidate age exceeds it | `drop` | Hard age cutoff. |
-| Score `< NARROWCTI_QUARANTINE_SCORE_THRESHOLD` and quarantine enabled | `quarantine` | Low score, analyst review required. |
-| Score `< NARROWCTI_QUARANTINE_SCORE_THRESHOLD` and quarantine disabled | `drop` | Very low score. |
-| Score `< NARROWCTI_MIN_SCORE_TO_INGEST` | `drop` | Below minimum score. |
-| Candidate age `> NARROWCTI_MAX_DAYS_OLD` and score below old-item threshold | `drop` | Old intelligence with insufficient score. |
+| Decision score `< NARROWCTI_QUARANTINE_SCORE_THRESHOLD` and quarantine enabled | `quarantine` | Low score, analyst review required. |
+| Decision score `< NARROWCTI_QUARANTINE_SCORE_THRESHOLD` and quarantine disabled | `drop` | Very low score. |
+| Decision score `< NARROWCTI_MIN_SCORE_TO_INGEST` | `drop` | Below minimum score. |
+| Candidate age `> NARROWCTI_MAX_DAYS_OLD` and decision score below old-item threshold | `drop` | Old intelligence with insufficient score. |
 | TLP tag exists and is not in `NARROWCTI_ALLOWED_TLP` | `drop` | Handling policy denies export. |
 | Indicator type filtering removes all exportable indicators | `skip` | Nothing safe remains to export. |
 | Artifact deduplication finds all indicators already known | `skip` | Avoids duplicate OpenCTI indicator noise. |
 | Artifact deduplication finds all indicators known and graph replay is enabled for bounded MISP export | graph-only export path | Replays improved graph context without indicator objects. |
 | Dry-run is enabled after policy passes | `dry-run` | Would ingest/export, but OpenCTI is not mutated. |
 | Policy passes, deduplication passes and dry-run is disabled | `ingest` / `export` | Candidate can be exported to OpenCTI. |
+
+TLP 2.0 `clear` and legacy `white` are equivalent for allow-list decisions.
+NarrowCTI still preserves the source-provided value in decision and graph
+evidence so the compatibility mapping remains auditable.
 
 ## Graph Export Matrix
 

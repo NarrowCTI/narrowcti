@@ -15,6 +15,7 @@ Goal: verify connectivity and decision evidence without OpenCTI writes.
 NARROWCTI_ENABLED_SOURCES=otx
 NARROWCTI_DRY_RUN=true
 NARROWCTI_RUN_ONCE=true
+NARROWCTI_CONTEXTUAL_SCORING_MODE=shadow
 NARROWCTI_GRAPH_EXPORT_MODE=audit
 NARROWCTI_OPENCTI_GRAPH_LOOKUP=false
 OTX_DRY_RUN=true
@@ -40,6 +41,7 @@ Goal: import a small, bounded source sample after dry-run evidence is clean.
 NARROWCTI_DRY_RUN=false
 NARROWCTI_RUN_ONCE=true
 NARROWCTI_DEDUP_MODE=hybrid
+NARROWCTI_CONTEXTUAL_SCORING_MODE=shadow
 NARROWCTI_OPENCTI_DEDUP_LOOKUP=false
 NARROWCTI_GRAPH_EXPORT_MODE=audit
 OTX_DRY_RUN=false
@@ -66,6 +68,7 @@ Goal: pull historical MISP data without overwhelming a limited machine.
 NARROWCTI_ENABLED_SOURCES=misp
 NARROWCTI_DRY_RUN=true
 NARROWCTI_RUN_ONCE=true
+NARROWCTI_CONTEXTUAL_SCORING_MODE=shadow
 MISP_DRY_RUN=true
 MISP_RUN_ONCE=true
 MISP_QUERIES=*
@@ -96,6 +99,7 @@ Only use after preflight, dry-run, controlled import and reports are clean.
 NARROWCTI_RUN_ONCE=false
 NARROWCTI_DRY_RUN=false
 NARROWCTI_DEDUP_MODE=hybrid
+NARROWCTI_CONTEXTUAL_SCORING_MODE=shadow
 NARROWCTI_OPENCTI_DEDUP_LOOKUP=true
 NARROWCTI_GRAPH_EXPORT_MODE=audit
 NARROWCTI_OPENCTI_GRAPH_LOOKUP=true
@@ -111,6 +115,35 @@ Expected behavior:
 - OpenCTI dedup lookup reduces indicator duplication;
 - run summaries and decision audit remain available for review.
 
+## Contextual Scoring Promotion
+
+Goal: compare contextual evidence before allowing it to change threshold
+decisions.
+
+First run the normal bounded source workload with:
+
+```env
+NARROWCTI_CONTEXTUAL_SCORING_MODE=shadow
+NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT=100
+NARROWCTI_CONTEXTUAL_SCORING_IMPACTS=threat:20,toolbox:15,ttp:15,sector:10,location:10,vulnerability:15,author:5,graph_state:5
+```
+
+Review base score, contextual score, delta, category adjustments and the
+simulated decision boundary in decision and curation reports. After confirming
+that source-backed context does not promote noisy candidates, change only:
+
+```env
+NARROWCTI_CONTEXTUAL_SCORING_MODE=enforce
+```
+
+Expected behavior:
+
+- score-threshold decisions use the contextual score;
+- TLP, hard age cutoff, graph holds and indicator-type policy remain blocking;
+- audit records retain base score, contextual score and every adjustment;
+- reverting to `shadow` restores the previous decision score without losing
+  evidence.
+
 ## Controlled Graph Export
 
 Goal: promote graph objects and relationships after source-specific validation.
@@ -124,6 +157,7 @@ NARROWCTI_MIN_ENTITY_CONFIDENCE=0
 NARROWCTI_MIN_RELATIONSHIP_CONFIDENCE=0
 NARROWCTI_ALLOWED_GRAPH_ENTITY_TYPES=
 NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES=
+NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT=false
 ```
 
 Expected behavior:
@@ -132,6 +166,12 @@ Expected behavior:
 - canonical OpenCTI objects are reused when lookup finds them;
 - newly exported graph keys are marked only after successful import;
 - relationship audit can validate Diamond and Kill Chain coverage.
+
+Infrastructure victimology remains disabled in this baseline. For a bounded
+same-event MISP validation, set
+`NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT=true`, export one known
+event, and confirm the `Infrastructure -> targets -> Sector/Organization`
+relationship through the OpenCTI API and UI before widening the scope.
 
 ## Graph-Only MISP Replay
 

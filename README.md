@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="docs/assets/narrowcti-logo.png" alt="NarrowCTI logo" width="180">
+  <img src="docs/assets/narrowcti-banner.png" alt="NarrowCTI banner" width="760">
 </p>
-
-<h1 align="center">NarrowCTI</h1>
 
 <p align="center">
   <strong>OpenCTI-native CTI curation gateway for governed, explainable and graph-ready intelligence.</strong>
@@ -27,13 +25,23 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v0.9.0
+v1.0.0-dev.0
 ```
 
-`v0.9.0` is the analyst operations and graph-quality release. It adds
-governed analyst review API operations, canonical relationship reuse, release
-gates and OpenCTI compatibility validation. It was published on 2026-07-11
-from the tagged main commit recorded in the GitHub Release.
+`v1.0.0` is in development as the first production-ready Community Edition.
+The frozen scope hardens the validated OTX and MISP gateway paths, integrates
+governed contextual scoring, closes priority graph-quality gaps and validates
+installation, upgrade, recovery and release gates. New source adapters are
+outside the current release scope.
+
+The latest published release is `v0.9.0` (2026-07-11). `v0.8.0` and
+`v0.9.0` have GitHub Release pages; `v0.2.0` through `v0.7.0` remain
+historical tags without GitHub Release pages. No `v1.0.0` tag, image or
+GitHub Release exists until the final documentation and validation gates close.
+
+The release sequence is `v0.8.0` -> `v0.9.0` -> `v1.0.0`. The `v1.0.0`
+release is the intended final production release for the first Community
+Edition milestone; until publication, it remains the current development track.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
@@ -64,18 +72,17 @@ upgrade procedure.
 The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
 transition from an OTX-specific connector into NarrowCTI Gateway, an OpenCTI-native
 pre-ingestion intelligence gateway. OTX remains the first source adapter; it is no
-longer the product identity. The v0.4 release validates the gateway model with a
-second real feed, with MISP as the first strategic candidate. The v0.5 track
-starts the move toward a unified gateway runtime. The v0.5 track also records
-the enterprise intelligence gateway target: NarrowCTI should become the decision
-layer that shapes actor, arsenal, TTP, victimology, infrastructure and
-quarantine/release context before OpenCTI ingestion.
+longer the product identity. The v0.4 release validated the gateway model with a
+second real feed, and v0.5 introduced the unified gateway runtime model. The
+current gateway shapes source-backed actor, arsenal, TTP, victimology,
+infrastructure and quarantine/release context before OpenCTI ingestion.
 
 ## What It Does
 
 - Searches OTX pulses using configurable threat intelligence queries.
 - Enriches candidate pulses through the OTX API.
-- Calculates contextual scores and records scoring evidence before ingestion.
+- Calculates contextual scores in `shadow` mode by default and supports
+  explicit, audited `enforce` mode after operator validation.
 - Applies ingestion policy for drop, quarantine and export decisions.
 - Optionally writes structured decision audit records for operational review.
 - Logs per-query operational summaries for reviewed, ingested, dropped,
@@ -83,8 +90,8 @@ quarantine/release context before OpenCTI ingestion.
 - Deduplicates processed pulses with persistent local state.
 - Provides a MISP adapter foundation with independent state, dry-run mode,
   run-once execution and safe backfill filters.
-- Defines the enterprise roadmap for actor, arsenal, MITRE ATT&CK,
-  victimology, quarantine-release and graph-enrichment filters.
+- Maps source-backed actor, arsenal, MITRE ATT&CK, victimology, quarantine,
+  release and graph-enrichment context.
 - Builds STIX bundles for OpenCTI ingestion.
 - Runs as a Dockerized connector inside an OpenCTI lab environment.
 
@@ -111,26 +118,25 @@ tests/               Unit coverage for the processor and shared pipeline logic
 docs/                Product, operations, architecture and release documentation
 ```
 
-## Product Positioning
+## Product Role
 
 NarrowCTI is designed as a pre-ingestion intelligence decision layer for
 OpenCTI. Its role is to reduce feed noise before data reaches the OpenCTI graph
 by applying source-specific enrichment, scoring, deduplication and policy.
 
-The product direction is a professional CTI gateway for analysts, hunters, SOC
-and platform teams that need curated intelligence, explainable decisions and
-auditable feed governance instead of raw IoC forwarding. OTX, MISP, commercial
-feeds and internal sources should be evaluated through the same explainable
-ingestion model. The enterprise target is to enrich OpenCTI with actors,
-arsenal, MITRE tactics and techniques, victimology, infrastructure, campaigns,
-vulnerabilities and detection context when source evidence supports it. The v1.0
-market position is tracked in `docs/market-positioning-v1.0.md`.
+The gateway serves analysts, hunters, SOC and platform teams that need curated
+intelligence, explainable decisions and auditable feed governance instead of raw
+IoC forwarding. OTX, MISP and other approved source adapters use the same
+explainable ingestion model. Source-backed actors, arsenal, MITRE tactics and
+techniques, victimology, infrastructure, campaigns, vulnerabilities and
+detection context are exported when the evidence supports them. The public
+product boundary is tracked in `docs/product-reference.md`.
 
 MITRE ATT&CK is treated as reference and curation context. The official MITRE
 connector should populate OpenCTI with the canonical ATT&CK baseline, while
-NarrowCTI uses ATT&CK ids found in OTX, MISP and future feeds to enrich, score,
-filter, deduplicate, audit and later relate curated intelligence to the OpenCTI
-graph. This decision is tracked in
+NarrowCTI uses ATT&CK ids found in OTX and MISP to enrich, score, filter,
+deduplicate, audit and relate curated intelligence to the OpenCTI graph. This
+decision is tracked in
 `docs/mitre-curation-architecture-v0.7.md`.
 
 ## Deduplication Posture
@@ -197,10 +203,8 @@ isolation intact.
 The source-specific OTX and MISP runtimes should remain available for debugging,
 validation and bounded backfill. MISP should stay opt-in and guarded until local
 OpenCTI, queue and Elasticsearch behavior remains stable across repeated bounded
-runs. The detailed v0.5 design is tracked in `docs/gateway-runtime-v0.5.md`,
-the enterprise intelligence gateway model is tracked in
-`docs/enterprise-intelligence-gateway-v0.5.md`, and the product/architecture
-continuity validation is tracked in
+runs. The runtime design is tracked in `docs/gateway-runtime-v0.5.md`, and the
+product/architecture continuity validation is tracked in
 `docs/product-architecture-validation-v0.5.md`.
 
 ## v0.6 Release Track
@@ -249,8 +253,7 @@ release, reject and export audit events without requiring manual JSONL parsing.
 OTX entity extraction is controlled by
 `NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION=true`. In v0.6 this extraction is
 metadata-only: adversary, malware family, ATT&CK ids, industries, targeted
-countries, TLP, references and tags are preserved as structured evidence for
-future graph enrichment.
+countries, TLP, references and tags are preserved as structured graph evidence.
 
 ## v0.7 Release
 
@@ -261,18 +264,12 @@ malware, tools, infrastructure, vulnerabilities, campaigns, sectors, locations,
 ATT&CK techniques and relationships, and keep those relationships explainable
 before they affect the OpenCTI graph.
 
-The consolidated architecture is tracked in `docs/architecture-v0.7.md`. The
-detailed graph-enrichment design is tracked in
-`docs/graph-enrichment-v0.7.md`, and the release notes are tracked in
-`docs/release-v0.7.0.md`. The MITRE curation architecture is tracked in
-`docs/mitre-curation-architecture-v0.7.md`. MISP
-compatibility with the official OpenCTI connector mapping is tracked in
-`docs/misp-official-connector-mapping-v0.7.md`, and OTX compatibility with the
-official AlienVault connector mapping is tracked in
-`docs/otx-official-connector-mapping-v0.7.md`. Contextual scoring research is
-tracked in `docs/contextual-scoring-reference-v0.7.md`.
-The direct source, MISP collector and hybrid ingestion architecture is tracked
-in `docs/source-ingestion-modes-v0.7.md`.
+The current operator contract is tracked in `docs/product-reference.md`, the
+active architecture in `docs/architecture-v1.0.md`, and current OpenCTI
+coverage in `docs/opencti-coverage-matrix.md`. Historical v0.7 source,
+MITRE, MISP and OTX mapping documents remain available through
+`docs/documentation-map.md`; they explain evolution but do not override the
+current product contract.
 
 ## v0.8 Release
 
@@ -293,6 +290,29 @@ optionally infer additional relationships after the curated graph exists.
 OpenCTI tab coverage, current export status and backlog boundaries are tracked
 in `docs/opencti-coverage-matrix-v0.8.md`.
 
+## v0.9 Release
+
+The published v0.9 release turns the v0.8 graph and analyst foundations into a
+governed operator workflow. It adds the authenticated review API, exact
+relationship deduplication, OpenCTI compatibility boundaries, public
+contributor governance and blocking CI/CD security gates.
+
+The authoritative notes are in `docs/release-v0.9.0.md`. The published image
+and tag policy are in `docs/container-images.md`.
+
+## v1.0 Development Track
+
+The current development track hardens the existing OTX and MISP gateway paths
+for Community Edition. It covers deterministic contextual scoring,
+source-backed actor, campaign, infrastructure and victimology propagation,
+Diamond, Timeline and Kill Chain evidence, restart-safe operations, complete
+documentation and reproducible security, image and OpenCTI validation. It does
+New direct adapters are outside the current release scope.
+
+The current product contract is `docs/product-reference.md`, the current
+OpenCTI coverage matrix is `docs/opencti-coverage-matrix.md`, and the evolving
+release evidence is `docs/release-v1.0.0.md`.
+
 ## Curation Configuration
 
 Curation controls must be visible in configuration and then applied
@@ -300,10 +320,8 @@ automatically by the gateway. Current source runtimes expose score thresholds,
 age limits, quarantine behavior, gateway-level allowed TLP, exportable
 indicator types, MISP date ranges, MISP tag filters and volume guardrails
 through environment variables. The v0.5 track adds gateway-level `NARROWCTI_*`
-controls for shared policy, deduplication and source selection. Future
-enterprise controls should cover actor, arsenal, ATT&CK, victimology, graph
-state and quarantine release workflows without hiding those policy choices from
-operators.
+controls for shared policy, deduplication and source selection. Unsupported
+policy dimensions remain explicit and are not silently inferred by the gateway.
 
 The graph layer records `graph_candidate_policy` and `graph_export_plan`
 metadata. `NARROWCTI_GRAPH_EXPORT_MODE=audit` keeps the plan audit-only, while
@@ -323,8 +341,8 @@ planning query OpenCTI for canonical graph objects, starting with ATT&CK
 attack-patterns, malware, tools, infrastructure, CVE vulnerabilities, threat
 actors and intrusion sets, and controlled locations/countries, before promotion
 creates new graph knowledge. Canonical matches are exposed as bounded
-`graph_export_plan_lookup_matches` metadata for audit and future enterprise
-reporting. When a canonical match includes a valid STIX `standard_id`, the
+`graph_export_plan_lookup_matches` metadata for bounded audit reporting. When a
+canonical match includes a valid STIX `standard_id`, the
 export gate references that existing OpenCTI object in the curated STIX bundle
 instead of duplicating it. Graph SDOs created by NarrowCTI also use
 deterministic STIX ids so repeated exports of the same curated object converge
@@ -368,7 +386,7 @@ Author naming convention:
 ```
 
 OTX exports appear as `OTX AlienVault via NarrowCTI`, MISP exports appear as
-`MISP via NarrowCTI`, and future adapters should define their own source
+`MISP via NarrowCTI`, and additional adapters should define their own source
 identity mapping with the same suffix. NarrowCTI also remains visible through
 decision audit records, curation reports, export plans and `x_narrowcti_*`
 graph metadata.
@@ -574,7 +592,8 @@ feature/* -> dev -> main -> version tag -> GitHub Release
 Current release:
 
 ```text
-v0.8.0
+Latest published: v0.9.0
+Next release: v1.0.0 (in development)
 ```
 
 ## Documentation
@@ -594,6 +613,8 @@ docs/configuration-reference.md
 docs/architecture.md
 docs/curation-decision-reference.md
 docs/environment-profiles.md
+docs/product-reference.md
+docs/opencti-coverage-matrix.md
 docs/analyst-review-api.md
 docs/container-images.md
 docs/opencti-compatibility.md
@@ -608,13 +629,13 @@ docs/development-guide.md
 docs/community-issue-triage.md
 docs/release-v0.9.0.md
 docs/release-v0.8.0.md
+docs/release-v1.0.0.md
 docs/release-process.md
-docs/roadmap.md
 ```
 
-Development evidence and lab validation notes may remain in the repository for
-transparency, but release source archives are curated through `.gitattributes`
-so operators receive product-focused documentation.
+Development evidence and lab validation notes are retained only where they help
+maintainers reproduce supported behavior. Release source archives are curated
+through `.gitattributes` so operators receive product-focused documentation.
 
 ## Contributing
 
@@ -627,27 +648,22 @@ docs/community-issue-triage.md
 CODE_OF_CONDUCT.md
 SUPPORT.md
 SECURITY.md
+docs/community-governance.md
 ```
 
 Issues and pull requests should avoid secrets, `.env` files, local `state/`
 artifacts, raw customer data and private feed payloads.
 
-## Roadmap
+## About NarrowCTI
 
-- Open source product foundation with Apache-2.0 core distribution.
-- v0.9 analyst operations, graph-quality hardening and governed source
-  expansion before the production-ready v1.0 release.
-- Multi-feed support beyond the reference OTX adapter.
-- Advanced correlation scoring and analyst-facing source evidence.
-- Richer scoring model with source-specific weighting.
-- Sigma or detection-rule generation.
-- Administrative controls for policy tuning.
-- Quarantine review and analyst release workflow.
-- Enterprise filters for actor, arsenal, MITRE ATT&CK, victimology and graph
-  state.
-- Post-v1.0 ML-assisted curation for aliases, relationship suggestions,
-  semantic deduplication and prioritization after the deterministic v1.0 engine
-  is stable.
+<p align="center">
+  <img src="docs/assets/cybersysbr-logo.png" alt="CybersysBR logo" width="140">
+</p>
+
+NarrowCTI is a product designed and developed by **CybersysBR**, the
+cybersecurity identity used by Fagner Mendes Leite de Oliveira. CybersysBR is
+the authorship identity associated with the project; NarrowCTI Community
+Edition remains distributed under the Apache-2.0 license.
 
 ## Security Notes
 
@@ -665,8 +681,4 @@ NarrowCTI core is open source under Apache-2.0. See:
 ```text
 LICENSE
 THIRD_PARTY_NOTICES.md
-docs/open-source-strategy.md
 ```
-
-Future paid services, managed deployments or optional separate modules should
-sit around the open source core rather than restricting the core gateway.

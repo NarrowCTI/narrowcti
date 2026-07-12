@@ -279,8 +279,8 @@ the v0.5 cross-source deduplication behavior inspectable before later releases
 turn correlation records into analyst-facing enrichment.
 
 This is an operator reporting layer for v0.5, not a customer-facing metrics
-platform. The v0.6 roadmap can expand this into richer health checks, value
-metrics and quarantine review workflows.
+platform. Richer health checks, value metrics and quarantine review workflows
+are outside this historical runtime document.
 
 ## Docker Compose Operation
 

@@ -1,6 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
+from connectors.otx.feed_adapter import pulse_to_feed_candidate
 from connectors.otx.models import PulseCandidate, QuerySummary
 from connectors.otx.processor import OTXProcessor, decision_metadata
 
@@ -375,7 +376,7 @@ class ProcessorTests(unittest.TestCase):
             mitre_attack["resolved"][0]["name"],
         )
         graph_evidence = records[0].metadata["graph_evidence"]
-        self.assertEqual("v0.7.0-dev", graph_evidence["version"])
+        self.assertEqual("v1.0.0-dev.0", graph_evidence["version"])
         self.assertEqual("alienvault:otx", graph_evidence["source_key"])
         self.assertEqual(2, graph_evidence["counts"]["attack_pattern"])
         self.assertEqual(1, graph_evidence["counts"]["vulnerability"])
@@ -412,7 +413,7 @@ class ProcessorTests(unittest.TestCase):
             )
         )
         graph_candidates = records[0].metadata["graph_candidates"]
-        self.assertEqual("v0.7.0-dev", graph_candidates["version"])
+        self.assertEqual("v1.0.0-dev.0", graph_candidates["version"])
         self.assertEqual("pulse-1", graph_candidates["external_id"])
         self.assertEqual(
             graph_evidence["record_count"],
@@ -454,7 +455,7 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(graph_policy["accepted_count"], graph_plan["accepted_count"])
         self.assertEqual(0, graph_plan["would_create_object_count"])
         contextual_scoring = records[0].metadata["contextual_scoring"]
-        self.assertEqual("dry-run", contextual_scoring["mode"])
+        self.assertEqual("shadow", contextual_scoring["mode"])
         self.assertFalse(contextual_scoring["applied_to_decision"])
         self.assertEqual(
             graph_policy["accepted_count"],
@@ -472,6 +473,43 @@ class ProcessorTests(unittest.TestCase):
         )
         self.assertGreater(graph_preview["graph_object_count"], 0)
         self.assertGreater(graph_preview["graph_relationship_count"], 0)
+
+    def test_enforce_contextual_scoring_changes_policy_score(self):
+        settings = self.settings()
+        settings.contextual_scoring_mode = "enforce"
+        settings.contextual_scoring_max_impact = 100
+        settings.contextual_scoring_impacts = {"threat": 100}
+        processor = OTXProcessor(
+            settings,
+            otx_client=None,
+            api_client=None,
+            logger=lambda message: None,
+        )
+        pulse = {
+            "id": "pulse-contextual",
+            "name": "Contextual candidate",
+            "adversary": "APT Example",
+            "created": self.FRESH_CREATED,
+            "indicators": [],
+        }
+        candidate = PulseCandidate(
+            pulse=pulse,
+            name=pulse["name"],
+            description="",
+            indicators=[],
+            ioc_count=0,
+            age=0,
+            score=40,
+            score_details={"final_score": 40},
+        )
+
+        scored = processor.apply_contextual_scoring(
+            pulse_to_feed_candidate(pulse),
+            candidate,
+        )
+
+        self.assertEqual(100, scored.score)
+        self.assertEqual(("ingest", "ok"), processor.candidate_policy_decision(scored))
 
     def test_decision_metadata_uses_graph_dedup_known_keys(self):
         candidate = SimpleNamespace(
@@ -672,6 +710,7 @@ class ProcessorTests(unittest.TestCase):
                 "description": "restricted",
                 "created": "2099-01-01T00:00:00Z",
                 "tags": ["tlp:red"],
+                "adversary": "APT Example",
                 "indicators": [{"type": "domain", "indicator": "red.example"}],
             }
         )
@@ -681,6 +720,8 @@ class ProcessorTests(unittest.TestCase):
         )
         settings = self.settings()
         settings.allowed_tlp = ["green"]
+        settings.contextual_scoring_mode = "enforce"
+        settings.contextual_scoring_impacts = {"threat": 100}
         processor = OTXProcessor(
             settings,
             otx_client=otx_client,
@@ -700,6 +741,10 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual([], marked)
         self.assertEqual("drop", records[0].action)
         self.assertEqual("tlp not allowed: red", records[0].reason)
+        contextual = records[0].metadata["contextual_scoring"]
+        self.assertTrue(contextual["configured_to_apply"])
+        self.assertFalse(contextual["applied_to_decision"])
+        self.assertEqual("drop", contextual["decision_action"])
         self.assertIn("Drop: TLP red pulse reason=tlp not allowed: red", logs)
 
     def test_process_pulse_skips_disallowed_indicator_types(self):

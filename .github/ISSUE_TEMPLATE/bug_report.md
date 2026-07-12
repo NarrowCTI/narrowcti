@@ -2,7 +2,7 @@
 name: Bug report
 about: Report a reproducible NarrowCTI bug
 title: "[bug] "
-labels: bug, needs-triage
+labels: type:bug, needs reproduction
 assignees: ""
 ---
 

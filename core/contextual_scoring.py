@@ -4,7 +4,14 @@ from collections.abc import Mapping
 from core.scoring import clamp_score
 
 
-CONTEXTUAL_SCORING_VERSION = "v0.7.0-dev"
+CONTEXTUAL_SCORING_VERSION = "v1.0.0"
+CONTEXTUAL_SCORING_MODES = ("off", "shadow", "enforce")
+CONTEXTUAL_SCORING_MODE_ALIASES = {
+    "audit": "shadow",
+    "disabled": "off",
+    "dry-run": "shadow",
+    "dry_run": "shadow",
+}
 
 CATEGORY_BY_ENTITY_TYPE = {
     "threat_actor": "threat",
@@ -43,25 +50,26 @@ DEFAULT_CATEGORY_IMPACTS = {
 def build_contextual_score_evidence(
     base_score,
     graph_candidate_policy,
-    mode="dry-run",
+    mode="shadow",
     enabled=True,
     category_impacts=None,
     max_impact=100,
 ):
     base_score = clamp_score(coerce_int(base_score, 50))
-    mode = clean_string(mode) or "dry-run"
-    max_impact = max(0, coerce_int(max_impact, 100))
-    if not enabled:
+    mode = normalize_contextual_scoring_mode(mode)
+    max_impact = normalize_contextual_scoring_max_impact(max_impact)
+    if not enabled or mode == "off":
         return contextual_score_result(
             base_score=base_score,
             contextual_score=base_score,
             mode=mode,
-            status="disabled",
+            status="disabled" if not enabled else "off",
             adjustments=[],
             accepted_candidate_count=accepted_candidate_count(graph_candidate_policy),
             raw_impact_total=0,
             capped_impact_total=0,
             max_impact=max_impact,
+            applied_to_decision=False,
         )
 
     impacts = normalize_category_impacts(category_impacts)
@@ -85,6 +93,7 @@ def build_contextual_score_evidence(
         raw_impact_total=raw_impact_total,
         capped_impact_total=capped_impact_total,
         max_impact=max_impact,
+        applied_to_decision=mode == "enforce",
     )
     result["deduplicated_adjustment_count"] = duplicate_count
     return result
@@ -134,15 +143,19 @@ def contextual_score_result(
     raw_impact_total,
     capped_impact_total,
     max_impact,
+    applied_to_decision,
 ):
     category_counts = Counter(adjustment["category"] for adjustment in adjustments)
+    decision_score = contextual_score if applied_to_decision else base_score
     return {
         "version": CONTEXTUAL_SCORING_VERSION,
         "mode": mode,
         "status": status,
-        "applied_to_decision": False,
+        "configured_to_apply": mode == "enforce",
+        "applied_to_decision": applied_to_decision,
         "base_score": base_score,
         "contextual_score": contextual_score,
+        "decision_score": decision_score,
         "score_delta": max(0, contextual_score - base_score),
         "accepted_candidate_count": accepted_candidate_count,
         "adjustment_count": len(adjustments),
@@ -153,6 +166,95 @@ def contextual_score_result(
         "impact_ratio": capped_impact_total / 100,
         "capped": raw_impact_total > capped_impact_total,
         "adjustments": adjustments,
+    }
+
+
+def finalize_contextual_score_evidence(
+    evidence,
+    decision_score,
+    decision_action,
+    decision_reason,
+):
+    if not isinstance(evidence, Mapping):
+        return {}
+    result = dict(evidence)
+    actual_score = clamp_score(
+        coerce_int(decision_score, result.get("base_score", 50))
+    )
+    result["decision_score"] = actual_score
+    result["applied_to_decision"] = bool(
+        result.get("configured_to_apply")
+        and actual_score == result.get("contextual_score")
+        and actual_score != result.get("base_score")
+    )
+    result["decision_action"] = clean_string(decision_action)
+    result["decision_reason"] = clean_string(decision_reason)
+    return result
+
+
+def normalize_contextual_scoring_mode(value):
+    mode = clean_string(value).lower() or "shadow"
+    mode = CONTEXTUAL_SCORING_MODE_ALIASES.get(mode, mode)
+    if mode not in CONTEXTUAL_SCORING_MODES:
+        raise ValueError(
+            "contextual scoring mode must be off, shadow or enforce"
+        )
+    return mode
+
+
+def normalize_contextual_scoring_max_impact(value):
+    max_impact = coerce_int(value, 100)
+    if max_impact < 0 or max_impact > 100:
+        raise ValueError("contextual scoring max impact must be between 0 and 100")
+    return max_impact
+
+
+def parse_contextual_scoring_impacts(value):
+    if value is None or value == "":
+        return {}
+    if isinstance(value, Mapping):
+        entries = value.items()
+    else:
+        pairs = []
+        for item in str(value).split(","):
+            item = item.strip()
+            if not item:
+                continue
+            if ":" not in item:
+                raise ValueError(
+                    "contextual scoring impacts must use category:points pairs"
+                )
+            category, impact = item.split(":", 1)
+            pairs.append((category, impact))
+        entries = pairs
+
+    impacts = {}
+    for category, impact in entries:
+        normalized_category = clean_string(category).lower()
+        if normalized_category not in DEFAULT_CATEGORY_IMPACTS:
+            raise ValueError(
+                f"unknown contextual scoring category: {normalized_category}"
+            )
+        normalized_impact = coerce_int(impact, 0)
+        if normalized_impact < 0 or normalized_impact > 100:
+            raise ValueError(
+                "contextual scoring category impact must be between 0 and 100"
+            )
+        impacts[normalized_category] = normalized_impact
+    return impacts
+
+
+def contextual_scoring_config_from_settings(settings):
+    return {
+        "mode": normalize_contextual_scoring_mode(
+            getattr(settings, "contextual_scoring_mode", "shadow")
+        ),
+        "category_impacts": parse_contextual_scoring_impacts(
+            getattr(settings, "contextual_scoring_impacts", {})
+        ),
+        "max_impact": normalize_contextual_scoring_max_impact(
+            getattr(settings, "contextual_scoring_max_impact", 100)
+        ),
     }
 
 

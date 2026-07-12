@@ -42,6 +42,10 @@ class GatewaySettingsTests(unittest.TestCase):
             "NARROWCTI_ENABLE_QUARANTINE": "false",
             "NARROWCTI_QUARANTINE_SCORE_THRESHOLD": "45",
             "NARROWCTI_MAX_DAYS_OLD": "365",
+            "NARROWCTI_CONTEXTUAL_SCORING_MODE": "enforce",
+            "NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT": "80",
+            "NARROWCTI_CONTEXTUAL_SCORING_IMPACTS": "threat:25,ttp:10",
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT": "true",
             "NARROWCTI_ALLOWED_TLP": "white, green",
             "NARROWCTI_ALLOWED_INDICATOR_TYPES": "domain, ipv4",
             "NARROWCTI_RELEASE_AUDIT_FILE": "/state/audit/releases.jsonl",
@@ -72,6 +76,13 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertFalse(settings.enable_quarantine)
         self.assertEqual(45, settings.quarantine_score_threshold)
         self.assertEqual(365, settings.max_days_old)
+        self.assertEqual("enforce", settings.contextual_scoring_mode)
+        self.assertEqual(80, settings.contextual_scoring_max_impact)
+        self.assertEqual(
+            {"threat": 25, "ttp": 10},
+            settings.contextual_scoring_impacts,
+        )
+        self.assertTrue(settings.enable_infrastructure_victimology_export)
         self.assertEqual(["white", "green"], settings.allowed_tlp)
         self.assertEqual(["domain", "ipv4"], settings.allowed_indicator_types)
         self.assertEqual("/state/audit/releases.jsonl", settings.release_audit_file)
@@ -115,6 +126,15 @@ class GatewaySettingsTests(unittest.TestCase):
                 opencti_graph_lookup=False,
             )
 
+    def test_settings_rejects_invalid_contextual_scoring_mode(self):
+        with patch.dict(
+            os.environ,
+            {"NARROWCTI_CONTEXTUAL_SCORING_MODE": "automatic"},
+            clear=True,
+        ):
+            with self.assertRaisesRegex(ValueError, "off, shadow or enforce"):
+                load_settings()
+
 
     def test_build_artifact_dedup_uses_gateway_mode(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -129,6 +149,11 @@ class GatewaySettingsTests(unittest.TestCase):
 
             self.assertIsNotNone(build_artifact_dedup(enabled))
             self.assertIsNone(build_artifact_dedup(disabled))
+
+    def test_build_artifact_dedup_disables_empty_state_path(self):
+        settings = SimpleNamespace(dedup_mode="hybrid", dedup_state_file="")
+
+        self.assertIsNone(build_artifact_dedup(settings))
     def test_build_source_dedup_can_enable_opencti_lookup_only(self):
         dedup = build_source_dedup(
             api_client="api",

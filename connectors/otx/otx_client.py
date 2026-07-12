@@ -1,6 +1,13 @@
+import random
 import time
 
 import requests
+
+from core.retry import retry_delay
+
+
+class OTXRequestError(RuntimeError):
+    pass
 
 
 class OTXClient:
@@ -14,14 +21,20 @@ class OTXClient:
         enrich_timeout=60,
         retries=3,
         retry_backoff_seconds=3,
+        retry_jitter_seconds=1,
         logger=None,
+        sleeper=time.sleep,
+        random_fn=random.uniform,
     ):
         self.api_key = api_key
         self.search_timeout = search_timeout
         self.enrich_timeout = enrich_timeout
         self.retries = retries
         self.retry_backoff_seconds = retry_backoff_seconds
+        self.retry_jitter_seconds = retry_jitter_seconds
         self.logger = logger or (lambda msg: None)
+        self.sleeper = sleeper
+        self.random_fn = random_fn
 
     def headers(self):
         return {
@@ -31,6 +44,7 @@ class OTXClient:
         }
 
     def request_json(self, url, params=None, timeout_seconds=30):
+        last_error = "unknown error"
         for attempt in range(self.retries):
             try:
                 self.logger(f"HTTP request attempt {attempt + 1}: {url}")
@@ -48,6 +62,10 @@ class OTXClient:
 
                 if response.status_code == 403:
                     self.logger("Auth error or invalid OTX API key")
+                    raise OTXRequestError("OTX authentication failed with HTTP 403")
+
+                if response.status_code == 404:
+                    self.logger("OTX object not found")
                     return None
 
                 if response.status_code == 429:
@@ -56,17 +74,32 @@ class OTXClient:
                 if 500 <= response.status_code < 600:
                     self.logger("OTX upstream error")
 
+                last_error = f"HTTP {response.status_code}"
+
             except requests.exceptions.ReadTimeout:
                 self.logger("Read timeout")
+                last_error = "read timeout"
             except requests.exceptions.ConnectTimeout:
                 self.logger("Connect timeout")
+                last_error = "connect timeout"
             except requests.exceptions.RequestException as exc:
                 self.logger(f"HTTP error: {exc}")
+                last_error = str(exc)
 
-            time.sleep((attempt + 1) * self.retry_backoff_seconds)
+            if attempt + 1 < self.retries:
+                self.sleeper(
+                    retry_delay(
+                        attempt + 1,
+                        self.retry_backoff_seconds,
+                        self.retry_jitter_seconds,
+                        self.random_fn,
+                    )
+                )
 
         self.logger("Request failed completely")
-        return None
+        raise OTXRequestError(
+            f"OTX request failed after {self.retries} attempts: {last_error}"
+        )
 
     def search_pulses(self, query):
         self.logger(f"Searching OTX: {query}")

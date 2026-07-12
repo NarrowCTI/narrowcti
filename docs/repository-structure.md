@@ -19,10 +19,17 @@ Root-level community and release files:
 
 GitHub collaboration files live under `.github/`:
 
-- issue templates for bugs, feature requests and documentation issues;
+- `CODEOWNERS` for default review responsibility;
+- `dependabot.yml` for dependency and action update proposals;
+- issue templates for bugs, features, documentation and questions;
 - pull request template;
-- continuous integration workflow;
+- continuous integration, security and DAST workflows;
 - container image publication workflow.
+
+The public contribution and permission model is defined in
+`docs/community-governance.md`. GitHub branch protection, private reporting,
+secret scanning and repository roles are settings outside the Git tree and must
+be checked by the repository owner before release.
 
 ## Source Layout
 

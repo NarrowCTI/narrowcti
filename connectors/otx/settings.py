@@ -1,8 +1,14 @@
 import os
 from dataclasses import dataclass
 
+from core.contextual_scoring import (
+    normalize_contextual_scoring_max_impact,
+    normalize_contextual_scoring_mode,
+    parse_contextual_scoring_impacts,
+)
 from core.graph_export_plan import normalize_graph_export_mode
 from core.mitre_attack import DEFAULT_MITRE_STIX_URL
+from core.runtime_config import require_nonnegative, require_positive
 
 
 @dataclass(frozen=True)
@@ -16,6 +22,7 @@ class Settings:
     otx_search_timeout: int
     otx_retries: int
     otx_retry_backoff_seconds: int
+    otx_retry_jitter_seconds: int
     connector_run_interval: int
     max_days_old: int
     max_days_hard_filter: int
@@ -43,10 +50,20 @@ class Settings:
     decision_audit_file: str
     quarantine_repository_file: str = ""
     quarantine_raw_snapshot_max_bytes: int = 65536
+    contextual_scoring_mode: str = "shadow"
+    contextual_scoring_max_impact: int = 100
+    contextual_scoring_impacts: dict[str, int] = None
+    enable_infrastructure_victimology_export: bool = False
     enable_otx_entity_extraction: bool = True
     enable_mitre_attack_resolution: bool = True
     mitre_cache_file: str = ""
     mitre_stix_url: str = DEFAULT_MITRE_STIX_URL
+
+    def __post_init__(self):
+        for name in ("otx_timeout", "otx_search_timeout", "otx_retries"):
+            require_positive(name, getattr(self, name))
+        for name in ("otx_retry_backoff_seconds", "otx_retry_jitter_seconds"):
+            require_nonnegative(name, getattr(self, name))
 
 
 def env_required(name):
@@ -110,6 +127,7 @@ def load_settings():
         otx_search_timeout=env_int("OTX_SEARCH_TIMEOUT", 45),
         otx_retries=env_int("OTX_RETRIES", 3),
         otx_retry_backoff_seconds=env_int("OTX_RETRY_BACKOFF_SECONDS", 3),
+        otx_retry_jitter_seconds=env_int("OTX_RETRY_JITTER_SECONDS", 1),
         connector_run_interval=env_int("CONNECTOR_RUN_INTERVAL", 3600),
         max_days_old=env_int_with_gateway(
             "MAX_DAYS_OLD",
@@ -168,6 +186,19 @@ def load_settings():
         quarantine_raw_snapshot_max_bytes=env_int(
             "NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES",
             65536,
+        ),
+        contextual_scoring_mode=normalize_contextual_scoring_mode(
+            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_MODE", "shadow")
+        ),
+        contextual_scoring_max_impact=normalize_contextual_scoring_max_impact(
+            env_int("NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT", 100)
+        ),
+        contextual_scoring_impacts=parse_contextual_scoring_impacts(
+            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_IMPACTS", "")
+        ),
+        enable_infrastructure_victimology_export=env_bool(
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT",
+            False,
         ),
         enable_otx_entity_extraction=env_bool(
             "NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION",

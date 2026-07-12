@@ -28,17 +28,28 @@ upgrade guidance.
 - `docs/security-quality-gates.md` describes the current security, quality,
   image and DAST release policy.
 - `docs/documentation-map.md` classifies public docs and development evidence.
+- `docs/community-governance.md` describes contribution scope, permissions and
+  maintainer review.
 - `docs/release-vX.Y.Z.md` is product-facing and does not read like a lab log.
 - Versioned docs such as `docs/deployment-operations-vX.Y.md` are kept only as
   release snapshots when needed.
 - `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md` are
   present.
 - `.github/` issue, pull request and CI templates are present.
+- `.github/CODEOWNERS` and `.github/dependabot.yml` are present and reviewed.
+- GitHub `main` and `dev` branch protection requires pull requests, maintainer
+  review and applicable required checks; this must be verified in repository
+  settings, not inferred from the source tree.
+- The GitHub `release` environment requires maintainer approval and accepts
+  deployments only from protected `main` or semantic version tags.
 - No `.env`, local state, raw feed payloads, credentials or `AGENTS.md` are
   tracked.
+- Private market positioning, competitive research and internal legal strategy
+  are not part of the public product path.
 - `.dockerignore` excludes local agent instructions, runtime state and local
   secrets from Docker build context.
 - SAST, code-quality and dependency-audit workflows pass.
+- Third-party GitHub Actions are pinned to reviewed full commit SHAs.
 - Secret scanning and push protection are enabled, and release-history secret
   scan evidence is current.
 - The exact release image passes vulnerability scanning and has a generated
@@ -62,6 +73,13 @@ Run image validation when Docker is available:
 ```text
 powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
+
+When tests are enabled, the release helper installs `requirements-dev.txt`
+inside the disposable validation container before running the suite. This keeps
+test-only dependencies out of the production image while making the local
+release check reproduce the CI dependency set. Use
+`-SkipTestDependencyInstall` only when the supplied image already contains the
+complete development dependency set.
 
 Security and quality policy, blocking thresholds and required evidence are
 defined in `docs/security-quality-gates.md`.
@@ -113,7 +131,12 @@ Official image publication follows the same release boundary as GitHub releases.
 - Merges to `main` may publish `latest` and a `main` tracking tag.
 - Tags matching `vX.Y.Z` publish immutable release tags such as `X.Y.Z`, `X.Y`,
   `X` and `sha-<short-sha>`.
+- The image is built and scanned before publication; the publication job loads
+  the exact scanned candidate and requires the protected `release` environment.
+- Only the publication job receives `packages: write`; pull request workflows
+  never receive registry credentials or release secrets.
 - Release notes should mention the canonical image for the release, for example
-  `ghcr.io/narrowcti/narrowcti-gateway:0.8.0`.
+  `ghcr.io/narrowcti/narrowcti-gateway:0.9.0` while v1.0 remains in
+  development.
 - Operators should pin `NARROWCTI_GATEWAY_IMAGE` to a release tag for stable
   deployments.

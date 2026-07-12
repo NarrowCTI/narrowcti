@@ -2,7 +2,13 @@ import os
 from dataclasses import dataclass
 
 from connectors.misp.feed_adapter import MISPAdapterLimits
+from core.contextual_scoring import (
+    normalize_contextual_scoring_max_impact,
+    normalize_contextual_scoring_mode,
+    parse_contextual_scoring_impacts,
+)
 from core.graph_export_plan import normalize_graph_export_mode
+from core.runtime_config import require_nonnegative, require_positive
 
 
 @dataclass(frozen=True)
@@ -18,6 +24,7 @@ class MISPSettings:
     misp_enrich_timeout: int
     misp_retries: int
     misp_retry_backoff_seconds: int
+    misp_retry_jitter_seconds: int
     connector_run_interval: int
     ingest_pause_seconds: int
     dry_run: bool
@@ -53,10 +60,18 @@ class MISPSettings:
     decision_audit_file: str
     quarantine_repository_file: str = ""
     quarantine_raw_snapshot_max_bytes: int = 65536
+    contextual_scoring_mode: str = "shadow"
+    contextual_scoring_max_impact: int = 100
+    contextual_scoring_impacts: dict[str, int] = None
+    enable_infrastructure_victimology_export: bool = False
 
     def __post_init__(self):
         if self.max_iocs_per_event < 1:
             raise ValueError("max_iocs_per_event must be greater than zero")
+        for name in ("misp_search_timeout", "misp_enrich_timeout", "misp_retries"):
+            require_positive(name, getattr(self, name))
+        for name in ("misp_retry_backoff_seconds", "misp_retry_jitter_seconds"):
+            require_nonnegative(name, getattr(self, name))
 
     @property
     def adapter_limits(self):
@@ -137,6 +152,7 @@ def load_settings():
         misp_enrich_timeout=env_int("MISP_ENRICH_TIMEOUT", 60),
         misp_retries=env_int("MISP_RETRIES", 3),
         misp_retry_backoff_seconds=env_int("MISP_RETRY_BACKOFF_SECONDS", 3),
+        misp_retry_jitter_seconds=env_int("MISP_RETRY_JITTER_SECONDS", 1),
         connector_run_interval=env_int("CONNECTOR_RUN_INTERVAL", 3600),
         ingest_pause_seconds=env_int("INGEST_PAUSE_SECONDS", 2),
         dry_run=env_bool("MISP_DRY_RUN", True),
@@ -207,6 +223,19 @@ def load_settings():
         quarantine_raw_snapshot_max_bytes=env_int(
             "NARROWCTI_QUARANTINE_RAW_SNAPSHOT_MAX_BYTES",
             65536,
+        ),
+        contextual_scoring_mode=normalize_contextual_scoring_mode(
+            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_MODE", "shadow")
+        ),
+        contextual_scoring_max_impact=normalize_contextual_scoring_max_impact(
+            env_int("NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT", 100)
+        ),
+        contextual_scoring_impacts=parse_contextual_scoring_impacts(
+            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_IMPACTS", "")
+        ),
+        enable_infrastructure_victimology_export=env_bool(
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT",
+            False,
         ),
     )
     _ = settings.adapter_limits

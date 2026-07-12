@@ -1,6 +1,11 @@
 import os
 from dataclasses import dataclass
 
+from core.contextual_scoring import (
+    normalize_contextual_scoring_max_impact,
+    normalize_contextual_scoring_mode,
+    parse_contextual_scoring_impacts,
+)
 from core.graph_export_plan import normalize_graph_export_mode
 from core.mitre_attack import DEFAULT_MITRE_STIX_URL
 
@@ -28,6 +33,10 @@ class GatewaySettings:
     graph_export_mode: str
     graph_dedup_state_file: str
     opencti_graph_lookup: bool
+    contextual_scoring_mode: str = "shadow"
+    contextual_scoring_max_impact: int = 100
+    contextual_scoring_impacts: dict[str, int] = None
+    enable_infrastructure_victimology_export: bool = False
     declared_capabilities: list[str] = None
     release_audit_file: str = ""
     enable_mitre_attack_resolution: bool = True
@@ -41,6 +50,23 @@ class GatewaySettings:
             raise ValueError("source_interval_seconds must be greater than zero")
         if self.dedup_mode not in ["off", "source", "artifact", "hybrid"]:
             raise ValueError("dedup_mode must be off, source, artifact or hybrid")
+        object.__setattr__(
+            self,
+            "contextual_scoring_mode",
+            normalize_contextual_scoring_mode(self.contextual_scoring_mode),
+        )
+        object.__setattr__(
+            self,
+            "contextual_scoring_max_impact",
+            normalize_contextual_scoring_max_impact(
+                self.contextual_scoring_max_impact
+            ),
+        )
+        object.__setattr__(
+            self,
+            "contextual_scoring_impacts",
+            parse_contextual_scoring_impacts(self.contextual_scoring_impacts),
+        )
         if self.declared_capabilities is None:
             object.__setattr__(self, "declared_capabilities", [])
 
@@ -132,6 +158,19 @@ def load_settings():
         ),
         graph_dedup_state_file=os.getenv("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
         opencti_graph_lookup=env_bool("NARROWCTI_OPENCTI_GRAPH_LOOKUP", False),
+        contextual_scoring_mode=normalize_contextual_scoring_mode(
+            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_MODE", "shadow")
+        ),
+        contextual_scoring_max_impact=normalize_contextual_scoring_max_impact(
+            env_int("NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT", 100)
+        ),
+        contextual_scoring_impacts=parse_contextual_scoring_impacts(
+            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_IMPACTS", "")
+        ),
+        enable_infrastructure_victimology_export=env_bool(
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT",
+            False,
+        ),
         declared_capabilities=env_list("NARROWCTI_CAPABILITIES"),
         release_audit_file=os.getenv(
             "NARROWCTI_RELEASE_AUDIT_FILE",

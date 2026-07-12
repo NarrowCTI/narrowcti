@@ -84,6 +84,8 @@ class GraphStixBuilderTests(unittest.TestCase):
         detection_indicator = objects_by_type["indicator"][0]
         self.assertEqual("SIGMA: Suspicious PowerShell", detection_indicator["name"])
         self.assertEqual("sigma", detection_indicator["pattern_type"])
+        self.assertIn("logsource:\n", detection_indicator["pattern"])
+        self.assertIn("  condition: selection", detection_indicator["pattern"])
         self.assertEqual(["malicious-activity"], detection_indicator["indicator_types"])
         self.assertIn("narrowcti:detection-rule", detection_indicator["labels"])
         self.assertIn("rule-type:sigma", detection_indicator["labels"])
@@ -834,6 +836,56 @@ class GraphStixBuilderTests(unittest.TestCase):
             relationship["x_narrowcti_relationship_source_value"],
         )
 
+    def test_builds_infrastructure_victimology_targets_relationship(self):
+        bundle, summary = build_graph_report_bundle(
+            "Curated infrastructure victimology report",
+            "Infrastructure target context",
+            80,
+            graph_candidate_policy={
+                "accepted": [
+                    infrastructure_candidate(),
+                    infrastructure_victimology_candidate(),
+                ]
+            },
+        )
+
+        data = json.loads(bundle.serialize())
+        objects_by_type = {}
+        for item in data["objects"]:
+            objects_by_type.setdefault(item["type"], []).append(item)
+
+        infrastructure = objects_by_type["infrastructure"][0]
+        sector = next(
+            item
+            for item in objects_by_type["identity"]
+            if item["name"] == "Finance"
+        )
+        relationship = next(
+            relationship
+            for relationship in objects_by_type["relationship"]
+            if relationship["relationship_type"] == "targets"
+            and relationship["source_ref"] == infrastructure["id"]
+            and relationship["target_ref"] == sector["id"]
+        )
+
+        self.assertEqual(2, summary["accepted_candidate_count"])
+        self.assertEqual(
+            {"related-to": 1, "targets": 1},
+            summary["relationship_counts"],
+        )
+        self.assertEqual(1, summary["semantic_relationship_count"])
+        self.assertEqual(1, summary["report_relationship_count"])
+        self.assertEqual("Finance", sector["name"])
+        self.assertEqual("semantic", relationship["x_narrowcti_relationship_mode"])
+        self.assertEqual(
+            "infrastructure",
+            relationship["x_narrowcti_relationship_source_type"],
+        )
+        self.assertEqual(
+            "Validation C2 Infrastructure",
+            relationship["x_narrowcti_relationship_source_value"],
+        )
+
     def test_builds_mitre_data_source_and_skips_unimportable_context_objects(self):
         bundle, summary = build_graph_report_bundle(
             "Curated MITRE context report",
@@ -1550,6 +1602,20 @@ def infrastructure_attack_pattern_candidate():
         "relationship_source_value": "Validation C2 Infrastructure",
         "relationship_source_field": "infrastructures",
         "relationship_inference": "otx-single-adversary-infrastructure-ttp",
+    }
+    return candidate
+
+
+def infrastructure_victimology_candidate():
+    candidate = target_sector_candidate()
+    candidate["fingerprint"] = "infra-victimology-1"
+    candidate["source_field"] = "Galaxy.meta.targeted-sector"
+    candidate["attributes"] = {
+        **candidate["attributes"],
+        "relationship_source_stix_object_type": "infrastructure",
+        "relationship_source_value": "Validation C2 Infrastructure",
+        "relationship_source_field": "infrastructure-victimology",
+        "relationship_inference": "misp-event-infrastructure-victimology-context",
     }
     return candidate
 

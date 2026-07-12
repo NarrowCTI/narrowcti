@@ -89,8 +89,8 @@ def build_operational_validation_report(
         ),
     ]
     return OperationalValidationReport(
-        schema_version="operational-validation/v0.8",
-        release="v0.8.0",
+        schema_version="operational-validation/v1.0",
+        release="v1.0.0-dev.0",
         overall_status=overall_status(checks),
         checks=tuple(checks),
     )
@@ -493,7 +493,7 @@ def overall_status(checks):
 def format_text_report(report):
     data = report.to_dict()
     lines = [
-        "NarrowCTI v0.8 operational validation",
+        "NarrowCTI v1.0 operational validation",
         f"schema_version={data['schema_version']}",
         f"release={data['release']}",
         f"overall_status={data['overall_status']}",
@@ -526,7 +526,7 @@ def format_html_report(report):
             '<html lang="en">',
             "<head>",
             '  <meta charset="utf-8">',
-            "  <title>NarrowCTI v0.8 operational validation</title>",
+            "  <title>NarrowCTI v1.0 operational validation</title>",
             "  <style>",
             "    body { font-family: Arial, sans-serif; margin: 24px; color: #1f2933; }",
             "    h1 { font-size: 24px; margin-bottom: 8px; }",
@@ -537,7 +537,7 @@ def format_html_report(report):
             "  </style>",
             "</head>",
             "<body>",
-            "  <h1>NarrowCTI v0.8 operational validation</h1>",
+            "  <h1>NarrowCTI v1.0 operational validation</h1>",
             f"  <p><strong>Schema:</strong> {escape_html(data['schema_version'])}</p>",
             f"  <p><strong>Release:</strong> {escape_html(data['release'])}</p>",
             f"  <p><strong>Overall status:</strong> {escape_html(data['overall_status'])}</p>",
@@ -642,7 +642,7 @@ def parse_sources(value):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Build a v0.8 operational validation checklist from local evidence."
+        description="Build the current v1.0 operational validation checklist from local evidence."
     )
     parser.add_argument(
         "--decision-path",

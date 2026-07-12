@@ -70,6 +70,18 @@ SAFE_GRAPH_EXPORT_STIX_OBJECT_TYPES = (
     "x-mitre-data-source",
 )
 
+INFRASTRUCTURE_VICTIMOLOGY_ENTITY_TYPES = {
+    "target_administrative_area",
+    "target_city",
+    "target_country",
+    "target_individual",
+    "target_organization",
+    "target_position",
+    "target_region",
+    "target_sector",
+    "target_system",
+}
+
 
 @dataclass(frozen=True)
 class GraphCandidate:
@@ -243,6 +255,7 @@ def apply_graph_candidate_policy(
     allowed_entity_types=None,
     allowed_stix_object_types=None,
     require_relationship_provenance=False,
+    allow_infrastructure_victimology_export=False,
 ):
     allowed_entity_types = normalize_exclusions(allowed_entity_types)
     allowed_stix_object_types = normalize_exclusions(allowed_stix_object_types)
@@ -257,6 +270,9 @@ def apply_graph_candidate_policy(
             allowed_entity_types=allowed_entity_types,
             allowed_stix_object_types=allowed_stix_object_types,
             require_relationship_provenance=require_relationship_provenance,
+            allow_infrastructure_victimology_export=(
+                allow_infrastructure_victimology_export
+            ),
         )
         if reasons:
             held.append(
@@ -283,6 +299,7 @@ def graph_candidate_policy_reasons(
     allowed_entity_types=None,
     allowed_stix_object_types=None,
     require_relationship_provenance=False,
+    allow_infrastructure_victimology_export=False,
 ):
     reasons = []
     if candidate.confidence < min_entity_confidence:
@@ -298,12 +315,29 @@ def graph_candidate_policy_reasons(
         reasons.append("stix_object_type_not_allowed")
     if require_relationship_provenance and not candidate.provenance:
         reasons.append("relationship_provenance_required")
-    if (
-        compact_mapping(candidate.attributes).get("relationship_validation_state")
+    attributes = compact_mapping(candidate.attributes)
+    requires_validation = (
+        attributes.get("relationship_validation_state")
         == "requires-opencti-validation"
+    )
+    if requires_validation and not (
+        allow_infrastructure_victimology_export
+        and is_infrastructure_victimology_candidate(candidate, attributes)
     ):
         reasons.append("relationship_requires_opencti_validation")
     return reasons
+
+
+def is_infrastructure_victimology_candidate(candidate, attributes=None):
+    attributes = compact_mapping(attributes or candidate.attributes)
+    return bool(
+        candidate.entity_type in INFRASTRUCTURE_VICTIMOLOGY_ENTITY_TYPES
+        and candidate.relationship_type == "targets"
+        and attributes.get("relationship_source_stix_object_type")
+        == "infrastructure"
+        and attributes.get("relationship_inference")
+        == "misp-event-infrastructure-victimology-context"
+    )
 
 
 def graph_candidate_from_record(

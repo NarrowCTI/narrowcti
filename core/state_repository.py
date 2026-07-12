@@ -1,6 +1,8 @@
 import json
 import os
 
+from core.atomic_io import write_json_atomic
+
 
 DEFAULT_STATE_KEY = "pulses"
 
@@ -25,11 +27,7 @@ def load_state(state_file, collection_key=DEFAULT_STATE_KEY):
 
 
 def save_state(state_file, state):
-    directory = os.path.dirname(state_file)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    with open(state_file, "w") as f:
-        json.dump(state, f)
+    write_json_atomic(state_file, state)
 
 
 class ProcessedItemStateRepository:

@@ -2,6 +2,7 @@ import json
 import os
 from collections.abc import Mapping
 
+from core.atomic_io import write_json_atomic
 from core.decision_audit import utc_now
 
 
@@ -43,11 +44,7 @@ def load_graph_state(state_file):
 def save_graph_state(state_file, state):
     if not state_file:
         raise ValueError("state file is required")
-    directory = os.path.dirname(state_file)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    with open(state_file, "w", encoding="utf-8") as file_obj:
-        json.dump(normalize_graph_state(state), file_obj, sort_keys=True)
+    write_json_atomic(state_file, state, normalize=normalize_graph_state)
 
 
 class GraphDeduplicationIndex:

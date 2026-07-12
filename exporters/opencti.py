@@ -80,6 +80,44 @@ mutation HydrateObjectDescription($id: ID!, $input: [EditInput]!) {
 }
 """
 
+
+class OpenCTIImportRejectedError(RuntimeError):
+    pass
+
+
+class _PyCTIWorkerLoggerProxy:
+    def __init__(self, delegate, errors):
+        self.delegate = delegate
+        self.errors = errors
+
+    def error(self, *args, **kwargs):
+        self.errors.append(args)
+        return self.delegate.error(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self.delegate, name)
+
+
+def capture_pycti_worker_errors(api_client):
+    """Capture permanent worker errors swallowed by PyCTI's import retry loop."""
+    errors = []
+    stix2_client = getattr(api_client, "stix2", None)
+    opencti_client = getattr(stix2_client, "opencti", None)
+    logger_factory = getattr(opencti_client, "logger_class", None)
+    if not callable(logger_factory):
+        return errors, lambda: None
+
+    def logger_factory_proxy(name):
+        return _PyCTIWorkerLoggerProxy(logger_factory(name), errors)
+
+    opencti_client.logger_class = logger_factory_proxy
+
+    def restore():
+        opencti_client.logger_class = logger_factory
+
+    return errors, restore
+
+
 SECURITY_PLATFORM_LOOKUP_QUERY = """
 query NarrowCTISecurityPlatformExportLookup($filters: FilterGroup) {
   securityPlatforms(first: 1, filters: $filters) {
@@ -269,9 +307,27 @@ def send_bundle(
             score,
             indicators,
             identity_name=identity_name,
-        )
+    )
     bundle_json = bundle.serialize()
-    api_client.stix2.import_bundle_from_json(bundle_json, update=True)
+    worker_errors, restore_worker_logger = capture_pycti_worker_errors(api_client)
+    try:
+        import_result = api_client.stix2.import_bundle_from_json(bundle_json, update=True)
+    finally:
+        restore_worker_logger()
+    failed = (
+        import_result[1]
+        if isinstance(import_result, tuple) and len(import_result) > 1
+        else []
+    )
+    if failed or worker_errors:
+        rejection = import_rejection_message(failed)
+        if worker_errors:
+            rejection = (
+                f"{rejection}; OpenCTI worker recorded "
+                f"{len(worker_errors)} permanent import error(s): "
+                f"{worker_errors[0]}"
+            )
+        raise OpenCTIImportRejectedError(rejection)
     if export_enabled:
         native_security_platforms = export_native_security_platforms(
             api_client,
@@ -304,6 +360,25 @@ def send_bundle(
             ),
         )
     return indicator_count
+
+
+def import_rejection_message(failed):
+    samples = []
+    for failure in list(failed or [])[:3]:
+        if isinstance(failure, dict):
+            detail = (
+                failure.get("error_message")
+                or failure.get("message")
+                or failure.get("error")
+                or failure.get("name")
+            )
+            if not detail:
+                detail = json.dumps(failure, sort_keys=True, default=str)
+        else:
+            detail = str(failure)
+        samples.append(str(detail)[:300])
+    suffix = f": {' | '.join(samples)}" if samples else ""
+    return f"OpenCTI rejected {len(failed)} bundle object(s){suffix}"
 
 
 def export_native_security_platforms(api_client, graph_candidate_policy):
