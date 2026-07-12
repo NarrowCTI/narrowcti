@@ -107,8 +107,9 @@ tracked Markdown file. Before the v1.0 release, the owner should configure:
 - require review from Code Owners;
 - dismiss stale approvals after new commits;
 - require the branch to be up to date before merging;
-- require `CI`, `Security and Quality`, `Container Image` and `DAST` when the
-  changed surface makes them applicable;
+- require these job checks when the changed surface makes them applicable:
+  `Python tests`, `Python quality, SAST and dependencies`, `Build, scan and
+  publish gateway image` and `Analyst review API OWASP ZAP`;
 - block force pushes and branch deletion;
 - restrict direct pushes to the owner or explicitly trusted maintainers;
 - keep emergency bypass restricted to the owner and record every bypass.
@@ -127,8 +128,12 @@ tracked Markdown file. Before the v1.0 release, the owner should configure:
 - keep secret scanning and push protection enabled when available;
 - keep GitHub Actions default permissions at read-only and elevate a job only
   for the exact artifact operation it needs;
+- pin third-party Actions to reviewed full commit SHAs and update them through
+  Dependabot or an explicit maintainer review;
 - review fork pull request workflow permissions before allowing privileged jobs;
-- keep release and registry credentials unavailable to untrusted pull requests.
+- keep release and registry credentials unavailable to untrusted pull requests;
+- protect the `release` environment with maintainer approval and restrict it to
+  `main` and semantic version tags.
 
 Branch protection is a repository setting, not a substitute for `CODEOWNERS`.
 `CODEOWNERS` identifies the reviewer; the branch rule is what enforces review.

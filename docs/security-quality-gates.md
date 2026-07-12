@@ -16,6 +16,7 @@ their applicable gates before a version tag and GitHub Release are created.
 | Unit and integration tests | Protect runtime and curation behavior | CI test result and release validation output | Any failure blocks release. |
 | Code quality | Catch undefined names, unsafe patterns and maintainability regressions | Versioned linter configuration and successful CI job | Any configured rule failure blocks merge. |
 | SAST | Detect source and workflow security flaws | CodeQL plus repository-owned Python security analysis | Unaccepted high or critical findings block release; lower findings require triage. |
+| Actions supply chain | Prevent mutable workflow dependencies from changing under the same ref | Third-party Actions pinned to full commit SHAs and reviewed updates | An unpinned or unreviewed privileged Action blocks release hardening. |
 | Dependency review | Detect vulnerable Python dependencies | Dependabot and a reproducible dependency audit | Unaccepted high or critical findings block release. |
 | Secret protection | Prevent credentials from entering history | GitHub secret scanning/push protection and release-history scan evidence | Any verified secret blocks publication and requires rotation. |
 | Container scan | Detect operating-system and Python package vulnerabilities in the final image | Scan of the exact image before publication | Unaccepted high or critical findings block image push. |
@@ -82,11 +83,26 @@ build exact image
   -> run image smoke validation
   -> scan vulnerabilities
   -> generate SBOM
-  -> authenticate to the registry
+  -> retain the exact candidate as a short-lived workflow artifact
+  -> require the protected release environment
+  -> authenticate to the registry with job-scoped package permission
   -> publish immutable and channel tags
 ```
 
 An image must not be pushed first and scanned later.
+
+The `Container Image` workflow keeps build and publication in separate jobs. The
+build job runs for pull requests and has read-only repository permissions. The
+publication job runs only for `main` or `v*` tags, downloads the exact scanned
+candidate, requests the `release` environment and is the only job with
+`packages: write`. The environment must be configured in GitHub with required
+reviewers and branch/tag restrictions before it is considered a blocking gate.
+
+GitHub Rulesets require job check names rather than workflow display names. The
+current blocking job names are `Python tests`, `Python quality, SAST and
+dependencies`, `Build, scan and publish gateway image` and `Analyst review API
+OWASP ZAP`. A check should be selected only when its workflow runs for the
+target pull request or release ref.
 
 ## Release Evidence
 

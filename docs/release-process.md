@@ -40,6 +40,8 @@ upgrade guidance.
 - GitHub `main` and `dev` branch protection requires pull requests, maintainer
   review and applicable required checks; this must be verified in repository
   settings, not inferred from the source tree.
+- The GitHub `release` environment requires maintainer approval and accepts
+  deployments only from protected `main` or semantic version tags.
 - No `.env`, local state, raw feed payloads, credentials or `AGENTS.md` are
   tracked.
 - Private market positioning, competitive research and internal legal strategy
@@ -47,6 +49,7 @@ upgrade guidance.
 - `.dockerignore` excludes local agent instructions, runtime state and local
   secrets from Docker build context.
 - SAST, code-quality and dependency-audit workflows pass.
+- Third-party GitHub Actions are pinned to reviewed full commit SHAs.
 - Secret scanning and push protection are enabled, and release-history secret
   scan evidence is current.
 - The exact release image passes vulnerability scanning and has a generated
@@ -121,6 +124,10 @@ Official image publication follows the same release boundary as GitHub releases.
 - Merges to `main` may publish `latest` and a `main` tracking tag.
 - Tags matching `vX.Y.Z` publish immutable release tags such as `X.Y.Z`, `X.Y`,
   `X` and `sha-<short-sha>`.
+- The image is built and scanned before publication; the publication job loads
+  the exact scanned candidate and requires the protected `release` environment.
+- Only the publication job receives `packages: write`; pull request workflows
+  never receive registry credentials or release secrets.
 - Release notes should mention the canonical image for the release, for example
   `ghcr.io/narrowcti/narrowcti-gateway:0.9.0` while v1.0 remains in
   development.
