@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/narrowcti-logo.png" alt="NarrowCTI logo" width="180">
+  <img src="docs/assets/narrowcti-banner.png" alt="NarrowCTI banner" width="760">
 </p>
 
 <h1 align="center">NarrowCTI</h1>
@@ -40,6 +40,10 @@ The latest published release is `v0.9.0` (2026-07-11). `v0.8.0` and
 `v0.9.0` have GitHub Release pages; `v0.2.0` through `v0.7.0` remain
 historical tags without GitHub Release pages. No `v1.0.0` tag, image or
 GitHub Release exists until the final documentation and validation gates close.
+
+The release sequence is `v0.8.0` -> `v0.9.0` -> `v1.0.0`. The `v1.0.0`
+release is the intended final production release for the first Community
+Edition milestone; until publication, it remains the current development track.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
@@ -651,6 +655,17 @@ docs/community-governance.md
 
 Issues and pull requests should avoid secrets, `.env` files, local `state/`
 artifacts, raw customer data and private feed payloads.
+
+## About NarrowCTI
+
+<p align="center">
+  <img src="docs/assets/cybersysbr-logo.png" alt="CybersysBR logo" width="140">
+</p>
+
+NarrowCTI is a product designed and developed by **CybersysBR**, the
+cybersecurity identity used by Fagner Mendes Leite de Oliveira. CybersysBR is
+the authorship identity associated with the project; NarrowCTI Community
+Edition remains distributed under the Apache-2.0 license.
 
 ## Security Notes
 
