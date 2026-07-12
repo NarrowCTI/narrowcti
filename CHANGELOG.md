@@ -7,25 +7,25 @@ Detailed operator-facing release notes remain in `docs/release-v*.md`.
 ## v1.0.0 - In Development
 
 Production-ready Community Edition scope for the existing OTX and MISP gateway
-paths. This section records planned work and must not be presented as released
-behavior until the final validation gates pass.
+paths. This section records the current implementation and validation status;
+the version is not published until the release gates are complete.
 
 - Added contextual scoring with explicit `off`, `shadow` and `enforce` modes,
   visible configuration, preflight posture and decision audit evidence.
-- Close priority graph-quality gaps for Diamond, infrastructure victimology,
-  Timeline and Kill Chain without promoting source-weak inference.
+- Harden graph quality for Diamond, infrastructure victimology, Timeline and
+  Kill Chain without promoting source-weak inference.
 - Propagate explicit same-event Campaign context to one unambiguous actor,
   infrastructure, capability and victimology relationships, with named
   inference evidence and title-only inference prohibited.
-- Consolidate current product, OpenCTI coverage, API, configuration and release
-  status documentation before the v1.0 publication gate.
+- Consolidate product, OpenCTI coverage, API, configuration and release-status
+  documentation.
 - Harden runtime recovery, retries, checkpoints, resource controls and health
-  reporting.
-- Validate clean installation, upgrade from v0.9, backup/restore and the full
+  reporting, with reproducible validation evidence.
+- Validate clean installation, upgrade compatibility, backup/restore and the
   security and software-supply-chain release gates.
 - Keep Community reporting concise and audit-ready. Advanced executive report
   packs remain outside the v1.0 Community scope.
-- Defer MalwareBazaar, URLHaus and other new adapters to v1.1.
+- Keep additional source adapters outside the current v1.0 release scope.
 
 See `docs/release-v1.0.0.md`.
 

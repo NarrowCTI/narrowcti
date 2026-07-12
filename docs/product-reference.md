@@ -58,8 +58,9 @@ The boundary is deliberate:
 | MITRE official connector | Canonical ATT&CK baseline in OpenCTI | Controlled by the OpenCTI deployment | OpenCTI connector logs and ATT&CK objects |
 | CVE or other official connectors | External OpenCTI source ingestion unless routed through NarrowCTI | Controlled by the corresponding connector | Connector evidence and OpenCTI objects |
 
-The v1.0 NarrowCTI contract is OTX and MISP. New direct adapters are deferred
-to v1.1 and must follow `source-adapter-onboarding-v0.7.md`.
+The v1.0 NarrowCTI contract is OTX and MISP. Additional direct adapters are
+outside the current product contract and must follow
+`source-adapter-onboarding-v0.7.md` before they can be considered.
 
 ## Configuration Contract
 

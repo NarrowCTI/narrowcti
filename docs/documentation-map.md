@@ -35,7 +35,6 @@ Use these docs first:
 - `release-v1.0.0.md`
 - `release-v0.9.0.md`
 - `release-v0.8.0.md`
-- `roadmap.md`
 
 These files are product-facing and should be included in release source
 archives.
@@ -61,6 +60,7 @@ Use these docs for contribution, support and repository governance:
 - `community-issue-triage.md`
 - `repository-structure.md`
 - `release-process.md`
+- `community-governance.md`
 - `community-standards.md`
 - `../SUPPORT.md`
 - `../SECURITY.md`
@@ -86,7 +86,6 @@ Historical design context:
 - `otx-adapter-foundation-v0.2.md`
 - `multi-feed-expansion-v0.4.md`
 - `gateway-runtime-v0.5.md`
-- `enterprise-intelligence-gateway-v0.5.md`
 - `quarantine-enrichment-v0.6.md`
 - `architecture-v0.7.md`
 - `graph-enrichment-v0.7.md`
@@ -150,8 +149,6 @@ Examples:
 - `*-validation-v*.md`
 - `metadata-validation-v*.md`
 - `product-architecture-validation-v*.md`
-- `market-positioning-v*.md`
-- `post-v1-ml-roadmap.md`
 
 These files should not be the first operator-facing documentation surface.
 

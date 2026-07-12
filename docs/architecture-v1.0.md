@@ -32,8 +32,8 @@ loader. NarrowCTI uses that context to curate and relate source intelligence.
 
 - OTX and MISP are the v1.0 ingestion sources.
 - No new direct adapter is required for v1.0.
-- MalwareBazaar and URLHaus move to v1.1.
-- Machine learning remains post-v1.0.
+- Additional source adapters are outside the current release scope.
+- Machine learning is outside the current release scope.
 - Automatic quarantine release remains prohibited.
 - Advanced executive reporting, tenant-specific templates and polished PDF
   packs remain outside the Community v1.0 scope.

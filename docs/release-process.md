@@ -28,14 +28,22 @@ upgrade guidance.
 - `docs/security-quality-gates.md` describes the current security, quality,
   image and DAST release policy.
 - `docs/documentation-map.md` classifies public docs and development evidence.
+- `docs/community-governance.md` describes contribution scope, permissions and
+  maintainer review.
 - `docs/release-vX.Y.Z.md` is product-facing and does not read like a lab log.
 - Versioned docs such as `docs/deployment-operations-vX.Y.md` are kept only as
   release snapshots when needed.
 - `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md` are
   present.
 - `.github/` issue, pull request and CI templates are present.
+- `.github/CODEOWNERS` and `.github/dependabot.yml` are present and reviewed.
+- GitHub `main` and `dev` branch protection requires pull requests, maintainer
+  review and applicable required checks; this must be verified in repository
+  settings, not inferred from the source tree.
 - No `.env`, local state, raw feed payloads, credentials or `AGENTS.md` are
   tracked.
+- Private market positioning, competitive research and internal legal strategy
+  are not part of the public product path.
 - `.dockerignore` excludes local agent instructions, runtime state and local
   secrets from Docker build context.
 - SAST, code-quality and dependency-audit workflows pass.

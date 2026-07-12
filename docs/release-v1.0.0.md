@@ -4,9 +4,8 @@
 
 Status: in development.
 
-These notes distinguish planned, implemented and validated behavior. Nothing in
-the planned sections should be presented as released until all blocking gates
-pass on the final release commit.
+These notes distinguish implemented and validated behavior. The version remains
+unpublished until all blocking gates pass on the final release commit.
 
 ## Release Theme
 
@@ -21,7 +20,7 @@ expansion.
 - Canonical context: MITRE ATT&CK through the official OpenCTI baseline and
   NarrowCTI resolution.
 - No new direct source adapter.
-- MalwareBazaar and URLHaus deferred to v1.1.
+- Additional source adapters remain outside the current release scope.
 
 ## Validation Record
 
@@ -81,6 +80,14 @@ The subsequent graph-context and documentation hardening commit
 - [Container Image run 29191662902](https://github.com/NarrowCTI/narrowcti/actions/runs/29191662902): image build, smoke test, Trivy and CycloneDX SBOM passed; publication remained disabled on the feature branch.
 - [DAST run 29191662910](https://github.com/NarrowCTI/narrowcti/actions/runs/29191662910): disposable review API authentication checks and OWASP ZAP passed.
 
+The public-surface governance commit
+`847d1b3a0d3e8e17e0199d713203e8916db1440d` also passed every blocking workflow:
+
+- [CI run 29191761786](https://github.com/NarrowCTI/narrowcti/actions/runs/29191761786): passed.
+- [Security and Quality run 29191761776](https://github.com/NarrowCTI/narrowcti/actions/runs/29191761776): passed.
+- [Container Image run 29191761795](https://github.com/NarrowCTI/narrowcti/actions/runs/29191761795): image build, smoke test, Trivy and CycloneDX SBOM passed; publication remained disabled on the feature branch.
+- [DAST run 29191761775](https://github.com/NarrowCTI/narrowcti/actions/runs/29191761775): disposable review API authentication checks and OWASP ZAP passed.
+
 ## Evidence Boundaries
 
 The audits distinguish absent source evidence from a failed export. Lumma
@@ -95,19 +102,12 @@ MITRE and CVE remain official OpenCTI connector paths in the v1.0 frozen
 architecture, rather than new direct NarrowCTI adapters. Their connector
 health is therefore validated separately from the OTX/MISP gateway ingestion
 contract.
+
+## Current Boundaries
+
 - Concise Community operational reporting.
 - No ML, automatic quarantine release, advanced report packs or full browser
   administration UI.
-
-## Planned Capabilities
-
-- Contextual scoring with `off`, `shadow` and `enforce` modes.
-- Visible scoring configuration and complete decision-effect evidence.
-- Priority Diamond, victimology, Timeline and Kill Chain validation.
-- Runtime retry, backoff, timeout, checkpoint and health controls.
-- Audit-ready Community report for decisions, sources and graph quality.
-- Clean installation, v0.9 upgrade, backup/restore and restart recovery.
-- Complete CI, SAST, DAST, dependency, image and SBOM release gates.
 
 ## Implemented Foundation
 
@@ -131,23 +131,24 @@ contract.
 
 ## Validation Status
 
-Validation evidence will be added only after each capability passes its local,
-container and controlled OpenCTI checks. The final release requires all gates
+Validation evidence below records the local, container and controlled OpenCTI
+checks completed for the current branch. The final release requires all gates
 defined in `docs/architecture-v1.0.md` and `docs/security-quality-gates.md`.
 
 Source-dependent gaps such as PCRE or OTX ASN/netblock real-feed examples may be
 recorded as contract-tested but not real-feed validated when the available
 sources do not provide the required shape.
 
-Local container validation on July 11, 2026 passed:
+Local container validation on July 12, 2026 passed:
 
-- 516 unit and integration tests;
+- 538 unit and integration tests;
 - Python compilation for connectors, core, exporters, gateway and tests;
 - Ruff checks across the repository;
 - Bandit with the same medium-severity blocking threshold used by CI.
 
-GitHub Actions and controlled OpenCTI runtime evidence remain pending for this
-development branch.
+The current branch also has controlled OpenCTI runtime evidence recorded above.
+GitHub Actions remain the authoritative release gate and must be green for the
+final release commit.
 
 ## Upgrade Boundary
 

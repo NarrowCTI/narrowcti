@@ -2,7 +2,7 @@
 name: Documentation issue
 about: Report missing, confusing or outdated documentation
 title: "[docs] "
-labels: docs, needs-triage
+labels: type:docs, needs reproduction
 assignees: ""
 ---
 

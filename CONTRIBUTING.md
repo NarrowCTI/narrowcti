@@ -19,6 +19,34 @@ Good first contribution areas are documentation corrections, reproducible bug
 reports, small tests for existing behavior, bounded source payload fixtures with
 sensitive values removed, and improvements to operator runbooks.
 
+## Contribution Scope And Ownership
+
+Community contributors may propose changes across the repository, including the
+gateway runtime, `core/` decision and graph logic, OTX/MISP adapters, exporters,
+tests, deployment templates and public documentation. A contributor does not
+need write access to submit a pull request.
+
+The repository owner and designated maintainers retain merge authority. A pull
+request is a proposal until a maintainer has reviewed the design, source
+evidence, security impact, tests and documentation. Contributors must not be
+given direct push access to `main` or `dev` merely because they opened a useful
+pull request.
+
+The review bar is proportional to impact:
+
+| Change area | Required review focus |
+| --- | --- |
+| Documentation, tests and pure helpers | Scope, accuracy, tests and public-data hygiene. |
+| Source adapters and parsing | Sanitized payload shape, retries, limits, state, provenance and failure behavior. |
+| Scoring, TLP, quarantine and deduplication | Decision effects, false-negative risk, replay behavior and audit evidence. |
+| STIX/OpenCTI graph export | Object/relationship mapping, canonical lookup, graph hygiene, real or contract evidence and rollback. |
+| CI, image, release or security policy | Supply-chain impact, permissions, artifact handling and maintainer approval. |
+
+The project may later add trusted maintainers or a maintainer team without
+changing this process. Permission should be granted through the smallest GitHub
+repository role needed for the duty; review authority and repository
+administration are separate responsibilities.
+
 ## Project Principles
 
 - Preserve OpenCTI graph hygiene. Do not create duplicate or weakly supported
@@ -43,9 +71,11 @@ Use the GitHub issue templates whenever possible.
 - Security reports must follow `SECURITY.md` and should not be opened as public
   issues with exploit details.
 
-Maintainers should prefer clear labels such as `bug`, `docs`, `feature`,
-`good first issue`, `source-adapter`, `graph-export`, `security`,
-`deployment`, `needs-evidence` and `blocked`.
+Maintainers should prefer the documented taxonomy: `type:bug`, `type:docs`,
+`type:feature`, `type:security`, `type:question`, component labels such as
+`component:core` or `component:misp`, area labels such as `area:graph-export`,
+and workflow labels such as `good first issue`, `needs reproduction`,
+`needs evidence` and `blocked`.
 
 ## Branching Model
 
@@ -60,6 +90,12 @@ feature/* -> dev -> main -> version tag / GitHub release
 - Use descriptive branch names, for example `feature/misp-graph-export` or
   `fix/opencti-lookup-timeout`.
 - Keep pull requests focused on one purpose.
+
+GitHub branch rules must require pull requests, passing required workflows and a
+maintainer or Code Owner approval before changes reach `main`. `dev` should also
+reject direct pushes once the community workflow is active. Emergency bypasses
+are restricted to the owner, must be recorded in the issue or release evidence,
+and must not be used to skip a security fix review.
 
 ## Development Setup
 
@@ -93,6 +129,9 @@ Before opening a pull request:
 - Update product documentation when configuration, deployment or operator
   behavior changes.
 - Keep development evidence out of user-facing release notes.
+- Identify whether the change belongs to public product documentation or local
+  maintainer evidence. Do not add market strategy, private lab evidence or
+  competitive research to the public operator path.
 
 Recommended PR title format:
 
@@ -128,3 +167,15 @@ or move `latest` semantics without documenting the migration.
 
 Do not disclose vulnerabilities publicly before maintainers have had time to
 review and fix them. See `SECURITY.md`.
+
+## Maintainer Review Flow
+
+1. Contributor opens or references an issue and submits a focused pull request.
+2. Automated CI, quality, security and image checks run on the proposed commit.
+3. A maintainer checks scope, provenance, graph impact, tests, documentation,
+   secrets and release-archive impact.
+4. Requested changes are resolved and stale approvals are dismissed after code
+   changes.
+5. The maintainer merges only after required checks and review are green.
+6. Release work is performed from `main` through the documented tag and GitHub
+   Release process; contributor PRs do not publish releases directly.

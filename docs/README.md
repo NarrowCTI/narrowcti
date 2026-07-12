@@ -27,15 +27,14 @@ release archive or community-facing page.
 - `opencti-coverage-matrix-v0.8.md`
 - `curation-reporting-v0.8.md`
 - `support-diagnostics-v0.8.md`
-- `roadmap.md`
 
 ## Community and Governance
 
 - `documentation-map.md`
 - `repository-structure.md`
 - `release-process.md`
+- `community-governance.md`
 - `community-standards.md`
-- `open-source-strategy.md`
 - `../CONTRIBUTING.md`
 - `development-guide.md`
 - `community-issue-triage.md`
@@ -98,8 +97,6 @@ first documentation surface for operators:
 - `*-validation-v*.md`
 - `product-architecture-validation-v*.md`
 - `metadata-validation-v*.md`
-- `market-positioning-v*.md`
-- `post-v1-ml-roadmap.md`
 
 Many development-evidence files are excluded from release source archives by
 `.gitattributes`.

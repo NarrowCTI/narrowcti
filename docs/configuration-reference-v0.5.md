@@ -151,28 +151,6 @@ supported by code.
 | `NARROWCTI_MITRE_CACHE_FILE` | Local ATT&CK cache used by preflight and OTX metadata enrichment. Missing cache is a warning, not an ingest blocker. |
 | `NARROWCTI_MITRE_STIX_URL` | ATT&CK STIX source URL used by cache refresh tooling. |
 
-## Target Enterprise Curation Controls
-
-These controls are not all implemented yet. They define the enterprise filter
-surface that should be introduced after quarantine release and entity extraction
-are available.
-
-| Variable | Purpose |
-| --- | --- |
-| `NARROWCTI_CRITICAL_INDICATOR_TYPES` | Indicator classes that can receive criticality override scoring. |
-| `NARROWCTI_HIGH_VALUE_TAGS` | Tags that increase priority or bypass low-context drops. |
-| `NARROWCTI_ALLOWED_ATTACK_PATTERN_IDS` | ATT&CK technique/sub-technique ids allowed by policy. |
-| `NARROWCTI_ALLOWED_MITRE_TACTICS` | ATT&CK tactics allowed by policy. |
-| `NARROWCTI_ALLOWED_THREAT_ACTORS` | Actor, group or intrusion-set names allowed by policy. |
-| `NARROWCTI_ALLOWED_MALWARE_FAMILIES` | Malware family names allowed by policy. |
-| `NARROWCTI_ALLOWED_TARGET_SECTORS` | Victimology filter for sectors or industries. |
-| `NARROWCTI_ALLOWED_TARGET_COUNTRIES` | Victimology filter for countries or regions. |
-| `NARROWCTI_MIN_CORROBORATING_SOURCES` | Minimum source corroboration before automatic ingest. |
-| `NARROWCTI_RELEASE_QUARANTINE_REQUIRES_REASON` | Requires analyst review reason before release, partial release or rejection. Implemented in v0.6. |
-
-Detailed behavior and backlog placement are documented in
-`docs/enterprise-intelligence-gateway-v0.5.md`.
-
 ## Example Safe Local MISP Backfill
 
 ```env
@@ -262,7 +240,7 @@ The operational report also includes derived value metrics. In v0.5,
 `accepted` means `ingested + dry_run`, `filtered` means
 `dropped + quarantined + skipped`, and rates are calculated against reviewed
 candidates. These metrics are useful for local validation and operator
-readiness, while richer customer-facing value reporting remains roadmap work.
+readiness; customer-facing reporting is outside this configuration contract.
 Failed source executions are also listed with timestamp, source key and error
 message so operators can identify runtime breakage without reading raw JSONL
 first.
