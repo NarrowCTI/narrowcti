@@ -55,6 +55,13 @@ socket-free image tar, but the vulnerability database download stalled before
 analysis; this is not treated as a passing image scan and the GitHub workflow
 must provide the authoritative result before publication.
 
+The authoritative GitHub Actions validation for commit
+`da0a5cbbfed9f0731ecd5911c67055fb73741a40` completed successfully:
+
+- [DAST run 29189163328](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163328): disposable review API, authentication boundary and OWASP ZAP scan passed; evidence artifact uploaded.
+- [Container Image run 29189163326](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163326): candidate image build, smoke test, Trivy scan and CycloneDX SBOM passed. GHCR publication was skipped because this was a feature branch.
+- [Security and Quality run 29189163357](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163357) and [CI run 29189163336](https://github.com/NarrowCTI/narrowcti/actions/runs/29189163336): passed.
+
 ## Evidence Boundaries
 
 The audits distinguish absent source evidence from a failed export. Lumma
