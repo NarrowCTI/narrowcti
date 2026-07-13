@@ -376,7 +376,7 @@ class ProcessorTests(unittest.TestCase):
             mitre_attack["resolved"][0]["name"],
         )
         graph_evidence = records[0].metadata["graph_evidence"]
-        self.assertEqual("v1.0.0-dev.0", graph_evidence["version"])
+        self.assertEqual("v1.0.0", graph_evidence["version"])
         self.assertEqual("alienvault:otx", graph_evidence["source_key"])
         self.assertEqual(2, graph_evidence["counts"]["attack_pattern"])
         self.assertEqual(1, graph_evidence["counts"]["vulnerability"])
@@ -413,7 +413,7 @@ class ProcessorTests(unittest.TestCase):
             )
         )
         graph_candidates = records[0].metadata["graph_candidates"]
-        self.assertEqual("v1.0.0-dev.0", graph_candidates["version"])
+        self.assertEqual("v1.0.0", graph_candidates["version"])
         self.assertEqual("pulse-1", graph_candidates["external_id"])
         self.assertEqual(
             graph_evidence["record_count"],

@@ -14,7 +14,7 @@ Check the product documentation first:
 - `docs/deployment-operations.md`
 - `docs/configuration-reference.md`
 - `docs/opencti-coverage-matrix.md`
-- `docs/release-v1.0.0.md` (in development)
+- `docs/release-v1.0.0.md` (current release)
 
 For local deployment problems, include the NarrowCTI version, enabled sources,
 runtime mode, relevant environment variable names without values, and sanitized

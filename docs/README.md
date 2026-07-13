@@ -61,7 +61,7 @@ release archive or community-facing page.
 ## Release Notes
 
 - `../CHANGELOG.md`
-- `release-v1.0.0.md` (in development)
+- `release-v1.0.0.md` (released)
 - `release-v0.9.0.md` (released)
 - `release-v0.8.0.md` (released)
 - `release-v0.7.0.md`
@@ -72,13 +72,12 @@ release archive or community-facing page.
 ## Release Status
 
 The release sequence is `v0.8.0` -> `v0.9.0` -> `v1.0.0`. The first two are
-published release milestones, while `v1.0.0` is the intended final production
-release for the initial Community Edition milestone.
+historical release milestones, while `v1.0.0` is the final production release
+for the initial Community Edition milestone.
 
-`v0.9.0` is the latest published stable release, dated 2026-07-11. The
-repository is currently preparing `v1.0.0-dev.0`; it has no public tag or
-GitHub Release yet. Tags `v0.2.0` through `v0.7.0` are historical version
-snapshots without GitHub Release pages. See `product-reference.md` for the
+`v1.0.0` is the latest published stable release, dated 2026-07-12. Tags
+`v0.2.0` through `v0.9.0` remain historical version snapshots, with GitHub
+Release pages for `v0.8.0` and `v0.9.0`. See `product-reference.md` for the
 single current status table and `release-process.md` for publication order.
 
 ## Release Snapshots

@@ -3,23 +3,20 @@
 This is the canonical public reference for NarrowCTI Community Edition
 behavior. It connects the operator workflow, configuration, source adapters,
 graph promotion, evidence and release gates. Versioned documents remain
-historical snapshots; this document describes the current unreleased v1.0
-behavior.
+historical snapshots; this document describes the current v1.0 behavior.
 
 ## Version Status
 
 | Label | Meaning | Current value |
 | --- | --- | --- |
-| Latest published release | Latest immutable GitHub Release and stable tag | `v0.9.0`, published 2026-07-11 |
-| Development version | Next release under validation | `v1.0.0-dev.0` |
-| v1.0 publication | GitHub Release, tag and image publication | Not created |
+| Latest published release | Latest immutable GitHub Release and stable tag | `v1.0.0`, published 2026-07-12 |
+| Previous stable release | Previous GitHub Release and immutable tag | `v0.9.0`, published 2026-07-11 |
+| v1.0 publication | GitHub Release, tag and image publication | Complete |
 | Historical tags | Earlier implementation snapshots | `v0.2.0` through `v0.8.0` |
 
 A Git tag without a GitHub Release is historical version evidence, not a
-complete public release. The release process is defined in
-`release-process.md`. The v1.0 branch must not be described as released until
-the tag, GitHub Release, release notes, image publication and final evidence
-all refer to the same commit.
+complete public release. The v1.0 tag, GitHub Release, release notes, image
+publication and final evidence all refer to the same `main` release commit.
 
 ## Product Boundary
 
@@ -212,7 +209,7 @@ consumer compatibility:
 
 | Contract | Current value | Meaning |
 | --- | --- | --- |
-| Graph evidence and graph candidate payload | `v1.0.0-dev.0` | Active v1.0 development shape for source-backed graph evidence. |
+| Graph evidence and graph candidate payload | `v1.0.0` | Stable v1.0 shape for source-backed graph evidence. |
 | Operational validation checklist | `operational-validation/v1.0` | Active checklist shape used by the v1.0 release gate. |
 | Curation report | `curation-report/v0.8` | Stable report schema retained for compatibility; it does not mean the product is on v0.8. |
 | Support diagnostics | `support-diagnostics/v0.8` | Stable support bundle schema retained for compatibility; it does not mean the product is on v0.8. |

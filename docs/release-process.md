@@ -136,7 +136,6 @@ Official image publication follows the same release boundary as GitHub releases.
 - Only the publication job receives `packages: write`; pull request workflows
   never receive registry credentials or release secrets.
 - Release notes should mention the canonical image for the release, for example
-  `ghcr.io/narrowcti/narrowcti-gateway:0.9.0` while v1.0 remains in
-  development.
+  `ghcr.io/narrowcti/narrowcti-gateway:1.0.0` for the current stable release.
 - Operators should pin `NARROWCTI_GATEWAY_IMAGE` to a release tag for stable
   deployments.

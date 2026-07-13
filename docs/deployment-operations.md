@@ -42,11 +42,11 @@ The Compose template builds `Dockerfile.gateway`, joins an existing OpenCTI
 Docker network and stores runtime evidence in a Docker volume.
 
 For local validation, the default image is `narrowcti/gateway:local`. The latest
-published stable release remains v0.9 while v1.0 is in development. For release
-deployments, use a pinned published image such as:
+published stable release is v1.0. For release deployments, use a pinned
+published image such as:
 
 ```text
-NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:0.9.0
+NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:1.0.0
 ```
 
 Do not use `latest` for production-like environments unless you intentionally
