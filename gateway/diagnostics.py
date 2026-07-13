@@ -366,14 +366,14 @@ def build_support_warnings(
             warnings.append(
                 support_warning(
                     "operational-validation-failed",
-                    "v0.8 operational validation has failing checks; graph promotion must remain blocked.",
+                    "Current operational validation has failing checks; graph promotion must remain blocked.",
                 )
             )
         elif status == "needs-evidence":
             warnings.append(
                 support_warning(
                     "operational-validation-needs-evidence",
-                    "v0.8 operational validation still needs evidence: "
+                    "Current operational validation still needs evidence: "
                     f"needs-evidence={counts.get('needs-evidence', 0)} "
                     f"warn={counts.get('warn', 0)}.",
                 )
@@ -913,7 +913,7 @@ def main():
     parser.add_argument(
         "--operational-validation-evidence-file",
         default=os.environ.get("NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE", ""),
-        help="Optional JSON file with manual v0.8 operational validation evidence.",
+        help="Optional JSON file with manual current operational validation evidence.",
     )
     parser.add_argument(
         "--opencti-relationship-audit-file",

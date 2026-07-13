@@ -18,6 +18,7 @@ def build_processor(settings):
         enrich_timeout=settings.otx_timeout,
         retries=settings.otx_retries,
         retry_backoff_seconds=settings.otx_retry_backoff_seconds,
+        retry_jitter_seconds=settings.otx_retry_jitter_seconds,
         logger=log,
     )
     return OTXProcessor(

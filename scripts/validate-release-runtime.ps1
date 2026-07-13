@@ -5,6 +5,8 @@ param(
 
     [switch]$SkipTests,
 
+    [switch]$InstallTestDependencies,
+
     [switch]$Preview
 )
 
@@ -71,7 +73,9 @@ $GatewayModules = @(
 function Invoke-DockerPython {
     param(
         [Parameter(Mandatory=$true)]
-        [string[]]$PythonArgs
+        [string[]]$PythonArgs,
+
+        [string]$RequirementsPath
     )
 
     $dockerArgs = @(
@@ -81,9 +85,19 @@ function Invoke-DockerPython {
         "${RepoDir}:/repo",
         '-w',
         '/repo',
-        $Image,
-        'python'
-    ) + $PythonArgs
+        $Image
+    )
+
+    if ($RequirementsPath) {
+        $pythonCommand = 'python {0}' -f ($PythonArgs -join ' ')
+        $dockerArgs += @(
+            'sh',
+            '-lc',
+            "python -m pip install --no-cache-dir --requirement $RequirementsPath && $pythonCommand"
+        )
+    } else {
+        $dockerArgs += @('python') + $PythonArgs
+    }
 
     Write-Host ('docker {0}' -f ($dockerArgs -join ' '))
     if ($Preview) {
@@ -110,7 +124,13 @@ Invoke-DockerPython -PythonArgs (@('-m', 'py_compile') + $CoreModules)
 Invoke-DockerPython -PythonArgs (@('-m', 'py_compile') + $GatewayModules)
 
 if (-not $SkipTests) {
-    Invoke-DockerPython -PythonArgs @('-m', 'unittest', 'discover', '-s', 'tests', '-v')
+    $testRequirements = $null
+    if ($InstallTestDependencies) {
+        $testRequirements = '/repo/requirements-dev.txt'
+    }
+    Invoke-DockerPython `
+        -PythonArgs @('-m', 'unittest', 'discover', '-s', 'tests', '-v') `
+        -RequirementsPath $testRequirements
 }
 
 Write-Host 'NarrowCTI release validation completed'

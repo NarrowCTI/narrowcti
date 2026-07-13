@@ -15,7 +15,7 @@ class GraphExportPlanTests(unittest.TestCase):
 
         plan = build_graph_export_plan(policy)
 
-        self.assertEqual("v0.7.0-dev", plan["version"])
+        self.assertEqual("v1.0.0", plan["version"])
         self.assertEqual("audit", plan["mode"])
         self.assertEqual("audit-only", plan["status"])
         self.assertFalse(plan["export_enabled"])

@@ -8,21 +8,25 @@ leaking credentials, customer data or sensitive feed payloads.
 
 | Version | Supported |
 | --- | --- |
-| v0.8.x | Yes |
-| v0.7.x and older | Best effort |
+| v1.0.x | Yes, current stable line |
+| v0.9.x | Best effort, previous stable line |
+| v0.8.x | Best effort |
+| v0.7.x and older | Unsupported |
 
-Until NarrowCTI reaches v1.0, the current minor release is the primary
-supported line. Older pre-1.0 lines receive best-effort guidance only unless a
-maintainer explicitly publishes a backport.
+The current stable minor release is the primary supported line. Older lines
+receive only the support described above unless a maintainer explicitly
+publishes a backport.
 
 ## Reporting a Vulnerability
 
 Do not open a public issue with exploit details, credentials, tokens, private
 feed payloads or customer identifiers.
 
-Use GitHub private vulnerability reporting if it is enabled for the repository.
-If private reporting is not available, open a public issue with only a high-level
-summary and ask maintainers for a private disclosure channel.
+Use GitHub private vulnerability reporting when it is enabled for the
+repository. If it is not available, contact the repository owner through a
+private channel and do not publish exploit details. A public issue is only a
+last-resort pointer to the private process, never the place for a proof of
+concept or credentials.
 
 Please include:
 
@@ -67,3 +71,10 @@ Target response expectations:
 
 NarrowCTI does not currently operate a bug bounty program. Security fixes are
 handled through coordinated disclosure and public release notes.
+
+## Maintainer Access
+
+Security reports are handled by the repository owner and any explicitly
+delegated security maintainer. Community contributors may inspect public code
+and submit fixes, but do not receive security settings, release credentials or
+direct push access by default.

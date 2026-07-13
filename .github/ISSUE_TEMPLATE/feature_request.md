@@ -2,7 +2,7 @@
 name: Feature request
 about: Propose a NarrowCTI capability or enhancement
 title: "[feature] "
-labels: enhancement, needs-triage
+labels: type:feature, needs evidence
 assignees: ""
 ---
 

@@ -5,12 +5,15 @@ param(
 
     [switch]$SkipTests,
 
+    [switch]$SkipTestDependencyInstall,
+
     [switch]$Preview
 )
 
 $ErrorActionPreference = 'Stop'
 
-& (Join-Path $PSScriptRoot 'validate-v0.6.ps1') `
+& (Join-Path $PSScriptRoot 'validate-release-runtime.ps1') `
     -Image $Image `
     -SkipTests:$SkipTests `
+    -InstallTestDependencies:(!$SkipTestDependencyInstall) `
     -Preview:$Preview

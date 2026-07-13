@@ -81,7 +81,7 @@ This version should establish:
 - Structured decision audit records for ingest, drop, quarantine and skip
   outcomes.
 - Per-query operational summaries for feed-noise reduction review.
-- Roadmap from product foundation to production-ready open source release.
+- Product path from the foundation to a production-ready open source release.
 - Runtime, Compose service and documentation naming aligned to NarrowCTI Gateway.
 - OTX remains the reference implementation, not the product name.
 

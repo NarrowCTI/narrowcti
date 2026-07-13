@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from core.tlp import extract_tlp_values, normalize_tlp
 
 
-GRAPH_EVIDENCE_VERSION = "v0.7.0-dev"
+GRAPH_EVIDENCE_VERSION = "v1.0.0"
 
 ENTITY_TARGETS = {
     "campaign": ("campaign", "related-to"),
@@ -135,12 +135,6 @@ MISP_GALAXY_TAG_PATTERN = re.compile(
 MISP_INFRA_CONTEXT_MAX_INFRASTRUCTURES = 50
 MISP_INFRA_CONTEXT_MAX_PAIRINGS = 100
 MISP_INFRA_CONTEXT_MAX_RECORDS = 200
-MISP_INFRA_ADVERSARY_ENTITY_TYPES = {
-    "campaign",
-    "intrusion_set",
-    "threat_actor",
-    "threat_actor_individual",
-}
 MISP_INFRA_CAPABILITY_ENTITY_TYPES = {
     "malware",
     "tool",
@@ -156,6 +150,21 @@ MISP_INFRA_VICTIMOLOGY_ENTITY_TYPES = {
     "target_region",
     "target_sector",
     "target_system",
+}
+
+MISP_CAMPAIGN_CONTEXT_MAX_CAMPAIGNS = 50
+MISP_CAMPAIGN_CONTEXT_MAX_PAIRINGS = 100
+MISP_CAMPAIGN_CONTEXT_MAX_RECORDS = 200
+MISP_CAMPAIGN_ADVERSARY_ENTITY_TYPES = {
+    "intrusion_set",
+    "threat_actor",
+    "threat_actor_individual",
+}
+MISP_CAMPAIGN_CAPABILITY_ENTITY_TYPES = {
+    "attack_pattern",
+    "channel",
+    "malware",
+    "tool",
 }
 
 
@@ -243,6 +252,9 @@ def build_graph_evidence(metadata, source_key="", external_id="", title=""):
             ),
             misp_timeline,
         )
+    )
+    records.extend(
+        misp_campaign_context_relationship_evidence(records, source_key)
     )
     records.extend(
         misp_infrastructure_context_relationship_evidence(records, source_key)
@@ -1782,21 +1794,40 @@ def misp_infrastructure_context_relationship_evidence(records, source_key=""):
 
     context_records = []
     existing = semantic_relationship_keys(records)
-    adversaries = unique_context_records(
+    actors = unique_context_records(
         record
         for record in records
-        if record.get("entity_type") in MISP_INFRA_ADVERSARY_ENTITY_TYPES
+        if record.get("entity_type")
+        in MISP_CAMPAIGN_ADVERSARY_ENTITY_TYPES
         and clean_string(record.get("source_name")).startswith("misp")
     )
-    if len(adversaries) == 1:
+    if len(actors) == 1:
         context_records.extend(
             infrastructure_anchor_relationship_records(
                 infrastructures,
-                adversaries,
+                actors,
                 source_key,
                 existing,
                 "uses",
                 "misp-event-infrastructure-adversary-context",
+            )
+        )
+
+    campaigns = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") == "campaign"
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if len(campaigns) == 1:
+        context_records.extend(
+            infrastructure_anchor_relationship_records(
+                infrastructures,
+                campaigns,
+                source_key,
+                existing,
+                "uses",
+                "misp-event-infrastructure-campaign-context",
             )
         )
 
@@ -1853,6 +1884,113 @@ def misp_infrastructure_context_relationship_evidence(records, source_key=""):
     return context_records[:MISP_INFRA_CONTEXT_MAX_RECORDS]
 
 
+def misp_campaign_context_relationship_evidence(records, source_key=""):
+    """Relate explicit same-event campaign context without title inference."""
+    records = [record for record in records or [] if isinstance(record, Mapping)]
+    campaigns = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") == "campaign"
+        and record.get("stix_object_type") == "campaign"
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if (
+        not campaigns
+        or len(campaigns) > MISP_CAMPAIGN_CONTEXT_MAX_CAMPAIGNS
+    ):
+        return []
+
+    existing = semantic_relationship_keys(records)
+    context_records = []
+    actors = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") in MISP_CAMPAIGN_ADVERSARY_ENTITY_TYPES
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if (
+        len(actors) == 1
+        and len(campaigns) * len(actors)
+        <= MISP_CAMPAIGN_CONTEXT_MAX_PAIRINGS
+    ):
+        context_records.extend(
+            context_anchor_relationship_records(
+                actors,
+                campaigns,
+                source_key,
+                existing,
+                "attributed-to",
+                "misp-event-campaign-adversary-context",
+            )
+        )
+
+    capabilities = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") in MISP_CAMPAIGN_CAPABILITY_ENTITY_TYPES
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if (
+        len(campaigns) * len(capabilities)
+        <= MISP_CAMPAIGN_CONTEXT_MAX_PAIRINGS
+    ):
+        context_records.extend(
+            context_anchor_relationship_records(
+                capabilities,
+                campaigns,
+                source_key,
+                existing,
+                "uses",
+                "misp-event-campaign-capability-context",
+            )
+        )
+
+    infrastructures = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") == "infrastructure"
+        and record.get("stix_object_type") == "infrastructure"
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if (
+        len(campaigns) * len(infrastructures)
+        <= MISP_CAMPAIGN_CONTEXT_MAX_PAIRINGS
+    ):
+        context_records.extend(
+            context_anchor_relationship_records(
+                infrastructures,
+                campaigns,
+                source_key,
+                existing,
+                "uses",
+                "misp-event-campaign-infrastructure-context",
+            )
+        )
+
+    victimology = unique_context_records(
+        record
+        for record in records
+        if record.get("entity_type") in MISP_INFRA_VICTIMOLOGY_ENTITY_TYPES
+        and clean_string(record.get("source_name")).startswith("misp")
+    )
+    if (
+        len(campaigns) * len(victimology)
+        <= MISP_CAMPAIGN_CONTEXT_MAX_PAIRINGS
+    ):
+        context_records.extend(
+            context_anchor_relationship_records(
+                victimology,
+                campaigns,
+                source_key,
+                existing,
+                "targets",
+                "misp-event-campaign-victimology-context",
+            )
+        )
+
+    return context_records[:MISP_CAMPAIGN_CONTEXT_MAX_RECORDS]
+
+
 def infrastructure_anchor_relationship_records(
     infrastructures,
     anchors,
@@ -1861,8 +1999,26 @@ def infrastructure_anchor_relationship_records(
     relationship_type,
     inference,
 ):
+    return context_anchor_relationship_records(
+        infrastructures,
+        anchors,
+        source_key,
+        existing,
+        relationship_type,
+        inference,
+    )
+
+
+def context_anchor_relationship_records(
+    targets,
+    anchors,
+    source_key,
+    existing,
+    relationship_type,
+    inference,
+):
     records = []
-    for infrastructure in infrastructures:
+    for target in targets:
         for anchor in anchors:
             source_type = clean_string(anchor.get("stix_object_type"))
             source_value = clean_string(anchor.get("value"))
@@ -1872,14 +2028,14 @@ def infrastructure_anchor_relationship_records(
                 source_type,
                 source_value,
                 relationship_type,
-                infrastructure.get("stix_object_type"),
-                infrastructure.get("value"),
+                target.get("stix_object_type"),
+                target.get("value"),
             )
             if key in existing:
                 continue
             existing.add(key)
             attributes = {
-                **compact_mapping(infrastructure.get("attributes")),
+                **compact_mapping(target.get("attributes")),
                 "relationship_source_stix_object_type": source_type,
                 "relationship_source_value": source_value,
                 "relationship_source_field": anchor.get("source_field"),
@@ -1887,18 +2043,18 @@ def infrastructure_anchor_relationship_records(
                 "relationship_context_scope": "same-misp-event",
             }
             record = evidence_record(
-                entity_type=infrastructure.get("entity_type"),
-                value=infrastructure.get("value"),
+                entity_type=target.get("entity_type"),
+                value=target.get("value"),
                 source_key=source_key,
                 source_name="misp-context",
-                source_field=infrastructure.get("source_field"),
+                source_field=target.get("source_field"),
                 confidence=min(
-                    clamp_confidence(infrastructure.get("confidence")),
+                    clamp_confidence(target.get("confidence")),
                     clamp_confidence(anchor.get("confidence")),
                 ),
-                display_name=infrastructure.get("display_name"),
+                display_name=target.get("display_name"),
                 attributes=attributes,
-                stix_object_type=infrastructure.get("stix_object_type"),
+                stix_object_type=target.get("stix_object_type"),
                 relationship_type=relationship_type,
             )
             if record:

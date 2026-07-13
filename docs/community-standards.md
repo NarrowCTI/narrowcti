@@ -18,12 +18,16 @@ NarrowCTI predictable for contributors, operators and security reporters.
 | Support | `SUPPORT.md` | Community support channels and data handling guidance. |
 | Release process | `docs/release-process.md` | Tag, GitHub Release and image release process. |
 | Container images | `docs/container-images.md` | Image naming, tags and operator pinning guidance. |
+| Community governance | `docs/community-governance.md` | Contribution scope, permissions, review and branch settings. |
+| Code ownership | `.github/CODEOWNERS` | Default maintainer review responsibility. |
+| Dependency updates | `.github/dependabot.yml` | Automated dependency and GitHub Actions update proposals. |
 
 ## NarrowCTI Posture
 
 NarrowCTI Community Edition is distributed under Apache-2.0. There is no
-commercial feature gate in the core repository. Future paid services or
-separate optional modules should not make the open source gateway ambiguous.
+commercial feature gate in the core repository. The public repository documents
+the Community Edition only; private business arrangements do not change its
+source or contribution rules.
 
 Public docs should explain:
 
@@ -47,3 +51,5 @@ Before a public release:
 - GitHub Release notes mention validation status, known limitations and the
   canonical container image tag.
 - No development-only validation log is promoted as the primary product doc.
+- `CODEOWNERS` and branch protection require maintainer review before merge.
+- Dependabot proposals are reviewed like any other community pull request.

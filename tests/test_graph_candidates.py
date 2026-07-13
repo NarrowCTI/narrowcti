@@ -339,6 +339,78 @@ class GraphCandidateTests(unittest.TestCase):
             result.held_reasons,
         )
 
+    def test_explicitly_allows_only_infrastructure_victimology_preview(self):
+        candidates = build_graph_candidates(
+            {
+                "source_key": "misp:misp",
+                "records": [
+                    {
+                        "entity_type": "target_sector",
+                        "value": "Finance",
+                        "stix_object_type": "identity",
+                        "relationship_type": "targets",
+                        "confidence": 75,
+                        "source_field": "Galaxy.meta.targeted-sector",
+                        "attributes": {
+                            "relationship_source_stix_object_type": "infrastructure",
+                            "relationship_source_value": "MISP domain-ip c2.example",
+                            "relationship_inference": (
+                                "misp-event-infrastructure-victimology-context"
+                            ),
+                            "relationship_validation_state": (
+                                "requires-opencti-validation"
+                            ),
+                        },
+                    }
+                ],
+            }
+        )
+
+        result = apply_graph_candidate_policy(
+            candidates,
+            allowed_entity_types={"target_sector"},
+            allowed_stix_object_types={"identity"},
+            allow_infrastructure_victimology_export=True,
+        )
+
+        self.assertEqual(1, result.accepted_count)
+        self.assertEqual(0, result.held_count)
+
+    def test_opt_in_does_not_allow_other_unvalidated_relationships(self):
+        candidates = build_graph_candidates(
+            {
+                "source_key": "misp:misp",
+                "records": [
+                    {
+                        "entity_type": "malware",
+                        "value": "Example Malware",
+                        "stix_object_type": "malware",
+                        "relationship_type": "uses",
+                        "confidence": 75,
+                        "attributes": {
+                            "relationship_source_stix_object_type": "threat-actor",
+                            "relationship_source_value": "APT Example",
+                            "relationship_inference": "unvalidated-other-inference",
+                            "relationship_validation_state": (
+                                "requires-opencti-validation"
+                            ),
+                        },
+                    }
+                ],
+            }
+        )
+
+        result = apply_graph_candidate_policy(
+            candidates,
+            allow_infrastructure_victimology_export=True,
+        )
+
+        self.assertEqual(0, result.accepted_count)
+        self.assertEqual(
+            {"relationship_requires_opencti_validation": 1},
+            result.held_reasons,
+        )
+
     def test_skips_malformed_records_and_clamps_confidence(self):
         candidates = build_graph_candidates(
             {

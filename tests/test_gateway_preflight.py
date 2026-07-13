@@ -64,6 +64,8 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertEqual("hybrid", report.settings["dedup_mode"])
         self.assertEqual("audit", report.settings["graph_export_mode"])
         self.assertFalse(report.settings["opencti_graph_lookup"])
+        self.assertEqual("shadow", report.settings["contextual_scoring_mode"])
+        self.assertEqual(100, report.settings["contextual_scoring_max_impact"])
         self.assertEqual("open_source", report.settings["distribution_model"])
         self.assertTrue(report.settings["open_source"])
         self.assertIn(
@@ -108,6 +110,43 @@ class GatewayPreflightTests(unittest.TestCase):
         report = build_preflight_report(settings, env={"OTX_DRY_RUN": "true"})
 
         self.assertEqual("direct", report.ingestion_mode)
+
+    def test_preflight_reports_enforced_contextual_scoring(self):
+        report = build_preflight_report(
+            make_settings(
+                contextual_scoring_mode="enforce",
+                contextual_scoring_impacts={"threat": 25},
+            ),
+            env={"NARROWCTI_DRY_RUN": "true"},
+        )
+
+        self.assertTrue(report.ok)
+        self.assertTrue(
+            any(issue.code == "contextual-scoring-enforced" for issue in report.issues)
+        )
+        rendered = format_text_report(report)
+        self.assertIn("contextual_scoring_mode=enforce", rendered)
+        self.assertIn("contextual_scoring_impacts=threat:25", rendered)
+
+    def test_preflight_reports_infrastructure_victimology_opt_in(self):
+        report = build_preflight_report(
+            make_settings(
+                graph_export_mode="export",
+                enable_infrastructure_victimology_export=True,
+            ),
+            env={"NARROWCTI_DRY_RUN": "true"},
+        )
+
+        issue = next(
+            issue
+            for issue in report.issues
+            if issue.code == "infrastructure-victimology-enabled"
+        )
+        self.assertEqual("warning", issue.severity)
+        self.assertIn(
+            "enable_infrastructure_victimology_export=true",
+            format_text_report(report),
+        )
         self.assertEqual("direct", report.to_dict()["ingestion_mode"])
 
     def test_preflight_reports_misp_collector_ingestion_mode(self):

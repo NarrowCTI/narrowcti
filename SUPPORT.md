@@ -9,9 +9,12 @@ Check the product documentation first:
 
 - `README.md`
 - `docs/README.md`
-- `docs/deployment-operations-v0.8.md`
-- `docs/configuration-reference-v0.6.md`
-- `docs/release-v0.8.0.md`
+- `docs/product-reference.md`
+- `docs/getting-started.md`
+- `docs/deployment-operations.md`
+- `docs/configuration-reference.md`
+- `docs/opencti-coverage-matrix.md`
+- `docs/release-v1.0.0.md` (current release)
 
 For local deployment problems, include the NarrowCTI version, enabled sources,
 runtime mode, relevant environment variable names without values, and sanitized
@@ -59,6 +62,7 @@ Follow `SECURITY.md` for private disclosure guidance.
 
 ## Commercial Support
 
-No commercial support channel is defined for this community repository. Future
-managed services, professional services or separate optional modules should stay
-outside the open source core, as described in `docs/open-source-strategy.md`.
+No commercial support channel is defined for this community repository. Support
+for the public project is provided through the documented community workflow;
+do not include private strategy, customer data, credentials or raw feed payloads
+in public requests.

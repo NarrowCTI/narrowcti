@@ -1,5 +1,6 @@
 import json
 import os
+import glob
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -19,6 +20,7 @@ from core.indicator_policy import (
     normalize_allowed_indicator_types,
 )
 from core.policy import PolicyConfig, should_ingest
+from core.retry import retry_delay
 from core.scoring import calculate_score, calculate_score_details
 from core.state_repository import (
     MISPEventStateRepository,
@@ -144,6 +146,11 @@ class TLPPolicyTests(unittest.TestCase):
             normalize_allowed_tlp(["tlp:white", "green"]),
         )
 
+    def test_tlp_clear_and_legacy_white_are_policy_equivalents(self):
+        self.assertEqual((True, ""), tlp_is_allowed(["tlp:clear"], ["white"]))
+        self.assertEqual((True, ""), tlp_is_allowed(["tlp:white"], ["clear"]))
+        self.assertEqual(("clear",), extract_tlp_values(["tlp:clear"]))
+
 
 class IndicatorTypePolicyTests(unittest.TestCase):
     def test_normalize_allowed_indicator_types_accepts_aliases(self):
@@ -211,6 +218,10 @@ class ScoringTests(unittest.TestCase):
 
 
 class StateRepositoryTests(unittest.TestCase):
+    def test_retry_delay_adds_bounded_jitter(self):
+        self.assertEqual(6, retry_delay(2, 3, 0))
+        self.assertEqual(7, retry_delay(2, 3, 2, random_fn=lambda _low, _high: 1))
+
     def test_mark_pulse_is_idempotent_and_persistent(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = os.path.join(tmpdir, "state.json")
@@ -240,6 +251,11 @@ class StateRepositoryTests(unittest.TestCase):
 
             self.assertEqual(["pulse-1"], data["pulses"])
             self.assertEqual(["event-1"], data["misp_events"])
+
+            self.assertEqual(
+                [],
+                glob.glob(os.path.join(tmpdir, ".state.json.*.tmp")),
+            )
             self.assertTrue(MISPEventStateRepository(state_file).has_event("event-1"))
             self.assertFalse(MISPEventStateRepository(state_file).has_event("pulse-1"))
 
@@ -336,6 +352,9 @@ class SettingsTests(unittest.TestCase):
             "NARROWCTI_GRAPH_EXPORT_MODE": "dry_run",
             "NARROWCTI_GRAPH_DEDUP_STATE_FILE": "/app/state/graph_dedup.json",
             "NARROWCTI_OPENCTI_GRAPH_LOOKUP": "true",
+            "NARROWCTI_CONTEXTUAL_SCORING_MODE": "enforce",
+            "NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT": "80",
+            "NARROWCTI_CONTEXTUAL_SCORING_IMPACTS": "threat:25,ttp:10",
             "NARROWCTI_ENABLE_OTX_ENTITY_EXTRACTION": "false",
             "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION": "false",
             "NARROWCTI_MITRE_CACHE_FILE": "/app/state/mitre_attack_cache.json",
@@ -373,6 +392,12 @@ class SettingsTests(unittest.TestCase):
             settings.graph_dedup_state_file,
         )
         self.assertTrue(settings.opencti_graph_lookup)
+        self.assertEqual("enforce", settings.contextual_scoring_mode)
+        self.assertEqual(80, settings.contextual_scoring_max_impact)
+        self.assertEqual(
+            {"threat": 25, "ttp": 10},
+            settings.contextual_scoring_impacts,
+        )
         self.assertFalse(settings.enable_otx_entity_extraction)
         self.assertFalse(settings.enable_mitre_attack_resolution)
         self.assertEqual(
@@ -421,6 +446,19 @@ class SettingsTests(unittest.TestCase):
 
         self.assertEqual(65, settings.min_score_to_ingest)
         self.assertTrue(settings.enable_quarantine)
+
+    def test_load_settings_rejects_invalid_otx_retry_configuration(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "OTX_API_KEY": "key",
+            "OTX_QUERIES": "lummac2",
+            "OTX_RETRIES": "0",
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaisesRegex(ValueError, "otx_retries"):
+                load_settings()
 
 
 class RuntimeTests(unittest.TestCase):

@@ -425,7 +425,7 @@ OpenCTI graph data and canonical MITRE ATT&CK lookup against the OpenCTI graph.
 Current validation is still anchored in the existing suite:
 
 ```text
-.\scripts\validate-v0.6.ps1
+.\scripts\validate-release-runtime.ps1
 ```
 
 The script name is historical. It currently validates the active codebase,

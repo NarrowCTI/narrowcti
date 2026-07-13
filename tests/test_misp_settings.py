@@ -39,6 +39,10 @@ class MISPSettingsTests(unittest.TestCase):
             "NARROWCTI_GRAPH_DEDUP_STATE_FILE": "/app/state/graph_dedup.json",
             "NARROWCTI_OPENCTI_GRAPH_LOOKUP": "true",
             "NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP": "true",
+            "NARROWCTI_CONTEXTUAL_SCORING_MODE": "enforce",
+            "NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT": "75",
+            "NARROWCTI_CONTEXTUAL_SCORING_IMPACTS": "toolbox:20,ttp:15",
+            "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT": "true",
             "MISP_STATE_FILE": "/app/state/misp.json",
             "MISP_DECISION_AUDIT_FILE": "/app/state/misp-decisions.jsonl",
         }
@@ -87,6 +91,13 @@ class MISPSettingsTests(unittest.TestCase):
         )
         self.assertTrue(settings.opencti_graph_lookup)
         self.assertTrue(settings.graph_replay_on_artifact_dedup)
+        self.assertEqual("enforce", settings.contextual_scoring_mode)
+        self.assertEqual(75, settings.contextual_scoring_max_impact)
+        self.assertEqual(
+            {"toolbox": 20, "ttp": 15},
+            settings.contextual_scoring_impacts,
+        )
+        self.assertTrue(settings.enable_infrastructure_victimology_export)
         self.assertEqual("/app/state/misp.json", settings.state_file)
         self.assertEqual("/app/state/misp-decisions.jsonl", settings.decision_audit_file)
 
@@ -103,6 +114,20 @@ class MISPSettingsTests(unittest.TestCase):
             settings = load_settings()
 
         self.assertTrue(settings.dry_run)
+
+    def test_load_settings_rejects_invalid_misp_retry_configuration(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "MISP_URL": "http://misp.local",
+            "MISP_KEY": "misp-key",
+            "MISP_QUERIES": "tlp:green",
+            "MISP_RETRY_JITTER_SECONDS": "-1",
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaisesRegex(ValueError, "misp_retry_jitter_seconds"):
+                load_settings()
 
     def test_load_settings_accepts_gateway_policy_fallbacks(self):
         env = {

@@ -280,7 +280,7 @@ capacity, deduplication posture and review evidence are acceptable.
 Before promoting v0.6, run:
 
 ```powershell
-.\scripts\validate-v0.6.ps1
+.\scripts\validate-release-runtime.ps1
 python -m gateway.preflight
 python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state\quarantine.jsonl
 python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state\quarantine.jsonl --output-file state\gateway-operational-report.txt

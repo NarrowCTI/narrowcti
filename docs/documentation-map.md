@@ -1,6 +1,7 @@
 # Documentation Map
 
-NarrowCTI keeps documentation paths stable across pre-1.0 releases. Current
+NarrowCTI keeps documentation paths stable across historical and current
+development releases. Current
 operator documentation uses unversioned filenames, while versioned files preserve
 release-specific snapshots and historical design evidence.
 
@@ -17,10 +18,13 @@ Use these docs first:
 - `architecture.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `product-reference.md`
+- `opencti-coverage-matrix.md`
 - `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`
 - `security-quality-gates.md`
+- `architecture-v1.0.md`
 - `architecture-v0.9.md`
 - `graph-promotion-v0.8.md`
 - `infrastructure-correlation-v0.8.md`
@@ -28,12 +32,24 @@ Use these docs first:
 - `analyst-review-v0.8.md`
 - `curation-reporting-v0.8.md`
 - `support-diagnostics-v0.8.md`
+- `release-v1.0.0.md`
 - `release-v0.9.0.md`
 - `release-v0.8.0.md`
-- `roadmap.md`
 
 These files are product-facing and should be included in release source
 archives.
+
+## Release Status
+
+| State | Version | Public evidence |
+| --- | --- | --- |
+| Latest published stable | `v1.0.0` | GitHub Release and immutable tag, published 2026-07-12. |
+| Historical stable | `v0.9.0` | Previous GitHub Release and immutable tag, published 2026-07-11. |
+| Historical tags | `v0.2.0` through `v0.7.0` | Tags exist, but no GitHub Release page was created. |
+
+`product-reference.md` is the current product and version source of truth.
+Versioned release notes remain historical or in-development evidence and must
+not override this status table.
 
 ## Community Path
 
@@ -44,6 +60,7 @@ Use these docs for contribution, support and repository governance:
 - `community-issue-triage.md`
 - `repository-structure.md`
 - `release-process.md`
+- `community-governance.md`
 - `community-standards.md`
 - `../SUPPORT.md`
 - `../SECURITY.md`
@@ -56,6 +73,7 @@ These files are public and should be included in release source archives.
 Current architecture:
 
 - `architecture.md`
+- `architecture-v1.0.md`
 - `architecture-v0.9.md`
 - `architecture-v0.8.md`
 - `graph-promotion-v0.8.md`
@@ -68,7 +86,6 @@ Historical design context:
 - `otx-adapter-foundation-v0.2.md`
 - `multi-feed-expansion-v0.4.md`
 - `gateway-runtime-v0.5.md`
-- `enterprise-intelligence-gateway-v0.5.md`
 - `quarantine-enrichment-v0.6.md`
 - `architecture-v0.7.md`
 - `graph-enrichment-v0.7.md`
@@ -94,6 +111,8 @@ repository readers:
 - `configuration-reference.md`
 - `curation-decision-reference.md`
 - `environment-profiles.md`
+- `product-reference.md`
+- `opencti-coverage-matrix.md`
 - `analyst-review-api.md`
 - `container-images.md`
 - `opencti-compatibility.md`
@@ -106,6 +125,7 @@ snapshot only when the release needs exact historical documentation.
 ## Release Notes Path
 
 - `../CHANGELOG.md`
+- `release-v1.0.0.md` (released)
 - `release-v0.9.0.md` (released)
 - `release-v0.8.0.md`
 - `release-v0.7.0.md`
@@ -129,8 +149,6 @@ Examples:
 - `*-validation-v*.md`
 - `metadata-validation-v*.md`
 - `product-architecture-validation-v*.md`
-- `market-positioning-v*.md`
-- `post-v1-ml-roadmap.md`
 
 These files should not be the first operator-facing documentation surface.
 

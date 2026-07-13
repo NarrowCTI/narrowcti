@@ -39,6 +39,7 @@ records the reason for every `ingest`, `drop`, `quarantine`, `skip`,
 | `NARROWCTI_GATEWAY_ENV_FILE` | `./gateway.env.example` | Env file consumed by Compose. Set to `./gateway.env` for real local secrets. |
 | `NARROWCTI_GATEWAY_RESTART` | `no` | Restart policy for the gateway runtime. Keep `no` during validation. |
 | `NARROWCTI_DOCKER_NETWORK` | `opencti_default` | External Docker network used to reach OpenCTI. |
+| `CONNECTOR_NAME` | `NarrowCTI Gateway` | Logical connector name used in runtime metadata and audit naming. Keep it stable across deployments. |
 
 ## Gateway Runtime
 
@@ -62,13 +63,23 @@ records the reason for every `ingest`, `drop`, `quarantine`, `skip`,
 | `NARROWCTI_QUARANTINE_SCORE_THRESHOLD` | `50` | Candidates below this score become `quarantine` when quarantine is enabled, otherwise `drop`. Legacy `QUARANTINE_SCORE_THRESHOLD` overrides source-specific runtimes. |
 | `NARROWCTI_ENABLE_QUARANTINE` | `true` | Enables `quarantine` for very low scores instead of immediate `drop`. Legacy `ENABLE_QUARANTINE` overrides source-specific runtimes. |
 | `NARROWCTI_MAX_DAYS_OLD` | `1095` | Old candidates need `MIN_SCORE_FOR_OLD_PULSE` or `MIN_SCORE_FOR_OLD_EVENT` to pass. Legacy `MAX_DAYS_OLD` overrides source-specific runtimes. |
+| `NARROWCTI_CONTEXTUAL_SCORING_MODE` | `shadow` | `off` disables contextual adjustments, `shadow` calculates and audits them without changing decisions, and `enforce` uses the contextual score for score-threshold decisions. |
+| `NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT` | `100` | Caps the combined contextual impact ratio. Valid range is `0..100`. A lower value limits how far context can lift the base score. |
+| `NARROWCTI_CONTEXTUAL_SCORING_IMPACTS` | Built-in category defaults | Comma-separated `category:points` overrides for `threat`, `toolbox`, `ttp`, `sector`, `location`, `vulnerability`, `author` and `graph_state`. Each value must be `0..100`. |
 | `MAX_DAYS_HARD_FILTER` | `0` | `0` disables hard cutoff. Positive values drop candidates older than this many days regardless of score. |
 | `MIN_SCORE_FOR_OLD_PULSE` | `80` | OTX score required when an old pulse exceeds `MAX_DAYS_OLD`. |
 | `MIN_SCORE_FOR_OLD_EVENT` | `80` | MISP score required when an old event exceeds `MAX_DAYS_OLD`. |
-| `NARROWCTI_ALLOWED_TLP` | Empty in code, `white,green` in templates | Candidates tagged with disallowed TLP are dropped before export. Empty means no TLP allow-list. |
+| `NARROWCTI_ALLOWED_TLP` | Empty in code, `white,green` in templates | Candidates tagged with disallowed TLP are dropped before export. Empty means no TLP allow-list. TLP 2.0 `clear` and legacy `white` are policy-equivalent while the source value remains unchanged in evidence. |
 | `NARROWCTI_ALLOWED_INDICATOR_TYPES` | Empty in code | Filters exportable indicator types. If all indicators are removed, the candidate is skipped. |
 
 See `curation-decision-reference.md` for the decision matrix.
+
+Contextual scoring is forward-only: it can preserve or increase the base score,
+never reduce it. `enforce` can change outcomes controlled by score thresholds,
+including minimum-score and quarantine boundaries. It cannot override a denied
+TLP, the positive `MAX_DAYS_HARD_FILTER`, an explicit graph hold or an
+indicator-type filter that removes every exportable indicator. Start with
+`shadow`, compare decision evidence, then activate `enforce` deliberately.
 
 ## Deduplication
 
@@ -118,8 +129,9 @@ Credential format, roles and endpoint behavior are documented in
 | `OTX_DRY_RUN` | Falls back to `NARROWCTI_DRY_RUN`, default `false` | Non-exporting OTX execution. |
 | `OTX_TIMEOUT` | `60` | OTX enrichment timeout. |
 | `OTX_SEARCH_TIMEOUT` | `45` | OTX search timeout. |
-| `OTX_RETRIES` | `3` | OTX retry count. |
+| `OTX_RETRIES` | `3` | OTX retry count; must be greater than zero. |
 | `OTX_RETRY_BACKOFF_SECONDS` | `3` | Delay between OTX retries. |
+| `OTX_RETRY_JITTER_SECONDS` | `1` | Maximum random delay added to each OTX retry backoff. Set `0` only for deterministic tests. |
 | `OTX_SOURCE_CONFIDENCE` | `50` | Source confidence adjustment. `50` is neutral. |
 | `MAX_SEARCH_RESULTS_PER_QUERY` | At least `MAX_PULSES_PER_QUERY` or `10` | Search candidates reviewed per query. |
 | `MAX_PULSES_PER_QUERY` | `5` | Accepted OTX pulses per query. |
@@ -138,8 +150,9 @@ Credential format, roles and endpoint behavior are documented in
 | `MISP_VERIFY_TLS` | `false` | TLS verification for MISP HTTP calls. Use `true` in production-like deployments with valid TLS. |
 | `MISP_SEARCH_TIMEOUT` | `45` | MISP search timeout. |
 | `MISP_ENRICH_TIMEOUT` | `60` | MISP event enrichment timeout. |
-| `MISP_RETRIES` | `3` | MISP retry count. |
+| `MISP_RETRIES` | `3` | MISP retry count; must be greater than zero. |
 | `MISP_RETRY_BACKOFF_SECONDS` | `3` | Delay between MISP retries. |
+| `MISP_RETRY_JITTER_SECONDS` | `1` | Maximum random delay added to each MISP retry backoff. Set `0` only for deterministic tests. |
 | `MISP_FROM_DATE` | Empty | Lower date bound for MISP search/backfill. |
 | `MISP_TO_DATE` | Empty | Upper date bound for MISP search/backfill. |
 | `MISP_TAGS` | Empty in code, `tlp:green` in templates | Tag filter for MISP search. |
@@ -172,7 +185,17 @@ Credential format, roles and endpoint behavior are documented in
 | `NARROWCTI_ALLOWED_GRAPH_STIX_OBJECT_TYPES` | Empty | Optional STIX/OpenCTI object allow-list. In export, empty uses safe defaults. |
 | `NARROWCTI_GRAPH_EXPORT_MODE` | `audit` | `audit`, `dry-run` or `export`. Controls graph promotion behavior. |
 | `NARROWCTI_GRAPH_DEDUP_STATE_FILE` | Empty | Local graph known-key index. |
+| `NARROWCTI_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` | `false` | Allows graph-only replay when indicators are already known, subject to graph policy and source evidence. Source-specific `MISP_GRAPH_REPLAY_ON_ARTIFACT_DEDUP` can override it. |
 | `NARROWCTI_OPENCTI_GRAPH_LOOKUP` | `false` | Read-only canonical lookup before creation. Existing entities are reused; relationships are deduplicated only after exact source, target, direction and relationship-type confirmation. Errors fail open and are logged. |
+| `NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT` | `false` | Explicitly promotes a same-event MISP `Infrastructure -> targets -> victimology` candidate whose source evidence and inference are exact. Keep disabled until OpenCTI API/UI validation confirms the expected Diamond victimology behavior. It does not approve unrelated or unvalidated relationships. |
+
+Infrastructure victimology promotion is intentionally opt-in. With the default
+`false`, NarrowCTI keeps the candidate in audit evidence with
+`relationship_requires_opencti_validation`. Setting it to `true` only changes
+that exact source-backed candidate; TLP, age, score, provenance and all other
+graph policy controls remain active. Enable it for a bounded validation run,
+inspect the resulting OpenCTI relationship and Diamond view, then retain the
+decision and evidence in the operational report.
 
 ## Reporting and Validation
 
