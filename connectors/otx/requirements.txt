@@ -1,4 +1,4 @@
-pycti==7.260710.0
+pycti==7.260722.0
 fastapi==0.139.0
 uvicorn==0.51.0
 stix2==3.0.1
