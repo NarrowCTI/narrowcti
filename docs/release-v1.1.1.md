@@ -2,13 +2,10 @@
 
 ## Status
 
-Status: release candidate.
+Status: released.
 
-The candidate is prepared on `release/prepare-v1.1.1` from the reviewed
-`dev` branch. It becomes an official release only after the protected
-`dev -> main` flow, required checks, the immutable `v1.1.1` tag and the GitHub
-Release are complete. Until then, `v1.1.0` remains the latest published stable
-release.
+NarrowCTI v1.1.1 was promoted through the protected `dev -> main` flow,
+validated, tagged immutably and published as a GitHub Release on 2026-09-14.
 
 ## Release Theme
 
@@ -36,29 +33,38 @@ release image only after the tag and protected image publication complete:
 NARROWCTI_GATEWAY_IMAGE=ghcr.io/narrowcti/narrowcti-gateway:1.1.1
 ```
 
-Until publication, keep using the approved `1.1.0` image or a deliberately
-selected `main`/`latest` build for validation; those moving tags are not the
-immutable `1.1.1` release.
+The published immutable image is `1.1.1`; production deployments should remain
+pinned to that tag. The moving `latest` and `main` tags point to the approved
+main build but should be used only when intentionally tracking the moving line.
 
 ## Validation Record
 
 - Dependabot maintenance PR #74 was reviewed and merged into `dev`.
 - Promotion PR #76 was reviewed and merged into `main` with a merge commit.
+- Release promotion PR [#78](https://github.com/NarrowCTI/narrowcti/pull/78) was
+  reviewed and merged into `main`.
 - Local validation for the dependency batch passed 544 unit tests, Ruff 0.16.6,
   Bandit and strict dependency audits, with the existing documented
   `PYSEC-2026-3447` exception retained.
-- The protected `main` CI, Security and Quality, DAST and Container Image
-  workflows passed for the promoted dependency batch; the approved image flow
-  completed successfully. The final `v1.1.1` tag workflow must still publish
-  the immutable release tags from the final release commit.
+- [CI run 34907559398](https://github.com/NarrowCTI/narrowcti/actions/runs/34907559398),
+  [Security and Quality run 34907559445](https://github.com/NarrowCTI/narrowcti/actions/runs/34907559445),
+  [DAST run 34907559397](https://github.com/NarrowCTI/narrowcti/actions/runs/34907559397)
+  and the code-quality gates passed on the final main promotion.
+- [Container Image run 34907559606](https://github.com/NarrowCTI/narrowcti/actions/runs/34907559606)
+  built, smoke-tested, scanned, generated the SBOM and published the approved
+  image after release-environment approval.
+- The published `latest`, `main` and `sha-ebef338` tags resolve to
+  `sha256:70509ae9509182bcfee29fe143626d9743e997891ff96a8170df09a9bee84efe`.
 
 ## Traceability
 
 - Source branch: `release/prepare-v1.1.1`, created from `dev`.
 - Dependency maintenance: PR [#74](https://github.com/NarrowCTI/narrowcti/pull/74).
 - Promotion to `main`: PR [#76](https://github.com/NarrowCTI/narrowcti/pull/76).
-- Main promotion commit: `d366da85a8bb6794dfcdf4ea0e487a5013de8994`.
-- Git tag and release commit: to be recorded only after publication.
+- Release promotion: PR [#78](https://github.com/NarrowCTI/narrowcti/pull/78).
+- Main promotion commit: `ebef338efbc0dce743c80d91ea3b55d079d8c69c`.
+- Git tag: `v1.1.1`.
+- Release commit: final `main` commit containing this release documentation.
 
 The intended release path remains:
 
