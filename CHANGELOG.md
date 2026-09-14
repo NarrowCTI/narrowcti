@@ -6,7 +6,22 @@ Detailed operator-facing release notes remain in `docs/release-v*.md`.
 
 ## Unreleased
 
-Changes are collected here after the v1.1.0 release candidate is promoted.
+Changes are collected here after the v1.1.1 release candidate is promoted.
+
+## v1.1.1 - 2026-09-14
+
+Dependency maintenance patch for the Community Edition.
+
+- Upgrade the OpenCTI client dependency from `pycti 7.260828.0` to
+  `pycti 7.260904.0`.
+- Upgrade Ruff from `0.16.5` to `0.16.6`.
+- Refresh the security-quality audit rationale for the current pycti packaging
+  constraint while retaining the existing documented exception boundary.
+- Preserve the v1.1.0 application behavior, state format, graph contracts and
+  environment contract; no migration or reset is required.
+
+This patch is source-compatible and is intended to be published only after the
+controlled `dev -> main` promotion, semantic tag and GitHub Release gates.
 
 ## v1.1.0 - 2026-09-06
 

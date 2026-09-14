@@ -25,12 +25,13 @@ CTI, hunting and SOC teams.
 ## Current Version
 
 ```text
-v1.1.0
+v1.1.1
 ```
 
-`v1.1.0` is the current Community Edition feature release. It adds
-deterministic detection-rule-to-ATT&CK graph relationships, preserves unmapped
-detection-rule context and includes the reviewed dependency maintenance batch.
+`v1.1.1` is the release candidate for the next Community Edition patch release.
+It carries the reviewed pycti and Ruff maintenance updates while preserving the
+v1.1.0 application, graph and state contracts. Publication remains gated by the
+controlled `dev -> main` promotion and release checks.
 
 `v1.0.0` is the first production-ready Community Edition release. It hardens
 the validated OTX and MISP gateway paths, integrates governed contextual
@@ -38,12 +39,14 @@ scoring, closes priority graph-quality gaps and validates installation,
 upgrade, recovery and release gates. New source adapters are outside the
 current release scope.
 
-The latest published release is `v1.1.0` (2026-09-06). `v1.0.1`, `v1.0.0`, `v0.9.0` and
+The latest published release remains `v1.1.0` (2026-09-06) until the `v1.1.1`
+candidate is promoted and tagged. `v1.0.1`, `v1.0.0`, `v0.9.0` and
 `v0.8.0` remain available as historical release milestones, while `v0.2.0` through
 `v0.7.0` remain historical tags without GitHub Release pages.
 
 The release sequence is `v0.8.0` -> `v0.9.0` -> `v1.0.0` -> `v1.0.1` ->
-`v1.1.0`. The `v1.1.0` release is the first post-v1.0 feature milestone.
+`v1.1.0` -> `v1.1.1`. The `v1.1.1` candidate is a dependency-maintenance
+patch for the v1.1 Community Edition line.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
 release notes are maintained under `docs/release-v*.md`.
@@ -313,8 +316,8 @@ not expand the source catalog. New direct adapters are outside the current
 release scope.
 
 The current product contract is `docs/product-reference.md`, the current
-OpenCTI coverage matrix is `docs/opencti-coverage-matrix.md`, and the current
-release evidence is `docs/release-v1.1.0.md`.
+OpenCTI coverage matrix is `docs/opencti-coverage-matrix.md`, and the release
+candidate evidence is `docs/release-v1.1.1.md`.
 
 ## Curation Configuration
 
@@ -595,9 +598,9 @@ feature/* -> dev -> main -> version tag -> GitHub Release
 Current release:
 
 ```text
-Current release: v1.1.0
+Release candidate: v1.1.1
 Latest published: v1.1.0
-Previous stable milestone: v1.0.1
+Previous stable milestone: v1.1.0
 ```
 
 ## Documentation
@@ -631,6 +634,7 @@ docs/opencti-coverage-matrix-v0.8.md
 docs/repository-structure.md
 docs/development-guide.md
 docs/community-issue-triage.md
+docs/release-v1.1.1.md
 docs/release-v1.0.1.md
 docs/release-v1.1.0.md
 docs/release-v0.9.0.md
