@@ -51,7 +51,7 @@ jobs:
 
       - name: Audit Python dependencies
         run: |
-          # pycti <= 7.260722.0 pins setuptools~=82.0.0. PYSEC-2026-3447
+          # pycti 7.260904.0 pins setuptools~=82.0.0. PYSEC-2026-3447
           # concerns source-distribution file matching on macOS APFS/HFS+;
           # this Linux-only runtime does not build source distributions.
           # Keep this exception narrow and remove it when pycti relaxes the pin.
