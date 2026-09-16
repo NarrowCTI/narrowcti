@@ -33,6 +33,7 @@ Use these docs first:
 - `curation-reporting-v0.8.md`
 - `support-diagnostics-v0.8.md`
 - `release-v1.0.1.md`
+- `release-v1.1.1.md`
 - `release-v1.1.0.md`
 - `release-v1.0.0.md`
 - `release-v0.9.0.md`
@@ -45,8 +46,8 @@ archives.
 
 | State | Version | Public evidence |
 | --- | --- | --- |
-| Latest published stable | `v1.1.0` | GitHub Release and immutable tag, published 2026-09-06. |
-| Historical stable | `v1.0.1` | Previous GitHub Release and immutable tag, published 2026-08-15. |
+| Latest published stable | `v1.1.1` | GitHub Release and immutable tag, published 2026-09-14. |
+| Historical stable | `v1.1.0` | Previous GitHub Release and immutable tag, published 2026-09-06. |
 | Historical tags | `v0.2.0` through `v0.9.0` | Tags exist; release pages exist for `v0.8.0` and `v0.9.0`. |
 
 `product-reference.md` is the current product and version source of truth.
