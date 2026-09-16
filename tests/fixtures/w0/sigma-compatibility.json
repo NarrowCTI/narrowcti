@@ -1,0 +1,10 @@
+{
+  "rule_type": "sigma",
+  "pattern_type": "sigma",
+  "opencti_indicator_compatible": true,
+  "attack_pattern_ids": [
+    "T1059.001"
+  ],
+  "relationship_type": "detects",
+  "relationship_inference": "explicit-detection-rule-attack-reference"
+}

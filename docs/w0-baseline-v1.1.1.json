@@ -1,0 +1,1649 @@
+{
+  "schema": "narrowcti.w0.baseline-inventory/v1",
+  "ref": "v1.1.1",
+  "commit": "4e3509b8f18c330361994975ab3c5b11e8f5b05f",
+  "tree": "f5570e9d92643060d79ef59eef0d4a8f266b9476",
+  "entry_count": 205,
+  "entries": [
+    {
+      "path": ".dockerignore",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c14b96688b0b1b506af0a54f8ab0e6e01d1648b0",
+      "size": 174,
+      "sha256": "79cce047793b37af07fb356c8858027550afa289af2e0f6a1b32d7dd629f53f0"
+    },
+    {
+      "path": ".gitattributes",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8924367d8f1e40a3088b956dde07b603236914f3",
+      "size": 620,
+      "sha256": "b3be25b23f63107f490db38e20b41ef33becbfdb330bc2120999883c96dbe2fb"
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "0d525ad781730810c4d9240c4c01ec2c11db0700",
+      "size": 449,
+      "sha256": "1f7e3ab73a23e9b290177a0cbc941bea6de9e3c5116788406dcba4b1fc2824ce"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "aa576cead8ada9c2c7fb43cbed1cb22f3ae2c8bc",
+      "size": 844,
+      "sha256": "960dff3e2ea9ad6ae1a96ead153cbc180b5c96967fdc9e3759c2fbba5f0bf5f7"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/config.yml",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5cfd408c00e2fe55b244567e9ab79e7c3ba9f1bf",
+      "size": 224,
+      "sha256": "fe71fa2b9dcc2b2ce852c35e43d7aa636a26a969d2e7acdbac53e956175bce02"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/documentation.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ea6d35b7689e5b4839f4a3fd66c785b970b965b3",
+      "size": 462,
+      "sha256": "e7b556ad9cdc95d91769fed2d059c898ac06e5b78cc2c03cc3b50d64388fff11"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "e435814fcd888662ed9f2dfe45a92f46a6a0be16",
+      "size": 829,
+      "sha256": "a273eba729b596ca331818c36235039d091848f32b126d976546c7d9d6e8b03f"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/question.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5be688bd368f52f146587726d6b24d54d1baf911",
+      "size": 536,
+      "sha256": "9859fdab8ab91b9d372e6a40d7ce6ea221f5dd92743e954b4c15948d8ed592dd"
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "3c319d24e0eda8b10e9b78faf7feac0f7f8b4eac",
+      "size": 1317,
+      "sha256": "20c1ca9c09c07cbe57bf58e9a39b755c81db98d7cbcdd01494ded1a339085bb9"
+    },
+    {
+      "path": ".github/dependabot.yml",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c67acca19659d85c82d68f5a0c97d438e7c38776",
+      "size": 510,
+      "sha256": "875fe5573178193da8bdfc6f8bd6bef1d30730bdbfbb47cec53f00186c4436a6"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "808302c2620b57da363d0958607f8cd2c6e4124c",
+      "size": 3242,
+      "sha256": "d8a89ff55677ef4e7ed27fea7202c145e560509afe69e47c20cac1a85e71a267"
+    },
+    {
+      "path": ".github/workflows/container-image.yml",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "f265229ba6a9517cc973b64a7290eafd6f9e2206",
+      "size": 4971,
+      "sha256": "730e2a619da9c5311059dc95e7300f677d77fcb3475f0e5719b6ee7060025416"
+    },
+    {
+      "path": ".github/workflows/dast.yml",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2e3e6437a8c2a4833ad2bb223d0436cf754fc23f",
+      "size": 5566,
+      "sha256": "333443470b2fb07cff37e7afa5a68bf731319add1d5b717d5fde8487e4013b4b"
+    },
+    {
+      "path": ".github/workflows/security-quality.yml",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ad829888aa7627e593677bfcfe65d0a5f8bd9b8f",
+      "size": 1765,
+      "sha256": "b7b4bae0bc5edc85d1ad125ee8b0b53790ee64670a98b44a781e14be2897681b"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "70ac747da5aa538e931cb8f5ae9b1c0d98c48b3a",
+      "size": 330,
+      "sha256": "a7032a1b2cc1a185a6e3f1506d2dd96c2d2023a6cbc735256a444bbde49d986f"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "b89bfdf01113a190b012774fb5ff20a1cd182709",
+      "size": 7891,
+      "sha256": "31a821797f650a4449617cad09c50baaa5a8f6d042705f4aba8f16e6f4e36f70"
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "467fa61bf400cc3e9ab95a144348420b4190fae2",
+      "size": 1212,
+      "sha256": "fc9ee95a1ab1fbac9780ea5f80cc35970eb769b151f26ce03855513b107f52af"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "69ebaf883a21521182139451d5b6030843760f1a",
+      "size": 7214,
+      "sha256": "c5483d7fc4880fe3e8429546c012609837f8afd2de75d5e9818de12122bf8ae8"
+    },
+    {
+      "path": "Dockerfile.gateway",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "f76a24de73a68739d2c35fbe83199a8bab78ab5e",
+      "size": 859,
+      "sha256": "dba3e30b217dc077c1dfe74d54706c0d95e3a71ea7fa8b2a7bfd5f255bf1978e"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "1fa25e1cc2471e4ed7940ca7c5e6154eaa536f74",
+      "size": 10248,
+      "sha256": "264770e9a433c851119241ec47124cf1f21da464a6e5a51c7f323d63da6114c5"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9cf59632ac31bf13aa11ce429c11303d46210d36",
+      "size": 30989,
+      "sha256": "3f8fe2d066068e32f167cf0abc10965fc2fd38c4c183fefee0471c184e696f03"
+    },
+    {
+      "path": "SECURITY.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9fe09a859a6a0a969d95cb9c2f2092af193a8965",
+      "size": 2880,
+      "sha256": "def6c851ed608657458059db64a2ba94b3457e44c3609a4287dbb8ff35afff04"
+    },
+    {
+      "path": "SUPPORT.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4007725e3fa0cb9ce188241842d9dd55327d118a",
+      "size": 2253,
+      "sha256": "dda3dd5ffdd9cb60b752abc9a6480ffd5f714540625ab547fa26c1c6e847b8b4"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c5274cd1e719106f288ddc67eb6aa7eb4a1da631",
+      "size": 1482,
+      "sha256": "929abd98729519fbf1c538aed9be23056cf5a0cc9881a384877056be52a12496"
+    },
+    {
+      "path": "VERSION",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "56130fb3a196dbde484abf6b391a877c97a27e65",
+      "size": 7,
+      "sha256": "aaeebc6ab5b9dd80bca452ec7a63a7175f6e9ce9b81b34a66c85e94a5e4d38ec"
+    },
+    {
+      "path": "config/.env.example",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d9dbefe6d85ef0cf5296117db17e7b2dd904fdff",
+      "size": 3074,
+      "sha256": "6390eebadc0f02086f15829c94e2a014f7503e45fb56c894ac6e16243ecbbc3c"
+    },
+    {
+      "path": "connectors/misp/.env.example",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "3dc04e44baf85a680db24568f91efb908204060a",
+      "size": 1747,
+      "sha256": "2bca0d279b495765be97f5a886230e7837055c4e940974d612241242c5f82b8d"
+    },
+    {
+      "path": "connectors/misp/client.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9ae95231c61a34ad7448d23f209350f6fce9479a",
+      "size": 5418,
+      "sha256": "7db9e94d8e30faa73377ff43ac7e34a6870020255a22c11e108fbbfa17837d62"
+    },
+    {
+      "path": "connectors/misp/connector.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c7aba32c34faca538cc8f7ba3467b44e8cac9d50",
+      "size": 1612,
+      "sha256": "7433d5f3e730fb735f8634918a631b6e516f8326e8aae871eebd5ac9785cc696"
+    },
+    {
+      "path": "connectors/misp/feed_adapter.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "0cb248044f4e5bb26eaad8eb28b7e9d0eb39af53",
+      "size": 12585,
+      "sha256": "4dab6bc071b246c5d3d24dbf83a9890a553f853a2269c01be37b0311548b5ad2"
+    },
+    {
+      "path": "connectors/misp/models.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "133a60635cf7d3dffb94e8bafc24fc8a5dd4143b",
+      "size": 322,
+      "sha256": "79ad6a3d63987fdbcea053ca7993e7229daef4e4a7bb07ab12b03c101005f7b5"
+    },
+    {
+      "path": "connectors/misp/processor.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "b77fa55eeaa54022a9f9a48babe4282796cdb366",
+      "size": 95018,
+      "sha256": "c595a5dfe463ebf0071f65e63e5198cc518f4ae8fd2c4729994fa8166d493075"
+    },
+    {
+      "path": "connectors/misp/runtime.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8e609d4c1e519cb03de3aa71e43299e2707a47dc",
+      "size": 244,
+      "sha256": "0daf30d357d688e313378b145eb2b809bf67163fdfa7b50c7decdd248f2bc13a"
+    },
+    {
+      "path": "connectors/misp/settings.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4a4f9858f941d31016667e47b9c4ca6d60995aac",
+      "size": 8966,
+      "sha256": "711d026fa0077e6c9ca919c904b57fbb19eca984328c5f86d7cc05d8170a8754"
+    },
+    {
+      "path": "connectors/otx/.env.example",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "616f689a9b974ecd67097f16c420462cc83cc1b2",
+      "size": 1759,
+      "sha256": "43c9586a968fc57c4c18ed668c819b4056dcf9b23f4f1d3bf5acbb9df1a47a76"
+    },
+    {
+      "path": "connectors/otx/Dockerfile",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2a0140b817863d430dd0894c0697ae1f160f8c31",
+      "size": 761,
+      "sha256": "4a7657ce5993c6b73dd8558b6c656ef8a580fc4152ec6c5696c3ac002fc382c5"
+    },
+    {
+      "path": "connectors/otx/connector.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "62a0df9b10ba6959cbce385613faf9ddf98011f0",
+      "size": 1149,
+      "sha256": "f797b1f59ae4512d45e928a7b376a3e3b5443806842197c29cbdd141577092e9"
+    },
+    {
+      "path": "connectors/otx/entity_extraction.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9957945cfe54002ad8df5ba62d85bb4a3bf09f5e",
+      "size": 34917,
+      "sha256": "efca5c85633132590dd840a048a567c6b5d41a7a2d4aee48615af193ac7f8959"
+    },
+    {
+      "path": "connectors/otx/feed_adapter.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "7023cffd26c6564dc47c1bea6a18a7cc198b60e5",
+      "size": 1670,
+      "sha256": "acfee3796ba9f158008b67d290b491121f0e704aa6f10868c006334e08ebff8e"
+    },
+    {
+      "path": "connectors/otx/models.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4dcde71d2e9a168983da53b61146d568ad3c8c41",
+      "size": 771,
+      "sha256": "3959859018665743e6ae93e85ed1fff5b0da49b8acec60f89f20aa217db83fbe"
+    },
+    {
+      "path": "connectors/otx/otx_client.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "13e01a9302442f2fd5289c614784dd12071db421",
+      "size": 3823,
+      "sha256": "851cdd1fcb32391b79dba093cf7a2e76454ee1d56a337e1a04d231aa3903d02a"
+    },
+    {
+      "path": "connectors/otx/processor.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "a3b8d7690bc6a0895714e4802f2bcf5deb822d14",
+      "size": 29357,
+      "sha256": "f1ee8e734e223f8ccc6294217e84da4de400ae0157a96aca6f61d68f3339c391"
+    },
+    {
+      "path": "connectors/otx/requirements.txt",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4c74cfcc6436906142dd5823c90cc5cabd39ad67",
+      "size": 178,
+      "sha256": "80b35c4eab20b10d163c31b2ac7ccf4061ed643742695253df981410f3bf4bb8"
+    },
+    {
+      "path": "connectors/otx/runtime.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8e609d4c1e519cb03de3aa71e43299e2707a47dc",
+      "size": 244,
+      "sha256": "0daf30d357d688e313378b145eb2b809bf67163fdfa7b50c7decdd248f2bc13a"
+    },
+    {
+      "path": "connectors/otx/settings.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4e8a8f20b2705c03b579fdeab9582e6aa758f794",
+      "size": 7891,
+      "sha256": "7751f961f9b58e9afdcb156c4c7d4cbadb4646a1de957e2fc88a1f17b2d711e5"
+    },
+    {
+      "path": "core/atomic_io.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ec6397f99766b8486efb08fe0e1960d3ec46dcb5",
+      "size": 915,
+      "sha256": "b88fdf8b38ee39c8cdb181e147d47fc0f01ee96235683c752dcf979933bf0b1b"
+    },
+    {
+      "path": "core/contextual_scoring.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c92e691f1d9782eea5b3c6c1078087c844121652",
+      "size": 9691,
+      "sha256": "3aefa85fbfc5171256c412d9ff0472bb867f90604f1d1a4cbdd2fc71e3bf6c57"
+    },
+    {
+      "path": "core/decision_audit.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5c120dff4a8fe4121231e37028b7835b31806716",
+      "size": 1270,
+      "sha256": "c16b97497c10aeebbadf830d832efcd9041fdb2b42715704af39a5a676fe4153"
+    },
+    {
+      "path": "core/deduplication.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "aa18e4c042d7a611aacda8611d8d6061b8684bbe",
+      "size": 7092,
+      "sha256": "7432648ee9c77c0b6e543f671f2f4672b7565a6cd39dab4b44ab36b30991516a"
+    },
+    {
+      "path": "core/feed_contract.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "fffc114878dde15c4e2a78709b5955ff364d9b2b",
+      "size": 1816,
+      "sha256": "daa967f4e904add114dca6958a03738851bc2050de6dd577dd690dbf035f1e7d"
+    },
+    {
+      "path": "core/graph_candidates.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ea6de92b8b5801d9cdb4eff66d3e569dcae59091",
+      "size": 14774,
+      "sha256": "2e613bd7f887761e2269c2f6de74c4b240404a16c1feb72eb8b969650febf67d"
+    },
+    {
+      "path": "core/graph_deduplication.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "cea0d7bb018697befcc514cedcaf29a8d16f34e5",
+      "size": 8471,
+      "sha256": "8856474f9bfd9b3f02dcf562c5be2ab16bb748316fee9b5f0f0caeec03625eba"
+    },
+    {
+      "path": "core/graph_evidence.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "f6e843e133332f542a553707309e05dc99b4e69d",
+      "size": 84976,
+      "sha256": "4f2ee7cdc489238b97eaef3b41273b2d7146a33aa62f6e985c8d8b91b3d9e011"
+    },
+    {
+      "path": "core/graph_export_plan.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c7d699a7c1d729fbcd2f0032ab4b8232f2e5d49e",
+      "size": 19069,
+      "sha256": "4499349c43c579c3fac6c7cd8209348daa33ee0089c07a2195b9bc023e809248"
+    },
+    {
+      "path": "core/indicator_policy.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "e22b4d88f245e14cf266b83410add231b34c1efa",
+      "size": 720,
+      "sha256": "4bd1be24f9060cf4664c86fdee599ec64dbd7f05b6596a272f2dc6a6f2f7c5d4"
+    },
+    {
+      "path": "core/ip_asn_enrichment.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "25fef94dd7f3ac3da32e3cc690c2c47ab3e3aa72",
+      "size": 4472,
+      "sha256": "669a883b0e8b35541838191ef5b12b5d171a2101ebd9eba350e2545a6438f792"
+    },
+    {
+      "path": "core/mitre_attack.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "bd6e2e82853bb6cd62f6e6332026946ef04ca6dd",
+      "size": 10504,
+      "sha256": "a9d62bd6b4ab76b158351a9e3931b73028ae60775a45e97964921f12f2df5d3a"
+    },
+    {
+      "path": "core/opencti_deduplication.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "045033993c419bdec1fc1a5fad6b2fcb303304dd",
+      "size": 2755,
+      "sha256": "2652d93d7b477e0a7adc426b8a4a670ec3b5e6c846700fed5f80726ea80cf0d1"
+    },
+    {
+      "path": "core/opencti_graph_lookup.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "f6be1b4559384f27c036cf3b64f2149ca67ad061",
+      "size": 47409,
+      "sha256": "e8058a23a7b63264a4d3de23c56de9e2622985ed5059bdfa7914608589ee2414"
+    },
+    {
+      "path": "core/policy.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "68359ee297398105c624f8e1cc709f17928e5f6c",
+      "size": 1261,
+      "sha256": "0a4b7c26bc273d033a6095d37371420f68bb9702a6a6e93736bcd0e3a0bd244c"
+    },
+    {
+      "path": "core/quarantine.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "fdd8b7726410b478afe2e015bd11570b9f51a64a",
+      "size": 13365,
+      "sha256": "61b6b7bc5526237f4739f309e85aaa0d06849c109fd49d9e88d6d4c02a7ef5c3"
+    },
+    {
+      "path": "core/retry.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "f1f36e7b1d8280a5acfffe7486d3c614d2516bf9",
+      "size": 303,
+      "sha256": "a7fdcaae2412bffef4f42099cfaf0b1a63348a5f79b889e1f403e47bded78665"
+    },
+    {
+      "path": "core/runtime_config.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "270d2b1355484dff8039429c25cd08b26a329c66",
+      "size": 264,
+      "sha256": "87b5c19da4474571e49c7e0655fe1dc59b7ed9929a9df76d130978e12c19e2f8"
+    },
+    {
+      "path": "core/scoring.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "71916f8c1e3aa7824c7293b8871bcfb644c2db95",
+      "size": 4087,
+      "sha256": "2c3201cbb7f21294188f39cefe69c85942c7c619a9c217e810463ef98640b3cc"
+    },
+    {
+      "path": "core/source_identity.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "f8c28f70141b093933ae7169d24a16109341e02c",
+      "size": 1595,
+      "sha256": "aaff831a031febcfb8e4af88c95c16103df50b49760af2cf9d5ff161f61448f1"
+    },
+    {
+      "path": "core/state_repository.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8d4fdf732359a4adb3cc2cbd7ffa72a4c7ad4fa6",
+      "size": 1933,
+      "sha256": "5c13136b7fc2e91a98ea3510b1bcbf2f64d8791b226849712bc2c6933c84d6a0"
+    },
+    {
+      "path": "core/tlp.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "58cf91083fea75a42e11114144000527eb84f2e5",
+      "size": 1235,
+      "sha256": "167d10a8ba9d20940161dfafd05767514dc34c5911beef51743646a8bd021e89"
+    },
+    {
+      "path": "deployment/docker-compose.narrowcti-gateway.yml",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "31631fab20ed25e7015e1836731063b14ef037a3",
+      "size": 8150,
+      "sha256": "87cf612a55ee4feecd6d76b75c3e5bc8e8e5f2fe97533b8e2ba416cf9561872a"
+    },
+    {
+      "path": "deployment/gateway.env.example",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "0c172906292a393766c903cd4be4b53932f79ed9",
+      "size": 4526,
+      "sha256": "db4fbd63e3f9da60b1e5029202a634a9baf139e043093d3602f91716aedc3ab8"
+    },
+    {
+      "path": "deployment/review-api-credentials.example.json",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d9b622469823b7ca7096c4b3e0530f437ceddd8e",
+      "size": 253,
+      "sha256": "6506077482da8c75af71ffb6d65e5338ca5c2dbba0aad64e1db7c858dfbdca6f"
+    },
+    {
+      "path": "docs/README.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8f3605513d78ba7f84064416e581f7cde8ccc46d",
+      "size": 3576,
+      "sha256": "6f0321e26e3c4149c5759a3ac794570ae39e941c399fd64afbbc3f7ee2baca7d"
+    },
+    {
+      "path": "docs/analyst-review-api.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "1d47a4dbde7b5807e63c710148f93336cbd9d715",
+      "size": 8897,
+      "sha256": "b878f3227e490811da202baeab4e9782931c6ad8c894b546d26c4066d4a0d175"
+    },
+    {
+      "path": "docs/analyst-review-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "6d2f641b8fa5847371ee5d62c24504f48a031096",
+      "size": 3910,
+      "sha256": "2ac50293313bf41d4a0145d7c2bf3847c4581040376a0daa820cd7beb7fb2316"
+    },
+    {
+      "path": "docs/architecture-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "1586e1b17736b3cedf96f8c661ecfa38e936e7a5",
+      "size": 20777,
+      "sha256": "a7d08ef66fd6ef0b99ebf4a22071abd278a7c75bfeafeacfc78571b6d375c7f4"
+    },
+    {
+      "path": "docs/architecture-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d3ecf3c9090a1a80e02f4f447b5a1266c2ef3536",
+      "size": 15126,
+      "sha256": "19098f1aa93d69f6c54ccd3cf795850abd6abfba529b24309d673ff0e64beeb5"
+    },
+    {
+      "path": "docs/architecture-v0.9.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4fb1bc77ccebb7508e34c8837bc326988e059af2",
+      "size": 6468,
+      "sha256": "36f31e7cc66b8d78c89370d53e61cf71c8c72e093c07c1089a8324c44805ec8c"
+    },
+    {
+      "path": "docs/architecture-v1.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "e92aad0d41ddb5c1e5a0562044ec4707cb839a26",
+      "size": 8614,
+      "sha256": "597e44c52b5ea96de0fbdaddbbe36ba7bdd598065beb11d593bce71f1e6a9ab0"
+    },
+    {
+      "path": "docs/architecture.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ca291c39e34d3ef9fb0a76cfbbe008550f4ac9f2",
+      "size": 2259,
+      "sha256": "ed393c6f5a534d954fda98ed00ff426419a9dda444028d7d5a64635f4b5b6b2a"
+    },
+    {
+      "path": "docs/assets/cybersysbr-logo.png",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2a9592cdcc8876c2f88d4fb445555838cbd55ba7",
+      "size": 43793,
+      "sha256": "df8316ed610907f12da32b3e871c770a590c8bdfb0323949cc7de2c33bce395b"
+    },
+    {
+      "path": "docs/assets/narrowcti-banner.png",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ab2d0e151d2514bcb2b6886f4d47a188b14633fa",
+      "size": 1007458,
+      "sha256": "a3986a7e13fffb2444d91274e8cb57e23db57b7a183c1ff7af73a14daa0542c4"
+    },
+    {
+      "path": "docs/assets/narrowcti-logo.png",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "371a7785581e3272aec8199db63a9401295c8f8e",
+      "size": 132458,
+      "sha256": "ff4216f3c7c909b7689e61fbdce0f419e1facae0b915718be74748170aa71037"
+    },
+    {
+      "path": "docs/community-governance.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "a02d5f0fd1f99885f213b556f2772dde6612f7fb",
+      "size": 7726,
+      "sha256": "1b9ac34522c23c12acbd54bc2208768a1429cd1b016daa3843bb0118896405c7"
+    },
+    {
+      "path": "docs/community-issue-triage.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "54eef930e7130920595ac8c4459e7e1c6e80431d",
+      "size": 2946,
+      "sha256": "2db1b8720f7a2799b172bf313553615a1ae17c81c00a9a89e817acc6d19ad59b"
+    },
+    {
+      "path": "docs/community-standards.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "65aff7f4ca1e5c6d28219826a3149a508bfab36e",
+      "size": 2743,
+      "sha256": "7b70dd9f0ef7b8375404152f808c0634f2317165b486437cad83a291e684f451"
+    },
+    {
+      "path": "docs/configuration-reference-v0.5.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5f6b3c0a8be8654e3f5937b9aab5c727e7ac344f",
+      "size": 16247,
+      "sha256": "d2d97f921b6c3979252473035aadcf97adcd1dbcd67943a9462a67f9d26a2e5d"
+    },
+    {
+      "path": "docs/configuration-reference-v0.6.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c254784305185fa97864506803f06508288f2fcf",
+      "size": 18572,
+      "sha256": "509c43d7c39f4091f8c6ae916428300b1d6bf5d3acd79174b0c7f18c1850d397"
+    },
+    {
+      "path": "docs/configuration-reference.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "1c7f507ae1c55e10f086b3e984a25fe739e9137f",
+      "size": 17233,
+      "sha256": "75957ea1c693d895d8a10ce337b4400cac965e28d2ff73b72b9923e430836b8a"
+    },
+    {
+      "path": "docs/container-images.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d5280346d89f3074ea68162dcdeee73ec417ad89",
+      "size": 3338,
+      "sha256": "060c29abb441754e39cf5e9655dd8eb447f50e82a1449e3459ae86ac70aa0d16"
+    },
+    {
+      "path": "docs/contextual-scoring-reference-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "27c742d28a56139692ea5e9e18a9c4c5d157905d",
+      "size": 9335,
+      "sha256": "457758f4a553f0dd49ba62850491983b383aa206f139bfc2a9f346b63c5caf3b"
+    },
+    {
+      "path": "docs/curation-decision-reference.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "fa213a66ae6b8fc2ef4159cb4d845ef722b121e1",
+      "size": 7108,
+      "sha256": "f6798f5993f4e063dd4e61433ac35fcf01ac2fe3ec1dab29fdb6069dc144e649"
+    },
+    {
+      "path": "docs/curation-reporting-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "93cd3d3955b2877e0505b62703757b85ae80c360",
+      "size": 15498,
+      "sha256": "e0dcd0c5bb9fd960ba93cad1b3b19e11f70b4c677a322455b6f4cb9cbaa0ec5e"
+    },
+    {
+      "path": "docs/deployment-operations-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "434645dbbfa479d47e5dbb825f182c08a725e070",
+      "size": 12266,
+      "sha256": "6f35d74bfe783defd0b1c1b8fc106f88f9b55e7156fcbd1790a968955330333f"
+    },
+    {
+      "path": "docs/deployment-operations.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4006624ec30d984d6299273bd9ad68213bf93d4a",
+      "size": 5961,
+      "sha256": "0e750b40238909b434e6da95506f0ddb1c17fb2e16678bc6afdccb2395b37fca"
+    },
+    {
+      "path": "docs/development-guide.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "60ed61e5a0997c078d31a486d2447005a4500927",
+      "size": 3090,
+      "sha256": "f87d2b8ccada66bd5f9867d81294da268a62d14f38a9afe22137350413ab48a0"
+    },
+    {
+      "path": "docs/documentation-map.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "960f630675edb704167bf913f45abe703adf0820",
+      "size": 5024,
+      "sha256": "8c692e56322abddd74fc68cb7a20046d0b6e98334fc1eaced6faf84a8a5b832c"
+    },
+    {
+      "path": "docs/environment-profiles.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ee139dd39544398defb3bc1455a0f8efce726076",
+      "size": 6335,
+      "sha256": "494f147ddd670946cefdbef5f2da12255bb8609a272904c5064af29dec7813c1"
+    },
+    {
+      "path": "docs/gateway-runtime-v0.5.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "abce4d538a232fbbf18fb85a9f4e067761f2e0a1",
+      "size": 16906,
+      "sha256": "7daa4592a30ec7bfea6cc3685283a48016c8cbe7b28c082ea7405bfdefa78351"
+    },
+    {
+      "path": "docs/getting-started.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "917acc1847717fe6a0e0b0f633e6461ab3cd5d82",
+      "size": 3996,
+      "sha256": "a1320a2a4f0752609b4bc764e2c41b539c58186023aba1a4ba8c4dfc39a45eed"
+    },
+    {
+      "path": "docs/graph-enrichment-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "e81b7e05bcd9ec12badcd13bd98206c12ca35fb6",
+      "size": 31641,
+      "sha256": "1cb790dfa6062e786cf368adc4d6ace1c41d72f4fff00a488b621a86d84a7e0d"
+    },
+    {
+      "path": "docs/graph-promotion-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8bebc788c9c862e3b50a6e74c17e078ee4062591",
+      "size": 21421,
+      "sha256": "190a612ca6c5869b51eb8bd26dd476b6691270d94592aa207f8b823678d2a8a5"
+    },
+    {
+      "path": "docs/infrastructure-correlation-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "a07678cd31eea9df932e754226c980e90e6814d1",
+      "size": 25144,
+      "sha256": "f9192f960818531426ab970f30cc78707dcf2b9f9b374604615a97668290b06b"
+    },
+    {
+      "path": "docs/metadata-validation-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "7c9b10ced9abef2b12f42037f885f0196afa1395",
+      "size": 14797,
+      "sha256": "3f8a89bcfb66833feaea55875944e422659ed1bec1307c25bb82775eb342cd20"
+    },
+    {
+      "path": "docs/misp-official-connector-mapping-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "7e612af9bb2069be38c7ce843f445e1d3693b0d3",
+      "size": 14419,
+      "sha256": "5c8e58a534b03a15147703be3d4b9935e2c4882179b1d25b4d1ef166661af8bf"
+    },
+    {
+      "path": "docs/misp-validation-v0.4.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "0e446127c42773522c9ccc6c282dd2fa7fee3f5f",
+      "size": 18232,
+      "sha256": "c81e71ff9a8b82346ea9b4e7c46ed0672305cc0f3eccfbb57617ec530eb3f873"
+    },
+    {
+      "path": "docs/mitre-curation-architecture-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "72ae6214ccd24771c4ddfc79c1e9bac41e69dd0c",
+      "size": 4312,
+      "sha256": "e5f9086e1536a94f945fa47ec93ea39196e75f9eb01074d94a219ce99e438f83"
+    },
+    {
+      "path": "docs/multi-feed-expansion-v0.4.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "cdd82d227fffe26ed2311d335bbb87432d7f8bd2",
+      "size": 5838,
+      "sha256": "a032de99a5233bf6f5b78781a48e918e3e8d07e480782eb87b82ae631506ef72"
+    },
+    {
+      "path": "docs/opencti-compatibility.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8cf5bbedf6f3a7f03f02565808e5b43449ea171e",
+      "size": 3302,
+      "sha256": "5f1b62ecf07149395fca92f9f5d331c0bd5547fd722fd33930e4fa58d83dc26b"
+    },
+    {
+      "path": "docs/opencti-coverage-matrix-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "974a35a6367748092eed96d5e5dca4e3454deb3c",
+      "size": 42736,
+      "sha256": "d6a44425011e2a5dcdd24719df81c80f558ba0411bb7a2017fed7f567e62cc6b"
+    },
+    {
+      "path": "docs/opencti-coverage-matrix.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ed730cc32e2204cd484c7c0616a4d763078c4dd0",
+      "size": 5253,
+      "sha256": "315f4ee45e331c79c21450c35a9dbb1404efc91eeeb1dbc2baefab4a0d01997d"
+    },
+    {
+      "path": "docs/opencti-rules-engine-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d0b7bd4b35cf37eaa8088e9b1808328845cfd8e9",
+      "size": 8419,
+      "sha256": "94473a7508e1a4901302eda5bf418064c488fdab2fce616652fb279a4d85a604"
+    },
+    {
+      "path": "docs/operational-validation-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "b7b8e45f8996a465f971d33c2a18cb477cc0e920",
+      "size": 9513,
+      "sha256": "d3788a4884dd06f77cb8f1e027316748b3640a8602b1ec92a89e16b2245eed3b"
+    },
+    {
+      "path": "docs/operational-validation-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "959731f8acf6b26e400c616d37d9d4aa890c3686",
+      "size": 97653,
+      "sha256": "92246a92697318ae38c09f469cf150c76d5fbfeaceaf8cf9e236c15cabecfd90"
+    },
+    {
+      "path": "docs/otx-adapter-foundation-v0.2.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "59479fb8c2bef15a146166f7cdd241f5482dbe6f",
+      "size": 9605,
+      "sha256": "e622a4b6c32cf355b3d77af1d6de9e3a91c0cd76644981d5eb4346863ed9a8bf"
+    },
+    {
+      "path": "docs/otx-official-connector-mapping-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5c50686347eaf45ae90dc87ce24068fbc9ff7519",
+      "size": 16055,
+      "sha256": "50e1d8be9293c807107be6c966151b79c712217634426f7e23e08f90ef115d65"
+    },
+    {
+      "path": "docs/product-architecture-validation-v0.5.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9da47ec7c0d3a554b02da17a07e01a862625193f",
+      "size": 5687,
+      "sha256": "0bb9833243739ed73bd5d15bb76a7204413a8246a82b2799b3e97d7d3e364a79"
+    },
+    {
+      "path": "docs/product-foundation-v0.3.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "abfe920ff31ab832d9283de282b68d93191198d0",
+      "size": 4209,
+      "sha256": "46c173b7465f0bc3c1423fd7718db2a99e5919dfece0f3bbc4bf33e0be287141"
+    },
+    {
+      "path": "docs/product-reference.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5556cba7ac5b50cd98cf3d6ad14e620cae21a3a9",
+      "size": 12013,
+      "sha256": "237fbdd786c07454ac1b4f60cd3633f11272b006abea9c9f243bb5a2b5d4bd74"
+    },
+    {
+      "path": "docs/quarantine-enrichment-v0.6.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5fcf8b639323b051582282e5f8d960ad4942bbe7",
+      "size": 12852,
+      "sha256": "55bd0f0dde333783d554f9f03c13d345c0911faf2bb78118209be5ad547eb1c0"
+    },
+    {
+      "path": "docs/release-process.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "94e18158818c7bf0d96327022201d6b6d5fbf248",
+      "size": 5607,
+      "sha256": "a71b69fc1918e7b7bd2f2e1cf9cf9b01df17f4b41110021cd9dd491b876fa646"
+    },
+    {
+      "path": "docs/release-v0.4.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "de6930c5cda737b713d4d37262e1f5bad58764c0",
+      "size": 2688,
+      "sha256": "d00196d477e5125dcfa84a9a409f68dfbdbe8c63eb257b09b0918919f224e1dd"
+    },
+    {
+      "path": "docs/release-v0.5.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "36cf8a4275165a731d93c0714b856c922f8498ca",
+      "size": 6987,
+      "sha256": "1f8846ca98a171d9ed1a177dfc379fb03eb5eb090e87e7646656cad69994cc26"
+    },
+    {
+      "path": "docs/release-v0.6.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "463b81c0779ffcbb8f5c2fe5bdfec96042fc0f9d",
+      "size": 9828,
+      "sha256": "54e0b866854b11f9d7cf4400b96be3ff59f59b464d7b4b38205566581c8f59b0"
+    },
+    {
+      "path": "docs/release-v0.7.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "eac10017eda2923670e4b0f1bf1c0bcf25cae5cb",
+      "size": 14112,
+      "sha256": "82d18391a71b0cad5c111c25f139add40c4c444fd5d12b0174fe097c8e70abf9"
+    },
+    {
+      "path": "docs/release-v0.8.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4c073289e1baa3ff7edaeee0a62c64e9368152c7",
+      "size": 57068,
+      "sha256": "51af5d722fc8b5b9a4b39a4b1c869a2bf45a06dceefbfa2f6866cba89f22d241"
+    },
+    {
+      "path": "docs/release-v0.9.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "805ca397b3160895fcac1b4ef419b5548bc6170c",
+      "size": 6251,
+      "sha256": "ddc972fb09c99009b246a52dddb45aa1f15f67d798ec7c7de02b3b3ba1458fcd"
+    },
+    {
+      "path": "docs/release-v1.0.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "82eabb62cce207aa018fd28da28249359bab7799",
+      "size": 9115,
+      "sha256": "404db47fafced3daa191dfc61ece3dfd5b361199b013a01eccf628d788389589"
+    },
+    {
+      "path": "docs/release-v1.0.1.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "603e3d48dd9134eca5f6b267c818cdb89ec8ef4a",
+      "size": 3470,
+      "sha256": "e1c21820bcd2971e40d700d3710126dbf8a283f6daddb16d5ed1abc46bb7917d"
+    },
+    {
+      "path": "docs/release-v1.1.0.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "dc197b19b737d1ceb0ac0b5973c67746ad3ad33c",
+      "size": 4605,
+      "sha256": "a1fc974c0e256b1cedb37cfdbda1712f87396abe3d6d30aa93bc5c00bf701b05"
+    },
+    {
+      "path": "docs/release-v1.1.1.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "3c2604047d6b11b99c258f5d90b0d97432c0cb53",
+      "size": 3715,
+      "sha256": "d6187d766b6acd218001c82f3eabc3ab9281c84fbac078c3254bbdb89f261ca6"
+    },
+    {
+      "path": "docs/repository-structure.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "69ce8ba134c281db7d2ad9da83ab05197beb3d08",
+      "size": 3783,
+      "sha256": "498624c5b132c1a994410ba1a7852d16c524e890e355ee6e77e939729b8686e7"
+    },
+    {
+      "path": "docs/security-quality-gates.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2e9620b82e45b5e7c3bb5a26658469d35f46a3f9",
+      "size": 6677,
+      "sha256": "f75d6f3468d642d3c866d885aa61144924e0a07203b597631d248b12c8c452e1"
+    },
+    {
+      "path": "docs/source-adapter-onboarding-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5c8c175d383488171332e0091b1cd4a76918e3ac",
+      "size": 7195,
+      "sha256": "ed3ddd43fa3f14466727718cf5b61225ca29b8f9972da9bb62fcd1bf56fcad42"
+    },
+    {
+      "path": "docs/source-ingestion-modes-v0.7.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d10b9c6c646fed0f959d65b5e3a9d383736db937",
+      "size": 9116,
+      "sha256": "1db95e98fd3164f11753e959d830263c4bfab70708090f72c495ee3c435771ac"
+    },
+    {
+      "path": "docs/support-diagnostics-v0.8.md",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5d2193b0e6cbb930aeae28df79e36488665bb9a7",
+      "size": 7750,
+      "sha256": "5e7a332b29094992e38d87a811b54826c0f5a658065a67915905c23059f5277e"
+    },
+    {
+      "path": "exporters/opencti.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "fbf69125b1f6486b025e00cce83f9c492b6b9647",
+      "size": 26358,
+      "sha256": "48b6eb68c0d6f2ed0f80ddbcae08447dad2b3112d7cd970ee352f8c4416b4100"
+    },
+    {
+      "path": "exporters/stix_builder.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d352d9978aab1a5d0ab87b0a40b507b0cb7346f3",
+      "size": 64843,
+      "sha256": "4c254ee999e82f56453c14fa08bb3742cdcc29894a875af12251e09d803028bf"
+    },
+    {
+      "path": "gateway/connector.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "3e28b9cba6edac3796ce8e12e0eb5b95c5c51059",
+      "size": 489,
+      "sha256": "06e6b51e1d2159014286f2f38515382d9a75366889e3efdeeac793eb18fb16d3"
+    },
+    {
+      "path": "gateway/correlation.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "b9fadc156d90f843ea46fb13d8a93a1bffab6a72",
+      "size": 5496,
+      "sha256": "22b58bb1fb8c732afda85084469e6098f0dc33f41c0f3a6d537d80ea05ffd9d0"
+    },
+    {
+      "path": "gateway/curation_report.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "297afe7022503009e8577f2375f45af1cb90082b",
+      "size": 72497,
+      "sha256": "947b4ea1b768c64624d19efcd2cc07ff5e7531412cb035081e2ad200063ceb90"
+    },
+    {
+      "path": "gateway/decisions.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "702f94f7e88da58cd114237d0e8029562d3a6d40",
+      "size": 45976,
+      "sha256": "dea0c2e954d30be25dfc93e8ea581f21be667265763ffb3a9490ba7118fff440"
+    },
+    {
+      "path": "gateway/diagnostics.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c0f5760832305654a3b2344b81708d3c62b6445f",
+      "size": 36530,
+      "sha256": "1880d2d0e726fc6037fbee852ba1a3f25869712dc9dc7a6c4aee886326d7ebec"
+    },
+    {
+      "path": "gateway/feature_gates.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "541fb9de73b03421c1109602b7ee9f71e23f60e3",
+      "size": 2435,
+      "sha256": "f46756ebd0a8ad26bf3a9b18147626e52df4ae31a5a0a1a7c45a4cc9422e300d"
+    },
+    {
+      "path": "gateway/mitre.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d7e618b1ecd09069c5b43a65d39912deb8ea418b",
+      "size": 2728,
+      "sha256": "8886993acc6da6fba02a3bef121a1c9f729b67d552c7a64fba74acfe1c6a6ea2"
+    },
+    {
+      "path": "gateway/opencti_client.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "09ad0eae817acd6c50eedcbde9bf82ff44ee859a",
+      "size": 3424,
+      "sha256": "3d095c83714f1dccccd4ff8f5a76fc01d287813513ead1740a89359ce9033903"
+    },
+    {
+      "path": "gateway/opencti_client_validation.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8d386ba51e8429d31bf15ab4c9292972c30b0c98",
+      "size": 3603,
+      "sha256": "8dde5f72bc8e9729622641c46588036ade4ec8a0d81981e3c866a5ab0343bf3d"
+    },
+    {
+      "path": "gateway/opencti_relationship_audit.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9bc099d4aac20d9bcec2f73e351d85a24b0360fa",
+      "size": 13920,
+      "sha256": "be1ba1ef4040517dc9e36015110a7b2046968db9907fe535e9492b706db5f10e"
+    },
+    {
+      "path": "gateway/operational_validation.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "3176185e811e07d07233945bcef062e474f5dad5",
+      "size": 25755,
+      "sha256": "6428d2e9bda54477da9ce291e5fc0e91739c5b7695a5b003d60aa6b3549cb0ec"
+    },
+    {
+      "path": "gateway/preflight.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5ea02f41268474be50955f7949bdccf7ed186bfd",
+      "size": 20429,
+      "sha256": "2dcab8dd69336825626928a3b40fe84a22bd7a320858db17467299055e28441e"
+    },
+    {
+      "path": "gateway/quarantine.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "7327d0528c4c040f9747afce31869ac59162378e",
+      "size": 14031,
+      "sha256": "6f9bdef6970664657d46efd26860efe6fcf1883ead68d75e822b75d5a6a0d46a"
+    },
+    {
+      "path": "gateway/quarantine_export.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5a02de482eddc59b0cd46e79bff85caa07b08b47",
+      "size": 8356,
+      "sha256": "bec18e0a1807a4dbf132162a15a8b309758fec381d88c8d85edbaeeec7d4a9d6"
+    },
+    {
+      "path": "gateway/report.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "03b6fc4adebbbe613ae705a1226cd7d22ccf159e",
+      "size": 15134,
+      "sha256": "f6af8246380588e5e530f5a775e80464c5dc417be42411954bd0184d1b261d6c"
+    },
+    {
+      "path": "gateway/review.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "3e5f23af2ba7e3f6a97449e2447418e7f0ba89a3",
+      "size": 5313,
+      "sha256": "532a487de1cd05891a2935dc8cc383afb47f1a92e499716afad8f34739754571"
+    },
+    {
+      "path": "gateway/review_api.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "144165d0698da144c90d8c1192a35531ebda8fe5",
+      "size": 15543,
+      "sha256": "86ee778e4d830936860376b74829ab4ab9b525fa278b908df643a4f5b344089e"
+    },
+    {
+      "path": "gateway/review_auth.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "0de60fd8b80174e41251bf9abf0b6ad65b6dccc6",
+      "size": 4816,
+      "sha256": "1197309428cfb964ed59deb366c2bb75c7619a075708b5c6ba522679021b85b9"
+    },
+    {
+      "path": "gateway/runtime.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "1fa22eaa0e867a94fd27f5f07636a3e8a67a3ec9",
+      "size": 6630,
+      "sha256": "3b3ee2aaaf70df628d6c88ee389602cd958803fd16263155c619d5db576a0a2b"
+    },
+    {
+      "path": "gateway/settings.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d56e6226237dd33ce868bdbb00920a7157ccce29",
+      "size": 6651,
+      "sha256": "0c14c2eb9d23ecff4a30e2277f38d943c839fc824cbeeef134e42febecf74274"
+    },
+    {
+      "path": "gateway/sources.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "bf359b5485d2a6e7e5e19db9bc9500b1b276b17b",
+      "size": 6605,
+      "sha256": "85fe4c5825a787ae36b8f8a209b1f9d6d7df89810ae0a295849ce657617c9257"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "74573c1f1aed44566da706cf08560d84958d117e",
+      "size": 200,
+      "sha256": "721d4aa29ea152008fc0ef06d2ddf437747c0d26cc0fcd5dc3ba461d6de66569"
+    },
+    {
+      "path": "requirements-dev.txt",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "3eb95aeb3a54e7c70250c00004ce6c3151115690",
+      "size": 60,
+      "sha256": "a704dbd859743ca81f3310566fd6f88473465fc05a7748fb8b9ab28f80810424"
+    },
+    {
+      "path": "scripts/capture-resource-posture.ps1",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9a846cfbfc2b7d4b08d1da0a7cc682aec3ce61dd",
+      "size": 4475,
+      "sha256": "526a338c228261674c70eaf22e9d5a4018630b215df1801d0f3500636b71723b"
+    },
+    {
+      "path": "scripts/misp-backfill-window.ps1",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "f0d31aabd1aa5b84cb852127f5803bae9ea00d7a",
+      "size": 3557,
+      "sha256": "76eb80958f4c1f52d693b4b6b945ff5278f0edef5e91939536f46ddcce8fd99c"
+    },
+    {
+      "path": "scripts/validate-release-runtime.ps1",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "c14156ec9498e9bb6dd0b7626ad46eb809008eb4",
+      "size": 3606,
+      "sha256": "f7ee267ab12941f51167ad95b0fbfbdf2bf9ef19d17c7dbd67bcff1d16d31e5a"
+    },
+    {
+      "path": "scripts/validate-release.ps1",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "18ebfbf89a39b05bfab13967f3cd2a78722d388d",
+      "size": 424,
+      "sha256": "b512bac3f8a146955479d40334dd3ac7d45430ad66927ef77a384d4367f0bc97"
+    },
+    {
+      "path": "state/.gitkeep",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tests/test_contextual_scoring.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "a3aeae3b785189bbec0de8b2b54c7afc749a9b4e",
+      "size": 7383,
+      "sha256": "f25ca7a16579227541b97d96f1e1f8bde8c910a0b0538d874b59720511aab6d0"
+    },
+    {
+      "path": "tests/test_core_pipeline.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "85934fc2ec9ba25ef48b5fa030a5bcd6226538d2",
+      "size": 21740,
+      "sha256": "400b96288f3afe13c8f0a5be2805f49ca2d7c0eff181329b3430833c4f8f8a39"
+    },
+    {
+      "path": "tests/test_deduplication.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "f05064d1c0f13f545f807c9bf40fa1f2cfd8c141",
+      "size": 6134,
+      "sha256": "d5aed3d0e6038315b0fec1e3a43adf3c9b0c5abf8821dbf1b85f2d2a651ef00e"
+    },
+    {
+      "path": "tests/test_feature_gates.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4e8bbf25c88103a58bd424eff12cca075a43b372",
+      "size": 2270,
+      "sha256": "87f53b22beefd610cd906f86ac447090bdd620dde9dc4acba0eadf5d4d6b2a93"
+    },
+    {
+      "path": "tests/test_gateway_correlation.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9ff2c6cf17b10c0d0775f81e0bead576a5248712",
+      "size": 4303,
+      "sha256": "85bf29b21a51fcddd4b0ce2d37d92bb9d27dbce616bbef880df3a27126a85a17"
+    },
+    {
+      "path": "tests/test_gateway_curation_report.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ab017f96a21a77ed98af77a8140d0be2cae7349d",
+      "size": 41994,
+      "sha256": "ea34091f4960bad76580c4a00afefe80897ff75271e1b7b64642b417a3527e3a"
+    },
+    {
+      "path": "tests/test_gateway_decisions.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2234055a54175b51018bd61abd68f8ee64a806b8",
+      "size": 36917,
+      "sha256": "87ea7e49ab63dbb8143cbbf6cc4265539084d941da57932f0f87d1376c6683b0"
+    },
+    {
+      "path": "tests/test_gateway_diagnostics.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "20997b1270dba8b20c22769878d7d3929a8ded75",
+      "size": 21990,
+      "sha256": "52faed1c5936637f11ef3bdfa7d8cfd4e2b112681443496a5a5b31963ff82ce9"
+    },
+    {
+      "path": "tests/test_gateway_mitre.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "430e95f05747e9e74615e995bcc18d16ff02f6c8",
+      "size": 2450,
+      "sha256": "86cc9ca9bc703c8dbfc7da9a83d8a5c95dc6f827bac2622f3b60418e273b27d3"
+    },
+    {
+      "path": "tests/test_gateway_operational_validation.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "66b6ce421d003bfac3292c19c8f2c3d667bd1b7a",
+      "size": 19118,
+      "sha256": "5f3c83623ab14045a97a4c28be36b86f5b069df3a7bdb0358bc61ccae52ed141"
+    },
+    {
+      "path": "tests/test_gateway_preflight.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2d4cf069a077e2368921ff5d66d580159e5b8211",
+      "size": 17180,
+      "sha256": "875ae2b7a1c893150893be5cb923035634fa9958c7cab9241f4d35dca3f0dd6f"
+    },
+    {
+      "path": "tests/test_gateway_quarantine.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "b9e818b008f2728bc15b53ff329534a6096e6d17",
+      "size": 14757,
+      "sha256": "fb7363b996ac58dc9123236392913e6c2c7e2ef59db4519a511dd3efc1c598cb"
+    },
+    {
+      "path": "tests/test_gateway_report.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "19b56240003ce8eaf3e0bf4165a7e5959b8eb378",
+      "size": 13962,
+      "sha256": "666012b095bcd478e6b592a12ea20cdebd98f713f549ab6cbf81817b7399f5c7"
+    },
+    {
+      "path": "tests/test_gateway_review.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "53df7843f3d55102f485d6686a593ea1aaf2a7aa",
+      "size": 5773,
+      "sha256": "bb5832fab570969f79047aec7d6e38b3cdf36e9b625d4868c19c1f6d46038bec"
+    },
+    {
+      "path": "tests/test_gateway_runtime.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "859e7b27be3bd955c2e880d2bd8def1902a3d03c",
+      "size": 15351,
+      "sha256": "b871f4466177c723cd5b5a42fd46118adba3b3e59918ce2420fc19e3072ac028"
+    },
+    {
+      "path": "tests/test_graph_candidates.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "b60ea9af8a15dfd464ab90ed198bafc3a62c6002",
+      "size": 20340,
+      "sha256": "821fe7541de3dc0f58320bd75400470a63b6cc44096169337868570997e13b95"
+    },
+    {
+      "path": "tests/test_graph_deduplication.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "a12c6bfdbd2de50af865bbc2f5faae77c1773567",
+      "size": 6163,
+      "sha256": "87ca020254a309c2c46aface9a5465b5a783be82c3ca3bc70600c3a5a1fb3630"
+    },
+    {
+      "path": "tests/test_graph_evidence.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4e75ea2eec9a74e50b57c22138f80fe4d943379b",
+      "size": 82330,
+      "sha256": "e66c3b1f792a47943913213926f63f329238a3d1b664d99885cbf5216ba597dc"
+    },
+    {
+      "path": "tests/test_graph_export_plan.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "246ff52db348b9005604f3ba0dfd5938d579d25a",
+      "size": 19458,
+      "sha256": "6b6fc381194e64e29cb767eb0f27c2b8bcef7ee9c22b895165dd66a94acc91e0"
+    },
+    {
+      "path": "tests/test_graph_stix_builder.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "feed2166d5e545d2e1f911f31bd17724dc343e51",
+      "size": 88497,
+      "sha256": "172ac44401487a975b4871405d006e012593d895bff4fce206eb8a95f593b64a"
+    },
+    {
+      "path": "tests/test_ip_asn_enrichment.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "8732b9a442e4d435e96c91e84b93d6b112e734ec",
+      "size": 1741,
+      "sha256": "04e400a7da370d66b305ed450e6818e8b219be2be7edd91fc4a61fa2c49931ab"
+    },
+    {
+      "path": "tests/test_misp_connector.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "ed2a5d51f1fd4cc9f5955c11fec79995deca7fad",
+      "size": 1316,
+      "sha256": "75107925885016b77b7a169d51d64a961d3929375de2f36e8379f266284911d9"
+    },
+    {
+      "path": "tests/test_misp_feed_adapter.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "9db6abfa73fe2aeffb9cfdc3bfc6d6503f7f5fdf",
+      "size": 15096,
+      "sha256": "5885c1e414c5938d6316c753d2f766fb9207268d5aef375300b1b10512959bc5"
+    },
+    {
+      "path": "tests/test_misp_processor.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "1c66fade6a80c180a8e801328124e1d074e261f8",
+      "size": 88818,
+      "sha256": "775ec43a7006278d0679f1017987833fb116ac46b3909304d7a06eda33d594ef"
+    },
+    {
+      "path": "tests/test_misp_settings.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "4f3e1e0a8d64c318a9ee0376aa58c76aa57314b2",
+      "size": 8765,
+      "sha256": "9af9f222ecdabde55bdbfc3383dd1f387451fcb2f95cc426553eabe31e4008ce"
+    },
+    {
+      "path": "tests/test_mitre_attack.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2af32b9cda87ae38a29a560b1f49bff9957c6eb5",
+      "size": 7521,
+      "sha256": "9f8e8f13a952d922a2818c75dc5f90372238b0e5a245794e102164c28b5ec02d"
+    },
+    {
+      "path": "tests/test_opencti_client.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "39c92e2993b1483ac56054be9057522b152703d3",
+      "size": 2659,
+      "sha256": "6a06cb49ded96289ba019395e41b336f442aa0a5c01778879802658442ef01c3"
+    },
+    {
+      "path": "tests/test_opencti_client_validation.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "5aca57912e53bb2d357fe52ffc42042653d1bb30",
+      "size": 2319,
+      "sha256": "ae616b08fe7d05b585c144c4928c75d033810175a98ad36ebfeaa68435f1f95b"
+    },
+    {
+      "path": "tests/test_opencti_deduplication.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "e77e18f8666e4728b893d586ef80df243a3e3b1b",
+      "size": 3587,
+      "sha256": "a9e0463a74788897affcfbc885f774d46485fc02cf4ac27e026ad8d205e8117d"
+    },
+    {
+      "path": "tests/test_opencti_exporter.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "147fe4ba619d9ca3003da7790b640b768c84325e",
+      "size": 36571,
+      "sha256": "52f17e6f0613c25685e4800646e7116174b84f2b6cbad4bec1d730ad583777e2"
+    },
+    {
+      "path": "tests/test_opencti_graph_lookup.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "79fcc8b0182336bc2e3d5c615b68a62f4a3f94b0",
+      "size": 73445,
+      "sha256": "f6d80d262717466e01150b075363d258f9174196ca4032e6e4732d57131695e0"
+    },
+    {
+      "path": "tests/test_opencti_relationship_audit.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "30ed8a6d1d0368ed729856002030dc0df259dd5a",
+      "size": 6226,
+      "sha256": "fd3f3343ee6667c069a99f2374216ace37364a5e96a5593c7249fe53cb1fa17d"
+    },
+    {
+      "path": "tests/test_otx_entity_extraction.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2e4be225fd265fe945a8a99bb9a8c1e2f491c7d6",
+      "size": 20745,
+      "sha256": "bda07412923efb21d3230644c906ab58d135640254feeba4a79ceef0c6962060"
+    },
+    {
+      "path": "tests/test_otx_feed_adapter.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "707c98b376f99a30e83fc7550ae52f22b73cddec",
+      "size": 4074,
+      "sha256": "4aa9c73e24e29d4236d0c2d3de96dc53c48794e879e3e41dad665d4ab4e93ef6"
+    },
+    {
+      "path": "tests/test_otx_processor.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "0a07a64701a6860e7813ef5b18a331df7d4064de",
+      "size": 37212,
+      "sha256": "c34556c5b82d41647336e501e298d4a1b4c805a5445baced3d1d92fdb9076b38"
+    },
+    {
+      "path": "tests/test_quarantine_export.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "b5acc431433530ad78a401a5b12d85c7f04f844d",
+      "size": 6180,
+      "sha256": "586d7e6c60b34da3314720794d142384a2a71a64d82b3b78f955cab271ad3802"
+    },
+    {
+      "path": "tests/test_quarantine_repository.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "19eaf3f11ae7ed1d7c36ed6ae4b476b3a2ef3529",
+      "size": 7040,
+      "sha256": "e49a2afdf568ade4a70622c00bee9b70ffe7379b5040f0470f584e08e5a7991c"
+    },
+    {
+      "path": "tests/test_review_api.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "67266f52ee999ae8949b02e0145378c78a16b47e",
+      "size": 9235,
+      "sha256": "7372ad9c136a213a4cad81566e8b6fd24271e2761a0b37b5ee8ee742e3f3e152"
+    },
+    {
+      "path": "tests/test_review_auth.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "67570cace8d24cda87eedc7c2a4c023da6ae4208",
+      "size": 2873,
+      "sha256": "e57b722ea2e8113b0656a5e6884a2bf116102a3f5a555ad50ce4bda59ed2d62d"
+    },
+    {
+      "path": "tests/test_source_clients.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "2c7e13633351d43f14bd0f8e97abf59ae614b6d9",
+      "size": 2442,
+      "sha256": "f7a3573c40ddbca670345f9eff2ba575844bae80fa7aee1dbb1968584a548ddb"
+    },
+    {
+      "path": "tests/test_source_identity.py",
+      "mode": "100644",
+      "object_type": "blob",
+      "object_id": "d5c327ff6767273621dc756bfe29301e3ebf4da8",
+      "size": 912,
+      "sha256": "25c4ee4e9288f16f0a26ce63a51cf6d89f2fc2d0eeb901ccd5753b3b45cddc16"
+    }
+  ]
+}

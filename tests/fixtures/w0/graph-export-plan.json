@@ -1,0 +1,17 @@
+{
+  "version": "v1.0.0",
+  "mode": "dry-run",
+  "status": "dry-run",
+  "export_enabled": false,
+  "candidate_count": 1,
+  "accepted_count": 1,
+  "held_count": 0,
+  "accepted_object_counts": {
+    "indicator": 1
+  },
+  "accepted_relationship_counts": {
+    "detects": 1
+  },
+  "would_create_object_count": 1,
+  "would_create_relationship_count": 1
+}
