@@ -6,20 +6,20 @@ implemented by PR-01.
 
 | ADR | Topic | W0 status |
 | --- | --- | --- |
-| ADR-001 | Community migration principles | skeleton |
-| ADR-002 | Source-tree/package boundary | skeleton |
-| ADR-003 | Configuration ownership and typed boundary | skeleton |
-| ADR-004 | Source adapter ports | skeleton |
-| ADR-005 | Domain primitives | skeleton |
-| ADR-006 | Graph evidence contract | skeleton |
-| ADR-007 | Candidate and promotion policy | skeleton |
-| ADR-008 | OpenCTI canonical lookup | skeleton |
-| ADR-009 | STIX/export boundary | skeleton |
-| ADR-010 | Decision and audit record | skeleton |
-| ADR-011 | Quarantine/review boundary | skeleton |
-| ADR-012 | Observability and operational evidence | skeleton |
-| ADR-013 | Community/Enterprise separation | skeleton |
-| ADR-014 | Compatibility and rollout policy | skeleton |
+| [MIG-ADR-001](MIG-ADR-001.md) | Community migration principles | proposed |
+| [MIG-ADR-002](MIG-ADR-002.md) | Source-tree/package boundary | proposed |
+| [MIG-ADR-003](MIG-ADR-003.md) | Configuration ownership and typed boundary | proposed |
+| [MIG-ADR-004](MIG-ADR-004.md) | Source adapter ports | proposed |
+| [MIG-ADR-005](MIG-ADR-005.md) | Domain primitives | proposed |
+| [MIG-ADR-006](MIG-ADR-006.md) | Graph evidence contract | proposed |
+| [MIG-ADR-007](MIG-ADR-007.md) | Candidate and promotion policy | proposed |
+| [MIG-ADR-008](MIG-ADR-008.md) | OpenCTI canonical lookup | proposed |
+| [MIG-ADR-009](MIG-ADR-009.md) | STIX/export boundary | proposed |
+| [MIG-ADR-010](MIG-ADR-010.md) | Decision and audit record | proposed |
+| [MIG-ADR-011](MIG-ADR-011.md) | Quarantine/review boundary | proposed |
+| [MIG-ADR-012](MIG-ADR-012.md) | Observability and operational evidence | proposed |
+| [MIG-ADR-013](MIG-ADR-013.md) | Community/Enterprise separation | proposed |
+| [MIG-ADR-014](MIG-ADR-014.md) | Compatibility and rollout policy | proposed |
 
 Each ADR must be reviewed and approved before the migration wave that depends
 on it. W0 records the decision surfaces only; it does not create compatibility

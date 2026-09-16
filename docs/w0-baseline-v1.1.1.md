@@ -59,8 +59,8 @@ targets.
 ## Existing test and coverage evidence
 
 The existing suite remains the first characterization layer. The unchanged
-release tree passes **544 tests**; the W0 branch adds six targeted
-characterization tests, for **550 tests** in total. Ruff and Bandit also pass.
+release tree passes **544 tests**; the W0 branch adds five targeted
+characterization tests, for **549 tests** in total. Ruff and Bandit also pass.
 With `coverage==7.16.1` added only to `requirements-dev.txt`, the initial
 measurement is **90% aggregate coverage** using line and branch measurement.
 This percentage is an observation and is not a merge gate in W0. The coverage

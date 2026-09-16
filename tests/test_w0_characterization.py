@@ -217,19 +217,5 @@ class W0CharacterizationTests(unittest.TestCase):
         )
         self.assertEqual(expected_decision, decision.to_dict())
 
-    def test_opencti_lookup_golden_contract_is_read_only_and_deduplicated(self):
-        expected = fixture("opencti-lookup.json")
-        self.assertEqual("read-only", expected["lookup_mode"])
-        self.assertEqual(
-            ["standard_id", "external_id", "exact_name", "alias"],
-            expected["canonical_resolution_precedence"],
-        )
-        self.assertEqual(
-            ["source", "target", "direction", "relationship_type"],
-            expected["relationship_deduplication_key"],
-        )
-        self.assertEqual("fail-open-and-audit", expected["lookup_errors"])
-
-
 if __name__ == "__main__":
     unittest.main()

@@ -11,7 +11,7 @@ prevents a second suite from merely repeating them.
 | STIX bundle and source publication time | `test_graph_stix_builder.py`, `test_core_pipeline.py` | High | no bundle golden preserving source date | golden fixture |
 | DecisionRecord and audit | `test_core_pipeline.py`, `test_gateway_decisions.py`, `test_gateway_operational_validation.py` | High | no stable JSONL record contract | golden fixture |
 | Sigma/detection-rule compatibility | `test_misp_processor.py`, `test_misp_connector.py` | Medium/high | no complete compatibility/rejection golden | targeted fixture |
-| Canonical OpenCTI lookup | `test_opencti_graph_lookup.py`, `test_opencti_client*.py` | High | no lookup snapshot contract | golden fixture |
+| Canonical OpenCTI lookup | `test_opencti_graph_lookup.py`, `test_opencti_client*.py` | High | no additional W0 gap; production lookup and exact relationship deduplication are already exercised | no new test/fixture |
 | Configuration/default precedence | `test_misp_settings.py`, `test_gateway_preflight.py`, `test_feature_gates.py` | High | matrix not documented | documentation only |
 | Quarantine and state transitions | `test_quarantine_*.py`, `test_gateway_quarantine.py` | High | no gap identified | none in W0 |
 | Event/publication/observation dates | MISP and STIX builder tests | Medium | no explicit event-date-vs-ingestion golden | targeted fixture |
