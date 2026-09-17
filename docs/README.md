@@ -45,6 +45,7 @@ release archive or community-facing page.
 ## Architecture and Design
 
 - `architecture.md`
+- `architecture/adr/README.md` (Community 2.0 ADR skeleton)
 - `architecture-v1.0.md`
 - `architecture-v0.9.md`
 - `analyst-review-api.md`
@@ -61,6 +62,10 @@ release archive or community-facing page.
 ## Release Notes
 
 - `../CHANGELOG.md`
+- `w0-baseline-v1.1.1.md` (W0 characterization)
+- `w0-v1.1.0-to-v1.1.1-delta.md` (release delta ledger)
+- `w0-test-inventory-v1.1.1.md` (test/golden inventory)
+- `w0-config-baseline-v1.1.1.md` (configuration baseline)
 - `release-v1.1.1.md` (released)
 - `release-v1.1.0.md` (released)
 - `release-v1.0.1.md` (released)

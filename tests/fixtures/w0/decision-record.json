@@ -1,0 +1,15 @@
+{
+  "action": "dry-run",
+  "reason": "baseline characterization",
+  "source_key": "misp",
+  "external_id": "822",
+  "title": "W0 fixture",
+  "query": "eventid:822",
+  "score": 85,
+  "age_days": 0,
+  "indicator_count": 1,
+  "recorded_at": "2026-09-16T00:00:00Z",
+  "metadata": {
+    "graph_export_mode": "audit"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "source_key": "misp",
+  "external_id": "822",
+  "title": "W0 fixture",
+  "version": "v1.0.0",
+  "record_count": 1,
+  "counts": {
+    "detection_rule": 1
+  },
+  "record": {
+    "entity_type": "detection_rule",
+    "value": "sigma-w0",
+    "stix_object_type": "indicator",
+    "relationship_type": "detects",
+    "source_key": "misp",
+    "source_name": "misp",
+    "source_field": "Attribute",
+    "confidence": 85,
+    "attack_pattern_id": "T1059.001",
+    "relationship_inference": "explicit-detection-rule-attack-reference",
+    "source_date": "2017-02-18"
+  }
+}

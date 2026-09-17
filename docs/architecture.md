@@ -9,6 +9,11 @@ files remain in the repository as release history; operators and contributors
 should link to this unversioned document when they need the current product
 architecture entry point.
 
+The Community 2.0 migration starts with the W0 baseline characterization in
+[`w0-baseline-v1.1.1.md`](w0-baseline-v1.1.1.md). Architecture decision record
+skeletons are indexed in [`architecture/adr/README.md`](architecture/adr/README.md);
+they do not change the v1.1.1 runtime.
+
 ## Product Boundary
 
 NarrowCTI is a pre-ingestion curation gateway for OpenCTI.
