@@ -1,3 +1,35 @@
+[build-system]
+requires = ["setuptools>=82.0.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "narrowcti"
+dynamic = ["version"]
+description = "OpenCTI-native CTI curation gateway"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+    "pycti==7.260910.0",
+    "msgpack==1.2.2",
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
+    "stix2==3.0.2",
+    "requests==2.33.0",
+    "python-dateutil==2.9.0.post0",
+    "urllib3==2.7.0",
+    "sigmatools==0.23.1",
+]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["connectors*", "core*", "exporters*", "gateway*"]
+exclude = ["tests*", "docs*", "scripts*", "deployment*", "state*"]
+namespaces = true
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100

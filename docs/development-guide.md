@@ -24,13 +24,16 @@ Do not develop directly on `main`. Keep pull requests focused on one purpose.
 
 ## Local Python Setup
 
-Use Python 3.11 when possible:
+Python 3.11 is the certified Community runtime for CI and release validation.
+Python 3.14 may be used as a local laboratory environment, but it is not the
+certified release baseline.
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -r connectors\otx\requirements.txt
+python -m pip install -e .
+python -m pip install -r requirements-dev.txt
 ```
 
 Run the unit suite:
