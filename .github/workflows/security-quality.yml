@@ -37,6 +37,7 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: |
+            pyproject.toml
             connectors/otx/requirements.txt
             requirements-dev.txt
 
@@ -51,10 +52,13 @@ jobs:
 
       - name: Audit Python dependencies
         run: |
-          # pycti 7.260904.0 pins setuptools~=82.0.0. PYSEC-2026-3447
-          # concerns source-distribution file matching on macOS APFS/HFS+;
-          # this Linux-only runtime does not build source distributions.
-          # Keep this exception narrow and remove it when pycti relaxes the pin.
+          # The legacy requirements projection retains setuptools~=82.0.0.
+          # PYSEC-2026-3447 concerns source-distribution file matching on
+          # macOS APFS/HFS+; this Linux-only runtime does not build source
+          # distributions. Keep this exception narrow and remove it when the
+          # projection no longer contains the affected pin.
+          pip-audit --strict . \
+            --ignore-vuln PYSEC-2026-3447
           pip-audit --strict --requirement connectors/otx/requirements.txt \
             --ignore-vuln PYSEC-2026-3447
           pip-audit --strict --requirement requirements-dev.txt

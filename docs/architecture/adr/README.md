@@ -1,13 +1,13 @@
 # Architecture decision records
 
-This directory is the W0 index and skeleton for the Community 2.0 migration.
-It is documentation-only: no target architecture or runtime behavior is
-implemented by PR-01.
+This directory is the migration decision index for Community 2.0. W0 created
+the decision records; the records marked accepted authorize only the bounded
+wave and PR scopes stated in those records.
 
 | ADR | Topic | W0 status |
 | --- | --- | --- |
-| [MIG-ADR-001](MIG-ADR-001.md) | Community migration principles | proposed |
-| [MIG-ADR-002](MIG-ADR-002.md) | Source-tree/package boundary | proposed |
+| [MIG-ADR-001](MIG-ADR-001.md) | Community migration principles | accepted |
+| [MIG-ADR-002](MIG-ADR-002.md) | Source-tree/package boundary | accepted for PR-02; `src/` reserved for PR-03 |
 | [MIG-ADR-003](MIG-ADR-003.md) | Configuration ownership and typed boundary | proposed |
 | [MIG-ADR-004](MIG-ADR-004.md) | Source adapter ports | proposed |
 | [MIG-ADR-005](MIG-ADR-005.md) | Domain primitives | proposed |
@@ -19,10 +19,10 @@ implemented by PR-01.
 | [MIG-ADR-011](MIG-ADR-011.md) | Quarantine/review boundary | proposed |
 | [MIG-ADR-012](MIG-ADR-012.md) | Observability and operational evidence | proposed |
 | [MIG-ADR-013](MIG-ADR-013.md) | Community/Enterprise separation | proposed |
-| [MIG-ADR-014](MIG-ADR-014.md) | Compatibility and rollout policy | proposed |
+| [MIG-ADR-014](MIG-ADR-014.md) | Compatibility and rollout policy | accepted |
 
 Each ADR must be reviewed and approved before the migration wave that depends
-on it. W0 records the decision surfaces only; it does not create compatibility
-shims, new ports, domain packages or migration code.
+on it. Accepted records remain bounded by their stated PR scope; this PR does
+not create compatibility shims, new ports, domain packages or `src/` moves.
 
 Use [`template.md`](template.md) for future ADR content.
