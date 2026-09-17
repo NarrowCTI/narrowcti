@@ -17,6 +17,7 @@ RUN for package in python3-msgpack python3-setuptools; do dpkg --purge "$package
 RUN find /usr/local/lib /usr/lib -type d \( -name 'setuptools-*.dist-info' -o -name 'msgpack-*.dist-info' \) -prune -exec rm -rf {} +
 
 COPY connectors/otx/requirements.txt /app/requirements.txt
+RUN python -m pip install --no-cache-dir --retries 5 --force-reinstall setuptools==82.0.1
 RUN pip install --no-cache-dir --retries 5 -r requirements.txt
 RUN python -m pip uninstall --yes pip
 
