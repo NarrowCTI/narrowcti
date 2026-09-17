@@ -27,6 +27,8 @@ def main() -> None:
         temp = Path(temp_dir)
         wheel_dir = temp / "wheel"
         wheel_dir.mkdir()
+        pip_env = os.environ.copy()
+        pip_env["PIP_CACHE_DIR"] = str(temp / "pip-cache")
         run(
             sys.executable,
             "-m",
@@ -37,6 +39,7 @@ def main() -> None:
             str(wheel_dir),
             str(ROOT),
             cwd=ROOT,
+            env=pip_env,
         )
 
         wheels = sorted(wheel_dir.glob("narrowcti-*.whl"))
@@ -54,7 +57,16 @@ def main() -> None:
         venv_dir = temp / "venv"
         venv.EnvBuilder(with_pip=True, clear=True).create(venv_dir)
         python = venv_dir / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-        run(str(python), "-m", "pip", "install", "--disable-pip-version-check", str(wheel), cwd=temp)
+        run(
+            str(python),
+            "-m",
+            "pip",
+            "install",
+            "--disable-pip-version-check",
+            str(wheel),
+            cwd=temp,
+            env=pip_env,
+        )
 
         source_version = Version((ROOT / "VERSION").read_text(encoding="utf-8").strip())
         version_result = subprocess.run(
