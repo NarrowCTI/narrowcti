@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import subprocess
 import sys
@@ -70,11 +71,43 @@ class PackageCompatibilityTests(unittest.TestCase):
     def test_submodule_identity_canonical_import_first(self):
         self._run_source_import_order(CANONICAL_FIRST)
 
+    def test_facades_and_aliases_are_exhaustive(self):
+        source_root = ROOT / "src"
+        package_root = source_root / "narrowcti"
+        spec = importlib.util.spec_from_file_location("compat_contract", package_root / "compat.py")
+        compat = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(compat)
+
+        # Inspect files only in the contract test; runtime aliases stay static.
+        facades = {
+            ".".join(path.relative_to(source_root).with_suffix("").parts)
+            for family in ("connectors", "core", "exporters", "gateway")
+            for path in (package_root / family).rglob("*.py")
+            if path.name != "__init__.py"
+        }
+        aliases = set(compat.LEGACY_MODULE_ALIASES)
+        self.assertSetEqual(
+            facades,
+            aliases,
+            f"Facades without aliases: {sorted(facades - aliases)}; "
+            f"aliases without facades: {sorted(aliases - facades)}",
+        )
+
     def test_source_mode_package_import_is_independent_of_distribution_metadata(self):
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join((str(ROOT / "src"), str(ROOT)))
+        # A preceding wheel build can leave discoverable .egg-info in ROOT.
+        # Force the missing-distribution condition independently of build artifacts.
+        code = """
+from importlib.metadata import PackageNotFoundError
+from unittest.mock import patch
+
+with patch("importlib.metadata.version", side_effect=PackageNotFoundError("narrowcti")):
+    import narrowcti
+    print(narrowcti.__version__)
+"""
         result = subprocess.run(
-            [sys.executable, "-S", "-c", "import narrowcti; print(narrowcti.__version__)"],
+            [sys.executable, "-S", "-c", code],
             cwd=ROOT,
             env=env,
             check=True,

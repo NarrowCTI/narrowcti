@@ -23,11 +23,16 @@
   module from `__init__`; move all implementations immediately; use a generic
   import hook.
 - Consequences: `sys.modules["core.feed_contract"] is
-  sys.modules["narrowcti.core.feed_contract"]` is guaranteed for every
-  mapped module. Source-mode works with `PYTHONPATH=/app/src:/app`; an
-  installed wheel contains both canonical facades and legacy packages. The
-  legacy OTX script entrypoint remains a historical script contract and is not
-  rewritten by this PR.
+  sys.modules["narrowcti.core.feed_contract"]` illustrates the identity guarantee
+  for mapped modules belonging to the supported import contract, after both
+  names have been imported in either order. `connectors.otx.connector` is an
+  explicit exception: it remains a historical script-entrypoint invoked as
+  `python connector.py` in the OTX image. Its unqualified local imports mean
+  neither `import connectors.otx.connector` nor
+  `import narrowcti.connectors.otx.connector` is part of the supported package
+  import contract. The facade preserves that existing limitation without a
+  runtime workaround. Source-mode uses `PYTHONPATH=/app/src:/app`; an installed
+  wheel contains both canonical facades and legacy packages.
 - Dependencies: PR-02 package foundation, MIG-ADR-001 and MIG-ADR-014.
 - Target Wave: W1 / PR-03.
 
