@@ -33,5 +33,8 @@
 
 The compatibility window remains in force until a later migration release
 provides replacement paths, deprecation evidence and automated removal tests.
-Legacy imports and CLI module entrypoints remain supported during the window;
-removing them is outside PR-03 and requires a separate approved decision.
+Legacy imports and CLI module entrypoints remain supported during the window
+where they are currently importable. The OTX connector remains a documented
+historical script-entrypoint exception until a dedicated migration decision
+addresses its unqualified local imports; removing or rewriting that contract
+is outside PR-03 and requires a separate approved decision.
