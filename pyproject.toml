@@ -25,8 +25,8 @@ dependencies = [
 version = { file = "VERSION" }
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["connectors*", "core*", "exporters*", "gateway*"]
+where = ["src", "."]
+include = ["narrowcti*", "connectors*", "core*", "exporters*", "gateway*"]
 exclude = ["tests*", "docs*", "scripts*", "deployment*", "state*"]
 namespaces = true
 

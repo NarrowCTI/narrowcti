@@ -42,6 +42,12 @@ Run the unit suite:
 python -m unittest discover -s tests -v
 ```
 
+During the staged W1 migration, new code may import modules through the
+`narrowcti.*` namespace. Existing `connectors.*`, `core.*`, `exporters.*` and
+`gateway.*` imports and module entrypoints remain supported. Compatibility
+facades bind each canonical submodule to the same module object as its legacy
+counterpart; they do not modify `sys.path` or discover files dynamically.
+
 ## Docker Validation
 
 Build the local gateway image:

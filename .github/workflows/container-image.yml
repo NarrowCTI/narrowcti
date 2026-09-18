@@ -65,7 +65,7 @@ jobs:
       - name: Smoke test candidate image
         run: >-
           docker run --rm narrowcti-gateway:scan
-          python -c "import gateway.connector, gateway.preflight, gateway.review_api, exporters.stix_builder; from sigma.parser.collection import SigmaCollectionParser"
+          python -c "import narrowcti, gateway.connector, gateway.preflight, gateway.review_api, exporters.stix_builder; from sigma.parser.collection import SigmaCollectionParser; assert narrowcti.__version__"
 
       - name: Scan candidate image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

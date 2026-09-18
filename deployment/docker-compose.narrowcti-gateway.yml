@@ -9,7 +9,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
     command: ["python", "-m", "gateway.connector"]
     restart: ${NARROWCTI_GATEWAY_RESTART:-no}
     volumes:
@@ -26,7 +26,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
     command: ["python", "-m", "gateway.preflight"]
     restart: "no"
     profiles:
@@ -45,7 +45,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
     command:
       - python
       - -m
@@ -73,7 +73,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
     command:
       - python
       - -m
@@ -103,7 +103,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
     command:
       - python
       - -m
@@ -129,7 +129,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
     command:
       - python
       - -m
@@ -155,7 +155,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
     command:
       - python
       - -m
@@ -189,7 +189,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
     command:
       - python
       - -m
@@ -221,7 +221,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
       NARROWCTI_OPENCTI_AUDIT_TYPE: ${NARROWCTI_OPENCTI_AUDIT_TYPE:-}
       NARROWCTI_OPENCTI_AUDIT_SEARCH: ${NARROWCTI_OPENCTI_AUDIT_SEARCH:-}
       NARROWCTI_OPENCTI_AUDIT_FIRST: ${NARROWCTI_OPENCTI_AUDIT_FIRST:-100}
@@ -247,7 +247,7 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /app
+      PYTHONPATH: /app/src:/app
       NARROWCTI_REVIEW_API_HOST: 0.0.0.0
       NARROWCTI_REVIEW_API_PORT: 8081
       NARROWCTI_REVIEW_API_CREDENTIALS_FILE: /run/secrets/narrowcti-review-api-credentials.json

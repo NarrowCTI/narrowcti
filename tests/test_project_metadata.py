@@ -25,8 +25,10 @@ class ProjectMetadataTests(unittest.TestCase):
 
     def test_package_discovery_is_explicitly_allowlisted(self):
         package_find = self.project["tool"]["setuptools"]["packages"]["find"]
+        self.assertEqual(package_find["where"], ["src", "."])
         self.assertEqual(
-            package_find["include"], ["connectors*", "core*", "exporters*", "gateway*"]
+            package_find["include"],
+            ["narrowcti*", "connectors*", "core*", "exporters*", "gateway*"],
         )
         self.assertEqual(
             package_find["exclude"],

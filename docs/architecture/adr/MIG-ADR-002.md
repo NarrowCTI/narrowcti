@@ -8,5 +8,30 @@
 - Dependencies: W0 inventory and characterization; MIG-ADR-001 and MIG-ADR-014; PR-03 for the later `src/` migration.
 - Target Wave: W1 / PR-02 package foundation; `src/` migration is W1 / PR-03.
 
-This accepted record authorizes only the PR-02 flat-layout packaging step; it
-does not authorize a package move or compatibility shim.
+## PR-03 addendum — canonical namespace bootstrap
+
+- Status: accepted for W1 / PR-03
+- Context: PR-03 introduces `src/narrowcti` while current implementations and
+  public imports remain in the four top-level package families.
+- Proposed Decision: Add one deterministic facade module for every current
+  runtime submodule. A facade imports its explicitly mapped legacy target and
+  binds the canonical name in `sys.modules` to that exact object. The reverse
+  order is supported because both paths resolve through the same legacy module;
+  no family-only alias, `MetaPathFinder`, filesystem traversal, `sys.path`
+  mutation or generic import hook is permitted.
+- Alternatives: Alias only package families; eagerly import and register every
+  module from `__init__`; move all implementations immediately; use a generic
+  import hook.
+- Consequences: `sys.modules["core.feed_contract"] is
+  sys.modules["narrowcti.core.feed_contract"]` is guaranteed for every
+  mapped module. Source-mode works with `PYTHONPATH=/app/src:/app`; an
+  installed wheel contains both canonical facades and legacy packages. The
+  legacy OTX script entrypoint remains a historical script contract and is not
+  rewritten by this PR.
+- Dependencies: PR-02 package foundation, MIG-ADR-001 and MIG-ADR-014.
+- Target Wave: W1 / PR-03.
+
+The compatibility window remains in force until a later migration release
+provides replacement paths, deprecation evidence and automated removal tests.
+Legacy imports and CLI module entrypoints remain supported during the window;
+removing them is outside PR-03 and requires a separate approved decision.

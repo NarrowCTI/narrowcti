@@ -16,6 +16,7 @@ but they are not part of the currently certified CI/release matrix. A
 multi-Python support matrix requires a separately approved change and is outside
 this PR.
 
-The current top-level package layout remains intentionally unchanged. Package
-discovery is restricted to `connectors*`, `core*`, `exporters*` and `gateway*`;
-the `src/` migration is reserved for PR-03.
+PR-03 adds the `src/narrowcti` canonical namespace as a compatibility bootstrap
+while retaining the top-level implementation packages. Package discovery is
+explicitly restricted to `narrowcti*`, `connectors*`, `core*`, `exporters*` and
+`gateway*`. Functional module moves remain reserved for later migration PRs.

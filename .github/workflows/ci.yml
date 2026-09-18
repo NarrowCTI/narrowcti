@@ -47,6 +47,8 @@ jobs:
       - name: Compile modules
         run: |
           python -m py_compile \
+            src/narrowcti/__init__.py \
+            src/narrowcti/compat.py \
             connectors/otx/connector.py \
             connectors/otx/entity_extraction.py \
             connectors/otx/feed_adapter.py \

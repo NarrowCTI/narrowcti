@@ -14,8 +14,22 @@ from packaging.version import Version
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ALLOWED_PREFIXES = ("connectors/", "core/", "exporters/", "gateway/")
-FORBIDDEN_PREFIXES = ("tests/", "docs/", "scripts/", "deployment/", "state/")
+ALLOWED_PREFIXES = (
+    "narrowcti/",
+    "connectors/",
+    "core/",
+    "exporters/",
+    "gateway/",
+)
+FORBIDDEN_PREFIXES = (
+    "src/",
+    "src.narrowcti/",
+    "tests/",
+    "docs/",
+    "scripts/",
+    "deployment/",
+    "state/",
+)
 
 
 def run(*args: str, cwd: Path, env: dict[str, str] | None = None) -> None:
@@ -48,8 +62,9 @@ def main() -> None:
         wheel = wheels[0]
         with zipfile.ZipFile(wheel) as archive:
             names = [name for name in archive.namelist() if not name.endswith("/")]
-        if not any(name.startswith(prefix) for name in names for prefix in ALLOWED_PREFIXES):
-            raise AssertionError("wheel contains none of the allowlisted runtime packages")
+        missing = [prefix for prefix in ALLOWED_PREFIXES if not any(name.startswith(prefix) for name in names)]
+        if missing:
+            raise AssertionError(f"wheel is missing allowlisted runtime packages: {missing}")
         forbidden = [name for name in names if name.startswith(FORBIDDEN_PREFIXES)]
         if forbidden:
             raise AssertionError(f"wheel contains forbidden paths: {forbidden}")
@@ -82,11 +97,50 @@ def main() -> None:
 
         child_env = os.environ.copy()
         child_env.pop("PYTHONPATH", None)
-        import_code = (
-            "import connectors.otx.models, core.feed_contract, exporters.stix_builder, "
-            "gateway.settings; print('installed-imports-ok')"
+        compatibility_checks = (
+            """
+import sys
+import connectors.misp.feed_adapter as legacy_connectors
+import core.feed_contract as legacy_core
+import exporters.stix_builder as legacy_exporters
+import gateway.settings as legacy_gateway
+import narrowcti.connectors.misp.feed_adapter as canonical_connectors
+import narrowcti.core.feed_contract as canonical_core
+import narrowcti.exporters.stix_builder as canonical_exporters
+import narrowcti.gateway.settings as canonical_gateway
+assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
+assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
+assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
+assert sys.modules["gateway.settings"] is sys.modules["narrowcti.gateway.settings"]
+assert legacy_connectors is canonical_connectors
+assert legacy_core is canonical_core
+assert legacy_exporters is canonical_exporters
+assert legacy_gateway is canonical_gateway
+print("installed-compatibility-legacy-first-ok")
+""",
+            """
+import sys
+import narrowcti.connectors.misp.feed_adapter as canonical_connectors
+import narrowcti.core.feed_contract as canonical_core
+import narrowcti.exporters.stix_builder as canonical_exporters
+import narrowcti.gateway.settings as canonical_gateway
+import connectors.misp.feed_adapter as legacy_connectors
+import core.feed_contract as legacy_core
+import exporters.stix_builder as legacy_exporters
+import gateway.settings as legacy_gateway
+assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
+assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
+assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
+assert sys.modules["gateway.settings"] is sys.modules["narrowcti.gateway.settings"]
+assert canonical_connectors is legacy_connectors
+assert canonical_core is legacy_core
+assert canonical_exporters is legacy_exporters
+assert canonical_gateway is legacy_gateway
+print("installed-compatibility-canonical-first-ok")
+""",
         )
-        run(str(python), "-c", import_code, cwd=temp, env=child_env)
+        for import_code in compatibility_checks:
+            run(str(python), "-c", import_code, cwd=temp, env=child_env)
         print(f"wheel-validation-ok version={installed_version} wheel={wheel.name}")
 
 
