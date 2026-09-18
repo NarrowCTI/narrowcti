@@ -72,25 +72,37 @@ class PackageCompatibilityTests(unittest.TestCase):
         self._run_source_import_order(CANONICAL_FIRST)
 
     def test_facades_and_aliases_are_exhaustive(self):
-        source_root = ROOT / "src"
-        package_root = source_root / "narrowcti"
-        spec = importlib.util.spec_from_file_location("compat_contract", package_root / "compat.py")
+        spec = importlib.util.spec_from_file_location(
+            "compat_contract", ROOT / "src" / "narrowcti" / "compat.py"
+        )
         compat = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(compat)
 
-        # Inspect files only in the contract test; runtime aliases stay static.
-        facades = {
-            ".".join(path.relative_to(source_root).with_suffix("").parts)
+        # Derive the expected contract from the current legacy source tree. This
+        # is test-only filesystem inspection; runtime aliases stay static.
+        legacy_modules = {
+            ".".join(path.relative_to(ROOT).with_suffix("").parts)
             for family in ("connectors", "core", "exporters", "gateway")
-            for path in (package_root / family).rglob("*.py")
+            for path in (ROOT / family).rglob("*.py")
+            if path.name != "__init__.py"
+        }
+        expected_canonical = {f"narrowcti.{module}" for module in legacy_modules}
+        facades = {
+            ".".join(path.relative_to(ROOT / "src").with_suffix("").parts)
+            for family in ("connectors", "core", "exporters", "gateway")
+            for path in (ROOT / "src" / "narrowcti" / family).rglob("*.py")
             if path.name != "__init__.py"
         }
         aliases = set(compat.LEGACY_MODULE_ALIASES)
-        self.assertSetEqual(
-            facades,
-            aliases,
-            f"Facades without aliases: {sorted(facades - aliases)}; "
-            f"aliases without facades: {sorted(aliases - facades)}",
+        self.assertSetEqual(expected_canonical, facades, "Legacy modules and facades differ")
+        self.assertSetEqual(expected_canonical, aliases, "Legacy modules and aliases differ")
+        self.assertDictEqual(
+            {
+                canonical: canonical.removeprefix("narrowcti.")
+                for canonical in expected_canonical
+            },
+            compat.LEGACY_MODULE_ALIASES,
+            "An alias points to a legacy module different from its canonical key",
         )
 
     def test_source_mode_package_import_is_independent_of_distribution_metadata(self):
