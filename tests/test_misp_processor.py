@@ -67,7 +67,9 @@ class MISPProcessorTests(unittest.TestCase):
             "  condition: selection"
         )
 
-        with patch("connectors.misp.processor.SigmaCollectionParser") as parser:
+        with patch(
+            "narrowcti.adapters.sources.misp.detection_rules.SigmaCollectionParser"
+        ) as parser:
             self.assertEqual((True, ""), sigma_rule_opencti_compatibility(rule))
             parser.assert_called_once_with(rule)
 
@@ -83,7 +85,7 @@ class MISPProcessorTests(unittest.TestCase):
         )
 
         with patch(
-            "connectors.misp.processor.SigmaCollectionParser",
+            "narrowcti.adapters.sources.misp.detection_rules.SigmaCollectionParser",
             side_effect=ValueError("invalid Sigma"),
         ):
             self.assertEqual(
@@ -102,7 +104,10 @@ class MISPProcessorTests(unittest.TestCase):
             "  condition: selection"
         )
 
-        with patch("connectors.misp.processor.SigmaCollectionParser", None):
+        with patch(
+            "narrowcti.adapters.sources.misp.detection_rules.SigmaCollectionParser",
+            None,
+        ):
             self.assertEqual(
                 (False, "OpenCTI-compatible Sigma parser unavailable"),
                 sigma_rule_opencti_compatibility(rule),

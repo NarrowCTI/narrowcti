@@ -45,6 +45,13 @@ REQUIRED_MODULES = (
     "narrowcti/application/ingestion/pipeline.py",
     "narrowcti/application/ingestion/outcomes.py",
     "narrowcti/application/ingestion/contracts.py",
+    "narrowcti/adapters/sources/__init__.py",
+    "narrowcti/adapters/sources/misp/__init__.py",
+    "narrowcti/adapters/sources/misp/context.py",
+    "narrowcti/adapters/sources/misp/entities.py",
+    "narrowcti/adapters/sources/misp/infrastructure.py",
+    "narrowcti/adapters/sources/misp/detection_rules.py",
+    "narrowcti/adapters/sources/misp/_common.py",
 )
 
 
@@ -160,6 +167,13 @@ import narrowcti.application.ingestion as ingestion
 import narrowcti.application.ingestion.pipeline as ingestion_pipeline
 import narrowcti.application.ingestion.outcomes as ingestion_outcomes
 import narrowcti.application.ingestion.contracts as ingestion_contracts
+import narrowcti.adapters.sources as canonical_sources
+import narrowcti.adapters.sources.misp as canonical_misp
+import narrowcti.adapters.sources.misp.context as canonical_misp_context
+import narrowcti.adapters.sources.misp.entities as canonical_misp_entities
+import narrowcti.adapters.sources.misp.infrastructure as canonical_misp_infrastructure
+import narrowcti.adapters.sources.misp.detection_rules as canonical_misp_detection_rules
+import connectors.misp.processor as legacy_misp_processor
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
@@ -191,6 +205,13 @@ assert application is not None
 assert ingestion.run_candidate is ingestion_pipeline.run_candidate
 assert ingestion.IngestionOutcome is ingestion_outcomes.IngestionOutcome
 assert ingestion_contracts.IngestionOperations is not None
+assert canonical_sources is not None
+assert canonical_misp is not None
+assert canonical_misp_context.extract_misp_context is not None
+assert canonical_misp_entities.extract_misp_galaxies is not None
+assert canonical_misp_infrastructure.extract_misp_infrastructure is not None
+assert canonical_misp_detection_rules.extract_misp_detection_rules is not None
+assert legacy_misp_processor.sigma_rule_opencti_compatibility is canonical_misp_detection_rules.sigma_rule_opencti_compatibility
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
     assert isinstance(graph_index, canonical_graph.GraphIndex)
@@ -225,6 +246,12 @@ import narrowcti.application.ingestion as ingestion
 import narrowcti.application.ingestion.pipeline as ingestion_pipeline
 import narrowcti.application.ingestion.outcomes as ingestion_outcomes
 import narrowcti.application.ingestion.contracts as ingestion_contracts
+import narrowcti.adapters.sources as canonical_sources
+import narrowcti.adapters.sources.misp as canonical_misp
+import narrowcti.adapters.sources.misp.context as canonical_misp_context
+import narrowcti.adapters.sources.misp.entities as canonical_misp_entities
+import narrowcti.adapters.sources.misp.infrastructure as canonical_misp_infrastructure
+import narrowcti.adapters.sources.misp.detection_rules as canonical_misp_detection_rules
 import connectors.misp.feed_adapter as legacy_connectors
 import core.feed_contract as legacy_core
 import core.scoring as legacy_scoring
@@ -239,6 +266,7 @@ import core.graph_deduplication as legacy_graph
 import core.quarantine as legacy_quarantine
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
+import connectors.misp.processor as legacy_misp_processor
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
@@ -270,6 +298,13 @@ assert application is not None
 assert ingestion.run_candidate is ingestion_pipeline.run_candidate
 assert ingestion.IngestionOutcome is ingestion_outcomes.IngestionOutcome
 assert ingestion_contracts.IngestionOperations is not None
+assert canonical_sources is not None
+assert canonical_misp is not None
+assert canonical_misp_context.extract_misp_context is not None
+assert canonical_misp_entities.extract_misp_galaxies is not None
+assert canonical_misp_infrastructure.extract_misp_infrastructure is not None
+assert canonical_misp_detection_rules.extract_misp_detection_rules is not None
+assert legacy_misp_processor.sigma_rule_opencti_compatibility is canonical_misp_detection_rules.sigma_rule_opencti_compatibility
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
     assert isinstance(graph_index, canonical_graph.GraphIndex)
