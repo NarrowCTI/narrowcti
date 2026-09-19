@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app \
+    PYTHONPATH=/app/src:/app \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_DEFAULT_TIMEOUT=120
 
@@ -27,5 +27,6 @@ COPY connectors /app/connectors
 COPY core /app/core
 COPY exporters /app/exporters
 COPY gateway /app/gateway
+COPY src /app/src
 
 CMD ["python", "-m", "gateway.connector"]

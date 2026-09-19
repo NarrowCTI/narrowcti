@@ -63,9 +63,25 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Smoke test candidate image
-        run: >-
-          docker run --rm narrowcti-gateway:scan
-          python -c "import gateway.connector, gateway.preflight, gateway.review_api, exporters.stix_builder; from sigma.parser.collection import SigmaCollectionParser"
+        run: |
+          docker run --rm -i narrowcti-gateway:scan python - <<'PY'
+          import importlib
+          import sys
+
+          import narrowcti
+          import gateway.connector
+          import gateway.preflight
+          import gateway.review_api
+          import exporters.stix_builder
+          from sigma.parser.collection import SigmaCollectionParser
+
+          canonical = importlib.import_module("narrowcti.core.feed_contract")
+          legacy = importlib.import_module("core.feed_contract")
+          assert canonical is legacy
+          assert sys.modules["narrowcti.core.feed_contract"] is sys.modules["core.feed_contract"]
+          assert narrowcti.__version__
+          print("source-mode-canonical-identity-ok")
+          PY
 
       - name: Scan candidate image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

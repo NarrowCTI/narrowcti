@@ -46,6 +46,7 @@ jobs:
 
       - name: Compile modules
         run: |
+          python -m compileall -q src/narrowcti
           python -m py_compile \
             connectors/otx/connector.py \
             connectors/otx/entity_extraction.py \

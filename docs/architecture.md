@@ -33,6 +33,10 @@ OpenCTI, why it should reach OpenCTI and which graph context is safe to promote.
 
 ## Current Runtime Shape
 
+- `src/narrowcti/`: canonical package namespace bootstrap. Its module facades
+  preserve identity with the legacy top-level packages during the migration
+  window; functional modules remain in their current locations until later
+  migration PRs.
 - `gateway/`: unified gateway runtime, preflight, reports, diagnostics and
   operator CLIs.
 - `connectors/`: source adapters such as OTX and MISP.

@@ -45,10 +45,10 @@ jobs:
         run: python -m pip install --requirement requirements-dev.txt
 
       - name: Run Ruff
-        run: ruff check connectors core exporters gateway tests
+        run: ruff check src/narrowcti connectors core exporters gateway tests
 
       - name: Run Bandit
-        run: bandit --quiet --recursive --severity-level medium connectors core exporters gateway
+        run: bandit --quiet --recursive --severity-level medium src/narrowcti connectors core exporters gateway
 
       - name: Audit Python dependencies
         run: |

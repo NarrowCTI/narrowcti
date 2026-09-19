@@ -33,6 +33,9 @@ be checked by the repository owner before release.
 
 ## Source Layout
 
+- `src/narrowcti/`: canonical package namespace and deterministic compatibility
+  facades for the current flat runtime modules. The facades do not move or
+  duplicate implementation modules.
 - `config/`: sample and shared configuration files.
 - `connectors/`: source adapters such as OTX and MISP.
 - `core/`: scoring, policy, graph evidence, deduplication, quarantine and state

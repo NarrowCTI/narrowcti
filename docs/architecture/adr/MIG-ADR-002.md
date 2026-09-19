@@ -8,5 +8,38 @@
 - Dependencies: W0 inventory and characterization; MIG-ADR-001 and MIG-ADR-014; PR-03 for the later `src/` migration.
 - Target Wave: W1 / PR-02 package foundation; `src/` migration is W1 / PR-03.
 
-This accepted record authorizes only the PR-02 flat-layout packaging step; it
-does not authorize a package move or compatibility shim.
+## PR-03 addendum — canonical namespace bootstrap
+
+- Status: accepted for W1 / PR-03
+- Context: PR-03 introduces `src/narrowcti` while current implementations and
+  public imports remain in the four top-level package families.
+- Proposed Decision: Add one deterministic facade module for every current
+  runtime submodule. A facade imports its explicitly mapped legacy target and
+  binds the canonical name in `sys.modules` to that exact object. The reverse
+  order is supported because both paths resolve through the same legacy module;
+  no family-only alias, `MetaPathFinder`, filesystem traversal, `sys.path`
+  mutation or generic import hook is permitted.
+- Alternatives: Alias only package families; eagerly import and register every
+  module from `__init__`; move all implementations immediately; use a generic
+  import hook.
+- Consequences: `sys.modules["core.feed_contract"] is
+  sys.modules["narrowcti.core.feed_contract"]` illustrates the identity guarantee
+  for mapped modules belonging to the supported import contract, after both
+  names have been imported in either order. `connectors.otx.connector` is an
+  explicit exception: it remains a historical script-entrypoint invoked as
+  `python connector.py` in the OTX image. Its unqualified local imports mean
+  neither `import connectors.otx.connector` nor
+  `import narrowcti.connectors.otx.connector` is part of the supported package
+  import contract. The facade preserves that existing limitation without a
+  runtime workaround. Source-mode uses `PYTHONPATH=/app/src:/app`; an installed
+  wheel contains both canonical facades and legacy packages.
+- Dependencies: PR-02 package foundation, MIG-ADR-001 and MIG-ADR-014.
+- Target Wave: W1 / PR-03.
+
+The compatibility window remains in force until a later migration release
+provides replacement paths, deprecation evidence and automated removal tests.
+Legacy imports and CLI module entrypoints remain supported during the window
+where they are currently importable. The OTX connector remains a documented
+historical script-entrypoint exception until a dedicated migration decision
+addresses its unqualified local imports; removing or rewriting that contract
+is outside PR-03 and requires a separate approved decision.

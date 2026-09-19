@@ -42,6 +42,16 @@ Run the unit suite:
 python -m unittest discover -s tests -v
 ```
 
+During the staged W1 migration, new code may import modules through the
+`narrowcti.*` namespace. Existing `connectors.*`, `core.*`, `exporters.*` and
+`gateway.*` imports and module entrypoints remain supported where they are
+currently importable. The OTX connector is an explicit historical exception:
+its supported form remains the connector image's `python connector.py`
+execution, because its local imports are intentionally not rewritten by PR-03.
+Compatibility facades bind each canonical submodule to the same module object
+as its legacy counterpart; they do not modify `sys.path` or discover files
+dynamically.
+
 ## Docker Validation
 
 Build the local gateway image:
