@@ -22,6 +22,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-014](MIG-ADR-014.md) | Compatibility and rollout policy | accepted |
 | [MIG-ADR-015](MIG-ADR-015.md) | Community repository ports and local persistence | accepted for PR-06 |
 | [MIG-ADR-016](MIG-ADR-016.md) | Ingestion application orchestration boundary | accepted for PR-08 |
+| [MIG-ADR-017](MIG-ADR-017.md) | MISP source extraction boundary | accepted for PR-09 |
 
 Each ADR must be reviewed and approved before the migration wave that depends
 on it. Accepted records remain bounded by their stated PR scope. PR-03 adds
