@@ -114,7 +114,7 @@ is outside PR-03 and requires a separate approved decision.
   owner. JSONL replay, append and release-audit details remain local-adapter
   concerns. The compatibility window remains active until a separately
   approved removal wave.
-- Dependencies: MIG-ADR-011 and the PR-03 compatibility window.
-- Related ADR: MIG-ADR-015 remains the accepted persistence-port foundation;
-  no PR-06 scope is reopened.
+- Dependencies: the PR-03 compatibility window.
+- Related ADRs: MIG-ADR-011 and MIG-ADR-015 remain the accepted quarantine
+  review boundary and persistence-port foundation; no PR-06 scope is reopened.
 - Target Wave: W2 / PR-07.

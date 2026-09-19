@@ -141,6 +141,12 @@ class QuarantineExportTests(unittest.TestCase):
             self.assertEqual(0, mark_calls[0][1]["exported_indicator_count"])
             self.assertEqual(2, mark_calls[0][1]["dedup_duplicate_count"])
 
+            second = service.export_pending(record["quarantine_id"])[0]
+
+            self.assertEqual("skip", second.action)
+            self.assertEqual("already exported", second.reason)
+            self.assertEqual(1, len(mark_calls))
+
 
 def released_repository(tmpdir):
     repository = QuarantineRepository(os.path.join(tmpdir, "quarantine.jsonl"))
