@@ -77,6 +77,7 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
         try:
             misp_verify_tls = parse_misp_verify_tls(env.get("MISP_VERIFY_TLS"))
         except ValueError as exc:
+            misp_verify_tls = None
             issues.append(
                 PreflightIssue(
                     "error",

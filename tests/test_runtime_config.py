@@ -4,6 +4,7 @@ import unittest
 from core.runtime_config import (
     OpenCTIConfig,
     load_runtime_config,
+    parse_bool,
     parse_misp_verify_tls,
 )
 
@@ -65,6 +66,11 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertFalse(parse_misp_verify_tls("0"))
         with self.assertRaises(ValueError):
             parse_misp_verify_tls("enabled")
+
+    def test_parse_bool_preserves_legacy_whitespace_semantics(self):
+        self.assertTrue(parse_bool("true"))
+        self.assertFalse(parse_bool(" true "))
+        self.assertFalse(parse_bool(" yes "))
 
 
 if __name__ == "__main__":

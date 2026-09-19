@@ -40,7 +40,10 @@ def parse_bool(value: str | None, default: bool = False) -> bool:
 
     if value is None:
         return default
-    return str(value).strip().lower() in _TRUE_VALUES
+    # Legacy loaders compared the raw value after lower-casing only.  Keep
+    # that permissive contract unchanged; security-sensitive parsing uses the
+    # strict parser below and is the only place that normalizes whitespace.
+    return str(value).lower() in _TRUE_VALUES
 
 
 def parse_misp_verify_tls(value: str | None) -> bool:

@@ -123,6 +123,7 @@ class GatewayPreflightTests(unittest.TestCase):
 
         self.assertFalse(enabled.ok)
         self.assertIn("misp-tls-invalid", {issue.code for issue in enabled.issues})
+        self.assertIsNone(enabled.settings["misp_verify_tls"])
         self.assertTrue(disabled.ok)
         self.assertNotIn("misp-tls-invalid", {issue.code for issue in disabled.issues})
 
