@@ -20,6 +20,43 @@ Operators configure the boundaries. NarrowCTI applies those boundaries and
 records the reason for every `ingest`, `drop`, `quarantine`, `skip`,
 `dry-run` or `export` decision.
 
+### Typed boundary and precedence
+
+Runtime loaders resolve values from an explicit mapping; their no-argument
+forms use the process environment only at the adapter boundary. The existing
+surface-specific precedence is intentionally preserved:
+
+| Surface | Primary | Fallback | Scope |
+| --- | --- | --- | --- |
+| Gateway interval | `NARROWCTI_SOURCE_INTERVAL_SECONDS` | `CONNECTOR_RUN_INTERVAL`, then `3600` | Gateway |
+| Gateway policy | `NARROWCTI_MIN_SCORE_TO_INGEST`, `NARROWCTI_ENABLE_QUARANTINE`, `NARROWCTI_QUARANTINE_SCORE_THRESHOLD`, `NARROWCTI_MAX_DAYS_OLD` | Corresponding legacy names (`MIN_SCORE_TO_INGEST`, `ENABLE_QUARANTINE`, `QUARANTINE_SCORE_THRESHOLD`, `MAX_DAYS_OLD`) | Gateway |
+| MISP policy | Legacy names (`MIN_SCORE_TO_INGEST`, `ENABLE_QUARANTINE`, `QUARANTINE_SCORE_THRESHOLD`, `MAX_DAYS_OLD`) | `NARROWCTI_*` gateway names | MISP connector |
+| OTX policy | Legacy names for source policy; `OTX_DRY_RUN` for dry-run | `NARROWCTI_*` gateway names | OTX connector |
+| OpenCTI credentials | `OPENCTI_URL` + `OPENCTI_TOKEN` | None | Only an active connector, lookup/export or review export |
+
+Inactive sources do not require their credentials. Secret-bearing settings have
+structural redaction and may be exposed to diagnostics, preflight, reports or
+JSON only through an explicit safe representation. The direct environment-read
+inventory remains bounded to CLI-only command options (for example quarantine
+and report file selection); runtime OpenCTI connection data is resolved through
+the typed boundary.
+
+The remaining direct reads are deliberately limited to CLI argument defaults
+for operator-invoked evidence/report/quarantine commands (for example
+`gateway.opencti_relationship_audit` and quarantine release/export options).
+They do not participate in the long-running Gateway, MISP or OTX runtime.
+
+The PR-04 inventory is therefore:
+
+- typed runtime boundary: `core/runtime_config.py`, `gateway/settings.py`,
+  `connectors/misp/settings.py`, `connectors/otx/settings.py`,
+  `gateway/review_api.py` and `gateway/opencti_client_validation.py`;
+- mapping adapters: Gateway preflight and source-path composition receive an
+  explicit mapping and default to `os.environ` only at the public edge;
+- bounded CLI exceptions: `gateway/quarantine.py`,
+  `gateway/opencti_relationship_audit.py`, `gateway/curation_report.py`,
+  `gateway/operational_validation.py` and diagnostics command-line defaults.
+
 ## Required Connection Variables
 
 | Variable | Scope | Default | Effect |
@@ -147,7 +184,7 @@ Credential format, roles and endpoint behavior are documented in
 | `MISP_QUERIES` | Required | `*`, search terms, `event:<id>`, `event-id:<id>`, `id:<id>` or `uuid:<uuid>`. |
 | `MISP_DRY_RUN` | `true` | Non-exporting MISP execution. |
 | `MISP_RUN_ONCE` | `false` in code, `true` in templates | Runs one bounded MISP cycle and exits. |
-| `MISP_VERIFY_TLS` | `false` | TLS verification for MISP HTTP calls. Use `true` in production-like deployments with valid TLS. |
+| `MISP_VERIFY_TLS` | `true` when absent | Strict values: `true/1/yes` enable verification; `false/0/no` explicitly disable it. Any other value is an error when MISP is enabled. Use `false` only for a controlled lab/self-signed endpoint. |
 | `MISP_SEARCH_TIMEOUT` | `45` | MISP search timeout. |
 | `MISP_ENRICH_TIMEOUT` | `60` | MISP event enrichment timeout. |
 | `MISP_RETRIES` | `3` | MISP retry count; must be greater than zero. |

@@ -111,6 +111,46 @@ class GatewayPreflightTests(unittest.TestCase):
 
         self.assertEqual("direct", report.ingestion_mode)
 
+    def test_preflight_rejects_invalid_misp_tls_only_when_misp_enabled(self):
+        enabled = build_preflight_report(
+            make_settings(enabled_sources=["misp"]),
+            env={"MISP_VERIFY_TLS": "ture", "MISP_DRY_RUN": "true"},
+        )
+        disabled = build_preflight_report(
+            make_settings(enabled_sources=["otx"]),
+            env={"MISP_VERIFY_TLS": "ture", "OTX_DRY_RUN": "true"},
+        )
+
+        self.assertFalse(enabled.ok)
+        self.assertIn("misp-tls-invalid", {issue.code for issue in enabled.issues})
+        self.assertTrue(disabled.ok)
+        self.assertNotIn("misp-tls-invalid", {issue.code for issue in disabled.issues})
+
+    def test_preflight_warns_for_explicitly_disabled_misp_tls(self):
+        report = build_preflight_report(
+            make_settings(enabled_sources=["misp"]),
+            env={"MISP_VERIFY_TLS": "false", "MISP_DRY_RUN": "true"},
+        )
+
+        self.assertTrue(report.ok)
+        self.assertFalse(report.settings["misp_verify_tls"])
+        self.assertIn("misp-tls-disabled", {issue.code for issue in report.issues})
+
+    def test_preflight_output_does_not_echo_connection_canaries(self):
+        report = build_preflight_report(
+            make_settings(enabled_sources=["misp"]),
+            env={
+                "MISP_DRY_RUN": "true",
+                "OPENCTI_TOKEN": "canary-opencti-token",
+                "MISP_KEY": "canary-misp-key",
+            },
+        )
+
+        rendered = json.dumps(report.to_dict())
+
+        self.assertNotIn("canary-opencti-token", rendered)
+        self.assertNotIn("canary-misp-key", rendered)
+
     def test_preflight_reports_enforced_contextual_scoring(self):
         report = build_preflight_report(
             make_settings(

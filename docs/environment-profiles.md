@@ -3,6 +3,17 @@
 This document defines safe configuration profiles for NarrowCTI Community
 Edition.
 
+MISP TLS verification is enabled by default. The explicit exception below is
+appropriate only for a controlled lab with a self-signed MISP certificate; it
+must not be copied into a production-like profile:
+
+```env
+MISP_VERIFY_TLS=false
+```
+
+When MISP is enabled, values other than `true/1/yes` or `false/0/no` fail
+preflight rather than silently disabling certificate verification.
+
 Use these profiles as starting points. Tune source scope and thresholds only
 after reviewing preflight, decision audit, curation reports and OpenCTI graph
 behavior.

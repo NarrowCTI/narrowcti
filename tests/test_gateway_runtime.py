@@ -100,6 +100,16 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertEqual(["otx"], settings.enabled_sources)
         self.assertEqual(120, settings.source_interval_seconds)
 
+    def test_load_settings_prefers_typed_gateway_interval_over_legacy(self):
+        settings = load_settings(
+            {
+                "CONNECTOR_RUN_INTERVAL": "120",
+                "NARROWCTI_SOURCE_INTERVAL_SECONDS": "300",
+            }
+        )
+
+        self.assertEqual(300, settings.source_interval_seconds)
+
     def test_settings_rejects_empty_sources(self):
         with self.assertRaises(ValueError):
             GatewaySettings(

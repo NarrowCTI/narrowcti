@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from typing import Mapping
 
 from core.contextual_scoring import (
     normalize_contextual_scoring_max_impact,
@@ -8,6 +9,14 @@ from core.contextual_scoring import (
 )
 from core.graph_export_plan import normalize_graph_export_mode
 from core.mitre_attack import DEFAULT_MITRE_STIX_URL
+from core.runtime_config import (
+    env_bool as resolve_bool,
+    env_bool_alias as resolve_bool_alias,
+    env_int as resolve_int,
+    env_int_alias as resolve_int_alias,
+    env_list as resolve_list,
+    environment,
+)
 
 
 @dataclass(frozen=True)
@@ -71,117 +80,113 @@ class GatewaySettings:
             object.__setattr__(self, "declared_capabilities", [])
 
 
-def env_int(name, default):
-    return int(os.getenv(name, str(default)))
+def env_int(name, default, environ=None):
+    return resolve_int(environment(environ), name, default)
 
 
-def env_bool(name, default=False):
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.lower() in ["true", "1", "yes"]
+def env_bool(name, default=False, environ=None):
+    return resolve_bool(environment(environ), name, default)
 
 
-def env_int_alias(primary, fallback, default):
-    value = os.getenv(primary)
-    if value is None:
-        value = os.getenv(fallback)
-    if value is None:
-        return default
-    return int(value)
+def env_int_alias(primary, fallback, default, environ=None):
+    return resolve_int_alias(environment(environ), primary, fallback, default)
 
 
-def env_bool_alias(primary, fallback, default=False):
-    value = os.getenv(primary)
-    if value is None:
-        value = os.getenv(fallback)
-    if value is None:
-        return default
-    return value.lower() in ["true", "1", "yes"]
+def env_bool_alias(primary, fallback, default=False, environ=None):
+    return resolve_bool_alias(environment(environ), primary, fallback, default)
 
 
-def env_list(name, default=""):
-    raw = os.getenv(name, default)
-    return [value.strip().lower() for value in raw.split(",") if value.strip()]
+def env_list(name, default="", environ=None):
+    return [value.lower() for value in resolve_list(environment(environ), name, default)]
 
 
-def load_settings():
-    legacy_interval = env_int("CONNECTOR_RUN_INTERVAL", 3600)
-    state_dir = os.getenv("NARROWCTI_STATE_DIR", "/app/state")
+def load_settings(environ: Mapping[str, str] | None = None):
+    env = environment(environ)
+    legacy_interval = env_int("CONNECTOR_RUN_INTERVAL", 3600, env)
+    state_dir = env.get("NARROWCTI_STATE_DIR", "/app/state")
+    default_quarantine_file = os.path.join(state_dir, "quarantine.jsonl")
+    default_release_audit_file = os.path.join(state_dir, "audit", "releases.jsonl")
 
     return GatewaySettings(
-        mode=os.getenv("NARROWCTI_MODE", "gateway"),
-        enabled_sources=env_list("NARROWCTI_ENABLED_SOURCES", "otx"),
-        dry_run=env_bool("NARROWCTI_DRY_RUN", False),
-        run_once=env_bool("NARROWCTI_RUN_ONCE", False),
+        mode=env.get("NARROWCTI_MODE", "gateway"),
+        enabled_sources=env_list("NARROWCTI_ENABLED_SOURCES", "otx", env),
+        dry_run=env_bool("NARROWCTI_DRY_RUN", False, env),
+        run_once=env_bool("NARROWCTI_RUN_ONCE", False, env),
         source_interval_seconds=env_int(
             "NARROWCTI_SOURCE_INTERVAL_SECONDS",
             legacy_interval,
+            env,
         ),
         state_dir=state_dir,
-        decision_audit_dir=os.getenv("NARROWCTI_DECISION_AUDIT_DIR", "/app/state/audit"),
-        quarantine_repository_file=os.getenv(
+        decision_audit_dir=env.get("NARROWCTI_DECISION_AUDIT_DIR", "/app/state/audit"),
+        quarantine_repository_file=env.get(
             "NARROWCTI_QUARANTINE_REPOSITORY",
-            os.path.join(state_dir, "quarantine.jsonl"),
+            default_quarantine_file,
         ),
-        run_summary_file=os.getenv("NARROWCTI_RUN_SUMMARY_FILE", ""),
+        run_summary_file=env.get("NARROWCTI_RUN_SUMMARY_FILE", ""),
         min_score_to_ingest=env_int_alias(
             "NARROWCTI_MIN_SCORE_TO_INGEST",
             "MIN_SCORE_TO_INGEST",
             60,
+            env,
         ),
         enable_quarantine=env_bool_alias(
             "NARROWCTI_ENABLE_QUARANTINE",
             "ENABLE_QUARANTINE",
             True,
+            env,
         ),
         quarantine_score_threshold=env_int_alias(
             "NARROWCTI_QUARANTINE_SCORE_THRESHOLD",
             "QUARANTINE_SCORE_THRESHOLD",
             50,
+            env,
         ),
         max_days_old=env_int_alias(
             "NARROWCTI_MAX_DAYS_OLD",
             "MAX_DAYS_OLD",
             1095,
+            env,
         ),
-        allowed_tlp=env_list("NARROWCTI_ALLOWED_TLP"),
-        allowed_indicator_types=env_list("NARROWCTI_ALLOWED_INDICATOR_TYPES"),
-        dedup_mode=os.getenv("NARROWCTI_DEDUP_MODE", "source").lower(),
-        opencti_dedup_lookup=env_bool("NARROWCTI_OPENCTI_DEDUP_LOOKUP", False),
-        dedup_state_file=os.getenv(
+        allowed_tlp=env_list("NARROWCTI_ALLOWED_TLP", environ=env),
+        allowed_indicator_types=env_list("NARROWCTI_ALLOWED_INDICATOR_TYPES", environ=env),
+        dedup_mode=env.get("NARROWCTI_DEDUP_MODE", "source").lower(),
+        opencti_dedup_lookup=env_bool("NARROWCTI_OPENCTI_DEDUP_LOOKUP", False, env),
+        dedup_state_file=env.get(
             "NARROWCTI_DEDUP_STATE_FILE",
             "/app/state/dedup_index.json",
         ),
         graph_export_mode=normalize_graph_export_mode(
-            os.getenv("NARROWCTI_GRAPH_EXPORT_MODE", "audit")
+            env.get("NARROWCTI_GRAPH_EXPORT_MODE", "audit")
         ),
-        graph_dedup_state_file=os.getenv("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
-        opencti_graph_lookup=env_bool("NARROWCTI_OPENCTI_GRAPH_LOOKUP", False),
+        graph_dedup_state_file=env.get("NARROWCTI_GRAPH_DEDUP_STATE_FILE", ""),
+        opencti_graph_lookup=env_bool("NARROWCTI_OPENCTI_GRAPH_LOOKUP", False, env),
         contextual_scoring_mode=normalize_contextual_scoring_mode(
-            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_MODE", "shadow")
+            env.get("NARROWCTI_CONTEXTUAL_SCORING_MODE", "shadow")
         ),
         contextual_scoring_max_impact=normalize_contextual_scoring_max_impact(
-            env_int("NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT", 100)
+            env_int("NARROWCTI_CONTEXTUAL_SCORING_MAX_IMPACT", 100, env)
         ),
         contextual_scoring_impacts=parse_contextual_scoring_impacts(
-            os.getenv("NARROWCTI_CONTEXTUAL_SCORING_IMPACTS", "")
+            env.get("NARROWCTI_CONTEXTUAL_SCORING_IMPACTS", "")
         ),
         enable_infrastructure_victimology_export=env_bool(
             "NARROWCTI_ENABLE_INFRASTRUCTURE_VICTIMOLOGY_EXPORT",
             False,
+            env,
         ),
-        declared_capabilities=env_list("NARROWCTI_CAPABILITIES"),
-        release_audit_file=os.getenv(
+        declared_capabilities=env_list("NARROWCTI_CAPABILITIES", environ=env),
+        release_audit_file=env.get(
             "NARROWCTI_RELEASE_AUDIT_FILE",
-            os.path.join(state_dir, "audit", "releases.jsonl"),
+            default_release_audit_file,
         ),
         enable_mitre_attack_resolution=env_bool(
             "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION",
             True,
+            env,
         ),
-        mitre_cache_file=os.getenv("NARROWCTI_MITRE_CACHE_FILE", ""),
-        mitre_stix_url=os.getenv(
+        mitre_cache_file=env.get("NARROWCTI_MITRE_CACHE_FILE", ""),
+        mitre_stix_url=env.get(
             "NARROWCTI_MITRE_STIX_URL",
             DEFAULT_MITRE_STIX_URL,
         ),

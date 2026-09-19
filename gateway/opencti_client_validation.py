@@ -1,8 +1,8 @@
 import argparse
-import os
 
 import pycti
 
+from core.runtime_config import environment, load_opencti_config
 from exporters.stix_builder import build_report_bundle
 from gateway.opencti_client import build_opencti_client
 
@@ -42,12 +42,11 @@ def parse_args(argv=None):
 
 
 def build_client(environ=None):
-    environ = environ or os.environ
-    opencti_url = str(environ.get("OPENCTI_URL") or "").strip()
-    opencti_token = str(environ.get("OPENCTI_TOKEN") or "").strip()
-    if not opencti_url or not opencti_token:
-        raise ValueError("OPENCTI_URL and OPENCTI_TOKEN are required")
-    return build_opencti_client(opencti_url, opencti_token)
+    try:
+        config = load_opencti_config(environment(environ), required=True)
+    except RuntimeError as exc:
+        raise ValueError(str(exc)) from exc
+    return build_opencti_client(config.url, config.token)
 
 
 def validate_authentication(api_client):

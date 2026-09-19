@@ -115,6 +115,69 @@ class MISPSettingsTests(unittest.TestCase):
 
         self.assertTrue(settings.dry_run)
 
+    def test_misp_tls_defaults_to_secure_when_absent(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "MISP_URL": "http://misp.local",
+            "MISP_KEY": "misp-key",
+            "MISP_QUERIES": "tlp:green",
+        }
+
+        settings = load_settings(env)
+
+        self.assertTrue(settings.misp_verify_tls)
+
+    def test_misp_tls_accepts_explicit_strict_values(self):
+        base = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "MISP_URL": "http://misp.local",
+            "MISP_KEY": "misp-key",
+            "MISP_QUERIES": "tlp:green",
+        }
+        for value in ("true", "1", "yes"):
+            with self.subTest(value=value):
+                env = {**base, "MISP_VERIFY_TLS": value}
+                self.assertTrue(load_settings(env).misp_verify_tls)
+        for value in ("false", "0", "no"):
+            with self.subTest(value=value):
+                env = {**base, "MISP_VERIFY_TLS": value}
+                self.assertFalse(load_settings(env).misp_verify_tls)
+
+    def test_misp_tls_rejects_invalid_value(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "MISP_URL": "http://misp.local",
+            "MISP_KEY": "misp-key",
+            "MISP_QUERIES": "tlp:green",
+            "MISP_VERIFY_TLS": "ture",
+        }
+
+        with self.assertRaisesRegex(ValueError, "MISP_VERIFY_TLS"):
+            load_settings(env)
+
+    def test_secret_fields_are_not_exposed_by_repr_or_safe_dict(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "canary-opencti-token",
+            "MISP_URL": "http://misp.local",
+            "MISP_KEY": "canary-misp-key",
+            "MISP_QUERIES": "tlp:green",
+        }
+
+        settings = load_settings(env)
+        rendered = repr(settings)
+        safe = settings.to_safe_dict()
+
+        self.assertNotIn("canary-opencti-token", rendered)
+        self.assertNotIn("canary-misp-key", rendered)
+        self.assertNotIn("canary-opencti-token", repr(safe))
+        self.assertNotIn("canary-misp-key", repr(safe))
+        self.assertTrue(safe["opencti_configured"])
+        self.assertTrue(safe["misp_configured"])
+
     def test_load_settings_rejects_invalid_misp_retry_configuration(self):
         env = {
             "OPENCTI_URL": "http://opencti:8080",
