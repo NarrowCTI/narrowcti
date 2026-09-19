@@ -30,6 +30,13 @@ FORBIDDEN_PREFIXES = (
     "deployment/",
     "state/",
 )
+REQUIRED_MODULES = (
+    "narrowcti/ports/storage.py",
+    "narrowcti/ports/graph.py",
+    "narrowcti/adapters/persistence/local/atomic_io.py",
+    "narrowcti/adapters/persistence/local/state_repository.py",
+    "narrowcti/adapters/persistence/local/artifact_index.py",
+)
 
 
 def run(*args: str, cwd: Path, env: dict[str, str] | None = None) -> None:
@@ -65,6 +72,9 @@ def main() -> None:
         missing = [prefix for prefix in ALLOWED_PREFIXES if not any(name.startswith(prefix) for name in names)]
         if missing:
             raise AssertionError(f"wheel is missing allowlisted runtime packages: {missing}")
+        missing_modules = [module for module in REQUIRED_MODULES if module not in names]
+        if missing_modules:
+            raise AssertionError(f"wheel is missing PR-06 modules: {missing_modules}")
         forbidden = [name for name in names if name.startswith(FORBIDDEN_PREFIXES)]
         if forbidden:
             raise AssertionError(f"wheel contains forbidden paths: {forbidden}")
@@ -100,7 +110,10 @@ def main() -> None:
         compatibility_checks = (
             """
 import sys
+import tempfile
+from pathlib import Path
 import connectors.misp.feed_adapter as legacy_connectors
+import core.atomic_io as legacy_atomic
 import core.feed_contract as legacy_core
 import core.scoring as legacy_scoring
 import core.contextual_scoring as legacy_contextual
@@ -108,6 +121,8 @@ import core.tlp as legacy_tlp
 import core.policy as legacy_policy
 import core.deduplication as legacy_dedup
 import core.indicator_policy as legacy_indicator_policy
+import core.state_repository as legacy_state
+import core.graph_deduplication as legacy_graph
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
 import narrowcti.connectors.misp.feed_adapter as canonical_connectors
@@ -121,6 +136,11 @@ import narrowcti.domain.intelligence.tlp as domain_tlp
 import narrowcti.domain.intelligence.policy as domain_policy
 import narrowcti.domain.intelligence.indicator_types as domain_indicator_types
 import narrowcti.domain.intelligence.indicator_policy as domain_indicator_policy
+import narrowcti.ports.storage as canonical_storage
+import narrowcti.ports.graph as canonical_graph
+import narrowcti.adapters.persistence.local.atomic_io as canonical_atomic
+import narrowcti.adapters.persistence.local.state_repository as canonical_state
+import narrowcti.adapters.persistence.local.artifact_index as canonical_artifacts
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
@@ -138,11 +158,26 @@ assert legacy_dedup.normalize_indicator_type is domain_indicator_types.normalize
 assert legacy_indicator_policy.filter_indicators_by_type is domain_indicator_policy.filter_indicators_by_type
 assert legacy_exporters is canonical_exporters
 assert legacy_gateway is canonical_gateway
+assert legacy_atomic.write_json_atomic is canonical_atomic.write_json_atomic
+assert legacy_state.ProcessedItemStateRepository is canonical_state.ProcessedItemStateRepository
+assert legacy_state.PulseStateRepository is canonical_state.PulseStateRepository
+assert legacy_state.MISPEventStateRepository is canonical_state.MISPEventStateRepository
+assert legacy_dedup.ArtifactDeduplicationIndex is canonical_artifacts.ArtifactDeduplicationIndex
+with tempfile.TemporaryDirectory() as tmpdir:
+    graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
+    assert isinstance(graph_index, canonical_graph.GraphIndex)
 print("installed-compatibility-legacy-first-ok")
 """,
             """
 import sys
+import tempfile
+from pathlib import Path
 import narrowcti.connectors.misp.feed_adapter as canonical_connectors
+import narrowcti.adapters.persistence.local.atomic_io as canonical_atomic
+import narrowcti.adapters.persistence.local.state_repository as canonical_state
+import narrowcti.adapters.persistence.local.artifact_index as canonical_artifacts
+import narrowcti.ports.storage as canonical_storage
+import narrowcti.ports.graph as canonical_graph
 import narrowcti.core.feed_contract as canonical_core
 import narrowcti.exporters.stix_builder as canonical_exporters
 import narrowcti.gateway.settings as canonical_gateway
@@ -161,6 +196,9 @@ import core.tlp as legacy_tlp
 import core.policy as legacy_policy
 import core.deduplication as legacy_dedup
 import core.indicator_policy as legacy_indicator_policy
+import core.atomic_io as legacy_atomic
+import core.state_repository as legacy_state
+import core.graph_deduplication as legacy_graph
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
@@ -180,6 +218,14 @@ assert legacy_dedup.normalize_indicator_type is domain_indicator_types.normalize
 assert legacy_indicator_policy.filter_indicators_by_type is domain_indicator_policy.filter_indicators_by_type
 assert canonical_exporters is legacy_exporters
 assert canonical_gateway is legacy_gateway
+assert legacy_atomic.write_json_atomic is canonical_atomic.write_json_atomic
+assert legacy_state.ProcessedItemStateRepository is canonical_state.ProcessedItemStateRepository
+assert legacy_state.PulseStateRepository is canonical_state.PulseStateRepository
+assert legacy_state.MISPEventStateRepository is canonical_state.MISPEventStateRepository
+assert legacy_dedup.ArtifactDeduplicationIndex is canonical_artifacts.ArtifactDeduplicationIndex
+with tempfile.TemporaryDirectory() as tmpdir:
+    graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
+    assert isinstance(graph_index, canonical_graph.GraphIndex)
 print("installed-compatibility-canonical-first-ok")
 """,
         )

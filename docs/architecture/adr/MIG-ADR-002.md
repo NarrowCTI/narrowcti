@@ -69,3 +69,27 @@ is outside PR-03 and requires a separate approved decision.
   outside this migration.
 - Dependencies: MIG-ADR-001, MIG-ADR-005 and MIG-ADR-014.
 - Target Wave: W1 / PR-05.
+
+## PR-06 addendum — persistence compatibility boundary
+
+- Status: accepted for W2 / PR-06
+- Context: PR-06 introduces explicit persistence ports and local adapters while
+  the legacy `core` import surface remains supported.
+- Proposed Decision: `core.atomic_io`, `core.state_repository` and
+  `core.deduplication` reexport the exact canonical concrete objects owned by
+  the local persistence adapters. The historical public names
+  `ProcessedItemStateRepository`, `PulseStateRepository`,
+  `MISPEventStateRepository` and `ArtifactDeduplicationIndex` are preserved.
+  `core.graph_deduplication` is intentionally not relocated: its concrete
+  `GraphDeduplicationIndex` and shared plan helpers remain in `core` while the
+  new `GraphIndex` port is characterized structurally.
+- Alternatives: Rename implementations to `Local*`; add family aliases;
+  move graph deduplication into filesystem adapters; normalize OTX/MISP to
+  generic state methods in this PR.
+- Consequences: Legacy imports and object identity remain stable, local state
+  ownership becomes explicit for state and artifacts, and graph/OpenCTI lookup
+  does not acquire a conceptual dependency on local persistence.
+- Dependencies: MIG-ADR-005 and the PR-03 compatibility window.
+- Related ADR: MIG-ADR-015 defines the accepted W2 persistence-port boundary
+  that this addendum applies when the PR-06 implementation is introduced.
+- Target Wave: W2 / PR-06.

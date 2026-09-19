@@ -20,6 +20,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-012](MIG-ADR-012.md) | Observability and operational evidence | proposed |
 | [MIG-ADR-013](MIG-ADR-013.md) | Community/Enterprise separation | proposed |
 | [MIG-ADR-014](MIG-ADR-014.md) | Compatibility and rollout policy | accepted |
+| [MIG-ADR-015](MIG-ADR-015.md) | Community repository ports and local persistence | accepted for PR-06 |
 
 Each ADR must be reviewed and approved before the migration wave that depends
 on it. Accepted records remain bounded by their stated PR scope. PR-03 adds
