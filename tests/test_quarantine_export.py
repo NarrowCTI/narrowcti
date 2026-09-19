@@ -121,12 +121,31 @@ class QuarantineExportTests(unittest.TestCase):
                 dry_run=False,
             )
 
+            mark_calls = []
+            mark_exported = repository.mark_exported
+
+            def record_mark(*args, **kwargs):
+                mark_calls.append((args, kwargs))
+                return mark_exported(*args, **kwargs)
+
+            repository.mark_exported = record_mark
+
             result = service.export_pending(record["quarantine_id"])[0]
 
             self.assertEqual("dedup-skip", result.action)
             self.assertEqual(0, result.exported_indicator_count)
             self.assertEqual(2, result.dedup_duplicate_count)
             self.assertTrue(repository.get(record["quarantine_id"])["review"]["exported"])
+            self.assertEqual(1, len(mark_calls))
+            self.assertEqual(record["quarantine_id"], mark_calls[0][0][0])
+            self.assertEqual(0, mark_calls[0][1]["exported_indicator_count"])
+            self.assertEqual(2, mark_calls[0][1]["dedup_duplicate_count"])
+
+            second = service.export_pending(record["quarantine_id"])[0]
+
+            self.assertEqual("skip", second.action)
+            self.assertEqual("already exported", second.reason)
+            self.assertEqual(1, len(mark_calls))
 
 
 def released_repository(tmpdir):

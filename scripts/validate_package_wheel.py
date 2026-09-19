@@ -36,6 +36,10 @@ REQUIRED_MODULES = (
     "narrowcti/adapters/persistence/local/atomic_io.py",
     "narrowcti/adapters/persistence/local/state_repository.py",
     "narrowcti/adapters/persistence/local/artifact_index.py",
+    "narrowcti/domain/review/__init__.py",
+    "narrowcti/domain/review/quarantine.py",
+    "narrowcti/ports/quarantine.py",
+    "narrowcti/adapters/persistence/local/quarantine_repository.py",
 )
 
 
@@ -74,7 +78,7 @@ def main() -> None:
             raise AssertionError(f"wheel is missing allowlisted runtime packages: {missing}")
         missing_modules = [module for module in REQUIRED_MODULES if module not in names]
         if missing_modules:
-            raise AssertionError(f"wheel is missing PR-06 modules: {missing_modules}")
+            raise AssertionError(f"wheel is missing required persistence/quarantine modules: {missing_modules}")
         forbidden = [name for name in names if name.startswith(FORBIDDEN_PREFIXES)]
         if forbidden:
             raise AssertionError(f"wheel contains forbidden paths: {forbidden}")
@@ -123,6 +127,7 @@ import core.deduplication as legacy_dedup
 import core.indicator_policy as legacy_indicator_policy
 import core.state_repository as legacy_state
 import core.graph_deduplication as legacy_graph
+import core.quarantine as legacy_quarantine
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
 import narrowcti.connectors.misp.feed_adapter as canonical_connectors
@@ -141,6 +146,10 @@ import narrowcti.ports.graph as canonical_graph
 import narrowcti.adapters.persistence.local.atomic_io as canonical_atomic
 import narrowcti.adapters.persistence.local.state_repository as canonical_state
 import narrowcti.adapters.persistence.local.artifact_index as canonical_artifacts
+import narrowcti.adapters.persistence.local.quarantine_repository as canonical_quarantine_repository
+import narrowcti.ports.quarantine as canonical_quarantine_port
+import narrowcti.core.quarantine as canonical_quarantine
+import narrowcti.domain.review.quarantine as domain_quarantine
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
@@ -163,6 +172,11 @@ assert legacy_state.ProcessedItemStateRepository is canonical_state.ProcessedIte
 assert legacy_state.PulseStateRepository is canonical_state.PulseStateRepository
 assert legacy_state.MISPEventStateRepository is canonical_state.MISPEventStateRepository
 assert legacy_dedup.ArtifactDeduplicationIndex is canonical_artifacts.ArtifactDeduplicationIndex
+assert sys.modules["core.quarantine"] is sys.modules["narrowcti.core.quarantine"]
+assert legacy_quarantine.QuarantineRecord is domain_quarantine.QuarantineRecord
+assert legacy_quarantine.QuarantineRepository is canonical_quarantine_repository.QuarantineRepository
+assert legacy_quarantine.QuarantineRepository is canonical_quarantine.QuarantineRepository
+assert isinstance(legacy_quarantine.QuarantineRepository("unused"), canonical_quarantine_port.QuarantineStore)
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
     assert isinstance(graph_index, canonical_graph.GraphIndex)
@@ -176,9 +190,12 @@ import narrowcti.connectors.misp.feed_adapter as canonical_connectors
 import narrowcti.adapters.persistence.local.atomic_io as canonical_atomic
 import narrowcti.adapters.persistence.local.state_repository as canonical_state
 import narrowcti.adapters.persistence.local.artifact_index as canonical_artifacts
+import narrowcti.adapters.persistence.local.quarantine_repository as canonical_quarantine_repository
 import narrowcti.ports.storage as canonical_storage
 import narrowcti.ports.graph as canonical_graph
+import narrowcti.ports.quarantine as canonical_quarantine_port
 import narrowcti.core.feed_contract as canonical_core
+import narrowcti.core.quarantine as canonical_quarantine
 import narrowcti.exporters.stix_builder as canonical_exporters
 import narrowcti.gateway.settings as canonical_gateway
 import narrowcti.domain.intelligence.feed_contract as domain_feed
@@ -188,6 +205,7 @@ import narrowcti.domain.intelligence.tlp as domain_tlp
 import narrowcti.domain.intelligence.policy as domain_policy
 import narrowcti.domain.intelligence.indicator_types as domain_indicator_types
 import narrowcti.domain.intelligence.indicator_policy as domain_indicator_policy
+import narrowcti.domain.review.quarantine as domain_quarantine
 import connectors.misp.feed_adapter as legacy_connectors
 import core.feed_contract as legacy_core
 import core.scoring as legacy_scoring
@@ -199,6 +217,7 @@ import core.indicator_policy as legacy_indicator_policy
 import core.atomic_io as legacy_atomic
 import core.state_repository as legacy_state
 import core.graph_deduplication as legacy_graph
+import core.quarantine as legacy_quarantine
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
@@ -223,6 +242,11 @@ assert legacy_state.ProcessedItemStateRepository is canonical_state.ProcessedIte
 assert legacy_state.PulseStateRepository is canonical_state.PulseStateRepository
 assert legacy_state.MISPEventStateRepository is canonical_state.MISPEventStateRepository
 assert legacy_dedup.ArtifactDeduplicationIndex is canonical_artifacts.ArtifactDeduplicationIndex
+assert sys.modules["core.quarantine"] is sys.modules["narrowcti.core.quarantine"]
+assert legacy_quarantine.QuarantineRecord is domain_quarantine.QuarantineRecord
+assert legacy_quarantine.QuarantineRepository is canonical_quarantine_repository.QuarantineRepository
+assert legacy_quarantine.QuarantineRepository is canonical_quarantine.QuarantineRepository
+assert isinstance(legacy_quarantine.QuarantineRepository("unused"), canonical_quarantine_port.QuarantineStore)
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
     assert isinstance(graph_index, canonical_graph.GraphIndex)
