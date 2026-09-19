@@ -93,3 +93,28 @@ is outside PR-03 and requires a separate approved decision.
 - Related ADR: MIG-ADR-015 defines the accepted W2 persistence-port boundary
   that this addendum applies when the PR-06 implementation is introduced.
 - Target Wave: W2 / PR-06.
+
+## PR-07 addendum — quarantine compatibility boundary
+
+- Status: accepted for W2 / PR-07
+- Context: The historical `core.quarantine` module combines quarantine domain
+  records, transition semantics, a concrete append-only JSONL repository and
+  the bounded raw-evidence helper. PR-07 separates those responsibilities
+  without changing processor, review API, CLI or exporter imports.
+- Proposed Decision: Canonical quarantine domain symbols live under
+  `narrowcti.domain.review.quarantine`; the concrete class keeps the public
+  name `QuarantineRepository` under the local persistence adapter; and the
+  minimal `QuarantineStore` Protocol lives under `narrowcti.ports.quarantine`.
+  `core.quarantine` remains a hybrid compatibility boundary that reexports
+  the canonical domain symbols and concrete repository while retaining
+  `bounded_raw_snapshot` and any legacy `utc_now` surface required by callers.
+  The explicit facade table and symbol-identity guarantees remain in force.
+- Consequences: Legacy callers keep the same names and return shapes, while
+  pure release/reject/partial-release/exported-state rules have one canonical
+  owner. JSONL replay, append and release-audit details remain local-adapter
+  concerns. The compatibility window remains active until a separately
+  approved removal wave.
+- Dependencies: MIG-ADR-011 and the PR-03 compatibility window.
+- Related ADR: MIG-ADR-015 remains the accepted persistence-port foundation;
+  no PR-06 scope is reopened.
+- Target Wave: W2 / PR-07.

@@ -16,7 +16,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-008](MIG-ADR-008.md) | OpenCTI canonical lookup | proposed |
 | [MIG-ADR-009](MIG-ADR-009.md) | STIX/export boundary | proposed |
 | [MIG-ADR-010](MIG-ADR-010.md) | Decision and audit record | proposed |
-| [MIG-ADR-011](MIG-ADR-011.md) | Quarantine/review boundary | proposed |
+| [MIG-ADR-011](MIG-ADR-011.md) | Quarantine/review boundary | accepted for PR-07 |
 | [MIG-ADR-012](MIG-ADR-012.md) | Observability and operational evidence | proposed |
 | [MIG-ADR-013](MIG-ADR-013.md) | Community/Enterprise separation | proposed |
 | [MIG-ADR-014](MIG-ADR-014.md) | Compatibility and rollout policy | accepted |
