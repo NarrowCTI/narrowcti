@@ -511,6 +511,46 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual(100, scored.score)
         self.assertEqual(("ingest", "ok"), processor.candidate_policy_decision(scored))
 
+    def test_contextual_scoring_cannot_override_hard_age_filter(self):
+        settings = self.settings()
+        settings.contextual_scoring_mode = "enforce"
+        settings.contextual_scoring_max_impact = 100
+        settings.contextual_scoring_impacts = {"threat": 100}
+        settings.max_days_hard_filter = 1
+        processor = OTXProcessor(
+            settings,
+            otx_client=None,
+            api_client=None,
+            logger=lambda message: None,
+        )
+        pulse = {
+            "id": "pulse-contextual-old",
+            "name": "Old contextual candidate",
+            "adversary": "APT Example",
+            "created": "2000-01-01T00:00:00Z",
+            "indicators": [],
+        }
+        candidate = PulseCandidate(
+            pulse=pulse,
+            name=pulse["name"],
+            description="",
+            indicators=[],
+            ioc_count=0,
+            age=9999,
+            score=40,
+            score_details={"final_score": 40},
+        )
+
+        scored = processor.apply_contextual_scoring(
+            pulse_to_feed_candidate(pulse),
+            candidate,
+        )
+
+        self.assertEqual(100, scored.score)
+        action, reason = processor.candidate_policy_decision(scored)
+        self.assertEqual("drop", action)
+        self.assertIn("older than hard filter", reason)
+
     def test_decision_metadata_uses_graph_dedup_known_keys(self):
         candidate = SimpleNamespace(
             pulse={
@@ -831,6 +871,7 @@ class ProcessorTests(unittest.TestCase):
     def test_process_pulse_uses_exporter_and_marks_state_after_success(self):
         logs = []
         marked = []
+        side_effects = []
         export_calls = []
         otx_client = SimpleNamespace(
             enrich_pulse=lambda pulse_id: {
@@ -842,7 +883,15 @@ class ProcessorTests(unittest.TestCase):
         )
         state = SimpleNamespace(
             has_pulse=lambda pulse_id: False,
-            mark_pulse=lambda pulse_id: marked.append(pulse_id),
+            mark_pulse=lambda pulse_id: (
+                side_effects.append("source_checkpoint"),
+                marked.append(pulse_id),
+            ),
+        )
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators, **kwargs: (indicators, 0),
+            mark_indicators=lambda *args, **kwargs: side_effects.append("artifact_mark")
+            or 1
         )
 
         def exporter(api_client, name, description, score, indicators, identity_name):
@@ -864,6 +913,7 @@ class ProcessorTests(unittest.TestCase):
             api_client="api",
             logger=logs.append,
             exporter=exporter,
+            artifact_dedup=artifact_dedup,
         )
 
         processed = processor.process_pulse(
@@ -874,6 +924,7 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertTrue(processed)
         self.assertEqual(["pulse-1"], marked)
+        self.assertEqual(["artifact_mark", "source_checkpoint"], side_effects)
         self.assertEqual("LummaC2 fresh", export_calls[0]["name"])
         self.assertEqual("OTX AlienVault via NarrowCTI", export_calls[0]["identity_name"])
         self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)

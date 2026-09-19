@@ -3,58 +3,36 @@ import os
 from datetime import datetime, timezone
 
 from core.atomic_io import write_json_atomic
+from narrowcti.domain.intelligence.indicator_types import (
+    LOWERCASE_VALUE_TYPES,
+    TYPE_ALIASES,
+    normalize_indicator_type,
+    normalize_indicator_value,
+)
+
+__all__ = [
+    "ARTIFACTS_KEY",
+    "ARTIFACT_RECORDS_KEY",
+    "ArtifactDeduplicationIndex",
+    "LOWERCASE_VALUE_TYPES",
+    "TYPE_ALIASES",
+    "default_artifact_state",
+    "indicator_fingerprint",
+    "load_artifact_state",
+    "normalize_artifact_state",
+    "normalize_indicator_type",
+    "normalize_indicator_value",
+    "save_artifact_state",
+    "source_sighting_key",
+    "utc_now",
+]
 
 
 ARTIFACTS_KEY = "artifact_fingerprints"
 ARTIFACT_RECORDS_KEY = "artifact_records"
 
-TYPE_ALIASES = {
-    "domain-name": "domain",
-    "domain": "domain",
-    "hostname": "hostname",
-    "ipv4": "ipv4",
-    "ipv4-addr": "ipv4",
-    "ip": "ipv4",
-    "ipv6": "ipv6",
-    "ipv6-addr": "ipv6",
-    "url": "url",
-    "uri": "url",
-    "email": "email",
-    "email-addr": "email",
-    "filehash-md5": "filehash-md5",
-    "md5": "filehash-md5",
-    "filehash-sha1": "filehash-sha1",
-    "sha1": "filehash-sha1",
-    "filehash-sha256": "filehash-sha256",
-    "sha256": "filehash-sha256",
-}
-
-LOWERCASE_VALUE_TYPES = {
-    "domain",
-    "hostname",
-    "email",
-    "filehash-md5",
-    "filehash-sha1",
-    "filehash-sha256",
-}
-
-
 def utc_now():
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def normalize_indicator_type(value):
-    indicator_type = str(value or "").strip().lower()
-    return TYPE_ALIASES.get(indicator_type, indicator_type)
-
-
-def normalize_indicator_value(indicator_type, value):
-    normalized = str(value or "").strip()
-    if not normalized:
-        return ""
-    if indicator_type in LOWERCASE_VALUE_TYPES:
-        return normalized.lower()
-    return normalized
 
 
 def indicator_fingerprint(indicator):

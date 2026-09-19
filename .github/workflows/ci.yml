@@ -19,6 +19,10 @@ jobs:
   python-tests:
     name: Python tests
     runs-on: ubuntu-latest
+    env:
+      # Legacy top-level imports and the canonical source-mode domain package
+      # are both exercised by the characterization suite.
+      PYTHONPATH: src:.
 
     steps:
       - name: Checkout

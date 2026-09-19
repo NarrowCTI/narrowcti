@@ -43,3 +43,29 @@ where they are currently importable. The OTX connector remains a documented
 historical script-entrypoint exception until a dedicated migration decision
 addresses its unqualified local imports; removing or rewriting that contract
 is outside PR-03 and requires a separate approved decision.
+
+## PR-05 addendum — domain primitive ownership
+
+- Status: accepted for W1 / PR-05
+- Context: PR-05 moves selected pure intelligence primitives from the legacy
+  `core` implementation locations into `src/narrowcti/domain/intelligence`.
+  The existing `narrowcti.core.*` facade and legacy import contract must remain
+  stable while the domain becomes the single owner of migrated logic.
+- Proposed Decision: The domain modules are the canonical owners for the
+  selected PR-05 symbols. The corresponding `core.*` modules reexport those
+  exact objects and retain any explicitly deferred symbols, including
+  `FeedAdapter` and `FeedRunSummary`. The existing explicit facade table and
+  module identity guarantee remain unchanged for mapped legacy modules. No
+  `MetaPathFinder`, global import hook, filesystem traversal or `sys.path`
+  mutation is introduced.
+- Alternatives: Duplicate domain and legacy implementations; alias only
+  package families; move adapters and application orchestration together with
+  the primitives.
+- Consequences: Legacy callers continue to import the same public symbols,
+  while new code can use the domain namespace. The domain-to-core dependency
+  direction is prohibited; compatibility flows from legacy wrappers to the
+  canonical domain implementation. `FeedAdapter`, `FeedRunSummary`,
+  `DecisionRecord`, `DecisionAuditLog` and the OTX historical script remain
+  outside this migration.
+- Dependencies: MIG-ADR-001, MIG-ADR-005 and MIG-ADR-014.
+- Target Wave: W1 / PR-05.
