@@ -40,6 +40,11 @@ REQUIRED_MODULES = (
     "narrowcti/domain/review/quarantine.py",
     "narrowcti/ports/quarantine.py",
     "narrowcti/adapters/persistence/local/quarantine_repository.py",
+    "narrowcti/application/__init__.py",
+    "narrowcti/application/ingestion/__init__.py",
+    "narrowcti/application/ingestion/pipeline.py",
+    "narrowcti/application/ingestion/outcomes.py",
+    "narrowcti/application/ingestion/contracts.py",
 )
 
 
@@ -150,6 +155,11 @@ import narrowcti.adapters.persistence.local.quarantine_repository as canonical_q
 import narrowcti.ports.quarantine as canonical_quarantine_port
 import narrowcti.core.quarantine as canonical_quarantine
 import narrowcti.domain.review.quarantine as domain_quarantine
+import narrowcti.application as application
+import narrowcti.application.ingestion as ingestion
+import narrowcti.application.ingestion.pipeline as ingestion_pipeline
+import narrowcti.application.ingestion.outcomes as ingestion_outcomes
+import narrowcti.application.ingestion.contracts as ingestion_contracts
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
@@ -177,6 +187,10 @@ assert legacy_quarantine.QuarantineRecord is domain_quarantine.QuarantineRecord
 assert legacy_quarantine.QuarantineRepository is canonical_quarantine_repository.QuarantineRepository
 assert legacy_quarantine.QuarantineRepository is canonical_quarantine.QuarantineRepository
 assert isinstance(legacy_quarantine.QuarantineRepository("unused"), canonical_quarantine_port.QuarantineStore)
+assert application is not None
+assert ingestion.run_candidate is ingestion_pipeline.run_candidate
+assert ingestion.IngestionOutcome is ingestion_outcomes.IngestionOutcome
+assert ingestion_contracts.IngestionOperations is not None
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
     assert isinstance(graph_index, canonical_graph.GraphIndex)
@@ -206,6 +220,11 @@ import narrowcti.domain.intelligence.policy as domain_policy
 import narrowcti.domain.intelligence.indicator_types as domain_indicator_types
 import narrowcti.domain.intelligence.indicator_policy as domain_indicator_policy
 import narrowcti.domain.review.quarantine as domain_quarantine
+import narrowcti.application as application
+import narrowcti.application.ingestion as ingestion
+import narrowcti.application.ingestion.pipeline as ingestion_pipeline
+import narrowcti.application.ingestion.outcomes as ingestion_outcomes
+import narrowcti.application.ingestion.contracts as ingestion_contracts
 import connectors.misp.feed_adapter as legacy_connectors
 import core.feed_contract as legacy_core
 import core.scoring as legacy_scoring
@@ -247,6 +266,10 @@ assert legacy_quarantine.QuarantineRecord is domain_quarantine.QuarantineRecord
 assert legacy_quarantine.QuarantineRepository is canonical_quarantine_repository.QuarantineRepository
 assert legacy_quarantine.QuarantineRepository is canonical_quarantine.QuarantineRepository
 assert isinstance(legacy_quarantine.QuarantineRepository("unused"), canonical_quarantine_port.QuarantineStore)
+assert application is not None
+assert ingestion.run_candidate is ingestion_pipeline.run_candidate
+assert ingestion.IngestionOutcome is ingestion_outcomes.IngestionOutcome
+assert ingestion_contracts.IngestionOperations is not None
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
     assert isinstance(graph_index, canonical_graph.GraphIndex)
