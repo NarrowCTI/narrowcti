@@ -88,9 +88,37 @@ class MISPExtractorTests(unittest.TestCase):
             [item["value"] for item in metadata["misp_vulnerabilities"]],
         )
 
+    def test_decision_metadata_falls_back_to_candidate_ref_tags(self):
+        candidate_ref = FeedCandidate(
+            source=MISP_SOURCE,
+            external_id="event-2",
+            title="Tag fallback event",
+            tags=("cve:CVE-2025-54321",),
+            raw={"id": "event-2"},
+        )
+        candidate = SimpleNamespace(event={}, score_details={})
+
+        metadata = decision_metadata(candidate_ref, candidate)
+
+        self.assertEqual(["cve:CVE-2025-54321"], metadata["tags"])
+        self.assertEqual(
+            ["CVE-2025-54321"],
+            [item["value"] for item in metadata["misp_vulnerabilities"]],
+        )
+
     def test_misp_adapter_modules_have_no_runtime_boundary_imports(self):
         package = ROOT / "src" / "narrowcti" / "adapters" / "sources" / "misp"
-        forbidden = ("core", "connectors", "gateway", "exporters", "application")
+        forbidden = (
+            "core",
+            "connectors",
+            "gateway",
+            "exporters",
+            "narrowcti.core",
+            "narrowcti.application",
+            "narrowcti.infrastructure",
+            "narrowcti.api",
+            "narrowcti.adapters.persistence",
+        )
         for path in package.glob("*.py"):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             for node in ast.walk(tree):
@@ -101,10 +129,6 @@ class MISPExtractorTests(unittest.TestCase):
                 else:
                     continue
                 for name in names:
-                    self.assertFalse(
-                        name == "narrowcti" or name.startswith("narrowcti.core."),
-                        f"{path} imports forbidden canonical boundary {name}",
-                    )
                     self.assertFalse(
                         any(name == prefix or name.startswith(f"{prefix}.") for prefix in forbidden),
                         f"{path} imports forbidden runtime boundary {name}",
@@ -120,6 +144,20 @@ class MISPExtractorTests(unittest.TestCase):
             processor.sigma_rule_opencti_compatibility,
             detection_rules.sigma_rule_opencti_compatibility,
         )
+
+    def test_processor_declares_exact_legacy_compatibility_surface(self):
+        processor = importlib.import_module("connectors.misp.processor")
+
+        self.assertEqual(
+            {
+                "MISPProcessor",
+                "decision_metadata",
+                "graph_candidate_policy_from_settings",
+                "sigma_rule_opencti_compatibility",
+            },
+            set(processor.__all__),
+        )
+        self.assertEqual(4, len(processor.__all__))
 
 
 if __name__ == "__main__":

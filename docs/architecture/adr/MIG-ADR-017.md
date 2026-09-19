@@ -22,11 +22,12 @@
   source provider abstraction before source-specific characterization; move
   extraction into `application.ingestion`.
 - Consequences: MISP extraction can be tested and packaged independently while
-  the processor retains all runtime ordering and side effects. The legacy
-  processor continues to expose only the proven compatibility surface:
-  `MISPProcessor`, `decision_metadata`,
+  the processor retains all runtime ordering and side effects. The explicit
+  compatibility surface is declared in `connectors.misp.processor.__all__` and
+  currently contains `MISPProcessor`, `decision_metadata`,
   `graph_candidate_policy_from_settings` and
-  `sigma_rule_opencti_compatibility`.
+  `sigma_rule_opencti_compatibility`; this declaration does not claim that
+  other module attributes are technically inaccessible.
 - Dependencies: Current MISP extraction characterization, MIG-ADR-005,
   MIG-ADR-014 and MIG-ADR-016.
 - Related ADRs: MIG-ADR-004 and MIG-ADR-006.
