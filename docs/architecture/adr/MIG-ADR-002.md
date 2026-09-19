@@ -89,5 +89,7 @@ is outside PR-03 and requires a separate approved decision.
 - Consequences: Legacy imports and object identity remain stable, local state
   ownership becomes explicit for state and artifacts, and graph/OpenCTI lookup
   does not acquire a conceptual dependency on local persistence.
-- Dependencies: MIG-ADR-015, MIG-ADR-005 and the PR-03 compatibility window.
+- Dependencies: MIG-ADR-005 and the PR-03 compatibility window.
+- Related ADR: MIG-ADR-015 defines the accepted W2 persistence-port boundary
+  that this addendum applies when the PR-06 implementation is introduced.
 - Target Wave: W2 / PR-06.

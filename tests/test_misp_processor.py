@@ -2170,13 +2170,46 @@ class MISPProcessorTests(unittest.TestCase):
     def test_process_event_records_successful_ingest_and_marks_state(self):
         records = []
         marked = []
+        side_effects = []
         export_calls = []
         state = SimpleNamespace(
             has_event=lambda event_id: False,
-            mark_event=lambda event_id: marked.append(event_id),
+            mark_event=lambda event_id: (
+                side_effects.append("source_checkpoint"),
+                marked.append(event_id),
+            ),
         )
 
-        def exporter(api_client, name, description, score, indicators, identity_name):
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators, **kwargs: (indicators, 0),
+            mark_indicators=lambda *args, **kwargs: side_effects.append(
+                "artifact_mark"
+            )
+            or 1
+        )
+        graph_deduplication = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": [],
+                "relationship_keys": [],
+            },
+            mark_exported_plan=lambda *args, **kwargs: side_effects.append(
+                "graph_exported_plan"
+            )
+            or {"entities": 1, "relationships": 0},
+        )
+
+        settings = self.settings()
+        settings.graph_export_mode = "export"
+
+        def exporter(
+            api_client,
+            name,
+            description,
+            score,
+            indicators,
+            identity_name,
+            **kwargs,
+        ):
             export_calls.append(
                 {
                     "api_client": api_client,
@@ -2187,15 +2220,22 @@ class MISPProcessorTests(unittest.TestCase):
                     "identity_name": identity_name,
                 }
             )
-            return len(indicators)
+            return {"exported": len(indicators)}
 
         processor = MISPProcessor(
-            self.settings(),
+            settings,
             misp_client=None,
             api_client="api",
             logger=lambda message: None,
             exporter=exporter,
-            decision_audit=SimpleNamespace(record=records.append),
+            decision_audit=SimpleNamespace(
+                record=lambda decision: (
+                    side_effects.append("decision_record"),
+                    records.append(decision),
+                )
+            ),
+            artifact_dedup=artifact_dedup,
+            graph_deduplication_index=graph_deduplication,
             feed_adapter=self.adapter(enriched=candidate(raw=enriched_event())),
         )
 
@@ -2203,6 +2243,15 @@ class MISPProcessorTests(unittest.TestCase):
 
         self.assertTrue(processed)
         self.assertEqual(["event-1"], marked)
+        self.assertEqual(
+            [
+                "artifact_mark",
+                "source_checkpoint",
+                "decision_record",
+                "graph_exported_plan",
+            ],
+            side_effects,
+        )
         self.assertEqual("ingest", records[0].action)
         self.assertEqual("ok", records[0].reason)
         self.assertEqual("misp", records[0].metadata["collector"])
