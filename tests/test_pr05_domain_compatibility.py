@@ -151,25 +151,35 @@ assert domain.slugify is legacy.slugify
         self.assertEqual(record.to_dict(), json.loads(json.dumps(record.to_dict())))
 
     def test_domain_modules_have_no_runtime_boundary_imports(self):
-        forbidden_roots = {
+        forbidden_prefixes = (
             "core",
             "connectors",
             "gateway",
             "exporters",
+            "narrowcti.adapters",
+            "narrowcti.infrastructure",
+            "narrowcti.api",
             "infrastructure",
             "adapters",
-        }
+        )
+
+        def is_forbidden(module_name):
+            return any(
+                module_name == prefix or module_name.startswith(f"{prefix}.")
+                for prefix in forbidden_prefixes
+            )
+
         for path in DOMAIN_ROOT.glob("*.py"):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
-                    imported = [alias.name.split(".", 1)[0] for alias in node.names]
-                elif isinstance(node, ast.ImportFrom) and node.module:
-                    imported = [node.module.split(".", 1)[0]]
+                    imported = [alias.name for alias in node.names]
+                elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                    imported = [node.module]
                 else:
                     continue
                 self.assertTrue(
-                    forbidden_roots.isdisjoint(imported),
+                    not any(is_forbidden(module) for module in imported),
                     f"{path.name} imports forbidden runtime boundary: {imported}",
                 )
 

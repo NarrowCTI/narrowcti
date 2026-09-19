@@ -47,8 +47,8 @@ Side effects remain outside the domain and are tested separately:
 
 ```text
 successful export → artifact mark → source checkpoint
-dry-run           → no source checkpoint
-export error      → no source checkpoint
+dry-run           → no artifact mark → no source checkpoint
+export error      → no artifact mark → no source checkpoint
 all paths         → existing evidence/DecisionRecord contract
 ```
 
