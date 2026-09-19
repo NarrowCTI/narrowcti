@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from threading import RLock
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Mapping
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -18,6 +18,7 @@ from core.opencti_deduplication import (
 from gateway.opencti_client import build_opencti_client
 from gateway.review import AnalystReviewService
 from gateway.review_auth import ReviewCredentialStore, ReviewPrincipal
+from core.runtime_config import environment, load_opencti_config
 
 
 ReviewStatus = Literal[
@@ -92,7 +93,7 @@ class PartialReleaseRequest(DecisionRequest):
 
 
 def env_bool(name, default=False, environ=None):
-    environ = environ or os.environ
+    environ = environment(environ)
     value = environ.get(name)
     if value is None:
         return default
@@ -100,7 +101,7 @@ def env_bool(name, default=False, environ=None):
 
 
 def load_review_api_settings(environ=None):
-    environ = environ or os.environ
+    environ = environment(environ)
     state_dir = environ.get("NARROWCTI_STATE_DIR", "/app/state")
     return ReviewApiSettings(
         repository_file=environ.get(
@@ -156,12 +157,12 @@ def load_review_api_settings(environ=None):
     )
 
 
-def default_opencti_client_factory():
-    opencti_url = os.getenv("OPENCTI_URL", "")
-    opencti_token = os.getenv("OPENCTI_TOKEN", "")
-    if not opencti_url or not opencti_token:
-        raise ValueError("OPENCTI_URL and OPENCTI_TOKEN are required for export")
-    return build_opencti_client(opencti_url, opencti_token)
+def default_opencti_client_factory(environ: Mapping[str, str] | None = None):
+    try:
+        config = load_opencti_config(environment(environ), required=True)
+    except RuntimeError as exc:
+        raise ValueError(str(exc) + " for export") from exc
+    return build_opencti_client(config.url, config.token)
 
 
 def build_export_dedup(settings, api_client):

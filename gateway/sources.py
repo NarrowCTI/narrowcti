@@ -1,5 +1,6 @@
 import os
 from dataclasses import replace
+from typing import Mapping
 
 from connectors.misp.client import MISPClient
 from connectors.misp.feed_adapter import MISPFeedAdapter
@@ -15,6 +16,7 @@ from core.opencti_deduplication import (
     CompositeArtifactDeduplication,
     OpenCTIArtifactLookup,
 )
+from core.runtime_config import environment
 from gateway.opencti_client import build_opencti_client
 from gateway.runtime import SourceRegistry
 
@@ -69,27 +71,33 @@ def gateway_file(gateway_settings, directory_name, filename):
     return os.path.join(base_dir, filename)
 
 
-def apply_gateway_source_paths(settings, gateway_settings, source_key):
+def apply_gateway_source_paths(
+    settings,
+    gateway_settings,
+    source_key,
+    environ: Mapping[str, str] | None = None,
+):
     if not gateway_settings:
         return settings
 
+    env = environment(environ)
     path_config = SOURCE_RUNTIME_PATHS[source_key]
     updates = {}
-    if path_config["state_env"] not in os.environ:
+    if path_config["state_env"] not in env:
         updates["state_file"] = gateway_file(
             gateway_settings,
             "state_dir",
             path_config["state_file"],
         )
-    if path_config["audit_env"] not in os.environ:
+    if path_config["audit_env"] not in env:
         updates["decision_audit_file"] = gateway_file(
             gateway_settings,
             "decision_audit_dir",
             path_config["audit_file"],
         )
     if (
-        path_config["quarantine_env"] not in os.environ
-        and "NARROWCTI_QUARANTINE_REPOSITORY" not in os.environ
+        path_config["quarantine_env"] not in env
+        and "NARROWCTI_QUARANTINE_REPOSITORY" not in env
     ):
         updates["quarantine_repository_file"] = getattr(
             gateway_settings,

@@ -447,6 +447,20 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(65, settings.min_score_to_ingest)
         self.assertTrue(settings.enable_quarantine)
 
+    def test_load_settings_otx_dry_run_prefers_legacy_otx_name(self):
+        env = {
+            "OPENCTI_URL": "http://opencti:8080",
+            "OPENCTI_TOKEN": "token",
+            "OTX_API_KEY": "key",
+            "OTX_QUERIES": "lummac2",
+            "OTX_DRY_RUN": "false",
+            "NARROWCTI_DRY_RUN": "true",
+        }
+
+        settings = load_settings(env)
+
+        self.assertFalse(settings.dry_run)
+
     def test_load_settings_rejects_invalid_otx_retry_configuration(self):
         env = {
             "OPENCTI_URL": "http://opencti:8080",

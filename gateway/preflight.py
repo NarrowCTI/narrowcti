@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 
 from core.mitre_attack import load_attack_cache
+from core.runtime_config import parse_misp_verify_tls
 from gateway.feature_gates import build_feature_gate_state
 from gateway.settings import load_settings
 
@@ -71,6 +72,29 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
 
     unknown_sources = tuple(source for source in enabled if source not in available)
     ingestion_mode = active_ingestion_mode(enabled)
+    misp_verify_tls = True
+    if "misp" in enabled:
+        try:
+            misp_verify_tls = parse_misp_verify_tls(env.get("MISP_VERIFY_TLS"))
+        except ValueError as exc:
+            misp_verify_tls = None
+            issues.append(
+                PreflightIssue(
+                    "error",
+                    "misp-tls-invalid",
+                    str(exc),
+                )
+            )
+        else:
+            if not misp_verify_tls:
+                issues.append(
+                    PreflightIssue(
+                        "warning",
+                        "misp-tls-disabled",
+                        "MISP TLS certificate verification is explicitly disabled; "
+                        "use only for a controlled lab or self-signed endpoint.",
+                    )
+                )
     for source in unknown_sources:
         issues.append(
             PreflightIssue(
@@ -285,6 +309,7 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
             "graph_export_mode": getattr(settings, "graph_export_mode", "audit"),
             "graph_dedup_state_file": getattr(settings, "graph_dedup_state_file", ""),
             "opencti_graph_lookup": getattr(settings, "opencti_graph_lookup", False),
+            "misp_verify_tls": misp_verify_tls,
             "distribution_model": feature_gate_state.distribution_model,
             "open_source": feature_gate_state.open_source,
             "declared_capabilities": list(
