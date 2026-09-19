@@ -7,10 +7,10 @@ wave and PR scopes stated in those records.
 | ADR | Topic | W0 status |
 | --- | --- | --- |
 | [MIG-ADR-001](MIG-ADR-001.md) | Community migration principles | accepted |
-| [MIG-ADR-002](MIG-ADR-002.md) | Source-tree/package boundary | accepted for PR-02 and PR-03 bootstrap |
+| [MIG-ADR-002](MIG-ADR-002.md) | Source-tree/package boundary | accepted for PR-02, PR-03 and PR-05 compatibility addendum |
 | [MIG-ADR-003](MIG-ADR-003.md) | Configuration ownership and typed boundary | proposed |
 | [MIG-ADR-004](MIG-ADR-004.md) | Source adapter ports | proposed |
-| [MIG-ADR-005](MIG-ADR-005.md) | Domain primitives | proposed |
+| [MIG-ADR-005](MIG-ADR-005.md) | Domain primitives | accepted for PR-05 |
 | [MIG-ADR-006](MIG-ADR-006.md) | Graph evidence contract | proposed |
 | [MIG-ADR-007](MIG-ADR-007.md) | Candidate and promotion policy | proposed |
 | [MIG-ADR-008](MIG-ADR-008.md) | OpenCTI canonical lookup | proposed |

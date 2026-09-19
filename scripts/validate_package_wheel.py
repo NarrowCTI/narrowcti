@@ -108,12 +108,16 @@ import narrowcti.connectors.misp.feed_adapter as canonical_connectors
 import narrowcti.core.feed_contract as canonical_core
 import narrowcti.exporters.stix_builder as canonical_exporters
 import narrowcti.gateway.settings as canonical_gateway
+import narrowcti.domain.intelligence.feed_contract as domain_feed
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
 assert sys.modules["gateway.settings"] is sys.modules["narrowcti.gateway.settings"]
 assert legacy_connectors is canonical_connectors
 assert legacy_core is canonical_core
+assert legacy_core.FeedSource is domain_feed.FeedSource
+assert legacy_core.FeedCandidate is domain_feed.FeedCandidate
+assert legacy_core.slugify is domain_feed.slugify
 assert legacy_exporters is canonical_exporters
 assert legacy_gateway is canonical_gateway
 print("installed-compatibility-legacy-first-ok")
@@ -124,6 +128,7 @@ import narrowcti.connectors.misp.feed_adapter as canonical_connectors
 import narrowcti.core.feed_contract as canonical_core
 import narrowcti.exporters.stix_builder as canonical_exporters
 import narrowcti.gateway.settings as canonical_gateway
+import narrowcti.domain.intelligence.feed_contract as domain_feed
 import connectors.misp.feed_adapter as legacy_connectors
 import core.feed_contract as legacy_core
 import exporters.stix_builder as legacy_exporters
@@ -134,6 +139,9 @@ assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters
 assert sys.modules["gateway.settings"] is sys.modules["narrowcti.gateway.settings"]
 assert canonical_connectors is legacy_connectors
 assert canonical_core is legacy_core
+assert legacy_core.FeedSource is domain_feed.FeedSource
+assert legacy_core.FeedCandidate is domain_feed.FeedCandidate
+assert legacy_core.slugify is domain_feed.slugify
 assert canonical_exporters is legacy_exporters
 assert canonical_gateway is legacy_gateway
 print("installed-compatibility-canonical-first-ok")
