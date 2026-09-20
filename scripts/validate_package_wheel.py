@@ -69,6 +69,15 @@ REQUIRED_MODULES = (
     "narrowcti/adapters/opencti/__init__.py",
     "narrowcti/adapters/opencti/graph_lookup.py",
     "narrowcti/adapters/opencti/deduplication.py",
+    "narrowcti/adapters/opencti/exporter.py",
+    "narrowcti/adapters/opencti/stix_profile.py",
+    "narrowcti/adapters/stix/__init__.py",
+    "narrowcti/adapters/stix/patterns.py",
+    "narrowcti/adapters/stix/identifiers.py",
+    "narrowcti/adapters/stix/serializer.py",
+    "narrowcti/application/compiler/__init__.py",
+    "narrowcti/application/compiler/contracts.py",
+    "narrowcti/application/compiler/graph.py",
 )
 
 
@@ -185,6 +194,15 @@ import narrowcti.domain.graph.evidence as domain_graph_evidence
 import narrowcti.domain.graph.deduplication as domain_graph_deduplication
 import narrowcti.adapters.opencti.graph_lookup as canonical_opencti_graph
 import narrowcti.adapters.opencti.deduplication as canonical_opencti_dedup
+import narrowcti.adapters.opencti.exporter as canonical_opencti_exporter
+import narrowcti.adapters.opencti.stix_profile as canonical_opencti_profile
+import narrowcti.adapters.stix as canonical_stix
+import narrowcti.adapters.stix.patterns as canonical_stix_patterns
+import narrowcti.adapters.stix.identifiers as canonical_stix_identifiers
+import narrowcti.adapters.stix.serializer as canonical_stix_serializer
+import narrowcti.application.compiler as canonical_compiler
+import narrowcti.application.compiler.contracts as compiler_contracts
+import narrowcti.application.compiler.graph as compiler_graph
 import core.opencti_graph_lookup as legacy_opencti_graph
 import core.opencti_deduplication as legacy_opencti_dedup
 import narrowcti.application as application
@@ -250,6 +268,15 @@ assert legacy_opencti_graph.OpenCTIGraphLookup is canonical_opencti_graph.OpenCT
 assert legacy_opencti_graph.CompositeGraphLookup is canonical_opencti_graph.CompositeGraphLookup
 assert legacy_opencti_dedup.OpenCTIArtifactLookup is canonical_opencti_dedup.OpenCTIArtifactLookup
 assert legacy_opencti_dedup.CompositeArtifactDeduplication is canonical_opencti_dedup.CompositeArtifactDeduplication
+assert legacy_exporters.indicator_pattern is canonical_stix_patterns.indicator_pattern
+assert legacy_exporters.deterministic_graph_object_id is canonical_stix_identifiers.deterministic_graph_object_id
+assert legacy_exporters.deterministic_identity_id is canonical_stix_identifiers.deterministic_identity_id
+assert legacy_exporters.deterministic_report_id is canonical_stix_identifiers.deterministic_report_id
+assert legacy_exporters.build_report_bundle is canonical_stix_serializer.build_report_bundle
+assert canonical_opencti_exporter.send_bundle is __import__("exporters.opencti", fromlist=["send_bundle"]).send_bundle
+assert canonical_compiler.compile_graph_semantics is compiler_graph.compile_graph_semantics
+assert compiler_contracts.CompilationResult is canonical_compiler.CompilationResult
+assert canonical_opencti_profile.OPENCTI_EXTENSION_DEFINITION_ID.startswith("extension-definition--")
 assert isinstance(canonical_opencti_graph.OpenCTIGraphLookup(object()), canonical_graph.GraphProvider)
 print("installed-compatibility-legacy-first-ok")
 """,
@@ -281,6 +308,15 @@ import narrowcti.domain.review.quarantine as domain_quarantine
 import narrowcti.domain.graph.deduplication as domain_graph_deduplication
 import narrowcti.adapters.opencti.graph_lookup as canonical_opencti_graph
 import narrowcti.adapters.opencti.deduplication as canonical_opencti_dedup
+import narrowcti.adapters.opencti.exporter as canonical_opencti_exporter
+import narrowcti.adapters.opencti.stix_profile as canonical_opencti_profile
+import narrowcti.adapters.stix as canonical_stix
+import narrowcti.adapters.stix.patterns as canonical_stix_patterns
+import narrowcti.adapters.stix.identifiers as canonical_stix_identifiers
+import narrowcti.adapters.stix.serializer as canonical_stix_serializer
+import narrowcti.application.compiler as canonical_compiler
+import narrowcti.application.compiler.contracts as compiler_contracts
+import narrowcti.application.compiler.graph as compiler_graph
 import narrowcti.application as application
 import narrowcti.application.ingestion as ingestion
 import narrowcti.application.ingestion.pipeline as ingestion_pipeline
@@ -362,6 +398,15 @@ assert legacy_opencti_graph.OpenCTIGraphLookup is canonical_opencti_graph.OpenCT
 assert legacy_opencti_graph.CompositeGraphLookup is canonical_opencti_graph.CompositeGraphLookup
 assert legacy_opencti_dedup.OpenCTIArtifactLookup is canonical_opencti_dedup.OpenCTIArtifactLookup
 assert legacy_opencti_dedup.CompositeArtifactDeduplication is canonical_opencti_dedup.CompositeArtifactDeduplication
+assert legacy_exporters.indicator_pattern is canonical_stix_patterns.indicator_pattern
+assert legacy_exporters.deterministic_graph_object_id is canonical_stix_identifiers.deterministic_graph_object_id
+assert legacy_exporters.deterministic_identity_id is canonical_stix_identifiers.deterministic_identity_id
+assert legacy_exporters.deterministic_report_id is canonical_stix_identifiers.deterministic_report_id
+assert legacy_exporters.build_report_bundle is canonical_stix_serializer.build_report_bundle
+assert canonical_opencti_exporter.send_bundle is __import__("exporters.opencti", fromlist=["send_bundle"]).send_bundle
+assert canonical_compiler.compile_graph_semantics is compiler_graph.compile_graph_semantics
+assert compiler_contracts.CompilationResult is canonical_compiler.CompilationResult
+assert canonical_opencti_profile.OPENCTI_EXTENSION_DEFINITION_ID.startswith("extension-definition--")
 assert isinstance(canonical_opencti_graph.OpenCTIGraphLookup(object()), canonical_graph.GraphProvider)
 print("installed-compatibility-canonical-first-ok")
 """,
