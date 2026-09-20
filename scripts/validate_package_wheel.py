@@ -33,6 +33,7 @@ FORBIDDEN_PREFIXES = (
 REQUIRED_MODULES = (
     "narrowcti/ports/storage.py",
     "narrowcti/ports/graph.py",
+    "narrowcti/ports/graph_index.py",
     "narrowcti/adapters/persistence/local/atomic_io.py",
     "narrowcti/adapters/persistence/local/state_repository.py",
     "narrowcti/adapters/persistence/local/artifact_index.py",
@@ -53,6 +54,7 @@ REQUIRED_MODULES = (
     "narrowcti/adapters/sources/misp/detection_rules.py",
     "narrowcti/adapters/sources/misp/_common.py",
     "narrowcti/domain/graph/__init__.py",
+    "narrowcti/domain/graph/deduplication.py",
     "narrowcti/domain/graph/evidence/__init__.py",
     "narrowcti/domain/graph/evidence/aggregate.py",
     "narrowcti/domain/graph/evidence/common.py",
@@ -64,6 +66,9 @@ REQUIRED_MODULES = (
     "narrowcti/domain/graph/evidence/misp_operational.py",
     "narrowcti/domain/graph/evidence/misp_detection.py",
     "narrowcti/domain/graph/evidence/misp_relationships.py",
+    "narrowcti/adapters/opencti/__init__.py",
+    "narrowcti/adapters/opencti/graph_lookup.py",
+    "narrowcti/adapters/opencti/deduplication.py",
 )
 
 
@@ -168,6 +173,7 @@ import narrowcti.domain.intelligence.indicator_types as domain_indicator_types
 import narrowcti.domain.intelligence.indicator_policy as domain_indicator_policy
 import narrowcti.ports.storage as canonical_storage
 import narrowcti.ports.graph as canonical_graph
+import narrowcti.ports.graph_index as canonical_graph_index
 import narrowcti.adapters.persistence.local.atomic_io as canonical_atomic
 import narrowcti.adapters.persistence.local.state_repository as canonical_state
 import narrowcti.adapters.persistence.local.artifact_index as canonical_artifacts
@@ -176,6 +182,11 @@ import narrowcti.ports.quarantine as canonical_quarantine_port
 import narrowcti.core.quarantine as canonical_quarantine
 import narrowcti.domain.review.quarantine as domain_quarantine
 import narrowcti.domain.graph.evidence as domain_graph_evidence
+import narrowcti.domain.graph.deduplication as domain_graph_deduplication
+import narrowcti.adapters.opencti.graph_lookup as canonical_opencti_graph
+import narrowcti.adapters.opencti.deduplication as canonical_opencti_dedup
+import core.opencti_graph_lookup as legacy_opencti_graph
+import core.opencti_deduplication as legacy_opencti_dedup
 import narrowcti.application as application
 import narrowcti.application.ingestion as ingestion
 import narrowcti.application.ingestion.pipeline as ingestion_pipeline
@@ -232,7 +243,14 @@ assert legacy_graph_evidence.GRAPH_EVIDENCE_VERSION == domain_graph_evidence.GRA
 assert domain_graph_evidence.GRAPH_EVIDENCE_VERSION == "v1.0.0"
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
-    assert isinstance(graph_index, canonical_graph.GraphIndex)
+assert isinstance(graph_index, canonical_graph.GraphIndex)
+assert canonical_graph.GraphIndex is canonical_graph_index.GraphIndex
+assert legacy_graph.plan_actions is domain_graph_deduplication.plan_actions
+assert legacy_opencti_graph.OpenCTIGraphLookup is canonical_opencti_graph.OpenCTIGraphLookup
+assert legacy_opencti_graph.CompositeGraphLookup is canonical_opencti_graph.CompositeGraphLookup
+assert legacy_opencti_dedup.OpenCTIArtifactLookup is canonical_opencti_dedup.OpenCTIArtifactLookup
+assert legacy_opencti_dedup.CompositeArtifactDeduplication is canonical_opencti_dedup.CompositeArtifactDeduplication
+assert isinstance(canonical_opencti_graph.OpenCTIGraphLookup(object()), canonical_graph.GraphProvider)
 print("installed-compatibility-legacy-first-ok")
 """,
             """
@@ -246,6 +264,7 @@ import narrowcti.adapters.persistence.local.artifact_index as canonical_artifact
 import narrowcti.adapters.persistence.local.quarantine_repository as canonical_quarantine_repository
 import narrowcti.ports.storage as canonical_storage
 import narrowcti.ports.graph as canonical_graph
+import narrowcti.ports.graph_index as canonical_graph_index
 import narrowcti.ports.quarantine as canonical_quarantine_port
 import narrowcti.core.feed_contract as canonical_core
 import narrowcti.core.quarantine as canonical_quarantine
@@ -259,6 +278,9 @@ import narrowcti.domain.intelligence.policy as domain_policy
 import narrowcti.domain.intelligence.indicator_types as domain_indicator_types
 import narrowcti.domain.intelligence.indicator_policy as domain_indicator_policy
 import narrowcti.domain.review.quarantine as domain_quarantine
+import narrowcti.domain.graph.deduplication as domain_graph_deduplication
+import narrowcti.adapters.opencti.graph_lookup as canonical_opencti_graph
+import narrowcti.adapters.opencti.deduplication as canonical_opencti_dedup
 import narrowcti.application as application
 import narrowcti.application.ingestion as ingestion
 import narrowcti.application.ingestion.pipeline as ingestion_pipeline
@@ -282,6 +304,8 @@ import core.atomic_io as legacy_atomic
 import core.state_repository as legacy_state
 import core.graph_deduplication as legacy_graph
 import core.graph_evidence as legacy_graph_evidence
+import core.opencti_graph_lookup as legacy_opencti_graph
+import core.opencti_deduplication as legacy_opencti_dedup
 import core.quarantine as legacy_quarantine
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
@@ -331,7 +355,14 @@ assert canonical_misp_detection_rules.extract_misp_detection_rules is not None
 assert legacy_misp_processor.sigma_rule_opencti_compatibility is canonical_misp_detection_rules.sigma_rule_opencti_compatibility
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
-    assert isinstance(graph_index, canonical_graph.GraphIndex)
+assert isinstance(graph_index, canonical_graph.GraphIndex)
+assert canonical_graph.GraphIndex is canonical_graph_index.GraphIndex
+assert legacy_graph.plan_actions is domain_graph_deduplication.plan_actions
+assert legacy_opencti_graph.OpenCTIGraphLookup is canonical_opencti_graph.OpenCTIGraphLookup
+assert legacy_opencti_graph.CompositeGraphLookup is canonical_opencti_graph.CompositeGraphLookup
+assert legacy_opencti_dedup.OpenCTIArtifactLookup is canonical_opencti_dedup.OpenCTIArtifactLookup
+assert legacy_opencti_dedup.CompositeArtifactDeduplication is canonical_opencti_dedup.CompositeArtifactDeduplication
+assert isinstance(canonical_opencti_graph.OpenCTIGraphLookup(object()), canonical_graph.GraphProvider)
 print("installed-compatibility-canonical-first-ok")
 """,
         )
