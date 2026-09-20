@@ -9,6 +9,7 @@ from narrowcti.domain.intelligence.tlp import extract_tlp_values, normalize_tlp
 from narrowcti.domain.graph.evidence.aggregate import *  # noqa: F403,F401
 from narrowcti.domain.graph.evidence.common import *  # noqa: F403,F401
 from narrowcti.domain.graph.evidence.misp_detection import *  # noqa: F403,F401
+from narrowcti.domain.graph.evidence.misp_contracts import *  # noqa: F403,F401
 from narrowcti.domain.graph.evidence.misp_galaxy import *  # noqa: F403,F401
 from narrowcti.domain.graph.evidence.misp_metadata import *  # noqa: F403,F401
 from narrowcti.domain.graph.evidence.misp_operational import *  # noqa: F403,F401

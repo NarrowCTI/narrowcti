@@ -56,6 +56,7 @@ REQUIRED_MODULES = (
     "narrowcti/domain/graph/evidence/__init__.py",
     "narrowcti/domain/graph/evidence/aggregate.py",
     "narrowcti/domain/graph/evidence/common.py",
+    "narrowcti/domain/graph/evidence/misp_contracts.py",
     "narrowcti/domain/graph/evidence/otx.py",
     "narrowcti/domain/graph/evidence/mitre.py",
     "narrowcti/domain/graph/evidence/misp_metadata.py",

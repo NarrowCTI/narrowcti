@@ -1,6 +1,6 @@
-# ruff: noqa: F401,F403,F405
 from collections.abc import Mapping
-from .common import *  # noqa: F403,F401
+
+from .common import compact_mapping, evidence_record
 
 def otx_entity_evidence(entities, source_key=""):
     if not isinstance(entities, Mapping):

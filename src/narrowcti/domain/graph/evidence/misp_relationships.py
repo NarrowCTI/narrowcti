@@ -1,49 +1,17 @@
-# ruff: noqa: F401,F403,F405
 from collections.abc import Mapping
-from .common import *  # noqa: F403,F401
-
-MISP_INFRA_CONTEXT_MAX_INFRASTRUCTURES = 50
-
-MISP_INFRA_CONTEXT_MAX_PAIRINGS = 100
-
-MISP_INFRA_CONTEXT_MAX_RECORDS = 200
-
-MISP_INFRA_CAPABILITY_ENTITY_TYPES = {
-    "malware",
-    "tool",
-    "channel",
-}
-
-MISP_INFRA_VICTIMOLOGY_ENTITY_TYPES = {
-    "target_administrative_area",
-    "target_city",
-    "target_country",
-    "target_individual",
-    "target_organization",
-    "target_position",
-    "target_region",
-    "target_sector",
-    "target_system",
-}
-
-MISP_CAMPAIGN_CONTEXT_MAX_CAMPAIGNS = 50
-
-MISP_CAMPAIGN_CONTEXT_MAX_PAIRINGS = 100
-
-MISP_CAMPAIGN_CONTEXT_MAX_RECORDS = 200
-
-MISP_CAMPAIGN_ADVERSARY_ENTITY_TYPES = {
-    "intrusion_set",
-    "threat_actor",
-    "threat_actor_individual",
-}
-
-MISP_CAMPAIGN_CAPABILITY_ENTITY_TYPES = {
-    "attack_pattern",
-    "channel",
-    "malware",
-    "tool",
-}
+from .common import clamp_confidence, clean_string, compact_mapping, evidence_record
+from .misp_contracts import (
+    MISP_CAMPAIGN_ADVERSARY_ENTITY_TYPES,
+    MISP_CAMPAIGN_CAPABILITY_ENTITY_TYPES,
+    MISP_CAMPAIGN_CONTEXT_MAX_CAMPAIGNS,
+    MISP_CAMPAIGN_CONTEXT_MAX_PAIRINGS,
+    MISP_CAMPAIGN_CONTEXT_MAX_RECORDS,
+    MISP_INFRA_CAPABILITY_ENTITY_TYPES,
+    MISP_INFRA_CONTEXT_MAX_INFRASTRUCTURES,
+    MISP_INFRA_CONTEXT_MAX_PAIRINGS,
+    MISP_INFRA_CONTEXT_MAX_RECORDS,
+    MISP_INFRA_VICTIMOLOGY_ENTITY_TYPES,
+)
 
 def misp_infrastructure_context_relationship_evidence(records, source_key=""):
     records = [record for record in records or [] if isinstance(record, Mapping)]

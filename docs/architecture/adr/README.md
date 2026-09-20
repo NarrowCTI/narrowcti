@@ -11,7 +11,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-003](MIG-ADR-003.md) | Configuration ownership and typed boundary | proposed |
 | [MIG-ADR-004](MIG-ADR-004.md) | Source adapter ports | proposed |
 | [MIG-ADR-005](MIG-ADR-005.md) | Domain primitives | accepted for PR-05 |
-| [MIG-ADR-006](MIG-ADR-006.md) | Graph evidence boundary | accepted |
+| [MIG-ADR-006](MIG-ADR-006.md) | Graph evidence boundary | accepted for W4 / PR-12 |
 | [MIG-ADR-007](MIG-ADR-007.md) | Candidate and promotion policy | proposed |
 | [MIG-ADR-008](MIG-ADR-008.md) | OpenCTI canonical lookup | proposed |
 | [MIG-ADR-009](MIG-ADR-009.md) | STIX/export boundary | proposed |
