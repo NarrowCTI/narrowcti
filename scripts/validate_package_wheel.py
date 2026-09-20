@@ -52,6 +52,17 @@ REQUIRED_MODULES = (
     "narrowcti/adapters/sources/misp/infrastructure.py",
     "narrowcti/adapters/sources/misp/detection_rules.py",
     "narrowcti/adapters/sources/misp/_common.py",
+    "narrowcti/domain/graph/__init__.py",
+    "narrowcti/domain/graph/evidence/__init__.py",
+    "narrowcti/domain/graph/evidence/aggregate.py",
+    "narrowcti/domain/graph/evidence/common.py",
+    "narrowcti/domain/graph/evidence/otx.py",
+    "narrowcti/domain/graph/evidence/mitre.py",
+    "narrowcti/domain/graph/evidence/misp_metadata.py",
+    "narrowcti/domain/graph/evidence/misp_galaxy.py",
+    "narrowcti/domain/graph/evidence/misp_operational.py",
+    "narrowcti/domain/graph/evidence/misp_detection.py",
+    "narrowcti/domain/graph/evidence/misp_relationships.py",
 )
 
 
@@ -139,6 +150,7 @@ import core.deduplication as legacy_dedup
 import core.indicator_policy as legacy_indicator_policy
 import core.state_repository as legacy_state
 import core.graph_deduplication as legacy_graph
+import core.graph_evidence as legacy_graph_evidence
 import core.quarantine as legacy_quarantine
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
@@ -162,6 +174,7 @@ import narrowcti.adapters.persistence.local.quarantine_repository as canonical_q
 import narrowcti.ports.quarantine as canonical_quarantine_port
 import narrowcti.core.quarantine as canonical_quarantine
 import narrowcti.domain.review.quarantine as domain_quarantine
+import narrowcti.domain.graph.evidence as domain_graph_evidence
 import narrowcti.application as application
 import narrowcti.application.ingestion as ingestion
 import narrowcti.application.ingestion.pipeline as ingestion_pipeline
@@ -212,6 +225,10 @@ assert canonical_misp_entities.extract_misp_galaxies is not None
 assert canonical_misp_infrastructure.extract_misp_infrastructure is not None
 assert canonical_misp_detection_rules.extract_misp_detection_rules is not None
 assert legacy_misp_processor.sigma_rule_opencti_compatibility is canonical_misp_detection_rules.sigma_rule_opencti_compatibility
+assert legacy_graph_evidence.build_graph_evidence is domain_graph_evidence.build_graph_evidence
+assert legacy_graph_evidence.clamp_confidence is domain_graph_evidence.clamp_confidence
+assert legacy_graph_evidence.GRAPH_EVIDENCE_VERSION == domain_graph_evidence.GRAPH_EVIDENCE_VERSION
+assert domain_graph_evidence.GRAPH_EVIDENCE_VERSION == "v1.0.0"
 with tempfile.TemporaryDirectory() as tmpdir:
     graph_index = legacy_graph.GraphDeduplicationIndex(str(Path(tmpdir) / "graph.json"))
     assert isinstance(graph_index, canonical_graph.GraphIndex)
@@ -263,9 +280,11 @@ import core.indicator_policy as legacy_indicator_policy
 import core.atomic_io as legacy_atomic
 import core.state_repository as legacy_state
 import core.graph_deduplication as legacy_graph
+import core.graph_evidence as legacy_graph_evidence
 import core.quarantine as legacy_quarantine
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
+import narrowcti.domain.graph.evidence as domain_graph_evidence
 import connectors.misp.processor as legacy_misp_processor
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
@@ -284,6 +303,10 @@ assert legacy_dedup.normalize_indicator_type is domain_indicator_types.normalize
 assert legacy_indicator_policy.filter_indicators_by_type is domain_indicator_policy.filter_indicators_by_type
 assert canonical_exporters is legacy_exporters
 assert canonical_gateway is legacy_gateway
+assert legacy_graph_evidence.build_graph_evidence is domain_graph_evidence.build_graph_evidence
+assert legacy_graph_evidence.clamp_confidence is domain_graph_evidence.clamp_confidence
+assert legacy_graph_evidence.GRAPH_EVIDENCE_VERSION == domain_graph_evidence.GRAPH_EVIDENCE_VERSION
+assert domain_graph_evidence.GRAPH_EVIDENCE_VERSION == "v1.0.0"
 assert legacy_atomic.write_json_atomic is canonical_atomic.write_json_atomic
 assert legacy_state.ProcessedItemStateRepository is canonical_state.ProcessedItemStateRepository
 assert legacy_state.PulseStateRepository is canonical_state.PulseStateRepository
