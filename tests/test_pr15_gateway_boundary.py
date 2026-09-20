@@ -63,6 +63,15 @@ class GatewayBoundaryTests(unittest.TestCase):
                     f"{path}: {names}",
                 )
 
+    def test_canonical_gateway_owners_do_not_import_legacy_migration_wrappers(self):
+        composition = ROOT / "src" / "narrowcti" / "infrastructure" / "runtime" / "gateway_composition.py"
+        settings = ROOT / "src" / "narrowcti" / "infrastructure" / "config" / "settings.py"
+        composition_imports = composition.read_text(encoding="utf-8")
+        settings_imports = settings.read_text(encoding="utf-8")
+        self.assertNotIn("from core.deduplication", composition_imports)
+        self.assertNotIn("from core.opencti_deduplication", composition_imports)
+        self.assertNotIn("from core.contextual_scoring", settings_imports)
+
     def test_registration_is_lazy_and_selected_source_only_is_constructed(self):
         calls = []
         registry = (

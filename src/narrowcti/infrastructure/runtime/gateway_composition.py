@@ -15,8 +15,11 @@ from connectors.otx.otx_client import OTXClient
 from connectors.otx.processor import OTXProcessor
 from connectors.otx.settings import load_settings as load_otx_settings
 from core.decision_audit import DecisionAuditLog
-from core.deduplication import ArtifactDeduplicationIndex
-from core.opencti_deduplication import CompositeArtifactDeduplication, OpenCTIArtifactLookup
+from narrowcti.adapters.opencti.deduplication import (
+    CompositeArtifactDeduplication,
+    OpenCTIArtifactLookup,
+)
+from narrowcti.adapters.persistence.local.artifact_index import ArtifactDeduplicationIndex
 from core.runtime_config import environment
 from narrowcti.adapters.opencti.client import build_opencti_client
 from narrowcti.application.provider_registry import SourceRegistry
@@ -159,4 +162,3 @@ __all__ = [
     "apply_gateway_source_paths", "build_otx_runner", "build_misp_runner",
     "build_artifact_dedup", "default_source_registry",
 ]
-

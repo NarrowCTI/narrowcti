@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from typing import Mapping
 
-from core.contextual_scoring import (
+from narrowcti.domain.intelligence.contextual_scoring import (
     normalize_contextual_scoring_max_impact,
     normalize_contextual_scoring_mode,
     parse_contextual_scoring_impacts,
@@ -134,4 +134,3 @@ __all__ = [
     "GatewaySettings", "env_int", "env_bool", "env_int_alias", "env_bool_alias",
     "env_list", "load_settings",
 ]
-
