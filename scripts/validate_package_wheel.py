@@ -79,6 +79,17 @@ REQUIRED_MODULES = (
     "narrowcti/application/compiler/__init__.py",
     "narrowcti/application/compiler/contracts.py",
     "narrowcti/application/compiler/graph.py",
+    "narrowcti/application/provider_registry.py",
+    "narrowcti/application/runtime.py",
+    "narrowcti/infrastructure/__init__.py",
+    "narrowcti/infrastructure/config/__init__.py",
+    "narrowcti/infrastructure/config/settings.py",
+    "narrowcti/infrastructure/runtime/__init__.py",
+    "narrowcti/infrastructure/runtime/gateway_composition.py",
+    "narrowcti/infrastructure/runtime/summary_store.py",
+    "narrowcti/adapters/opencti/client.py",
+    "narrowcti/cli/__init__.py",
+    "narrowcti/cli/gateway.py",
 )
 
 
@@ -170,10 +181,24 @@ import core.graph_evidence as legacy_graph_evidence
 import core.quarantine as legacy_quarantine
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
+import gateway.runtime as legacy_gateway_runtime
+import gateway.sources as legacy_gateway_sources
+import gateway.connector as legacy_gateway_connector
+import gateway.opencti_client as legacy_opencti_client
 import narrowcti.connectors.misp.feed_adapter as canonical_connectors
 import narrowcti.core.feed_contract as canonical_core
 import narrowcti.exporters.stix_builder as canonical_exporters
 import narrowcti.gateway.settings as canonical_gateway
+import narrowcti.gateway.runtime as canonical_gateway_runtime
+import narrowcti.gateway.sources as canonical_gateway_sources
+import narrowcti.gateway.connector as canonical_gateway_connector
+import narrowcti.gateway.opencti_client as canonical_opencti_client
+import narrowcti.application.provider_registry as canonical_provider_registry
+import narrowcti.application.runtime as canonical_runtime
+import narrowcti.infrastructure.config.settings as canonical_settings
+import narrowcti.infrastructure.runtime.gateway_composition as canonical_composition
+import narrowcti.cli.gateway as canonical_cli_gateway
+import narrowcti.adapters.opencti.client as canonical_opencti_client_adapter
 import narrowcti.domain.intelligence.feed_contract as domain_feed
 import narrowcti.domain.intelligence.scoring as domain_scoring
 import narrowcti.domain.intelligence.contextual_scoring as domain_contextual
@@ -236,6 +261,16 @@ assert legacy_dedup.normalize_indicator_type is domain_indicator_types.normalize
 assert legacy_indicator_policy.filter_indicators_by_type is domain_indicator_policy.filter_indicators_by_type
 assert legacy_exporters is canonical_exporters
 assert legacy_gateway is canonical_gateway
+assert legacy_gateway_runtime.SUMMARY_FIELDS == canonical_runtime.SUMMARY_FIELDS
+assert legacy_gateway_sources.default_source_registry is canonical_composition.default_source_registry
+assert legacy_gateway_connector.main is not canonical_cli_gateway.main
+assert legacy_opencti_client.NarrowCTIOpenCTIApiClient is canonical_opencti_client_adapter.NarrowCTIOpenCTIApiClient
+assert legacy_opencti_client.OpenCTICompatibilityError is canonical_opencti_client_adapter.OpenCTICompatibilityError
+assert legacy_opencti_client.sanitize_legacy_variables is canonical_opencti_client_adapter.sanitize_legacy_variables
+assert legacy_opencti_client.sanitize_legacy_query is canonical_opencti_client_adapter.sanitize_legacy_query
+assert legacy_opencti_client.build_opencti_client is canonical_opencti_client_adapter.build_opencti_client
+assert canonical_provider_registry.SourceRegistry is legacy_gateway_runtime.SourceRegistry
+assert canonical_settings.GatewaySettings is legacy_gateway.GatewaySettings
 assert legacy_atomic.write_json_atomic is canonical_atomic.write_json_atomic
 assert legacy_state.ProcessedItemStateRepository is canonical_state.ProcessedItemStateRepository
 assert legacy_state.PulseStateRepository is canonical_state.PulseStateRepository
@@ -301,6 +336,16 @@ import narrowcti.core.feed_contract as canonical_core
 import narrowcti.core.quarantine as canonical_quarantine
 import narrowcti.exporters.stix_builder as canonical_exporters
 import narrowcti.gateway.settings as canonical_gateway
+import narrowcti.gateway.runtime as canonical_gateway_runtime
+import narrowcti.gateway.sources as canonical_gateway_sources
+import narrowcti.gateway.connector as canonical_gateway_connector
+import narrowcti.gateway.opencti_client as canonical_opencti_client
+import narrowcti.application.provider_registry as canonical_provider_registry
+import narrowcti.application.runtime as canonical_runtime
+import narrowcti.infrastructure.config.settings as canonical_settings
+import narrowcti.infrastructure.runtime.gateway_composition as canonical_composition
+import narrowcti.cli.gateway as canonical_cli_gateway
+import narrowcti.adapters.opencti.client as canonical_opencti_client_adapter
 import narrowcti.domain.intelligence.feed_contract as domain_feed
 import narrowcti.domain.intelligence.scoring as domain_scoring
 import narrowcti.domain.intelligence.contextual_scoring as domain_contextual
@@ -350,6 +395,10 @@ import core.opencti_deduplication as legacy_opencti_dedup
 import core.quarantine as legacy_quarantine
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
+import gateway.runtime as legacy_gateway_runtime
+import gateway.sources as legacy_gateway_sources
+import gateway.connector as legacy_gateway_connector
+import gateway.opencti_client as legacy_opencti_client
 import narrowcti.domain.graph.evidence as domain_graph_evidence
 import connectors.misp.processor as legacy_misp_processor
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
@@ -369,6 +418,16 @@ assert legacy_dedup.normalize_indicator_type is domain_indicator_types.normalize
 assert legacy_indicator_policy.filter_indicators_by_type is domain_indicator_policy.filter_indicators_by_type
 assert canonical_exporters is legacy_exporters
 assert canonical_gateway is legacy_gateway
+assert canonical_gateway_runtime.SUMMARY_FIELDS == canonical_runtime.SUMMARY_FIELDS
+assert canonical_gateway_sources.default_source_registry is canonical_composition.default_source_registry
+assert canonical_gateway_connector.main is not canonical_cli_gateway.main
+assert canonical_opencti_client.NarrowCTIOpenCTIApiClient is canonical_opencti_client_adapter.NarrowCTIOpenCTIApiClient
+assert canonical_opencti_client.OpenCTICompatibilityError is canonical_opencti_client_adapter.OpenCTICompatibilityError
+assert canonical_opencti_client.sanitize_legacy_variables is canonical_opencti_client_adapter.sanitize_legacy_variables
+assert canonical_opencti_client.sanitize_legacy_query is canonical_opencti_client_adapter.sanitize_legacy_query
+assert canonical_opencti_client.build_opencti_client is canonical_opencti_client_adapter.build_opencti_client
+assert canonical_provider_registry.SourceRegistry is canonical_gateway_runtime.SourceRegistry
+assert canonical_settings.GatewaySettings is canonical_gateway.GatewaySettings
 assert legacy_graph_evidence.build_graph_evidence is domain_graph_evidence.build_graph_evidence
 assert legacy_graph_evidence.clamp_confidence is domain_graph_evidence.clamp_confidence
 assert legacy_graph_evidence.GRAPH_EVIDENCE_VERSION == domain_graph_evidence.GRAPH_EVIDENCE_VERSION

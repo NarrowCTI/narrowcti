@@ -8,7 +8,7 @@ wave and PR scopes stated in those records.
 | --- | --- | --- |
 | [MIG-ADR-001](MIG-ADR-001.md) | Community migration principles | accepted |
 | [MIG-ADR-002](MIG-ADR-002.md) | Source-tree/package boundary | accepted for PR-02, PR-03 and PR-05 compatibility addendum |
-| [MIG-ADR-003](MIG-ADR-003.md) | Configuration ownership and typed boundary | proposed |
+| [MIG-ADR-003](MIG-ADR-003.md) | Configuration ownership and typed boundary | accepted |
 | [MIG-ADR-004](MIG-ADR-004.md) | Source adapter ports | proposed |
 | [MIG-ADR-005](MIG-ADR-005.md) | Domain primitives | accepted for PR-05 |
 | [MIG-ADR-006](MIG-ADR-006.md) | Graph evidence boundary | accepted for W4 / PR-12 |
@@ -23,6 +23,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-015](MIG-ADR-015.md) | Community repository ports and local persistence | accepted for PR-06 |
 | [MIG-ADR-016](MIG-ADR-016.md) | Ingestion application orchestration boundary | accepted for PR-08 |
 | [MIG-ADR-017](MIG-ADR-017.md) | MISP source extraction boundary | accepted for PR-09 |
+| [MIG-ADR-018](MIG-ADR-018.md) | Gateway runtime and source provider registry boundary | accepted for W5 / PR-15 |
 
 Each ADR must be reviewed and approved before the migration wave that depends
 on it. Accepted records remain bounded by their stated PR scope. PR-03 adds

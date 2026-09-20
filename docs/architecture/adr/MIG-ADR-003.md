@@ -9,3 +9,11 @@
 - Target Wave: W1 / PR-04 — typed configuration and secure TLS defaults.
 
 The active precedence matrix and direct-environment-read inventory are maintained in the PR-04 configuration documentation and contract tests. Historical/versioned documents are not rewritten.
+
+## PR-15 addendum — GatewaySettings owner
+
+The canonical owner of GatewaySettings and its existing loader/helpers is
+`src/narrowcti/infrastructure/config/settings.py`. The compatibility module
+`gateway.settings` continues to expose the historical API. This is an ownership
+move only: aliases, defaults, activation scope, precedence and validation
+behavior remain unchanged.

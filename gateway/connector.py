@@ -1,6 +1,8 @@
+"""Historical gateway entrypoint with a preserved monkeypatch surface."""
+
+from narrowcti.infrastructure.config.settings import load_settings
+from narrowcti.infrastructure.runtime.gateway_composition import default_source_registry
 from gateway.runtime import run_gateway_loop, run_gateway_once
-from gateway.settings import load_settings
-from gateway.sources import default_source_registry
 
 
 def log(msg):
