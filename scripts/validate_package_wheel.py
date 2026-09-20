@@ -69,6 +69,7 @@ REQUIRED_MODULES = (
     "narrowcti/adapters/opencti/__init__.py",
     "narrowcti/adapters/opencti/graph_lookup.py",
     "narrowcti/adapters/opencti/deduplication.py",
+    "narrowcti/adapters/opencti/graph_serializer.py",
     "narrowcti/adapters/opencti/exporter.py",
     "narrowcti/adapters/opencti/stix_profile.py",
     "narrowcti/adapters/stix/__init__.py",
@@ -194,6 +195,7 @@ import narrowcti.domain.graph.evidence as domain_graph_evidence
 import narrowcti.domain.graph.deduplication as domain_graph_deduplication
 import narrowcti.adapters.opencti.graph_lookup as canonical_opencti_graph
 import narrowcti.adapters.opencti.deduplication as canonical_opencti_dedup
+import narrowcti.adapters.opencti.graph_serializer as canonical_graph_serializer
 import narrowcti.adapters.opencti.exporter as canonical_opencti_exporter
 import narrowcti.adapters.opencti.stix_profile as canonical_opencti_profile
 import narrowcti.adapters.stix as canonical_stix
@@ -273,6 +275,8 @@ assert legacy_exporters.deterministic_graph_object_id is canonical_stix_identifi
 assert legacy_exporters.deterministic_identity_id is canonical_stix_identifiers.deterministic_identity_id
 assert legacy_exporters.deterministic_report_id is canonical_stix_identifiers.deterministic_report_id
 assert legacy_exporters.build_report_bundle is canonical_stix_serializer.build_report_bundle
+assert legacy_exporters.build_graph_report_bundle is canonical_graph_serializer.build_graph_report_bundle
+assert legacy_exporters.build_curated_report_bundle is canonical_graph_serializer.build_curated_report_bundle
 assert canonical_opencti_exporter.send_bundle is __import__("exporters.opencti", fromlist=["send_bundle"]).send_bundle
 assert canonical_compiler.compile_graph_semantics is compiler_graph.compile_graph_semantics
 assert compiler_contracts.CompilationResult is canonical_compiler.CompilationResult
@@ -308,6 +312,7 @@ import narrowcti.domain.review.quarantine as domain_quarantine
 import narrowcti.domain.graph.deduplication as domain_graph_deduplication
 import narrowcti.adapters.opencti.graph_lookup as canonical_opencti_graph
 import narrowcti.adapters.opencti.deduplication as canonical_opencti_dedup
+import narrowcti.adapters.opencti.graph_serializer as canonical_graph_serializer
 import narrowcti.adapters.opencti.exporter as canonical_opencti_exporter
 import narrowcti.adapters.opencti.stix_profile as canonical_opencti_profile
 import narrowcti.adapters.stix as canonical_stix
@@ -403,6 +408,8 @@ assert legacy_exporters.deterministic_graph_object_id is canonical_stix_identifi
 assert legacy_exporters.deterministic_identity_id is canonical_stix_identifiers.deterministic_identity_id
 assert legacy_exporters.deterministic_report_id is canonical_stix_identifiers.deterministic_report_id
 assert legacy_exporters.build_report_bundle is canonical_stix_serializer.build_report_bundle
+assert legacy_exporters.build_graph_report_bundle is canonical_graph_serializer.build_graph_report_bundle
+assert legacy_exporters.build_curated_report_bundle is canonical_graph_serializer.build_curated_report_bundle
 assert canonical_opencti_exporter.send_bundle is __import__("exporters.opencti", fromlist=["send_bundle"]).send_bundle
 assert canonical_compiler.compile_graph_semantics is compiler_graph.compile_graph_semantics
 assert compiler_contracts.CompilationResult is canonical_compiler.CompilationResult

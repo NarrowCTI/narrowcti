@@ -9,10 +9,13 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
 import exporters.stix_builder as legacy_builder
+import exporters.opencti as legacy_opencti
 from exporters.opencti import send_bundle as legacy_send_bundle
 from narrowcti.adapters.opencti import exporter as canonical_exporter
+from narrowcti.adapters.opencti import graph_serializer as canonical_graph
 from narrowcti.adapters.opencti.stix_profile import (
     OPENCTI_CUSTOM_SDO_TYPES,
     OPENCTI_EXTENSION_DEFINITION_ID,
@@ -146,6 +149,69 @@ assert legacy.send_bundle is canonical.send_bundle
 assert legacy.OpenCTIImportRejectedError is canonical.OpenCTIImportRejectedError
 """
         )
+
+    def test_opencti_adapters_do_not_import_legacy_stix_builder(self):
+        adapter_root = ROOT / "src" / "narrowcti" / "adapters" / "opencti"
+        for path in adapter_root.glob("*.py"):
+            imports = self._imports(path)
+            self.assertNotIn("exporters.stix_builder", imports, path.name)
+
+    def test_opencti_wrapper_has_explicit_compatibility_surface(self):
+        tree = ast.parse((ROOT / "exporters" / "opencti.py").read_text(encoding="utf-8"))
+        self.assertFalse(
+            any(
+                isinstance(node, ast.ImportFrom)
+                and any(alias.name == "*" for alias in node.names)
+                for node in ast.walk(tree)
+            )
+        )
+        self.assertTrue(
+            {
+                "OpenCTIImportRejectedError",
+                "capture_pycti_worker_errors",
+                "send_bundle",
+                "report_refs_from_bundle_json",
+            }.issubset(set(legacy_opencti.__all__))
+        )
+
+    def test_legacy_graph_builders_are_canonical_symbols(self):
+        self.assertIs(legacy_builder.build_graph_report_bundle, canonical_graph.build_graph_report_bundle)
+        self.assertIs(legacy_builder.build_curated_report_bundle, canonical_graph.build_curated_report_bundle)
+
+    def test_production_graph_paths_consume_compiler_boundary(self):
+        with patch.object(
+            canonical_graph,
+            "compile_graph_semantics",
+            wraps=canonical_graph.compile_graph_semantics,
+        ) as compile_semantics:
+            canonical_graph.build_graph_report_bundle(
+                "Compiler graph path",
+                "description",
+                70,
+                graph_candidate_policy={"accepted": []},
+            )
+            canonical_graph.build_curated_report_bundle(
+                "Compiler curated path",
+                "description",
+                70,
+                graph_candidate_policy={"accepted": []},
+            )
+        self.assertEqual(2, compile_semantics.call_count)
+
+    def test_compiler_uses_historical_graph_key_and_reference_semantics(self):
+        candidate = {
+            "stix_object_type": "malware",
+            "value": "sample",
+            "attributes": {"opencti_existing_ref": "malware--existing"},
+        }
+        result = compile_graph_semantics(
+            [candidate],
+            key_resolver=lambda value, _index: canonical_graph.graph_object_key(value),
+            existing_reference_resolver=canonical_graph.existing_opencti_ref,
+            deduplicate=False,
+        )
+        self.assertEqual(canonical_graph.graph_object_key(candidate), result.objects[0].key)
+        self.assertEqual("malware--existing", result.objects[0].existing_reference)
 
     def test_generic_report_bundle_matches_legacy_shape(self):
         indicators = [{"indicator": "example.org", "type": "domain"}]
