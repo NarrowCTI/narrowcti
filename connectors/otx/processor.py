@@ -35,6 +35,8 @@ from core.state_repository import PulseStateRepository
 from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
 from exporters.stix_builder import build_graph_report_bundle
+from narrowcti.application.ingestion import IngestionOutcome, run_candidate
+from narrowcti.application.ingestion.contracts import IngestionOperations
 
 try:
     from .entity_extraction import extract_otx_entities
@@ -312,88 +314,64 @@ class OTXProcessor:
 
     def process_pulse_outcome(self, query, pulse, state):
         candidate_ref = self.normalize_feed_candidate(pulse)
+        operations = self.build_otx_ingestion_operations(query, candidate_ref, state)
+        return run_candidate(candidate_ref, operations).action
+
+    def build_otx_ingestion_operations(self, query, candidate_ref, state):
         pulse_id = candidate_ref.external_id
 
-        if not pulse_id:
-            self.log(f"Skip pulse without id: {candidate_ref.title}")
+        def precheck(_candidate_ref):
+            if not pulse_id:
+                self.log(f"Skip pulse without id: {candidate_ref.title}")
+                return IngestionOutcome("skip", "missing external id")
+            if state.has_pulse(pulse_id):
+                self.log(f"Skip state: {candidate_ref.title}")
+                return IngestionOutcome("skip", "already processed")
+            return None
+
+        def tlp(candidate):
+            action, reason = self.candidate_tlp_decision(candidate)
+            return IngestionOutcome(action, reason)
+
+        def policy(candidate):
+            action, reason = self.candidate_policy_decision(candidate)
+            return IngestionOutcome(action, reason)
+
+        def record_decision(ref, candidate, outcome):
+            if outcome.action == "dry_run":
+                self.log(
+                    f"Dry-run: {candidate.name} score={candidate.score} "
+                    f"reason={outcome.reason}"
+                )
             self.record_decision(
                 query,
-                candidate_ref,
-                action="skip",
-                reason="missing external id",
-            )
-            return "skip"
-
-        if state.has_pulse(pulse_id):
-            self.log(f"Skip state: {candidate_ref.title}")
-            self.record_decision(
-                query,
-                candidate_ref,
-                action="skip",
-                reason="already processed",
-            )
-            return "skip"
-
-        candidate = self.enrich_candidate(query, candidate_ref)
-        if not candidate:
-            self.record_decision(
-                query,
-                candidate_ref,
-                action="skip",
-                reason="enrichment failed",
-            )
-            return "skip"
-
-        action, reason = self.candidate_tlp_decision(candidate)
-        if action != "ingest":
-            self.record_decision(query, candidate_ref, action, reason, candidate)
-            return action
-
-        candidate = self.apply_contextual_scoring(candidate_ref, candidate)
-        action, reason = self.candidate_policy_decision(candidate)
-        if action != "ingest":
-            self.record_decision(query, candidate_ref, action, reason, candidate)
-            return action
-
-        candidate = self.apply_indicator_type_filter(query, candidate_ref, candidate)
-        if not candidate:
-            return "skip"
-
-        candidate = self.apply_artifact_dedup(query, candidate_ref, candidate)
-        if not candidate:
-            return "skip"
-
-        if getattr(self.settings, "dry_run", False):
-            self.log(
-                f"Dry-run: {candidate.name} score={candidate.score} "
-                f"reason={reason}"
-            )
-            self.record_decision(
-                query,
-                candidate_ref,
-                action="dry_run",
-                reason=reason,
+                ref,
+                action=outcome.action,
+                reason=outcome.reason,
                 candidate=candidate,
             )
-            return "dry_run"
 
-        ingest_result = self.ingest_candidate(candidate_ref, candidate, reason)
-        if not ingest_result:
-            self.record_decision(
-                query,
-                candidate_ref,
-                action="error",
-                reason="export failed",
-                candidate=candidate,
-            )
-            return "error"
-
-        self.mark_artifacts(candidate_ref, candidate)
-        state.mark_pulse(pulse_id)
-        self.record_decision(query, candidate_ref, "ingest", reason, candidate)
-        if isinstance(ingest_result, dict):
-            self.mark_exported_graph_plan(candidate_ref, candidate, ingest_result)
-        return "ingest"
+        return IngestionOperations(
+            precheck=precheck,
+            enrich=lambda ref: self.enrich_candidate(query, ref),
+            tlp=tlp,
+            score=lambda candidate: self.apply_contextual_scoring(
+                candidate_ref, candidate
+            ),
+            policy=policy,
+            indicator_filter=self.indicator_filter_operation,
+            artifact_dedup=lambda candidate: self.artifact_dedup_operation(
+                candidate_ref, candidate
+            ),
+            export=self.ingest_candidate,
+            mark_artifacts=lambda candidate: self.mark_artifacts(
+                candidate_ref, candidate
+            ),
+            checkpoint=lambda _candidate: state.mark_pulse(pulse_id),
+            record_decision=record_decision,
+            mark_graph=self.mark_exported_graph_plan,
+            dry_run=bool(getattr(self.settings, "dry_run", False)),
+        )
 
     def normalize_feed_candidate(self, pulse):
         if hasattr(pulse, "external_id") and hasattr(pulse, "raw"):
@@ -572,8 +550,22 @@ class OTXProcessor:
             self.log(f"Quarantine repository failed: {title} error={exc}")
 
     def apply_artifact_dedup(self, query, candidate_ref, candidate):
+        filtered_candidate, reason = self.artifact_dedup_operation(
+            candidate_ref, candidate
+        )
+        if filtered_candidate is None:
+            self.record_decision(
+                query,
+                candidate_ref,
+                action="skip",
+                reason=reason,
+                candidate=candidate,
+            )
+        return filtered_candidate
+
+    def artifact_dedup_operation(self, candidate_ref, candidate):
         if not self.artifact_dedup:
-            return candidate
+            return candidate, ""
 
         indicators, duplicate_count = self.artifact_dedup.filter_new_indicators(
             candidate.indicators
@@ -583,56 +575,60 @@ class OTXProcessor:
                 f"Artifact dedup: {candidate.name} duplicates={duplicate_count}"
             )
         if not indicators:
+            return None, "all indicators already known"
+        if len(indicators) == len(candidate.indicators):
+            return candidate, ""
+        return (
+            PulseCandidate(
+                pulse=candidate.pulse,
+                name=candidate.name,
+                description=candidate.description,
+                indicators=indicators,
+                ioc_count=len(indicators),
+                age=candidate.age,
+                score=candidate.score,
+                score_details=candidate.score_details,
+            ),
+            "",
+        )
+
+    def apply_indicator_type_filter(self, query, candidate_ref, candidate):
+        filtered_candidate, reason = self.indicator_filter_operation(candidate)
+        if filtered_candidate is None:
             self.record_decision(
                 query,
                 candidate_ref,
                 action="skip",
-                reason="all indicators already known",
+                reason=reason,
                 candidate=candidate,
             )
-            return None
-        if len(indicators) == len(candidate.indicators):
-            return candidate
-        return PulseCandidate(
-            pulse=candidate.pulse,
-            name=candidate.name,
-            description=candidate.description,
-            indicators=indicators,
-            ioc_count=len(indicators),
-            age=candidate.age,
-            score=candidate.score,
-            score_details=candidate.score_details,
-        )
+        return filtered_candidate
 
-    def apply_indicator_type_filter(self, query, candidate_ref, candidate):
+    def indicator_filter_operation(self, candidate):
         indicators, dropped_count = filter_indicators_by_type(
             candidate.indicators,
             getattr(self.settings, "allowed_indicator_types", []),
         )
         if not dropped_count:
-            return candidate
+            return candidate, ""
         self.log(
             f"Indicator type filter: {candidate.name} dropped={dropped_count} "
             f"kept={len(indicators)}"
         )
         if not indicators:
-            self.record_decision(
-                query,
-                candidate_ref,
-                action="skip",
-                reason="all indicators disallowed by type",
-                candidate=candidate,
-            )
-            return None
-        return PulseCandidate(
-            pulse=candidate.pulse,
-            name=candidate.name,
-            description=candidate.description,
-            indicators=indicators,
-            ioc_count=len(indicators),
-            age=candidate.age,
-            score=candidate.score,
-            score_details=candidate.score_details,
+            return None, "all indicators disallowed by type"
+        return (
+            PulseCandidate(
+                pulse=candidate.pulse,
+                name=candidate.name,
+                description=candidate.description,
+                indicators=indicators,
+                ioc_count=len(indicators),
+                age=candidate.age,
+                score=candidate.score,
+                score_details=candidate.score_details,
+            ),
+            "",
         )
 
     def mark_artifacts(self, candidate_ref, candidate):
