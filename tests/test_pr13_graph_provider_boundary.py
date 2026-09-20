@@ -107,7 +107,14 @@ assert legacy_dedup.CompositeArtifactDeduplication is canonical_dedup.CompositeA
     @staticmethod
     def _assert_subprocess(code: str):
         env = os.environ.copy()
-        env["PYTHONPATH"] = f"{ROOT / 'src'};{ROOT}"
+        paths = [
+            str(ROOT / "src"),
+            str(ROOT),
+        ]
+        existing_pythonpath = env.get("PYTHONPATH")
+        if existing_pythonpath:
+            paths.append(existing_pythonpath)
+        env["PYTHONPATH"] = os.pathsep.join(paths)
         subprocess.run(
             [sys.executable, "-c", code],
             cwd=ROOT,
