@@ -1,16 +1,12 @@
 import json
 import os
-from collections.abc import Mapping
-
 from core.atomic_io import write_json_atomic
 from core.decision_audit import utc_now
 from narrowcti.domain.graph.deduplication import (
     action_deduplication,
-    candidate_summary,
     clean_string,
     mapping_from,
     plan_actions,
-    source_sighting_key,
     upsert_graph_record,
 )
 
