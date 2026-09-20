@@ -185,6 +185,7 @@ class ProcessorTests(unittest.TestCase):
 
     def test_process_pulse_skips_missing_id(self):
         logs = []
+        records = []
         otx_client = SimpleNamespace(
             enrich_pulse=lambda pulse_id: self.fail("enrich should not be called")
         )
@@ -196,15 +197,20 @@ class ProcessorTests(unittest.TestCase):
             otx_client=otx_client,
             api_client=None,
             logger=logs.append,
+            decision_audit=SimpleNamespace(record=records.append),
         )
 
         processed = processor.process_pulse("lummac2", {"name": "No ID"}, state)
 
         self.assertFalse(processed)
         self.assertIn("Skip pulse without id: No ID", logs)
+        self.assertEqual(1, len(records))
+        self.assertEqual("skip", records[0].action)
+        self.assertEqual("missing external id", records[0].reason)
 
     def test_process_pulse_skips_failed_enrich(self):
         logs = []
+        records = []
         otx_client = SimpleNamespace(enrich_pulse=lambda pulse_id: None)
         state = SimpleNamespace(
             has_pulse=lambda pulse_id: False,
@@ -215,6 +221,7 @@ class ProcessorTests(unittest.TestCase):
             otx_client=otx_client,
             api_client=None,
             logger=logs.append,
+            decision_audit=SimpleNamespace(record=records.append),
         )
 
         processed = processor.process_pulse(
@@ -225,6 +232,36 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertFalse(processed)
         self.assertIn("Skip enrich failed: Search result", logs)
+        self.assertEqual(1, len(records))
+        self.assertEqual("enrichment failed", records[0].reason)
+
+    def test_process_pulse_skips_already_processed_with_one_decision(self):
+        records = []
+        calls = []
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: calls.append(pulse_id) or True,
+            mark_pulse=lambda pulse_id: self.fail("state should not be marked"),
+        )
+        processor = OTXProcessor(
+            self.settings(),
+            otx_client=SimpleNamespace(
+                enrich_pulse=lambda pulse_id: self.fail("enrich should not be called")
+            ),
+            api_client=None,
+            logger=lambda message: None,
+            decision_audit=SimpleNamespace(record=records.append),
+        )
+
+        processed = processor.process_pulse(
+            "lummac2",
+            {"id": "pulse-1", "name": "Search result"},
+            state,
+        )
+
+        self.assertFalse(processed)
+        self.assertEqual(["pulse-1"], calls)
+        self.assertEqual(1, len(records))
+        self.assertEqual("already processed", records[0].reason)
 
     def test_evaluate_candidate_policy_logs_drop(self):
         logs = []
@@ -287,6 +324,7 @@ class ProcessorTests(unittest.TestCase):
         )
 
         self.assertFalse(processed)
+        self.assertEqual(1, len(records))
         self.assertEqual("drop", records[0].action)
         self.assertEqual("below minimum score", records[0].reason)
         self.assertEqual("alienvault:otx", records[0].source_key)
@@ -677,6 +715,7 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertEqual("quarantine", outcome)
         self.assertEqual([], marked)
+        self.assertEqual(1, len(records))
         self.assertEqual("quarantine", records[0].action)
         self.assertEqual("low score", records[0].reason)
         self.assertEqual(1, len(queued))
@@ -779,6 +818,7 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertFalse(processed)
         self.assertEqual([], marked)
+        self.assertEqual(1, len(records))
         self.assertEqual("drop", records[0].action)
         self.assertEqual("tlp not allowed: red", records[0].reason)
         contextual = records[0].metadata["contextual_scoring"]
@@ -797,6 +837,7 @@ class ProcessorTests(unittest.TestCase):
                 "name": "LummaC2 email pulse",
                 "description": "email only",
                 "created": "2099-01-01T00:00:00Z",
+                "author_name": "AlienVault Test",
                 "indicators": [{"type": "email", "indicator": "user@example.com"}],
             }
         )
@@ -823,8 +864,16 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertFalse(processed)
         self.assertEqual([], marked)
+        self.assertEqual(1, len(records))
         self.assertEqual("skip", records[0].action)
         self.assertEqual("all indicators disallowed by type", records[0].reason)
+        self.assertEqual("LummaC2 email pulse", records[0].title)
+        self.assertEqual(75, records[0].score)
+        self.assertEqual(0, records[0].age_days)
+        self.assertEqual(1, records[0].indicator_count)
+        self.assertEqual(
+            ["AlienVault Test"], records[0].metadata["otx_entities"]["authors"]
+        )
         self.assertIn(
             "Indicator type filter: LummaC2 email pulse dropped=1 kept=0",
             logs,
@@ -873,6 +922,7 @@ class ProcessorTests(unittest.TestCase):
         marked = []
         side_effects = []
         export_calls = []
+        records = []
         otx_client = SimpleNamespace(
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
@@ -893,8 +943,22 @@ class ProcessorTests(unittest.TestCase):
             mark_indicators=lambda *args, **kwargs: side_effects.append("artifact_mark")
             or 1
         )
+        graph_index = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": [],
+                "relationship_keys": [],
+                "matches": [],
+            },
+            mark_exported_plan=lambda *args, **kwargs: side_effects.append(
+                "graph_exported_plan"
+            )
+            or {"entities": 1, "relationships": 0},
+        )
 
-        def exporter(api_client, name, description, score, indicators, identity_name):
+        def exporter(
+            api_client, name, description, score, indicators, identity_name, **kwargs
+        ):
+            side_effects.append("export")
             export_calls.append(
                 {
                     "api_client": api_client,
@@ -907,13 +971,20 @@ class ProcessorTests(unittest.TestCase):
             )
             return len(indicators)
 
+        settings = self.settings()
+        settings.graph_export_mode = "export"
         processor = OTXProcessor(
-            self.settings(),
+            settings,
             otx_client=otx_client,
             api_client="api",
             logger=logs.append,
             exporter=exporter,
             artifact_dedup=artifact_dedup,
+            decision_audit=SimpleNamespace(
+                record=lambda record: side_effects.append("decision_record")
+                or records.append(record)
+            ),
+            graph_deduplication_index=graph_index,
         )
 
         processed = processor.process_pulse(
@@ -924,7 +995,17 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertTrue(processed)
         self.assertEqual(["pulse-1"], marked)
-        self.assertEqual(["artifact_mark", "source_checkpoint"], side_effects)
+        self.assertEqual(
+            [
+                "export",
+                "artifact_mark",
+                "source_checkpoint",
+                "decision_record",
+                "graph_exported_plan",
+            ],
+            side_effects,
+        )
+        self.assertEqual(1, len(records))
         self.assertEqual("LummaC2 fresh", export_calls[0]["name"])
         self.assertEqual("OTX AlienVault via NarrowCTI", export_calls[0]["identity_name"])
         self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)
@@ -932,6 +1013,7 @@ class ProcessorTests(unittest.TestCase):
     def test_process_pulse_does_not_mark_state_when_export_fails(self):
         logs = []
         marked = []
+        records = []
         otx_client = SimpleNamespace(
             enrich_pulse=lambda pulse_id: {
                 "name": "LummaC2 fresh",
@@ -954,6 +1036,7 @@ class ProcessorTests(unittest.TestCase):
             api_client="api",
             logger=logs.append,
             exporter=exporter,
+            decision_audit=SimpleNamespace(record=records.append),
         )
 
         processed = processor.process_pulse(
@@ -964,6 +1047,9 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertFalse(processed)
         self.assertEqual([], marked)
+        self.assertEqual(1, len(records))
+        self.assertEqual("error", records[0].action)
+        self.assertEqual("export failed", records[0].reason)
         self.assertIn(
             "Ingest failed: LummaC2 fresh error=OpenCTI unavailable",
             logs,
@@ -979,6 +1065,7 @@ class ProcessorTests(unittest.TestCase):
                 "name": "LummaC2 known pulse",
                 "description": "description",
                 "created": self.FRESH_CREATED,
+                "author_name": "AlienVault Test",
                 "indicators": [{"type": "domain", "indicator": "known.example"}],
             }
         )
@@ -1009,8 +1096,16 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertFalse(processed)
         self.assertEqual([], marked)
+        self.assertEqual(1, len(records))
         self.assertEqual("skip", records[0].action)
         self.assertEqual("all indicators already known", records[0].reason)
+        self.assertEqual("LummaC2 known pulse", records[0].title)
+        self.assertEqual(75, records[0].score)
+        self.assertEqual(0, records[0].age_days)
+        self.assertEqual(1, records[0].indicator_count)
+        self.assertEqual(
+            ["AlienVault Test"], records[0].metadata["otx_entities"]["authors"]
+        )
         self.assertIn("Artifact dedup: LummaC2 known pulse duplicates=1", logs)
     def test_process_pulse_dry_run_records_decision_without_export_or_state(self):
         records = []
@@ -1048,6 +1143,7 @@ class ProcessorTests(unittest.TestCase):
 
         self.assertFalse(processed)
         self.assertEqual([], marked)
+        self.assertEqual(1, len(records))
         self.assertEqual("dry_run", records[0].action)
         self.assertEqual("ok", records[0].reason)
         self.assertIn("scoring", records[0].metadata)
