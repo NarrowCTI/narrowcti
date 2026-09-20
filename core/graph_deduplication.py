@@ -174,5 +174,3 @@ class GraphDeduplicationIndex:
         if changed:
             save_graph_state(self.state_file, self.state)
         return added
-
-
