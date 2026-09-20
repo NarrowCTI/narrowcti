@@ -4,9 +4,11 @@ from core.atomic_io import write_json_atomic
 from core.decision_audit import utc_now
 from narrowcti.domain.graph.deduplication import (
     action_deduplication,
+    candidate_summary,  # noqa: F401 - historical core compatibility export
     clean_string,
     mapping_from,
     plan_actions,
+    source_sighting_key,  # noqa: F401 - historical core compatibility export
     upsert_graph_record,
 )
 
