@@ -1,24 +1,17 @@
-"""Minimal graph lookup/marking contract for promotion planning."""
+"""Compatibility surface for graph planning and provider contracts."""
 
 from collections.abc import Mapping
 from typing import Protocol, runtime_checkable
 
+from .graph_index import GraphIndex
+
 
 @runtime_checkable
-class GraphIndex(Protocol):
-    """Operations required by graph planning and successful export marking."""
+class GraphProvider(Protocol):
+    """Read-only graph capability consumed by current graph planning callers."""
 
     def known_keys_for_plan(self, plan: Mapping[str, object]) -> Mapping[str, object]:
         ...
 
-    def mark_exported_plan(
-        self,
-        plan: Mapping[str, object],
-        source_key: str = "",
-        external_id: str = "",
-        title: str = "",
-    ) -> Mapping[str, object]:
-        ...
 
-
-__all__ = ["GraphIndex"]
+__all__ = ["GraphIndex", "GraphProvider"]

@@ -13,7 +13,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-005](MIG-ADR-005.md) | Domain primitives | accepted for PR-05 |
 | [MIG-ADR-006](MIG-ADR-006.md) | Graph evidence boundary | accepted for W4 / PR-12 |
 | [MIG-ADR-007](MIG-ADR-007.md) | Candidate and promotion policy | proposed |
-| [MIG-ADR-008](MIG-ADR-008.md) | OpenCTI canonical lookup | proposed |
+| [MIG-ADR-008](MIG-ADR-008.md) | OpenCTI graph provider boundary | accepted for W4 / PR-13 |
 | [MIG-ADR-009](MIG-ADR-009.md) | STIX/export boundary | proposed |
 | [MIG-ADR-010](MIG-ADR-010.md) | Decision and audit record | proposed |
 | [MIG-ADR-011](MIG-ADR-011.md) | Quarantine/review boundary | accepted for PR-07 |
