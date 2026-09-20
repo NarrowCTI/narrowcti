@@ -313,9 +313,38 @@ class MISPProcessorTests(unittest.TestCase):
         processed = processor.process_event("tlp:green", candidate(), state)
 
         self.assertFalse(processed)
+        self.assertEqual(1, len(records))
         self.assertEqual("skip", records[0].action)
         self.assertEqual("already processed", records[0].reason)
         self.assertEqual("misp:misp", records[0].source_key)
+
+    def test_process_event_missing_external_id_short_circuits_before_state_and_enrich(self):
+        records = []
+        state = SimpleNamespace(
+            has_event=lambda event_id: self.fail("state should not be consulted"),
+            mark_event=lambda event_id: self.fail("checkpoint should not be reached"),
+        )
+        processor = MISPProcessor(
+            self.settings(),
+            misp_client=None,
+            api_client=None,
+            logger=lambda message: None,
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=SimpleNamespace(
+                source=MISP_TEST_SOURCE,
+                enrich=lambda event: self.fail("enrichment should not occur"),
+            ),
+        )
+
+        outcome = processor.process_event_outcome(
+            "tlp:green",
+            candidate(external_id=""),
+            state,
+        )
+
+        self.assertEqual("skip", outcome)
+        self.assertEqual(1, len(records))
+        self.assertEqual("missing external id", records[0].reason)
 
     def test_process_event_records_one_decision_when_enrichment_fails(self):
         records = []
@@ -1967,6 +1996,7 @@ class MISPProcessorTests(unittest.TestCase):
         outcome = processor.process_event_outcome("tlp:green", candidate(), state)
 
         self.assertEqual("skip", outcome)
+        self.assertEqual(1, len(records))
         self.assertEqual([], marked)
         self.assertEqual("skip", records[0].action)
         self.assertEqual("all indicators already known", records[0].reason)
@@ -2149,6 +2179,7 @@ class MISPProcessorTests(unittest.TestCase):
         outcome = processor.process_event_outcome("unrelated", candidate(), state)
 
         self.assertEqual("quarantine", outcome)
+        self.assertEqual(1, len(records))
         self.assertEqual([], marked)
         self.assertEqual("quarantine", records[0].action)
         self.assertEqual("low score", records[0].reason)
@@ -2203,6 +2234,7 @@ class MISPProcessorTests(unittest.TestCase):
         outcome = processor.process_event_outcome("tlp:green", candidate(), state)
 
         self.assertEqual("skip", outcome)
+        self.assertEqual(1, len(records))
         self.assertEqual([], marked)
         self.assertEqual("skip", records[0].action)
         self.assertEqual("all indicators disallowed by type", records[0].reason)

@@ -110,6 +110,7 @@ class IngestionPipelineTests(unittest.TestCase):
         result = run_candidate("candidate-1", operations)
 
         self.assertEqual(IngestionOutcome("skip", "already processed"), result)
+        self.assertEqual(1, len(decisions))
         self.assertEqual(["decision"], calls)
         self.assertEqual("already processed", decisions[0][2].reason)
 
@@ -130,6 +131,7 @@ class IngestionPipelineTests(unittest.TestCase):
         result = run_candidate("candidate-1", operations)
 
         self.assertEqual(IngestionOutcome("skip", "indicator filtered"), result)
+        self.assertEqual(1, len(decisions))
         self.assertIs(candidate, decisions[0][1])
         self.assertNotIn("artifact_dedup", calls)
         self.assertNotIn("export", calls)
@@ -149,6 +151,7 @@ class IngestionPipelineTests(unittest.TestCase):
         result = run_candidate("candidate-1", operations)
 
         self.assertEqual(IngestionOutcome("skip", "all indicators already known"), result)
+        self.assertEqual(1, len(decisions))
         self.assertIs(candidate, decisions[0][1])
         self.assertNotIn("export", calls)
         self.assertNotIn("artifact_mark", calls)
