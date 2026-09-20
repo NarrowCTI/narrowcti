@@ -40,23 +40,25 @@ def run_candidate(candidate_ref: Any, operations: IngestionOperations) -> Ingest
         return _record(operations, candidate_ref, candidate, policy)
     current_reason = policy.reason
 
-    candidate, filter_reason = operations.indicator_filter(candidate)
-    if candidate is None:
+    filtered_candidate, filter_reason = operations.indicator_filter(candidate)
+    if filtered_candidate is None:
         return _record(
             operations,
             candidate_ref,
             candidate,
             IngestionOutcome("skip", filter_reason),
         )
+    candidate = filtered_candidate
 
-    candidate, dedup_reason = operations.artifact_dedup(candidate)
-    if candidate is None:
+    dedup_candidate, dedup_reason = operations.artifact_dedup(candidate)
+    if dedup_candidate is None:
         return _record(
             operations,
             candidate_ref,
             candidate,
             IngestionOutcome("skip", dedup_reason),
         )
+    candidate = dedup_candidate
     if dedup_reason:
         current_reason = dedup_reason
 

@@ -38,6 +38,8 @@ from core.tlp import tlp_is_allowed
 from exporters.opencti import send_bundle
 from exporters.stix_builder import build_graph_report_bundle
 
+from narrowcti.application.ingestion import IngestionOutcome, run_candidate
+from narrowcti.application.ingestion.contracts import IngestionOperations
 from narrowcti.adapters.sources.misp._common import compact_mapping
 from narrowcti.adapters.sources.misp.context import extract_misp_context
 from narrowcti.adapters.sources.misp.detection_rules import (
@@ -472,90 +474,72 @@ class MISPProcessor:
 
     def process_event_outcome(self, query, event, state):
         candidate_ref = self.normalize_feed_candidate(event)
+        operations = self.build_misp_ingestion_operations(query, candidate_ref, state)
+        return run_candidate(candidate_ref, operations).action
+
+    def build_misp_ingestion_operations(self, query, candidate_ref, state):
         event_id = candidate_ref.external_id
 
-        if not event_id:
-            self.log(f"Skip MISP event without id: {candidate_ref.title}")
+        def precheck(ref):
+            if not ref.external_id:
+                self.log(f"Skip MISP event without id: {ref.title}")
+                return IngestionOutcome("skip", "missing external id")
+
+            if state.has_event(ref.external_id):
+                self.log(f"Skip MISP state: {ref.title}")
+                return IngestionOutcome("skip", "already processed")
+
+            return None
+
+        def tlp(candidate):
+            action, reason = self.candidate_tlp_decision(candidate)
+            return IngestionOutcome(action, reason)
+
+        def policy(candidate):
+            action, reason = self.candidate_policy_decision(candidate)
+            return IngestionOutcome(action, reason)
+
+        def mark_artifacts(candidate):
+            self.mark_artifacts(candidate_ref, candidate)
+
+        def checkpoint(_candidate):
+            state.mark_event(event_id)
+
+        def record_decision(ref, candidate, outcome):
+            if outcome.action == "dry_run":
+                self.log(
+                    f"MISP dry-run: {candidate.name} score={candidate.score} "
+                    f"reason={outcome.reason}"
+                )
             self.record_decision(
                 query,
+                ref,
+                outcome.action,
+                outcome.reason,
+                candidate,
+            )
+
+        return IngestionOperations(
+            precheck=precheck,
+            enrich=lambda ref: self.enrich_candidate(query, ref),
+            tlp=tlp,
+            score=lambda candidate: self.apply_contextual_scoring(
                 candidate_ref,
-                action="skip",
-                reason="missing external id",
-            )
-            return "skip"
-
-        if state.has_event(event_id):
-            self.log(f"Skip MISP state: {candidate_ref.title}")
-            self.record_decision(
-                query,
+                candidate,
+            ),
+            policy=policy,
+            indicator_filter=self.indicator_filter_operation,
+            artifact_dedup=lambda candidate: self.artifact_dedup_operation(
                 candidate_ref,
-                action="skip",
-                reason="already processed",
-            )
-            return "skip"
-
-        candidate = self.enrich_candidate(query, candidate_ref)
-        if not candidate:
-            self.record_decision(
-                query,
-                candidate_ref,
-                action="skip",
-                reason="enrichment failed",
-            )
-            return "skip"
-
-        action, reason = self.candidate_tlp_decision(candidate)
-        if action != "ingest":
-            self.record_decision(query, candidate_ref, action, reason, candidate)
-            return action
-
-        candidate = self.apply_contextual_scoring(candidate_ref, candidate)
-        action, reason = self.candidate_policy_decision(candidate)
-        if action != "ingest":
-            self.record_decision(query, candidate_ref, action, reason, candidate)
-            return action
-
-        candidate = self.apply_indicator_type_filter(query, candidate_ref, candidate)
-        if not candidate:
-            return "skip"
-
-        candidate = self.apply_artifact_dedup(query, candidate_ref, candidate)
-        if not candidate:
-            return "skip"
-        if self.is_graph_replay_only(candidate):
-            reason = "all indicators already known; graph replay only"
-
-        if self.settings.dry_run:
-            self.log(
-                f"MISP dry-run: {candidate.name} score={candidate.score} "
-                f"reason={reason}"
-            )
-            self.record_decision(
-                query,
-                candidate_ref,
-                action="dry_run",
-                reason=reason,
-                candidate=candidate,
-            )
-            return "dry_run"
-
-        ingest_result = self.ingest_candidate(candidate_ref, candidate, reason)
-        if not ingest_result:
-            self.record_decision(
-                query,
-                candidate_ref,
-                action="error",
-                reason="export failed",
-                candidate=candidate,
-            )
-            return "error"
-
-        self.mark_artifacts(candidate_ref, candidate)
-        state.mark_event(event_id)
-        self.record_decision(query, candidate_ref, "ingest", reason, candidate)
-        if isinstance(ingest_result, dict):
-            self.mark_exported_graph_plan(candidate_ref, candidate, ingest_result)
-        return "ingest"
+                candidate,
+            ),
+            export=self.ingest_candidate,
+            mark_artifacts=mark_artifacts,
+            checkpoint=checkpoint,
+            record_decision=record_decision,
+            mark_graph=self.mark_exported_graph_plan,
+            dry_run=bool(getattr(self.settings, "dry_run", False)),
+        )
 
     def normalize_feed_candidate(self, event):
         if hasattr(event, "external_id") and hasattr(event, "raw"):
@@ -726,9 +710,9 @@ class MISPProcessor:
         except Exception as exc:
             self.log(f"MISP quarantine repository failed: {title} error={exc}")
 
-    def apply_artifact_dedup(self, query, candidate_ref, candidate):
+    def artifact_dedup_operation(self, candidate_ref, candidate):
         if not self.artifact_dedup:
-            return candidate
+            return candidate, ""
 
         indicators, duplicate_count = self.artifact_dedup.filter_new_indicators(
             candidate.indicators
@@ -743,27 +727,38 @@ class MISPProcessor:
                 candidate,
             )
             if replay_candidate:
-                return replay_candidate
+                return replay_candidate, "all indicators already known; graph replay only"
+            return None, "all indicators already known"
+        if len(indicators) == len(candidate.indicators):
+            return candidate, ""
+        return (
+            MISPEventCandidate(
+                event=candidate.event,
+                name=candidate.name,
+                description=candidate.description,
+                indicators=indicators,
+                ioc_count=len(indicators),
+                age=candidate.age,
+                score=candidate.score,
+                score_details=candidate.score_details,
+            ),
+            "",
+        )
+
+    def apply_artifact_dedup(self, query, candidate_ref, candidate):
+        dedup_candidate, reason = self.artifact_dedup_operation(
+            candidate_ref,
+            candidate,
+        )
+        if dedup_candidate is None:
             self.record_decision(
                 query,
                 candidate_ref,
                 action="skip",
-                reason="all indicators already known",
+                reason=reason,
                 candidate=candidate,
             )
-            return None
-        if len(indicators) == len(candidate.indicators):
-            return candidate
-        return MISPEventCandidate(
-            event=candidate.event,
-            name=candidate.name,
-            description=candidate.description,
-            indicators=indicators,
-            ioc_count=len(indicators),
-            age=candidate.age,
-            score=candidate.score,
-            score_details=candidate.score_details,
-        )
+        return dedup_candidate
 
     def artifact_dedup_graph_replay_candidate(self, candidate_ref, candidate):
         if not self.graph_replay_on_artifact_dedup_enabled():
@@ -823,36 +818,44 @@ class MISPProcessor:
         controls = compact_mapping(candidate.event.get("narrowcti_controls"))
         return bool(controls.get("graph_replay_only"))
 
-    def apply_indicator_type_filter(self, query, candidate_ref, candidate):
+    def indicator_filter_operation(self, candidate):
         indicators, dropped_count = filter_indicators_by_type(
             candidate.indicators,
             getattr(self.settings, "allowed_indicator_types", []),
         )
         if not dropped_count:
-            return candidate
+            return candidate, ""
         self.log(
             f"MISP indicator type filter: {candidate.name} "
             f"dropped={dropped_count} kept={len(indicators)}"
         )
         if not indicators:
+            return None, "all indicators disallowed by type"
+        return (
+            MISPEventCandidate(
+                event=candidate.event,
+                name=candidate.name,
+                description=candidate.description,
+                indicators=indicators,
+                ioc_count=len(indicators),
+                age=candidate.age,
+                score=candidate.score,
+                score_details=candidate.score_details,
+            ),
+            "",
+        )
+
+    def apply_indicator_type_filter(self, query, candidate_ref, candidate):
+        filtered_candidate, reason = self.indicator_filter_operation(candidate)
+        if filtered_candidate is None:
             self.record_decision(
                 query,
                 candidate_ref,
                 action="skip",
-                reason="all indicators disallowed by type",
+                reason=reason,
                 candidate=candidate,
             )
-            return None
-        return MISPEventCandidate(
-            event=candidate.event,
-            name=candidate.name,
-            description=candidate.description,
-            indicators=indicators,
-            ioc_count=len(indicators),
-            age=candidate.age,
-            score=candidate.score,
-            score_details=candidate.score_details,
-        )
+        return filtered_candidate
 
     def mark_artifacts(self, candidate_ref, candidate):
         if not self.artifact_dedup:

@@ -110,17 +110,20 @@ class IngestionPipelineTests(unittest.TestCase):
         result = run_candidate("candidate-1", operations)
 
         self.assertEqual(IngestionOutcome("skip", "already processed"), result)
+        self.assertEqual(1, len(decisions))
         self.assertEqual(["decision"], calls)
         self.assertEqual("already processed", decisions[0][2].reason)
 
     def test_indicator_filter_skip_is_terminal(self):
         calls = []
-        operations, _ = self.operations(
+        candidate = {"id": "candidate-before-filter"}
+        operations, decisions = self.operations(
             calls,
         )
         operations = IngestionOperations(
             **{
                 **operations.__dict__,
+                "enrich": lambda ref: candidate,
                 "indicator_filter": lambda candidate: (None, "indicator filtered"),
             }
         )
@@ -128,15 +131,19 @@ class IngestionPipelineTests(unittest.TestCase):
         result = run_candidate("candidate-1", operations)
 
         self.assertEqual(IngestionOutcome("skip", "indicator filtered"), result)
+        self.assertEqual(1, len(decisions))
+        self.assertIs(candidate, decisions[0][1])
         self.assertNotIn("artifact_dedup", calls)
         self.assertNotIn("export", calls)
 
     def test_artifact_dedup_skip_is_terminal(self):
         calls = []
-        operations, _ = self.operations(calls)
+        candidate = {"id": "candidate-before-dedup"}
+        operations, decisions = self.operations(calls)
         operations = IngestionOperations(
             **{
                 **operations.__dict__,
+                "enrich": lambda ref: candidate,
                 "artifact_dedup": lambda candidate: (None, "all indicators already known"),
             }
         )
@@ -144,6 +151,8 @@ class IngestionPipelineTests(unittest.TestCase):
         result = run_candidate("candidate-1", operations)
 
         self.assertEqual(IngestionOutcome("skip", "all indicators already known"), result)
+        self.assertEqual(1, len(decisions))
+        self.assertIs(candidate, decisions[0][1])
         self.assertNotIn("export", calls)
         self.assertNotIn("artifact_mark", calls)
         self.assertNotIn("checkpoint", calls)

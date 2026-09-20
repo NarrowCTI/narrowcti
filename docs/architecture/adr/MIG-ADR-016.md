@@ -30,6 +30,13 @@
   and adopted incrementally. Existing MISP and OTX runtime behavior remains
   unchanged in PR-08, while PR-10 and PR-11 own runtime adoption after the
   source-specific decomposition work.
+- PR-10 adoption addendum: MISP candidate-level ordering delegates to
+  `application.ingestion`; query/run ownership remains in MISP and the
+  source-specific operations remain in the MISP composition root. A source
+  operation may be audit-free while still logging or planning source-specific
+  work, and may remove a candidate from the forward flow by returning `None`.
+  The application records terminal outcomes with the last valid candidate as
+  decision context, preserving title, score, age, indicator count and metadata.
 - Dependencies: Current MISP/OTX pipeline characterization, MIG-ADR-005 and
   MIG-ADR-014.
 - Related ADRs: MIG-ADR-004, MIG-ADR-010, MIG-ADR-011 and MIG-ADR-015.

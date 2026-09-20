@@ -313,9 +313,95 @@ class MISPProcessorTests(unittest.TestCase):
         processed = processor.process_event("tlp:green", candidate(), state)
 
         self.assertFalse(processed)
+        self.assertEqual(1, len(records))
         self.assertEqual("skip", records[0].action)
         self.assertEqual("already processed", records[0].reason)
         self.assertEqual("misp:misp", records[0].source_key)
+
+    def test_process_event_missing_external_id_short_circuits_before_state_and_enrich(self):
+        records = []
+        state = SimpleNamespace(
+            has_event=lambda event_id: self.fail("state should not be consulted"),
+            mark_event=lambda event_id: self.fail("checkpoint should not be reached"),
+        )
+        processor = MISPProcessor(
+            self.settings(),
+            misp_client=None,
+            api_client=None,
+            logger=lambda message: None,
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=SimpleNamespace(
+                source=MISP_TEST_SOURCE,
+                enrich=lambda event: self.fail("enrichment should not occur"),
+            ),
+        )
+
+        outcome = processor.process_event_outcome(
+            "tlp:green",
+            candidate(external_id=""),
+            state,
+        )
+
+        self.assertEqual("skip", outcome)
+        self.assertEqual(1, len(records))
+        self.assertEqual("missing external id", records[0].reason)
+
+    def test_process_event_records_one_decision_when_enrichment_fails(self):
+        records = []
+        state = SimpleNamespace(
+            has_event=lambda event_id: False,
+            mark_event=lambda event_id: self.fail("state should not be marked"),
+        )
+        processor = MISPProcessor(
+            self.settings(),
+            misp_client=None,
+            api_client=None,
+            logger=lambda message: None,
+            decision_audit=SimpleNamespace(record=records.append),
+            feed_adapter=self.adapter(enriched=None),
+        )
+
+        outcome = processor.process_event_outcome("tlp:green", candidate(), state)
+
+        self.assertEqual("skip", outcome)
+        self.assertEqual(1, len(records))
+        self.assertEqual("enrichment failed", records[0].reason)
+
+    def test_process_event_checkpoint_failure_skips_later_decision_and_graph_mark(self):
+        records = []
+        graph_marks = []
+        settings = self.settings()
+        settings.graph_export_mode = "export"
+        state = SimpleNamespace(
+            has_event=lambda event_id: False,
+            mark_event=lambda event_id: (_ for _ in ()).throw(
+                RuntimeError("checkpoint unavailable")
+            ),
+        )
+        graph_deduplication = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": [],
+                "relationship_keys": [],
+            },
+            mark_exported_plan=lambda *args, **kwargs: graph_marks.append(True),
+        )
+
+        processor = MISPProcessor(
+            settings,
+            misp_client=None,
+            api_client="api",
+            logger=lambda message: None,
+            exporter=lambda *args, **kwargs: {"exported": 1},
+            decision_audit=SimpleNamespace(record=records.append),
+            graph_deduplication_index=graph_deduplication,
+            feed_adapter=self.adapter(enriched=candidate(raw=enriched_event())),
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "checkpoint unavailable"):
+            processor.process_event_outcome("tlp:green", candidate(), state)
+
+        self.assertEqual([], records)
+        self.assertEqual([], graph_marks)
 
     def test_decision_metadata_prefers_enriched_provenance(self):
         candidate_ref = candidate(
@@ -1905,13 +1991,19 @@ class MISPProcessorTests(unittest.TestCase):
             feed_adapter=self.adapter(enriched=candidate(raw=enriched_event())),
             artifact_dedup=artifact_dedup,
         )
+        expected = processor.prepare_candidate("tlp:green", enriched_event())
 
         outcome = processor.process_event_outcome("tlp:green", candidate(), state)
 
         self.assertEqual("skip", outcome)
+        self.assertEqual(1, len(records))
         self.assertEqual([], marked)
         self.assertEqual("skip", records[0].action)
         self.assertEqual("all indicators already known", records[0].reason)
+        self.assertEqual(expected.name, records[0].title)
+        self.assertEqual(expected.score, records[0].score)
+        self.assertEqual(expected.age, records[0].age_days)
+        self.assertEqual(expected.ioc_count, records[0].indicator_count)
         self.assertIn("MISP artifact dedup: tlp green event duplicates=1", logs)
 
     def test_process_event_replays_graph_when_artifacts_are_known(self):
@@ -1919,6 +2011,7 @@ class MISPProcessorTests(unittest.TestCase):
         marked = []
         logs = []
         exports = []
+        graph_marks = []
         settings = self.settings()
         settings.graph_export_mode = "export"
         settings.graph_replay_on_artifact_dedup = True
@@ -1936,6 +2029,14 @@ class MISPProcessorTests(unittest.TestCase):
             mark_indicators=lambda indicators, **kwargs: self.fail(
                 "artifacts should not be marked during graph-only replay"
             ),
+        )
+        graph_deduplication = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": [],
+                "relationship_keys": [],
+            },
+            mark_exported_plan=lambda *args, **kwargs: graph_marks.append(True)
+            or {"entities": 1, "relationships": 1},
         )
         event = enriched_event(indicator_count=1)
         event["Galaxy"] = [
@@ -1973,6 +2074,7 @@ class MISPProcessorTests(unittest.TestCase):
             decision_audit=SimpleNamespace(record=records.append),
             feed_adapter=self.adapter(enriched=candidate(raw=event)),
             artifact_dedup=artifact_dedup,
+            graph_deduplication_index=graph_deduplication,
         )
 
         outcome = processor.process_event_outcome("tlp:green", candidate(), state)
@@ -1993,6 +2095,7 @@ class MISPProcessorTests(unittest.TestCase):
         )
         self.assertEqual(0, records[-1].indicator_count)
         self.assertTrue(records[-1].metadata["guardrails"]["graph_replay_only"])
+        self.assertEqual(1, len(graph_marks))
         self.assertIn(
             "MISP artifact dedup graph replay: tlp green event objects=2 relationships=2",
             logs,
@@ -2034,7 +2137,6 @@ class MISPProcessorTests(unittest.TestCase):
             decision_audit=SimpleNamespace(record=records.append),
             feed_adapter=self.adapter(enriched=candidate(raw=event)),
         )
-
         outcome = processor.process_event_outcome("tlp:any", candidate(), state)
 
         self.assertEqual("drop", outcome)
@@ -2077,6 +2179,7 @@ class MISPProcessorTests(unittest.TestCase):
         outcome = processor.process_event_outcome("unrelated", candidate(), state)
 
         self.assertEqual("quarantine", outcome)
+        self.assertEqual(1, len(records))
         self.assertEqual([], marked)
         self.assertEqual("quarantine", records[0].action)
         self.assertEqual("low score", records[0].reason)
@@ -2126,13 +2229,19 @@ class MISPProcessorTests(unittest.TestCase):
             decision_audit=SimpleNamespace(record=records.append),
             feed_adapter=self.adapter(enriched=candidate(raw=event)),
         )
+        expected = processor.prepare_candidate("tlp:green", event)
 
         outcome = processor.process_event_outcome("tlp:green", candidate(), state)
 
         self.assertEqual("skip", outcome)
+        self.assertEqual(1, len(records))
         self.assertEqual([], marked)
         self.assertEqual("skip", records[0].action)
         self.assertEqual("all indicators disallowed by type", records[0].reason)
+        self.assertEqual(expected.name, records[0].title)
+        self.assertEqual(expected.score, records[0].score)
+        self.assertEqual(expected.age, records[0].age_days)
+        self.assertEqual(expected.ioc_count, records[0].indicator_count)
         self.assertIn(
             "MISP indicator type filter: email only event dropped=1 kept=0",
             logs,
