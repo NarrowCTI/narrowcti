@@ -1010,6 +1010,287 @@ class ProcessorTests(unittest.TestCase):
         self.assertEqual("OTX AlienVault via NarrowCTI", export_calls[0]["identity_name"])
         self.assertIn("Ingest complete: LummaC2 fresh indicators=1", logs)
 
+    def test_process_pulse_continues_after_artifact_mark_failure(self):
+        logs = []
+        side_effects = []
+        records = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "LummaC2 fresh",
+                "description": "description",
+                "created": self.FRESH_CREATED,
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: side_effects.append("source_checkpoint"),
+        )
+
+        def mark_indicators(*args, **kwargs):
+            side_effects.append("artifact_mark")
+            raise RuntimeError("artifact index unavailable")
+
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators, **kwargs: (indicators, 0),
+            mark_indicators=mark_indicators,
+        )
+        graph_index = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": [],
+                "relationship_keys": [],
+                "matches": [],
+            },
+            mark_exported_plan=lambda *args, **kwargs: side_effects.append(
+                "graph_exported_plan"
+            )
+            or {"entities": 1, "relationships": 0},
+        )
+
+        def exporter(*args, **kwargs):
+            side_effects.append("export")
+            return 1
+
+        settings = self.settings()
+        settings.graph_export_mode = "export"
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client="api",
+            logger=logs.append,
+            exporter=exporter,
+            artifact_dedup=artifact_dedup,
+            decision_audit=SimpleNamespace(
+                record=lambda record: side_effects.append("decision_record")
+                or records.append(record)
+            ),
+            graph_deduplication_index=graph_index,
+        )
+
+        self.assertTrue(
+            processor.process_pulse(
+                "lummac2",
+                {"id": "pulse-1", "name": "Search result"},
+                state,
+            )
+        )
+        self.assertEqual(
+            [
+                "export",
+                "artifact_mark",
+                "source_checkpoint",
+                "decision_record",
+                "graph_exported_plan",
+            ],
+            side_effects,
+        )
+        self.assertEqual(1, len(records))
+        self.assertTrue(
+            any("Artifact dedup mark failed: LummaC2 fresh" in log for log in logs)
+        )
+
+    def test_process_pulse_propagates_checkpoint_failure_before_audit_or_graph(self):
+        logs = []
+        side_effects = []
+        records = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "LummaC2 fresh",
+                "description": "description",
+                "created": self.FRESH_CREATED,
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
+            }
+        )
+
+        def mark_pulse(pulse_id):
+            side_effects.append("source_checkpoint")
+            raise RuntimeError("checkpoint unavailable")
+
+        state = SimpleNamespace(has_pulse=lambda pulse_id: False, mark_pulse=mark_pulse)
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators, **kwargs: (indicators, 0),
+            mark_indicators=lambda *args, **kwargs: side_effects.append("artifact_mark")
+            or 1,
+        )
+        graph_index = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": [],
+                "relationship_keys": [],
+                "matches": [],
+            },
+            mark_exported_plan=lambda *args, **kwargs: side_effects.append(
+                "graph_exported_plan"
+            )
+            or {"entities": 1, "relationships": 0},
+        )
+
+        settings = self.settings()
+        settings.graph_export_mode = "export"
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client="api",
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: side_effects.append("export") or 1,
+            artifact_dedup=artifact_dedup,
+            decision_audit=SimpleNamespace(record=records.append),
+            graph_deduplication_index=graph_index,
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "checkpoint unavailable"):
+            processor.process_pulse(
+                "lummac2",
+                {"id": "pulse-1", "name": "Search result"},
+                state,
+            )
+
+        self.assertEqual(
+            ["export", "artifact_mark", "source_checkpoint"], side_effects
+        )
+        self.assertEqual([], records)
+
+    def test_process_pulse_continues_after_decision_audit_failure(self):
+        logs = []
+        side_effects = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "LummaC2 fresh",
+                "description": "description",
+                "created": self.FRESH_CREATED,
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: side_effects.append("source_checkpoint"),
+        )
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators, **kwargs: (indicators, 0),
+            mark_indicators=lambda *args, **kwargs: side_effects.append("artifact_mark")
+            or 1,
+        )
+        graph_index = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": [],
+                "relationship_keys": [],
+                "matches": [],
+            },
+            mark_exported_plan=lambda *args, **kwargs: side_effects.append(
+                "graph_exported_plan"
+            )
+            or {"entities": 1, "relationships": 0},
+        )
+
+        def audit_record(record):
+            side_effects.append("decision_record")
+            raise RuntimeError("audit unavailable")
+
+        settings = self.settings()
+        settings.graph_export_mode = "export"
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client="api",
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: side_effects.append("export") or 1,
+            artifact_dedup=artifact_dedup,
+            decision_audit=SimpleNamespace(record=audit_record),
+            graph_deduplication_index=graph_index,
+        )
+
+        self.assertTrue(
+            processor.process_pulse(
+                "lummac2",
+                {"id": "pulse-1", "name": "Search result"},
+                state,
+            )
+        )
+        self.assertEqual(
+            [
+                "export",
+                "artifact_mark",
+                "source_checkpoint",
+                "decision_record",
+                "graph_exported_plan",
+            ],
+            side_effects,
+        )
+        self.assertTrue(
+            any("Decision audit failed: LummaC2 fresh" in log for log in logs)
+        )
+
+    def test_process_pulse_continues_after_graph_mark_failure(self):
+        logs = []
+        side_effects = []
+        records = []
+        otx_client = SimpleNamespace(
+            enrich_pulse=lambda pulse_id: {
+                "name": "LummaC2 fresh",
+                "description": "description",
+                "created": self.FRESH_CREATED,
+                "indicators": [{"type": "domain", "indicator": "one.example"}],
+            }
+        )
+        state = SimpleNamespace(
+            has_pulse=lambda pulse_id: False,
+            mark_pulse=lambda pulse_id: side_effects.append("source_checkpoint"),
+        )
+        artifact_dedup = SimpleNamespace(
+            filter_new_indicators=lambda indicators, **kwargs: (indicators, 0),
+            mark_indicators=lambda *args, **kwargs: side_effects.append("artifact_mark")
+            or 1,
+        )
+
+        def mark_exported_plan(*args, **kwargs):
+            side_effects.append("graph_exported_plan")
+            raise RuntimeError("graph index unavailable")
+
+        graph_index = SimpleNamespace(
+            known_keys_for_plan=lambda plan: {
+                "entity_keys": [],
+                "relationship_keys": [],
+                "matches": [],
+            },
+            mark_exported_plan=mark_exported_plan,
+        )
+        settings = self.settings()
+        settings.graph_export_mode = "export"
+        processor = OTXProcessor(
+            settings,
+            otx_client=otx_client,
+            api_client="api",
+            logger=logs.append,
+            exporter=lambda *args, **kwargs: side_effects.append("export") or 1,
+            artifact_dedup=artifact_dedup,
+            decision_audit=SimpleNamespace(
+                record=lambda record: side_effects.append("decision_record")
+                or records.append(record)
+            ),
+            graph_deduplication_index=graph_index,
+        )
+
+        self.assertTrue(
+            processor.process_pulse(
+                "lummac2",
+                {"id": "pulse-1", "name": "Search result"},
+                state,
+            )
+        )
+        self.assertEqual(
+            [
+                "export",
+                "artifact_mark",
+                "source_checkpoint",
+                "decision_record",
+                "graph_exported_plan",
+            ],
+            side_effects,
+        )
+        self.assertEqual(1, len(records))
+        self.assertTrue(
+            any("Graph dedup mark failed: LummaC2 fresh" in log for log in logs)
+        )
+
     def test_process_pulse_does_not_mark_state_when_export_fails(self):
         logs = []
         marked = []
