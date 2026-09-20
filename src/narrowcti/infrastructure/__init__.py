@@ -1,0 +1,2 @@
+"""Concrete Community infrastructure composition."""
+
