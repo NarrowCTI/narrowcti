@@ -103,4 +103,5 @@ __all__ = [
     "INDICATOR_LOOKUP_QUERY",
     "OpenCTIArtifactLookup",
     "CompositeArtifactDeduplication",
+    "indicator_pattern",
 ]

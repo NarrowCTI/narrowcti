@@ -4,10 +4,12 @@ from narrowcti.adapters.opencti.deduplication import (
     INDICATOR_LOOKUP_QUERY,
     CompositeArtifactDeduplication,
     OpenCTIArtifactLookup,
+    indicator_pattern,
 )
 
 __all__ = [
     "INDICATOR_LOOKUP_QUERY",
     "CompositeArtifactDeduplication",
     "OpenCTIArtifactLookup",
+    "indicator_pattern",
 ]
