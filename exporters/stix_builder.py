@@ -13,7 +13,7 @@ from stix2 import (
     CustomObject,
     DomainName,
     EmailAddress,
-    ExtensionDefinition,
+    ExtensionDefinition,  # noqa: F401 - historical module attribute
     File,
     IPv4Address,
     IPv6Address,
@@ -25,7 +25,7 @@ from stix2 import (
     Malware,
     Note,
     Relationship,
-    Report,
+    Report,  # noqa: F401 - historical module attribute
     Sighting,
     ThreatActor,
     Tool,
@@ -34,6 +34,28 @@ from stix2 import (
 )
 from stix2.properties import StringProperty
 from stix2.registry import class_for_type
+
+from narrowcti.adapters.opencti.stix_profile import (
+    OPENCTI_CUSTOM_SDO_TYPES,
+    OPENCTI_EXTENSION_DEFINITION_ID,
+    opencti_extension_objects,
+)
+from narrowcti.adapters.stix.identifiers import (
+    GRAPH_OBJECT_ID_NAMESPACE,
+    deterministic_graph_object_id,
+    deterministic_identity_id,  # noqa: F401 - historical module attribute
+    deterministic_report_id,  # noqa: F401 - historical module attribute
+)
+from narrowcti.adapters.stix.patterns import (  # noqa: F401 - compatibility exports
+    escape_pattern_value,
+    indicator_pattern,
+)
+from narrowcti.adapters.stix.serializer import (
+    build_identity,
+    build_indicators,
+    build_report_bundle,  # noqa: F401 - compatibility export
+    build_stix_report,
+)
 
 
 def registered_custom_object(type_name, properties):
@@ -68,97 +90,8 @@ SEMANTIC_RELATIONSHIP_TYPES = {
     "targets",
     "uses",
 }
-REPORT_ID_NAMESPACE = "https://narrowcti.local/stix/report"
-IDENTITY_ID_NAMESPACE = "https://narrowcti.local/stix/identity"
-GRAPH_OBJECT_ID_NAMESPACE = "https://narrowcti.local/stix/graph-object"
-OPENCTI_EXTENSION_DEFINITION_ID = (
-    f"extension-definition--{uuid5(NAMESPACE_URL, 'opencti-extension-definition')}"
-)
-OPENCTI_CUSTOM_SDO_TYPES = {"channel", "event", "narrative"}
 DETECTION_RULE_INDICATOR_PATTERN_TYPES = {"sigma", "yara"}
 DETECTION_RULE_NOTE_PATTERN_TYPES = {"pcre", "snort", "suricata"}
-
-
-def escape_pattern_value(value):
-    return value.replace("\\", "\\\\").replace("'", "\\'")
-
-
-def indicator_pattern(raw_indicator):
-    value = raw_indicator.get("indicator")
-    indicator_type = raw_indicator.get("type", "").lower()
-
-    if not value:
-        return None
-
-    escaped = escape_pattern_value(value)
-    pattern_by_type = {
-        "domain": f"[domain-name:value = '{escaped}']",
-        "hostname": f"[domain-name:value = '{escaped}']",
-        "ipv4": f"[ipv4-addr:value = '{escaped}']",
-        "ipv6": f"[ipv6-addr:value = '{escaped}']",
-        "url": f"[url:value = '{escaped}']",
-        "email": f"[email-addr:value = '{escaped}']",
-        "filehash-md5": f"[file:hashes.MD5 = '{escaped}']",
-        "filehash-sha1": f"[file:hashes.SHA1 = '{escaped}']",
-        "filehash-sha256": f"[file:hashes.SHA256 = '{escaped}']",
-    }
-    return pattern_by_type.get(indicator_type)
-
-
-def build_indicators(raw_indicators, identity_id, score, valid_from):
-    objects = []
-    seen_patterns = set()
-
-    for raw_indicator in raw_indicators:
-        pattern = indicator_pattern(raw_indicator)
-        if not pattern or pattern in seen_patterns:
-            continue
-
-        seen_patterns.add(pattern)
-        value = raw_indicator.get("indicator")
-        objects.append(
-            Indicator(
-                name=value,
-                pattern=pattern,
-                pattern_type="stix",
-                valid_from=valid_from,
-                confidence=score,
-                created_by_ref=identity_id,
-            )
-        )
-
-    return objects
-
-
-def build_report_bundle(
-    name,
-    description,
-    score,
-    indicators=None,
-    identity_name="NarrowCTI Gateway",
-    published_at=None,
-):
-    now = datetime.now(timezone.utc)
-    publication_time = source_publication_time(published_at, now)
-    identity = build_identity(identity_name)
-    indicator_objects = build_indicators(
-        indicators or [], identity.id, score, publication_time
-    )
-    object_refs = [indicator.id for indicator in indicator_objects] or [identity.id]
-
-    report = build_stix_report(
-        name,
-        description,
-        score,
-        now,
-        identity.id,
-        object_refs,
-        source_date=published_at,
-        published=publication_time,
-    )
-
-    bundle = Bundle(objects=[identity, *indicator_objects, report], allow_custom=True)
-    return bundle, len(indicator_objects)
 
 
 def build_curated_report_bundle(
@@ -291,103 +224,6 @@ def build_graph_report_bundle(
         relationship_content,
     )
     return bundle, summary
-
-
-def build_stix_report(
-    name,
-    description,
-    score,
-    now,
-    identity_id,
-    object_refs,
-    source_date=None,
-    published=None,
-):
-    custom_properties = {}
-    if clean_string(source_date):
-        custom_properties["x_narrowcti_source_date"] = clean_string(source_date)
-    return Report(
-        id=deterministic_report_id(name, description),
-        name=name,
-        description=description or "",
-        report_types=["threat-report"],
-        confidence=score,
-        created=now,
-        modified=now,
-        published=published or now,
-        created_by_ref=identity_id,
-        object_refs=object_refs,
-        custom_properties=custom_properties,
-        allow_custom=True,
-    )
-
-
-def opencti_extension_objects(graph_objects, identity_id, now):
-    if not any(
-        stix_object_field(item, "type").lower() in OPENCTI_CUSTOM_SDO_TYPES
-        for item in graph_objects or []
-    ):
-        return []
-    return [
-        ExtensionDefinition(
-            id=OPENCTI_EXTENSION_DEFINITION_ID,
-            name="OpenCTI",
-            description="OpenCTI native custom SDO extension.",
-            created=now,
-            modified=now,
-            created_by_ref=identity_id,
-            schema="https://www.filigran.io/opencti/schema",
-            version="1.0",
-            extension_types=["new-sdo"],
-            allow_custom=True,
-        )
-    ]
-
-
-def build_identity(identity_name, identity_class="organization"):
-    return Identity(
-        id=deterministic_identity_id(identity_name, identity_class),
-        name=identity_name,
-        identity_class=identity_class,
-    )
-
-
-def deterministic_identity_id(name, identity_class="organization"):
-    material = "|".join(
-        (
-            IDENTITY_ID_NAMESPACE,
-            clean_string(identity_class).casefold() or "organization",
-            clean_string(name).casefold() or "unknown",
-        )
-    )
-    return f"identity--{uuid5(NAMESPACE_URL, material)}"
-
-
-def deterministic_graph_object_id(stix_object_type, name, value="", attributes=None):
-    attributes = attributes if isinstance(attributes, dict) else {}
-    object_type = clean_string(stix_object_type).lower()
-    identity_class = clean_string(attributes.get("identity_class")).casefold()
-    material = "|".join(
-        (
-            GRAPH_OBJECT_ID_NAMESPACE,
-            object_type,
-            identity_class,
-            clean_string(value or name).casefold(),
-            clean_string(name).casefold(),
-        )
-    )
-    return f"{object_type}--{uuid5(NAMESPACE_URL, material)}"
-
-
-def deterministic_report_id(name, description):
-    material = "|".join(
-        (
-            "narrowcti-report",
-            clean_string(name).casefold(),
-            clean_string(description).casefold(),
-        )
-    )
-    return f"report--{uuid5(NAMESPACE_URL, material)}"
 
 
 def indicator_object_ids(indicator_objects):

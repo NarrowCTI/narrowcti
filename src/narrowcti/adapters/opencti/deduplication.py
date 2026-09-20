@@ -1,4 +1,4 @@
-from exporters.stix_builder import indicator_pattern
+from narrowcti.adapters.stix.patterns import indicator_pattern
 
 
 INDICATOR_LOOKUP_QUERY = """
