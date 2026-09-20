@@ -37,6 +37,12 @@
   work, and may remove a candidate from the forward flow by returning `None`.
   The application records terminal outcomes with the last valid candidate as
   decision context, preserving title, score, age, indicator count and metadata.
+- PR-11 adoption addendum: OTX candidate-level ordering delegates to
+  `application.ingestion`; query/run ownership remains in OTX. OTX
+  normalization, enrichment, metadata, persistence and export remain
+  source-owned. OTX does not acquire MISP graph-replay behavior, and the
+  existing export, artifact-mark, checkpoint, decision-record and graph-plan
+  ordering is preserved.
 - Dependencies: Current MISP/OTX pipeline characterization, MIG-ADR-005 and
   MIG-ADR-014.
 - Related ADRs: MIG-ADR-004, MIG-ADR-010, MIG-ADR-011 and MIG-ADR-015.
