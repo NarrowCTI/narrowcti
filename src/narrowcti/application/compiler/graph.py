@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 
 from .contracts import CompilationResult, ObjectSemantics, RelationshipSemantics
 
@@ -21,6 +21,10 @@ def _candidate_key(candidate: Mapping[str, object], index: int) -> str:
 
 def compile_graph_semantics(
     candidates: Iterable[Mapping[str, object]],
+    *,
+    key_resolver: Callable[[Mapping[str, object], int], str] | None = None,
+    existing_reference_resolver: Callable[[Mapping[str, object]], str | None] | None = None,
+    deduplicate: bool = True,
 ) -> CompilationResult:
     """Compile accepted candidate mappings into semantic graph decisions.
 
@@ -38,8 +42,12 @@ def compile_graph_semantics(
         if not isinstance(candidate, Mapping):
             skipped.append(f"candidate:{index}")
             continue
-        key = _candidate_key(candidate, index)
-        if key in seen_keys:
+        key = (
+            key_resolver(candidate, index)
+            if key_resolver is not None
+            else _candidate_key(candidate, index)
+        )
+        if deduplicate and key in seen_keys:
             skipped.append(key)
             continue
         seen_keys.add(key)
@@ -51,7 +59,11 @@ def compile_graph_semantics(
                 name=_value(candidate, "display_name", "name", "value"),
                 value=_value(candidate, "value"),
                 attributes=dict(candidate.get("attributes") or {}),
-                existing_reference=_value(candidate, "existing_opencti_ref", "existing_ref") or None,
+                existing_reference=(
+                    existing_reference_resolver(candidate)
+                    if existing_reference_resolver is not None
+                    else _value(candidate, "existing_opencti_ref", "existing_ref") or None
+                ),
             )
         )
 

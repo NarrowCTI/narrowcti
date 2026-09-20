@@ -3,9 +3,8 @@ import sys
 
 from core.graph_export_plan import normalize_graph_export_mode
 from core.opencti_graph_lookup import filter_eq, first_node
-from exporters.stix_builder import (
+from narrowcti.adapters.opencti.graph_serializer import (
     build_curated_report_bundle,
-    build_report_bundle,
     detection_rule_indicator_compatible,
     detection_rule_labels,
     detection_rule_indicator_name,
@@ -13,6 +12,7 @@ from exporters.stix_builder import (
     graph_candidate_description,
     graph_description_hydration_requests,
 )
+from narrowcti.adapters.stix.serializer import build_report_bundle
 
 
 DESCRIPTION_READ_QUERY = """
@@ -894,4 +894,3 @@ def clean_list_values(*values):
             seen.add(key)
             cleaned.append(text)
     return cleaned
-
