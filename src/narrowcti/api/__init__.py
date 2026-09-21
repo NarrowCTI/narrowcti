@@ -1,0 +1,1 @@
+"""Canonical HTTP API boundaries."""

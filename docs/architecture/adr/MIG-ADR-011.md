@@ -12,3 +12,39 @@
 - Dependencies: Existing quarantine/review/export characterization, MIG-ADR-002, MIG-ADR-014 and MIG-ADR-015.
 - Related ADRs: MIG-ADR-007 and MIG-ADR-010.
 - Target Wave: W2 quarantine domain/repository boundary, with existing W5 review/API consumers preserved during compatibility.
+
+## PR-16 addendum — review service, API and persistence separation
+
+- Scope: W5 / PR-16 only. This addendum separates review application behavior,
+  API/authentication boundaries, CLI composition and local audit reading without
+  changing the quarantine domain, `QuarantineStore` port or local quarantine
+  repository contract.
+- Decision: canonical review code is owned by
+  `narrowcti.application.review`, `narrowcti.api.review`,
+  `narrowcti.cli.quarantine` and
+  `narrowcti.adapters.persistence.local.review_audit`. The application service
+  receives an injected export operation; API and CLI composition provide the
+  canonical OpenCTI exporter only for real execution. Dry-run remains usable
+  without an exporter callable.
+- Compatibility: the historical `gateway.review`,
+  `gateway.quarantine_export`, `gateway.review_api`,
+  `gateway.review_auth` and `gateway.quarantine` modules remain importable.
+  Their compatibility wrappers preserve constructor signatures, `from_paths`,
+  CLI output/argparse behavior, API status behavior and the historical default
+  OpenCTI exporter. No identity guarantee is introduced where adaptive
+  injection is required; pure authentication symbols and `ReviewSummary` keep
+  identity with their canonical owners where practical.
+- Audit: JSONL audit reading is a local adapter concern. Missing/empty files
+  return an empty list, UTF-8 BOM is accepted, event order is preserved and
+  JSON decoding errors retain their existing behavior. The application layer
+  receives audit events and only filters them; it does not discover paths or
+  perform filesystem I/O.
+- Side-effect order: successful real export remains export, artifact mark,
+  quarantine mark-exported and audit append in the existing order. Dry-run,
+  non-exportable, already-exported, empty-release, dedup-skip and export-error
+  branches retain their existing mutations and results.
+- Dependencies: MIG-ADR-011 remains the governing quarantine/review boundary;
+  this addendum does not make a new application port, OpenCTI exporter port or
+  DecisionRecord migration, and does not alter the `QuarantineStore` contract.
+- Deferred: DecisionRecord extraction, processor cutover, OpenCTI mutation
+  migration and broader application orchestration remain outside PR-16.
