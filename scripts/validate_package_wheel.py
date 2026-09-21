@@ -46,6 +46,13 @@ REQUIRED_MODULES = (
     "narrowcti/application/ingestion/pipeline.py",
     "narrowcti/application/ingestion/outcomes.py",
     "narrowcti/application/ingestion/contracts.py",
+    "narrowcti/application/review/__init__.py",
+    "narrowcti/application/review/service.py",
+    "narrowcti/application/review/export.py",
+    "narrowcti/api/__init__.py",
+    "narrowcti/api/review/__init__.py",
+    "narrowcti/api/review/app.py",
+    "narrowcti/api/review/auth.py",
     "narrowcti/adapters/sources/__init__.py",
     "narrowcti/adapters/sources/misp/__init__.py",
     "narrowcti/adapters/sources/misp/context.py",
@@ -90,6 +97,8 @@ REQUIRED_MODULES = (
     "narrowcti/adapters/opencti/client.py",
     "narrowcti/cli/__init__.py",
     "narrowcti/cli/gateway.py",
+    "narrowcti/cli/quarantine.py",
+    "narrowcti/adapters/persistence/local/review_audit.py",
 )
 
 
@@ -244,6 +253,17 @@ import narrowcti.adapters.sources.misp.entities as canonical_misp_entities
 import narrowcti.adapters.sources.misp.infrastructure as canonical_misp_infrastructure
 import narrowcti.adapters.sources.misp.detection_rules as canonical_misp_detection_rules
 import connectors.misp.processor as legacy_misp_processor
+import narrowcti.application.review.service as canonical_review_service
+import narrowcti.application.review.export as canonical_review_export
+import narrowcti.api.review.app as canonical_review_api
+import narrowcti.api.review.auth as canonical_review_auth
+import narrowcti.cli.quarantine as canonical_review_cli
+import narrowcti.adapters.persistence.local.review_audit as canonical_review_audit
+import gateway.review as legacy_review
+import gateway.quarantine_export as legacy_review_export
+import gateway.review_api as legacy_review_api
+import gateway.review_auth as legacy_review_auth
+import gateway.quarantine as legacy_review_cli
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
@@ -292,6 +312,15 @@ assert canonical_misp_entities.extract_misp_galaxies is not None
 assert canonical_misp_infrastructure.extract_misp_infrastructure is not None
 assert canonical_misp_detection_rules.extract_misp_detection_rules is not None
 assert legacy_misp_processor.sigma_rule_opencti_compatibility is canonical_misp_detection_rules.sigma_rule_opencti_compatibility
+assert legacy_review.ReviewSummary is canonical_review_service.ReviewSummary
+assert legacy_review_export.QuarantineExportResult is canonical_review_export.QuarantineExportResult
+assert legacy_review_api.ReviewApiSettings is canonical_review_api.ReviewApiSettings
+assert legacy_review_auth.ReviewPrincipal is canonical_review_auth.ReviewPrincipal
+assert legacy_review_auth.ReviewCredentialStore is canonical_review_auth.ReviewCredentialStore
+assert legacy_review_cli.main is canonical_review_cli.main
+assert canonical_review_audit.read_audit_events is not None
+assert canonical_review_service.AnalystReviewService is not legacy_review.AnalystReviewService
+assert canonical_review_export.QuarantineExporter is not legacy_review_export.QuarantineExporter
 assert legacy_graph_evidence.build_graph_evidence is domain_graph_evidence.build_graph_evidence
 assert legacy_graph_evidence.clamp_confidence is domain_graph_evidence.clamp_confidence
 assert legacy_graph_evidence.GRAPH_EVIDENCE_VERSION == domain_graph_evidence.GRAPH_EVIDENCE_VERSION
