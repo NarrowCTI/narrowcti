@@ -18,3 +18,7 @@ __all__ = [
     "ReviewCredentialStore", "ReviewPrincipal", "generate_token", "main",
     "normalize_credentials", "token_sha256",
 ]
+
+
+if __name__ == "__main__":
+    main()

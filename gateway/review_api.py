@@ -17,3 +17,7 @@ __all__ = [
     "load_review_api_settings", "default_opencti_client_factory",
     "build_export_dedup", "create_app", "main",
 ]
+
+
+if __name__ == "__main__":
+    main()
