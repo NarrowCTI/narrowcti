@@ -3,6 +3,7 @@
 from narrowcti.api.review.app import (
     DecisionRequest,
     PartialReleaseRequest,
+    ReviewStatus,
     ReviewApiSettings,
     build_export_dedup,
     create_app,
@@ -13,7 +14,7 @@ from narrowcti.api.review.app import (
 )
 
 __all__ = [
-    "ReviewApiSettings", "DecisionRequest", "PartialReleaseRequest", "env_bool",
+    "ReviewApiSettings", "ReviewStatus", "DecisionRequest", "PartialReleaseRequest", "env_bool",
     "load_review_api_settings", "default_opencti_client_factory",
     "build_export_dedup", "create_app", "main",
 ]

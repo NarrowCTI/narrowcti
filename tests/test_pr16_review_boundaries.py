@@ -1,23 +1,53 @@
 """PR-16 review boundary and compatibility characterization."""
 
 import ast
+import inspect
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
 from core.quarantine import QuarantineRecord, QuarantineRepository
+import gateway.quarantine_export as legacy_quarantine_export
+import gateway.review as legacy_review
+import gateway.review_api as legacy_review_api
 from gateway.review import AnalystReviewService as LegacyReviewService, ReviewSummary as LegacySummary
 from narrowcti.adapters.persistence.local.review_audit import read_audit_events
 from narrowcti.application.review.export import QuarantineExporter, QuarantineExportResult
 from narrowcti.application.review.service import AnalystReviewService, ReviewSummary
 from narrowcti.api.review.auth import ReviewCredentialStore, normalize_credentials, token_sha256
+from narrowcti.api.review.app import ReviewStatus
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class ReviewBoundaryTests(unittest.TestCase):
+    def test_review_status_is_preserved_as_canonical_symbol(self):
+        self.assertIs(legacy_review_api.ReviewStatus, ReviewStatus)
+
+    def test_legacy_quarantine_exporter_signature_is_preserved(self):
+        parameters = inspect.signature(legacy_quarantine_export.QuarantineExporter.__init__).parameters
+        self.assertEqual(
+            [
+                "self", "repository", "api_client", "exporter", "artifact_dedup",
+                "identity_name", "logger", "dry_run", "exported_by",
+            ],
+            list(parameters),
+        )
+        self.assertIs(parameters["exporter"].default, legacy_quarantine_export.send_bundle)
+
+    def test_legacy_review_export_signature_is_preserved(self):
+        parameters = inspect.signature(legacy_review.AnalystReviewService.export_released).parameters
+        self.assertEqual(
+            [
+                "self", "quarantine_id", "limit", "api_client", "artifact_dedup",
+                "identity_name", "logger", "dry_run", "exported_by",
+            ],
+            list(parameters),
+        )
+        self.assertNotIn("exporter", parameters)
+
     def test_pure_summary_and_audit_reader_compatibility(self):
         self.assertIs(LegacySummary, ReviewSummary)
         with tempfile.TemporaryDirectory() as tmpdir:

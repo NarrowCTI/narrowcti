@@ -21,5 +21,27 @@ class AnalystReviewService(_AnalystReviewService):
                    release_audit_file=release_audit_file, reviewer=reviewer,
                    require_reason=require_reason)
 
+    def export_released(
+        self,
+        quarantine_id="",
+        limit=0,
+        api_client=None,
+        artifact_dedup=None,
+        identity_name="NarrowCTI Gateway",
+        logger=None,
+        dry_run=True,
+        exported_by="gateway.quarantine",
+    ):
+        return super().export_released(
+            quarantine_id,
+            limit=limit,
+            api_client=api_client,
+            artifact_dedup=artifact_dedup,
+            identity_name=identity_name,
+            logger=logger,
+            dry_run=dry_run,
+            exported_by=exported_by,
+        )
+
 
 __all__ = ["AnalystReviewService", "ReviewSummary", "read_audit_events"]
