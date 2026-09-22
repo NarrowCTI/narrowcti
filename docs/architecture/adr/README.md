@@ -17,7 +17,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-009](MIG-ADR-009.md) | STIX/IR/compiler and OpenCTI export boundary | accepted for W4 / PR-14 |
 | [MIG-ADR-010](MIG-ADR-010.md) | Decision and audit record | proposed |
 | [MIG-ADR-011](MIG-ADR-011.md) | Quarantine/review boundary | accepted for PR-07 |
-| [MIG-ADR-012](MIG-ADR-012.md) | Observability and operational evidence | proposed |
+| [MIG-ADR-012](MIG-ADR-012.md) | Observability and operational evidence | accepted for W5 / PR-17 |
 | [MIG-ADR-013](MIG-ADR-013.md) | Community/Enterprise separation | proposed |
 | [MIG-ADR-014](MIG-ADR-014.md) | Compatibility and rollout policy | accepted |
 | [MIG-ADR-015](MIG-ADR-015.md) | Community repository ports and local persistence | accepted for PR-06 |
