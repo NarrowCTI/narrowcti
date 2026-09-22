@@ -11,7 +11,7 @@ from narrowcti.application.assurance.operational_validation import *  # noqa: F4
 from narrowcti.application.assurance.operational_validation import build_operational_validation_report
 from narrowcti.application.reporting.decisions import build_decision_audit_report
 from narrowcti.adapters.persistence.local.decision_audit_reader import read_decision_records
-from narrowcti.application.preflight import build_preflight_report
+from gateway.preflight import build_preflight_report
 from gateway.settings import load_settings
 
 def write_report(report, output_file, output_format="text"):

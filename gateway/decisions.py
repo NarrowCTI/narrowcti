@@ -1,7 +1,7 @@
 """Compatibility/composition surface for decision audit reporting."""
 
 from __future__ import annotations
-# ruff: noqa: F403, F405
+# ruff: noqa: F401, F403, F405
 
 import argparse
 import os
@@ -9,6 +9,7 @@ import os
 from narrowcti.application.reporting.decisions import *  # noqa: F403
 from narrowcti.application.reporting.decisions import build_decision_audit_report, render_report
 from narrowcti.adapters.persistence.local.decision_audit_reader import (
+    expand_paths,
     read_decision_records,
 )
 from gateway.settings import load_settings

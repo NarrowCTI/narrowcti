@@ -1,13 +1,14 @@
 """Compatibility/composition surface for operational gateway reports."""
 
 from __future__ import annotations
-# ruff: noqa: F403, F405
+# ruff: noqa: F401, F403, F405
 
 import argparse
 import os
 
 from narrowcti.application.reporting.operational import *  # noqa: F403
 from narrowcti.application.reporting.operational import build_operational_report, render_report
+from narrowcti.application.runtime import SUMMARY_FIELDS
 from narrowcti.adapters.persistence.local.quarantine_repository import QuarantineRepository
 from narrowcti.infrastructure.runtime.summary_store import read_gateway_summary_file
 from gateway.settings import load_settings
@@ -22,13 +23,13 @@ def read_quarantine_records(repository_file):
 def write_report(report, output_file, output_format="text"):
     output_file = str(output_file or "").strip()
     if not output_file:
-        raise ValueError("output_file is required")
+        return None
     directory = os.path.dirname(output_file)
     if directory:
         os.makedirs(directory, exist_ok=True)
     with open(output_file, "w", encoding="utf-8") as handle:
         handle.write(render_report(report, output_format=output_format) + "\n")
-    return output_file
+    return None
 
 
 def main():

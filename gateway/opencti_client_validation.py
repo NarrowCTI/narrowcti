@@ -1,6 +1,7 @@
 """Compatibility/composition surface for OpenCTI client validation."""
 
 from __future__ import annotations
+# ruff: noqa: F401
 
 import argparse
 import pycti
@@ -10,6 +11,8 @@ from exporters.stix_builder import build_report_bundle
 from gateway.opencti_client import build_opencti_client
 from narrowcti.application.validation.opencti_client import (
     DEFAULT_REPORT_NAME,
+    REPORT_LOOKUP_QUERY,
+    exact_report_matches,
     validate_authentication,
 )
 from narrowcti.application.validation.opencti_client import (

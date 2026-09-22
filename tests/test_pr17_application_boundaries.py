@@ -88,6 +88,81 @@ class PR17BoundaryTests(unittest.TestCase):
             canonical = importlib.import_module(canonical_name)
             self.assertIs(getattr(legacy, symbol), getattr(canonical, symbol), f"{legacy_name}.{symbol}")
 
+    def test_operational_validation_uses_composed_legacy_preflight(self):
+        import gateway.operational_validation as legacy_validation
+        import gateway.preflight as legacy_preflight
+
+        self.assertIs(
+            legacy_validation.build_preflight_report,
+            legacy_preflight.build_preflight_report,
+        )
+
+    def test_operational_validation_preflight_preserves_misp_tls_evidence(self):
+        from gateway.operational_validation import build_preflight_report
+        from tests.test_gateway_preflight import make_settings
+
+        report = build_preflight_report(
+            make_settings(enabled_sources=["misp"]),
+            env={"MISP_VERIFY_TLS": "definitely-invalid"},
+        )
+        issue_codes = {issue.code for issue in report.issues}
+        self.assertIn("misp-tls-invalid", issue_codes)
+        self.assertEqual("error", next(issue.severity for issue in report.issues if issue.code == "misp-tls-invalid"))
+
+    def test_gateway_report_write_report_preserves_legacy_return_contract(self):
+        import tempfile
+
+        from gateway.report import build_operational_report, render_report, write_report
+
+        report = build_operational_report([])
+        self.assertIsNone(write_report(report, ""))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_file = Path(temp_dir) / "report.txt"
+            self.assertIsNone(write_report(report, output_file))
+            self.assertEqual(
+                render_report(report) + "\n",
+                output_file.read_text(encoding="utf-8"),
+            )
+
+    def test_legacy_reader_and_semantic_constants_are_preserved(self):
+        import gateway.decisions as legacy_decisions
+        import gateway.operational_validation as legacy_validation
+        import gateway.report as legacy_report
+        from narrowcti.adapters.persistence.local.decision_audit_reader import expand_paths
+        from narrowcti.application.assurance import operational_validation as canonical_validation
+        from narrowcti.application.reporting import decisions as canonical_decisions
+        from narrowcti.application.runtime import SUMMARY_FIELDS
+
+        self.assertIs(legacy_decisions.expand_paths, expand_paths)
+        self.assertIs(legacy_decisions.ACTION_ORDER, canonical_decisions.ACTION_ORDER)
+        self.assertIs(
+            legacy_decisions.GRAPH_ENTITY_CATEGORIES,
+            canonical_decisions.GRAPH_ENTITY_CATEGORIES,
+        )
+        self.assertIs(
+            legacy_decisions.GRAPH_ENTITY_TOP_FIELDS,
+            canonical_decisions.GRAPH_ENTITY_TOP_FIELDS,
+        )
+        self.assertIs(legacy_validation.STATUS_ORDER, canonical_validation.STATUS_ORDER)
+        self.assertIs(
+            legacy_validation.DECISION_SOURCE_ALIASES,
+            canonical_validation.DECISION_SOURCE_ALIASES,
+        )
+        self.assertIs(legacy_report.SUMMARY_FIELDS, SUMMARY_FIELDS)
+
+    def test_opencti_validation_lookup_surface_is_preserved(self):
+        import gateway.opencti_client_validation as legacy_validation
+        from narrowcti.application.validation import opencti_client as canonical_validation
+
+        self.assertEqual(
+            legacy_validation.REPORT_LOOKUP_QUERY,
+            canonical_validation.REPORT_LOOKUP_QUERY,
+        )
+        self.assertIs(
+            legacy_validation.exact_report_matches,
+            canonical_validation.exact_report_matches,
+        )
+
     def test_canonical_modules_are_importable_without_gateway_composition(self):
         modules = (
             "narrowcti.application.preflight",
