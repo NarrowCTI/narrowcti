@@ -19,5 +19,18 @@ def write_gateway_summary(summary, summary_file, logger):
         logger(f"Gateway summary write failed: {summary_file} error={exc}")
 
 
-__all__ = ["write_gateway_summary"]
+def read_gateway_summary_file(summary_file, limit=None):
+    """Read gateway cycle summaries using the historical strict semantics."""
 
+    records = []
+    with open(summary_file, "r", encoding="utf-8") as file_obj:
+        for line in file_obj:
+            stripped = line.strip()
+            if stripped:
+                records.append(json.loads(stripped))
+    if limit is not None and limit > 0:
+        records = records[-limit:]
+    return records
+
+
+__all__ = ["write_gateway_summary", "read_gateway_summary_file"]
