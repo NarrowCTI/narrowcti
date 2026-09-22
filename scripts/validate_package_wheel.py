@@ -42,6 +42,19 @@ REQUIRED_MODULES = (
     "narrowcti/ports/quarantine.py",
     "narrowcti/adapters/persistence/local/quarantine_repository.py",
     "narrowcti/application/__init__.py",
+    "narrowcti/application/preflight.py",
+    "narrowcti/application/reporting/__init__.py",
+    "narrowcti/application/reporting/operational.py",
+    "narrowcti/application/reporting/correlation.py",
+    "narrowcti/application/reporting/decisions.py",
+    "narrowcti/application/reporting/curation.py",
+    "narrowcti/application/assurance/__init__.py",
+    "narrowcti/application/assurance/opencti_relationship_audit.py",
+    "narrowcti/application/assurance/operational_validation.py",
+    "narrowcti/application/validation/__init__.py",
+    "narrowcti/application/validation/opencti_client.py",
+    "narrowcti/application/support/__init__.py",
+    "narrowcti/application/support/diagnostics.py",
     "narrowcti/application/ingestion/__init__.py",
     "narrowcti/application/ingestion/pipeline.py",
     "narrowcti/application/ingestion/outcomes.py",
@@ -99,6 +112,9 @@ REQUIRED_MODULES = (
     "narrowcti/cli/gateway.py",
     "narrowcti/cli/quarantine.py",
     "narrowcti/adapters/persistence/local/review_audit.py",
+    "narrowcti/adapters/persistence/local/decision_audit_reader.py",
+    "narrowcti/adapters/persistence/local/support_bundle.py",
+    "narrowcti/adapters/opencti/relationship_audit.py",
 )
 
 
@@ -242,6 +258,18 @@ import narrowcti.application.compiler.graph as compiler_graph
 import core.opencti_graph_lookup as legacy_opencti_graph
 import core.opencti_deduplication as legacy_opencti_dedup
 import narrowcti.application as application
+import narrowcti.application.preflight as canonical_preflight
+import narrowcti.application.reporting.operational as canonical_reporting_operational
+import narrowcti.application.reporting.correlation as canonical_reporting_correlation
+import narrowcti.application.reporting.decisions as canonical_reporting_decisions
+import narrowcti.application.reporting.curation as canonical_reporting_curation
+import narrowcti.application.assurance.opencti_relationship_audit as canonical_relationship_assurance
+import narrowcti.application.assurance.operational_validation as canonical_operational_assurance
+import narrowcti.application.validation.opencti_client as canonical_validation
+import narrowcti.application.support.diagnostics as canonical_support
+import narrowcti.adapters.opencti.relationship_audit as canonical_relationship_adapter
+import narrowcti.adapters.persistence.local.decision_audit_reader as canonical_decision_reader
+import narrowcti.adapters.persistence.local.support_bundle as canonical_support_bundle
 import narrowcti.application.ingestion as ingestion
 import narrowcti.application.ingestion.pipeline as ingestion_pipeline
 import narrowcti.application.ingestion.outcomes as ingestion_outcomes
@@ -302,6 +330,18 @@ assert legacy_quarantine.QuarantineRepository is canonical_quarantine_repository
 assert legacy_quarantine.QuarantineRepository is canonical_quarantine.QuarantineRepository
 assert isinstance(legacy_quarantine.QuarantineRepository("unused"), canonical_quarantine_port.QuarantineStore)
 assert application is not None
+assert canonical_preflight.PreflightReport is not None
+assert canonical_reporting_operational.GatewayOperationalReport is not None
+assert canonical_reporting_correlation.ArtifactCorrelationReport is not None
+assert canonical_reporting_decisions.DecisionAuditReport is not None
+assert canonical_reporting_curation.CurationReport is not None
+assert canonical_relationship_assurance.summarize_relationships is not None
+assert canonical_operational_assurance.OperationalValidationReport is not None
+assert canonical_validation.import_validation_report is not None
+assert canonical_support.SupportDiagnosticSnapshot is not None
+assert canonical_relationship_adapter.build_relationship_audit is not None
+assert canonical_decision_reader.read_decision_records is not None
+assert canonical_support_bundle.write_support_bundle is not None
 assert ingestion.run_candidate is ingestion_pipeline.run_candidate
 assert ingestion.IngestionOutcome is ingestion_outcomes.IngestionOutcome
 assert ingestion_contracts.IngestionOperations is not None
@@ -397,6 +437,18 @@ import narrowcti.application.compiler as canonical_compiler
 import narrowcti.application.compiler.contracts as compiler_contracts
 import narrowcti.application.compiler.graph as compiler_graph
 import narrowcti.application as application
+import narrowcti.application.preflight as canonical_preflight
+import narrowcti.application.reporting.operational as canonical_reporting_operational
+import narrowcti.application.reporting.correlation as canonical_reporting_correlation
+import narrowcti.application.reporting.decisions as canonical_reporting_decisions
+import narrowcti.application.reporting.curation as canonical_reporting_curation
+import narrowcti.application.assurance.opencti_relationship_audit as canonical_relationship_assurance
+import narrowcti.application.assurance.operational_validation as canonical_operational_assurance
+import narrowcti.application.validation.opencti_client as canonical_validation
+import narrowcti.application.support.diagnostics as canonical_support
+import narrowcti.adapters.opencti.relationship_audit as canonical_relationship_adapter
+import narrowcti.adapters.persistence.local.decision_audit_reader as canonical_decision_reader
+import narrowcti.adapters.persistence.local.support_bundle as canonical_support_bundle
 import narrowcti.application.ingestion as ingestion
 import narrowcti.application.ingestion.pipeline as ingestion_pipeline
 import narrowcti.application.ingestion.outcomes as ingestion_outcomes
@@ -472,6 +524,18 @@ assert legacy_quarantine.QuarantineRepository is canonical_quarantine_repository
 assert legacy_quarantine.QuarantineRepository is canonical_quarantine.QuarantineRepository
 assert isinstance(legacy_quarantine.QuarantineRepository("unused"), canonical_quarantine_port.QuarantineStore)
 assert application is not None
+assert canonical_preflight.PreflightReport is not None
+assert canonical_reporting_operational.GatewayOperationalReport is not None
+assert canonical_reporting_correlation.ArtifactCorrelationReport is not None
+assert canonical_reporting_decisions.DecisionAuditReport is not None
+assert canonical_reporting_curation.CurationReport is not None
+assert canonical_relationship_assurance.summarize_relationships is not None
+assert canonical_operational_assurance.OperationalValidationReport is not None
+assert canonical_validation.import_validation_report is not None
+assert canonical_support.SupportDiagnosticSnapshot is not None
+assert canonical_relationship_adapter.build_relationship_audit is not None
+assert canonical_decision_reader.read_decision_records is not None
+assert canonical_support_bundle.write_support_bundle is not None
 assert ingestion.run_candidate is ingestion_pipeline.run_candidate
 assert ingestion.IngestionOutcome is ingestion_outcomes.IngestionOutcome
 assert ingestion_contracts.IngestionOperations is not None

@@ -1,28 +1,28 @@
-import argparse
+"""Compatibility/composition surface for OpenCTI client validation."""
 
+from __future__ import annotations
+
+import argparse
 import pycti
 
 from core.runtime_config import environment, load_opencti_config
 from exporters.stix_builder import build_report_bundle
 from gateway.opencti_client import build_opencti_client
+from narrowcti.application.validation.opencti_client import (
+    DEFAULT_REPORT_NAME,
+    validate_authentication,
+)
+from narrowcti.application.validation.opencti_client import (
+    import_validation_report as _import_validation_report,
+)
 
-
-DEFAULT_REPORT_NAME = "NarrowCTI v1.0 OpenCTI client compatibility validation"
-
-REPORT_LOOKUP_QUERY = """
-query NarrowCTIClientValidationReport($search: String!) {
-  reports(first: 20, search: $search) {
-    edges {
-      node {
-        id
-        standard_id
-        name
-      }
-    }
-  }
-}
-"""
-
+def import_validation_report(api_client, report_name):
+    return _import_validation_report(
+        api_client,
+        report_name,
+        bundle_builder=build_report_bundle,
+        bundle_importer=api_client.stix2.import_bundle_from_json,
+    )
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
@@ -49,45 +49,6 @@ def build_client(environ=None):
     return build_opencti_client(config.url, config.token)
 
 
-def validate_authentication(api_client):
-    result = api_client.query("query NarrowCTIClientValidation { me { id } }")
-    return bool(((result.get("data") or {}).get("me") or {}).get("id"))
-
-
-def exact_report_matches(api_client, report_name):
-    result = api_client.query(REPORT_LOOKUP_QUERY, {"search": report_name})
-    edges = (((result.get("data") or {}).get("reports") or {}).get("edges")) or []
-    return [
-        edge.get("node") or {}
-        for edge in edges
-        if str((edge.get("node") or {}).get("name") or "") == report_name
-    ]
-
-
-def import_validation_report(api_client, report_name):
-    bundle, _ = build_report_bundle(
-        report_name,
-        "Controlled NarrowCTI client compatibility validation Report.",
-        0,
-        [],
-        identity_name="NarrowCTI Gateway",
-    )
-    rejected = []
-    imported_counts = []
-    for _ in range(2):
-        imported, failed = api_client.stix2.import_bundle_from_json(
-            bundle.serialize(),
-            update=True,
-        )
-        imported_counts.append(len(imported or []))
-        rejected.extend(failed or [])
-    return {
-        "imported_counts": imported_counts,
-        "rejected_count": len(rejected),
-        "exact_report_count": len(exact_report_matches(api_client, report_name)),
-    }
-
-
 def main(argv=None):
     args = parse_args(argv)
     try:
@@ -111,6 +72,8 @@ def main(argv=None):
             raise SystemExit("OpenCTI write compatibility validation failed")
 
     return 0
+
+
 
 
 if __name__ == "__main__":
