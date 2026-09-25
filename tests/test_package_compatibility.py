@@ -15,10 +15,12 @@ import connectors.misp.feed_adapter as legacy_connectors
 import core.feed_contract as legacy_core
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
+import gateway.feature_gates as legacy_feature_gates
 import narrowcti.connectors.misp.feed_adapter as canonical_connectors
 import narrowcti.core.feed_contract as canonical_core
 import narrowcti.exporters.stix_builder as canonical_exporters
 import narrowcti.gateway.settings as canonical_gateway
+import narrowcti.gateway.feature_gates as canonical_feature_gates
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
@@ -27,6 +29,9 @@ assert legacy_connectors is canonical_connectors
 assert legacy_core is canonical_core
 assert legacy_exporters is canonical_exporters
 assert legacy_gateway is canonical_gateway
+assert legacy_feature_gates is canonical_feature_gates
+assert legacy_feature_gates.FeatureGateState is canonical_feature_gates.FeatureGateState
+assert legacy_feature_gates.build_feature_gate_state is canonical_feature_gates.build_feature_gate_state
 '''
 
 
@@ -36,10 +41,12 @@ import narrowcti.connectors.misp.feed_adapter as canonical_connectors
 import narrowcti.core.feed_contract as canonical_core
 import narrowcti.exporters.stix_builder as canonical_exporters
 import narrowcti.gateway.settings as canonical_gateway
+import narrowcti.gateway.feature_gates as canonical_feature_gates
 import connectors.misp.feed_adapter as legacy_connectors
 import core.feed_contract as legacy_core
 import exporters.stix_builder as legacy_exporters
 import gateway.settings as legacy_gateway
+import gateway.feature_gates as legacy_feature_gates
 assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
 assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
 assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
@@ -48,6 +55,9 @@ assert canonical_connectors is legacy_connectors
 assert canonical_core is legacy_core
 assert canonical_exporters is legacy_exporters
 assert canonical_gateway is legacy_gateway
+assert canonical_feature_gates is legacy_feature_gates
+assert canonical_feature_gates.FeatureGateState is legacy_feature_gates.FeatureGateState
+assert canonical_feature_gates.build_feature_gate_state is legacy_feature_gates.build_feature_gate_state
 '''
 
 

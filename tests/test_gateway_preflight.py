@@ -388,7 +388,7 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("distribution_model=open_source", text)
         self.assertIn("open_source=true", text)
         self.assertIn("enabled_capabilities=source.otx", text)
-        self.assertIn("disabled_capabilities=(none)", text)
+        self.assertIn("disabled_capabilities=mssp.multi_environment", text)
         self.assertIn("otx.state_file=/app/state/otx_state.json", text)
         self.assertIn(
             "otx.decision_audit_file=/app/state/audit/otx_decisions.jsonl",
@@ -447,9 +447,21 @@ class GatewayPreflightTests(unittest.TestCase):
             "source.misp",
             report.settings["capability_inventory"]["enabled_capabilities"],
         )
+        self.assertIn(
+            "reporting.operational",
+            report.settings["capability_inventory"]["known"],
+        )
+        self.assertIn(
+            "curation.scoring",
+            report.settings["capability_inventory"]["implemented"],
+        )
+        self.assertIn(
+            "environment.multi",
+            report.settings["capability_inventory"]["disabled"],
+        )
         self.assertIn("distribution_model=open_source", text)
         self.assertIn("enabled_capabilities=source.otx,source.misp", text)
-        self.assertIn("disabled_capabilities=(none)", text)
+        self.assertIn("disabled_capabilities=mssp.multi_environment", text)
 
     def test_preflight_warns_about_unknown_capabilities(self):
         settings = make_settings(

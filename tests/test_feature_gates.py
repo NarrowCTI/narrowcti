@@ -16,7 +16,7 @@ class FeatureGateTests(unittest.TestCase):
         self.assertIn("reports.support_diagnostics", state.enabled_capabilities)
         self.assertIn("graph.lookup.opencti", state.enabled_capabilities)
         self.assertIn("graph.export.controlled", state.enabled_capabilities)
-        self.assertEqual((), state.disabled_capabilities)
+        self.assertEqual(("mssp.multi_environment",), state.disabled_capabilities)
 
     def test_requested_capabilities_are_visible_without_disabling_others(self):
         state = build_feature_gate_state(
@@ -51,6 +51,63 @@ class FeatureGateTests(unittest.TestCase):
         self.assertIn("source.misp", state.enabled_capabilities)
         self.assertIn("source.otx", state.enabled_capabilities)
         self.assertEqual(("unknown.capability",), state.unknown_capabilities)
+
+    def test_legacy_aliases_and_community_compatibility_are_preserved(self):
+        state = build_feature_gate_state(
+            requested_capabilities=[
+                "reports.operational_validation",
+                "reports.support_diagnostics",
+                "mssp.multi_environment",
+            ],
+        )
+        self.assertEqual(
+            (
+                "reports.operational_validation",
+                "reports.support_diagnostics",
+                "mssp.multi_environment",
+            ),
+            state.requested_capabilities,
+        )
+        self.assertIn("deployment.templates", state.enabled_capabilities)
+        self.assertNotIn("mssp.multi_environment", state.enabled_capabilities)
+        self.assertEqual(("mssp.multi_environment",), state.disabled_capabilities)
+
+    def test_configuration_cannot_escalate_commercial_capabilities(self):
+        state = build_feature_gate_state(
+            requested_capabilities=[
+                "validation.openaev",
+                "ui.control_plane",
+                "ingestion.scheduler",
+                "environment.multi",
+                "mssp.multi_tenant",
+            ],
+        )
+        self.assertFalse(
+            set(state.enabled_capabilities)
+            & {
+                "validation.openaev",
+                "ui.control_plane",
+                "ingestion.scheduler",
+                "environment.multi",
+                "mssp.multi_tenant",
+            }
+        )
+
+    def test_legacy_dto_shape_remains_stable(self):
+        state = build_feature_gate_state()
+        self.assertEqual(
+            (
+                "distribution_model",
+                "open_source",
+                "enforcement_enabled",
+                "available_capabilities",
+                "enabled_capabilities",
+                "disabled_capabilities",
+                "requested_capabilities",
+                "unknown_capabilities",
+            ),
+            tuple(state.to_dict()),
+        )
 
 
 if __name__ == "__main__":
