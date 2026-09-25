@@ -24,6 +24,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-016](MIG-ADR-016.md) | Ingestion application orchestration boundary | accepted for PR-08 |
 | [MIG-ADR-017](MIG-ADR-017.md) | MISP source extraction boundary | accepted for PR-09 |
 | [MIG-ADR-018](MIG-ADR-018.md) | Gateway runtime and source provider registry boundary | accepted for W5 / PR-15 |
+| [MIG-ADR-019](MIG-ADR-019.md) | Capability registry and entitlement provider boundary | accepted for W6 / PR-18 |
 
 Each ADR must be reviewed and approved before the migration wave that depends
 on it. Accepted records remain bounded by their stated PR scope. PR-03 adds

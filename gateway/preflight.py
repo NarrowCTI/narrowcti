@@ -9,7 +9,7 @@ import os
 
 from core.mitre_attack import load_attack_cache
 from core.runtime_config import parse_misp_verify_tls
-from gateway.feature_gates import build_feature_gate_state
+from gateway.feature_gates import build_capability_inventory
 from gateway.settings import load_settings
 from narrowcti.application.preflight import *  # noqa: F403
 from narrowcti.application.preflight import (
@@ -34,7 +34,7 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
         settings,
         available_sources=available_sources,
         env=env,
-        feature_gate_state=build_feature_gate_state(
+        feature_gate_state=build_capability_inventory(
             requested_capabilities=getattr(settings, "declared_capabilities", []),
         ),
         misp_verify_tls=misp_verify_tls,

@@ -40,8 +40,10 @@ REQUIRED_MODULES = (
     "narrowcti/domain/review/__init__.py",
     "narrowcti/domain/review/quarantine.py",
     "narrowcti/ports/quarantine.py",
+    "narrowcti/ports/entitlements.py",
     "narrowcti/adapters/persistence/local/quarantine_repository.py",
     "narrowcti/application/__init__.py",
+    "narrowcti/application/capabilities.py",
     "narrowcti/application/preflight.py",
     "narrowcti/application/reporting/__init__.py",
     "narrowcti/application/reporting/operational.py",
@@ -104,10 +106,13 @@ REQUIRED_MODULES = (
     "narrowcti/infrastructure/__init__.py",
     "narrowcti/infrastructure/config/__init__.py",
     "narrowcti/infrastructure/config/settings.py",
+    "narrowcti/infrastructure/capabilities.py",
     "narrowcti/infrastructure/runtime/__init__.py",
     "narrowcti/infrastructure/runtime/gateway_composition.py",
     "narrowcti/infrastructure/runtime/summary_store.py",
     "narrowcti/adapters/opencti/client.py",
+    "narrowcti/adapters/entitlements/__init__.py",
+    "narrowcti/adapters/entitlements/community.py",
     "narrowcti/cli/__init__.py",
     "narrowcti/cli/gateway.py",
     "narrowcti/cli/quarantine.py",
@@ -568,6 +573,42 @@ assert compiler_contracts.CompilationResult is canonical_compiler.CompilationRes
 assert canonical_opencti_profile.OPENCTI_EXTENSION_DEFINITION_ID.startswith("extension-definition--")
 assert isinstance(canonical_opencti_graph.OpenCTIGraphLookup(object()), canonical_graph.GraphProvider)
 print("installed-compatibility-canonical-first-ok")
+""",
+            """
+import sys
+from narrowcti.application.capabilities import CapabilityRegistry, CapabilityResolution
+from narrowcti.ports.entitlements import EntitlementProvider
+from narrowcti.adapters.entitlements.community import CommunityEntitlements
+from narrowcti.infrastructure.capabilities import COMMUNITY_IMPLEMENTED_CAPABILITIES
+import gateway.feature_gates as legacy_feature_gates
+import narrowcti.gateway.feature_gates as canonical_feature_gates
+assert sys.modules["gateway.feature_gates"] is sys.modules["narrowcti.gateway.feature_gates"]
+assert legacy_feature_gates.FeatureGateState is canonical_feature_gates.FeatureGateState
+assert legacy_feature_gates.build_feature_gate_state is canonical_feature_gates.build_feature_gate_state
+resolution = CapabilityRegistry.default().resolve(
+    implemented=COMMUNITY_IMPLEMENTED_CAPABILITIES,
+    entitled=CommunityEntitlements().granted_capabilities(),
+)
+assert resolution.enabled
+assert isinstance(resolution, CapabilityResolution)
+assert isinstance(CommunityEntitlements(), EntitlementProvider)
+print("installed-capability-contract-ok")
+""",
+            """
+import sys
+import narrowcti.gateway.feature_gates as canonical_feature_gates
+import narrowcti.application.capabilities as capabilities
+import narrowcti.ports.entitlements as entitlements
+import narrowcti.adapters.entitlements.community as community
+import gateway.feature_gates as legacy_feature_gates
+import gateway.preflight as legacy_preflight
+assert sys.modules["gateway.feature_gates"] is sys.modules["narrowcti.gateway.feature_gates"]
+assert canonical_feature_gates.FeatureGateState is legacy_feature_gates.FeatureGateState
+assert capabilities.CapabilityRegistry.default().capabilities
+assert entitlements.EntitlementProvider is not None
+assert community.CommunityEntitlements().granted_capabilities()
+assert legacy_preflight.build_preflight_report is not None
+print("installed-capability-contract-canonical-first-ok")
 """,
         )
         for import_code in compatibility_checks:

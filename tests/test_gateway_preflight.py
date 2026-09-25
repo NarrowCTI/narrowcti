@@ -388,7 +388,7 @@ class GatewayPreflightTests(unittest.TestCase):
         self.assertIn("distribution_model=open_source", text)
         self.assertIn("open_source=true", text)
         self.assertIn("enabled_capabilities=source.otx", text)
-        self.assertIn("disabled_capabilities=(none)", text)
+        self.assertIn("disabled_capabilities=mssp.multi_environment", text)
         self.assertIn("otx.state_file=/app/state/otx_state.json", text)
         self.assertIn(
             "otx.decision_audit_file=/app/state/audit/otx_decisions.jsonl",
@@ -447,9 +447,21 @@ class GatewayPreflightTests(unittest.TestCase):
             "source.misp",
             report.settings["capability_inventory"]["enabled_capabilities"],
         )
+        self.assertIn(
+            "reporting.operational",
+            report.settings["capability_inventory"]["known"],
+        )
+        self.assertIn(
+            "curation.scoring",
+            report.settings["capability_inventory"]["implemented"],
+        )
+        self.assertIn(
+            "environment.multi",
+            report.settings["capability_inventory"]["disabled"],
+        )
         self.assertIn("distribution_model=open_source", text)
         self.assertIn("enabled_capabilities=source.otx,source.misp", text)
-        self.assertIn("disabled_capabilities=(none)", text)
+        self.assertIn("disabled_capabilities=mssp.multi_environment", text)
 
     def test_preflight_warns_about_unknown_capabilities(self):
         settings = make_settings(
@@ -467,6 +479,60 @@ class GatewayPreflightTests(unittest.TestCase):
             "unknown-capability",
             [issue.code for issue in report.issues],
         )
+
+    def test_declared_commercial_capabilities_cannot_escalate_community(self):
+        requested = [
+            "validation.openaev",
+            "ui.control_plane",
+            "ingestion.scheduler",
+            "environment.multi",
+            "mssp.multi_tenant",
+        ]
+        report = build_preflight_report(
+            make_settings(declared_capabilities=requested),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        enabled = report.settings["capability_inventory"]["enabled"]
+        self.assertFalse(set(requested) & set(enabled))
+
+    def test_known_commercial_capabilities_are_disabled_not_unknown(self):
+        requested = [
+            "validation.openaev",
+            "ui.control_plane",
+            "ingestion.scheduler",
+            "environment.multi",
+            "mssp.multi_tenant",
+        ]
+        report = build_preflight_report(
+            make_settings(declared_capabilities=requested),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        inventory = report.settings["capability_inventory"]
+        self.assertEqual(tuple(requested), tuple(inventory["requested"]))
+        self.assertFalse(set(requested) & set(inventory["enabled"]))
+        self.assertFalse(set(requested) & set(inventory["unknown_capabilities"]))
+        self.assertNotIn("unknown-capability", [issue.code for issue in report.issues])
+
+    def test_known_community_capability_is_enabled_not_unknown(self):
+        report = build_preflight_report(
+            make_settings(declared_capabilities=["reporting.operational"]),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        inventory = report.settings["capability_inventory"]
+        self.assertIn("reporting.operational", inventory["requested"])
+        self.assertIn("reporting.operational", inventory["enabled"])
+        self.assertNotIn("reporting.operational", inventory["unknown_capabilities"])
+        self.assertNotIn("unknown-capability", [issue.code for issue in report.issues])
+
+    def test_truly_unknown_capability_remains_warning(self):
+        report = build_preflight_report(
+            make_settings(declared_capabilities=["does.not.exist"]),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        inventory = report.settings["capability_inventory"]
+        self.assertIn("does.not.exist", inventory["unknown"])
+        self.assertIn("does.not.exist", inventory["unknown_capabilities"])
+        self.assertIn("unknown-capability", [issue.code for issue in report.issues])
 
 
 if __name__ == "__main__":
