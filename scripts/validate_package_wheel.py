@@ -594,6 +594,22 @@ assert isinstance(resolution, CapabilityResolution)
 assert isinstance(CommunityEntitlements(), EntitlementProvider)
 print("installed-capability-contract-ok")
 """,
+            """
+import sys
+import narrowcti.gateway.feature_gates as canonical_feature_gates
+import narrowcti.application.capabilities as capabilities
+import narrowcti.ports.entitlements as entitlements
+import narrowcti.adapters.entitlements.community as community
+import gateway.feature_gates as legacy_feature_gates
+import gateway.preflight as legacy_preflight
+assert sys.modules["gateway.feature_gates"] is sys.modules["narrowcti.gateway.feature_gates"]
+assert canonical_feature_gates.FeatureGateState is legacy_feature_gates.FeatureGateState
+assert capabilities.CapabilityRegistry.default().capabilities
+assert entitlements.EntitlementProvider is not None
+assert community.CommunityEntitlements().granted_capabilities()
+assert legacy_preflight.build_preflight_report is not None
+print("installed-capability-contract-canonical-first-ok")
+""",
         )
         for import_code in compatibility_checks:
             run(str(python), "-c", import_code, cwd=temp, env=child_env)
