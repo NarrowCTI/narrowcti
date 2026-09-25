@@ -88,6 +88,37 @@ class CapabilityRegistryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             CapabilityRegistry(["one"], {"two": "missing"})
 
+    def test_registry_rejects_duplicate_canonical_name(self):
+        with self.assertRaises(ValueError):
+            CapabilityRegistry(["one", "one"])
+
+    def test_registry_rejects_canonical_collision_after_normalization(self):
+        with self.assertRaises(ValueError):
+            CapabilityRegistry(["one-name", "one_name"])
+
+    def test_registry_rejects_duplicate_alias_after_normalization(self):
+        with self.assertRaises(ValueError):
+            CapabilityRegistry(
+                ["one", "two"],
+                {"legacy-name": "one", "legacy_name": "two"},
+            )
+
+    def test_registry_rejects_alias_colliding_with_canonical_name(self):
+        with self.assertRaises(ValueError):
+            CapabilityRegistry(["one_name"], {"one-name": "one_name"})
+
+    def test_registry_rejects_empty_canonical_name(self):
+        with self.assertRaises(ValueError):
+            CapabilityRegistry(["one", "  "])
+
+    def test_registry_rejects_empty_alias_name(self):
+        with self.assertRaises(ValueError):
+            CapabilityRegistry(["one"], {"  ": "one"})
+
+    def test_registry_rejects_empty_alias_target(self):
+        with self.assertRaises(ValueError):
+            CapabilityRegistry(["one"], {"legacy": "  "})
+
 
 class CommunityEntitlementsTests(unittest.TestCase):
     def test_provider_is_structural_and_offline(self):

@@ -17,14 +17,36 @@ class CapabilityBoundaryTests(unittest.TestCase):
                 imports.append(node.module)
         return imports
 
+    def _assert_no_io_imports(self, path):
+        imports = self._imports(path)
+        forbidden_roots = {
+            "os",
+            "pathlib",
+            "socket",
+            "requests",
+            "http",
+            "httpx",
+            "urllib",
+            "urllib3",
+            "aiohttp",
+            "importlib.metadata",
+        }
+        violations = [
+            name
+            for name in imports
+            if name in forbidden_roots
+            or any(name.startswith(f"{root}.") for root in forbidden_roots)
+        ]
+        self.assertFalse(violations, f"forbidden I/O/discovery imports in {path}: {violations}")
+
     def test_application_capabilities_is_pure(self):
-        imports = self._imports(ROOT / "src/narrowcti/application/capabilities.py")
-        forbidden = ("gateway", "narrowcti.adapters", "requests", "http", "filesystem")
+        path = ROOT / "src/narrowcti/application/capabilities.py"
+        imports = self._imports(path)
         self.assertFalse(
             [name for name in imports if name == "gateway" or name.startswith("narrowcti.adapters")],
             imports,
         )
-        self.assertFalse([name for name in imports if name in forbidden], imports)
+        self._assert_no_io_imports(path)
 
     def test_entitlement_port_does_not_depend_on_adapters_or_gateway(self):
         imports = self._imports(ROOT / "src/narrowcti/ports/entitlements.py")
@@ -34,11 +56,8 @@ class CapabilityBoundaryTests(unittest.TestCase):
         )
 
     def test_community_adapter_has_no_external_io_or_license_discovery(self):
-        imports = self._imports(ROOT / "src/narrowcti/adapters/entitlements/community.py")
-        forbidden_prefixes = ("requests", "http", "urllib", "socket", "importlib.metadata")
-        self.assertFalse(
-            [name for name in imports if name.startswith(forbidden_prefixes)],
-            imports,
+        self._assert_no_io_imports(
+            ROOT / "src/narrowcti/adapters/entitlements/community.py"
         )
 
 

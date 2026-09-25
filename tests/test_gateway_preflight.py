@@ -495,6 +495,45 @@ class GatewayPreflightTests(unittest.TestCase):
         enabled = report.settings["capability_inventory"]["enabled"]
         self.assertFalse(set(requested) & set(enabled))
 
+    def test_known_commercial_capabilities_are_disabled_not_unknown(self):
+        requested = [
+            "validation.openaev",
+            "ui.control_plane",
+            "ingestion.scheduler",
+            "environment.multi",
+            "mssp.multi_tenant",
+        ]
+        report = build_preflight_report(
+            make_settings(declared_capabilities=requested),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        inventory = report.settings["capability_inventory"]
+        self.assertEqual(tuple(requested), tuple(inventory["requested"]))
+        self.assertFalse(set(requested) & set(inventory["enabled"]))
+        self.assertFalse(set(requested) & set(inventory["unknown_capabilities"]))
+        self.assertNotIn("unknown-capability", [issue.code for issue in report.issues])
+
+    def test_known_community_capability_is_enabled_not_unknown(self):
+        report = build_preflight_report(
+            make_settings(declared_capabilities=["reporting.operational"]),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        inventory = report.settings["capability_inventory"]
+        self.assertIn("reporting.operational", inventory["requested"])
+        self.assertIn("reporting.operational", inventory["enabled"])
+        self.assertNotIn("reporting.operational", inventory["unknown_capabilities"])
+        self.assertNotIn("unknown-capability", [issue.code for issue in report.issues])
+
+    def test_truly_unknown_capability_remains_warning(self):
+        report = build_preflight_report(
+            make_settings(declared_capabilities=["does.not.exist"]),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        inventory = report.settings["capability_inventory"]
+        self.assertIn("does.not.exist", inventory["unknown"])
+        self.assertIn("does.not.exist", inventory["unknown_capabilities"])
+        self.assertIn("unknown-capability", [issue.code for issue in report.issues])
+
 
 if __name__ == "__main__":
     unittest.main()

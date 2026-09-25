@@ -102,7 +102,10 @@ def build_capability_inventory(requested_capabilities=None):
             "enabled_capabilities": list(legacy.enabled_capabilities),
             "disabled_capabilities": list(legacy.disabled_capabilities),
             "requested_capabilities": list(legacy.requested_capabilities),
-            "unknown_capabilities": list(legacy.unknown_capabilities),
+            # The rich inventory reports canonical registry knowledge.  The
+            # legacy FeatureGateState projection intentionally retains its
+            # historical AVAILABLE_CAPABILITIES semantics above.
+            "unknown_capabilities": list(resolution.unknown),
             "canonical_aliases": _REGISTRY.aliases,
         }
     )

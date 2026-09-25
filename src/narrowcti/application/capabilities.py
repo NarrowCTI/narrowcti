@@ -112,20 +112,36 @@ class CapabilityRegistry:
         capabilities: Iterable[str],
         aliases: Mapping[str, str] | None = None,
     ) -> None:
-        canonical = tuple(sorted(_unique(normalize_capability(value) for value in capabilities)))
+        normalized_capabilities: list[str] = []
+        seen_capabilities: set[str] = set()
+        for value in capabilities:
+            name = normalize_capability(value)
+            if not name:
+                raise ValueError("capability registry contains an empty name")
+            if name in seen_capabilities:
+                raise ValueError(f"duplicate capability name: {name}")
+            seen_capabilities.add(name)
+            normalized_capabilities.append(name)
+
+        canonical = tuple(sorted(normalized_capabilities))
         if not canonical:
             raise ValueError("capability registry cannot be empty")
         canonical_set = set(canonical)
-        normalized_aliases = {
-            normalize_capability(key): normalize_capability(value)
-            for key, value in (aliases or {}).items()
-        }
-        if any(key in canonical_set for key in normalized_aliases):
-            raise ValueError("capability alias collides with a canonical name")
-        if any(value not in canonical_set for value in normalized_aliases.values()):
-            raise ValueError("capability alias points to an unknown canonical name")
-        if len(normalized_aliases) != len(set(normalized_aliases)):
-            raise ValueError("duplicate capability alias")
+        normalized_aliases: dict[str, str] = {}
+        for key, value in (aliases or {}).items():
+            alias = normalize_capability(key)
+            target = normalize_capability(value)
+            if not alias:
+                raise ValueError("capability alias contains an empty name")
+            if not target:
+                raise ValueError("capability alias contains an empty target")
+            if alias in normalized_aliases:
+                raise ValueError(f"duplicate capability alias: {alias}")
+            if alias in canonical_set:
+                raise ValueError("capability alias collides with a canonical name")
+            if target not in canonical_set:
+                raise ValueError("capability alias points to an unknown canonical name")
+            normalized_aliases[alias] = target
         self._capabilities = canonical
         self._capability_set = canonical_set
         self._aliases = dict(sorted(normalized_aliases.items()))
