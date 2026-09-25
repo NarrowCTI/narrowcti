@@ -480,6 +480,21 @@ class GatewayPreflightTests(unittest.TestCase):
             [issue.code for issue in report.issues],
         )
 
+    def test_declared_commercial_capabilities_cannot_escalate_community(self):
+        requested = [
+            "validation.openaev",
+            "ui.control_plane",
+            "ingestion.scheduler",
+            "environment.multi",
+            "mssp.multi_tenant",
+        ]
+        report = build_preflight_report(
+            make_settings(declared_capabilities=requested),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        enabled = report.settings["capability_inventory"]["enabled"]
+        self.assertFalse(set(requested) & set(enabled))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -73,6 +73,15 @@ class CapabilityRegistryTests(unittest.TestCase):
         self.assertEqual(("unknown_capability",), resolution.unknown)
         self.assertEqual(tuple(sorted(resolution.known)), resolution.known)
 
+    def test_deferred_names_are_not_canonical(self):
+        resolution = self.registry.resolve(
+            requested=["source.search", "ingestion.preview"],
+            implemented=COMMUNITY_IMPLEMENTED_CAPABILITIES,
+            entitled=CommunityEntitlements().granted_capabilities(),
+        )
+        self.assertEqual((), resolution.requested)
+        self.assertEqual(("source.search", "ingestion.preview"), resolution.unknown)
+
     def test_registry_rejects_invalid_aliases(self):
         with self.assertRaises(ValueError):
             CapabilityRegistry(["one"], {"one": "one"})
