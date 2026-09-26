@@ -11,6 +11,15 @@ LEDGER = ROOT / "docs/development/documentation-migration-map.json"
 DISPOSITIONS = {"STAY", "MOVE", "LEGACY-RETAIN", "CANONICAL-REPLACEMENT"}
 
 
+def _canonical_text_bytes(path: Path) -> bytes:
+    """Hash tracked text content independent of checkout newline conversion."""
+
+    content = path.read_bytes()
+    if path.suffix.lower() in {".md", ".json"}:
+        return content.replace(b"\r\n", b"\n")
+    return content
+
+
 class DocumentationMigrationTests(unittest.TestCase):
     def test_baseline_docs_have_one_explicit_disposition(self):
         payload = json.loads(LEDGER.read_text(encoding="utf-8"))
@@ -30,7 +39,7 @@ class DocumentationMigrationTests(unittest.TestCase):
             if entry["disposition"] in {"MOVE", "CANONICAL-REPLACEMENT"}:
                 self.assertTrue(target.exists(), entry["new_path"])
             if entry["immutable"] and entry.get("sha256_before"):
-                digest = hashlib.sha256(target.read_bytes()).hexdigest()
+                digest = hashlib.sha256(_canonical_text_bytes(target)).hexdigest()
                 self.assertEqual(entry["sha256_before"], digest, entry["old_path"])
 
     def test_current_docs_do_not_reference_moved_paths(self):

@@ -29,7 +29,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "64d34a7d0aa2423699adb8d513abff28a2ad811b903c00812809d281662961b6"
+      "sha256_before": "2ac50293313bf41d4a0145d7c2bf3847c4581040376a0daa820cd7beb7fb2316"
     },
     {
       "old_path": "docs/architecture-v0.7.md",
@@ -38,7 +38,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "dfd58d723942dc174408b1c4734cf0f11f728b059232fbd625f0af83c30b34b8"
+      "sha256_before": "a7d08ef66fd6ef0b99ebf4a22071abd278a7c75bfeafeacfc78571b6d375c7f4"
     },
     {
       "old_path": "docs/architecture-v0.8.md",
@@ -47,7 +47,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "e145abb9db0caf0920500646f6a7b00e5ff20eb282c0b648ca8552ad2f2250a1"
+      "sha256_before": "19098f1aa93d69f6c54ccd3cf795850abd6abfba529b24309d673ff0e64beeb5"
     },
     {
       "old_path": "docs/architecture-v0.9.md",
@@ -56,7 +56,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "a987234cae1a83cb87707da285e515bf451c4521bd57831de21f589085847f8f"
+      "sha256_before": "36f31e7cc66b8d78c89370d53e61cf71c8c72e093c07c1089a8324c44805ec8c"
     },
     {
       "old_path": "docs/architecture-v1.0.md",
@@ -65,7 +65,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "daa181b47be5725da09fa3133ec6625faa8561fe51df1df8a141c99297f1d4fc"
+      "sha256_before": "597e44c52b5ea96de0fbdaddbbe36ba7bdd598065beb11d593bce71f1e6a9ab0"
     },
     {
       "old_path": "docs/architecture.md",
@@ -316,7 +316,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "3a277fa3e7feb3d9d691a2251209e019b181d11fccec1463c41af3531454c73b"
+      "sha256_before": "d2d97f921b6c3979252473035aadcf97adcd1dbcd67943a9462a67f9d26a2e5d"
     },
     {
       "old_path": "docs/configuration-reference-v0.6.md",
@@ -325,7 +325,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "0d42a8d274faa2f35e4cf7182526c20ab0ad6fde887ddf49e97542e946087591"
+      "sha256_before": "509c43d7c39f4091f8c6ae916428300b1d6bf5d3acd79174b0c7f18c1850d397"
     },
     {
       "old_path": "docs/configuration-reference.md",
@@ -350,7 +350,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "9f4a58f6c8b1e8b7db91fb28cf135eb8cc26b5f8bfeef424610033822fb44e3d"
+      "sha256_before": "457758f4a553f0dd49ba62850491983b383aa206f139bfc2a9f346b63c5caf3b"
     },
     {
       "old_path": "docs/curation-decision-reference.md",
@@ -367,7 +367,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "bae9a4a558076e2caff54a97a50a74c24607d0130375596b3f810304ac2c49e4"
+      "sha256_before": "e0dcd0c5bb9fd960ba93cad1b3b19e11f70b4c677a322455b6f4cb9cbaa0ec5e"
     },
     {
       "old_path": "docs/deployment-operations-v0.8.md",
@@ -376,7 +376,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "0f8e4505c5fdcca687d4b8eb09ffcfe4decb92648bd1286fab8f852916168957"
+      "sha256_before": "6f35d74bfe783defd0b1c1b8fc106f88f9b55e7156fcbd1790a968955330333f"
     },
     {
       "old_path": "docs/deployment-operations.md",
@@ -417,7 +417,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "df5065ac7f50003be22bca1c4ac87ac89d7f2abab30aa8d7b4bfa4ba328c0959"
+      "sha256_before": "7daa4592a30ec7bfea6cc3685283a48016c8cbe7b28c082ea7405bfdefa78351"
     },
     {
       "old_path": "docs/getting-started.md",
@@ -434,7 +434,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "acdfa54d526afae50c844487651a7dad2ede3f4ae2602115dffe039d9fe306ea"
+      "sha256_before": "1cb790dfa6062e786cf368adc4d6ace1c41d72f4fff00a488b621a86d84a7e0d"
     },
     {
       "old_path": "docs/graph-promotion-v0.8.md",
@@ -443,7 +443,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "8d283450fa8973a3cab59f1b50d2ed4bead273fc8f781c4d6a2abccfc7c01724"
+      "sha256_before": "190a612ca6c5869b51eb8bd26dd476b6691270d94592aa207f8b823678d2a8a5"
     },
     {
       "old_path": "docs/infrastructure-correlation-v0.8.md",
@@ -452,7 +452,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "895887f46dac651c2a595f13f3aebbc7a77844b088e5b98cb69013fc2b8aa8f9"
+      "sha256_before": "f9192f960818531426ab970f30cc78707dcf2b9f9b374604615a97668290b06b"
     },
     {
       "old_path": "docs/metadata-validation-v0.7.md",
@@ -461,7 +461,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "c9daac739fb5131e243130ea438d0eb96edc65d36d3cc46d7b550b31985ccf96"
+      "sha256_before": "3f8a89bcfb66833feaea55875944e422659ed1bec1307c25bb82775eb342cd20"
     },
     {
       "old_path": "docs/misp-official-connector-mapping-v0.7.md",
@@ -470,7 +470,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "85cbbe37bfbd856416a0da3d3b63368441c57380e7255309d0113aa00abe0814"
+      "sha256_before": "5c8e58a534b03a15147703be3d4b9935e2c4882179b1d25b4d1ef166661af8bf"
     },
     {
       "old_path": "docs/misp-validation-v0.4.md",
@@ -479,7 +479,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "251b37f13bb130627aa4cb282404e9497729c37b6b933a03fcda8eae3877208f"
+      "sha256_before": "c81e71ff9a8b82346ea9b4e7c46ed0672305cc0f3eccfbb57617ec530eb3f873"
     },
     {
       "old_path": "docs/mitre-curation-architecture-v0.7.md",
@@ -488,7 +488,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "e0b50a57fb76c5d32cc8c87dd36e505fb3a4b78c9ae980679087db47a7a9b1e7"
+      "sha256_before": "e5f9086e1536a94f945fa47ec93ea39196e75f9eb01074d94a219ce99e438f83"
     },
     {
       "old_path": "docs/multi-feed-expansion-v0.4.md",
@@ -497,7 +497,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "ef66872a74b88345bb72e02034e2129ffb624811e7af3dfea6128b4669642b2e"
+      "sha256_before": "a032de99a5233bf6f5b78781a48e918e3e8d07e480782eb87b82ae631506ef72"
     },
     {
       "old_path": "docs/opencti-compatibility.md",
@@ -514,7 +514,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "d503031f0f12b8fb2ccb52a893d041ace994670feb0cad7a30a5f628bd162306"
+      "sha256_before": "d6a44425011e2a5dcdd24719df81c80f558ba0411bb7a2017fed7f567e62cc6b"
     },
     {
       "old_path": "docs/opencti-coverage-matrix.md",
@@ -531,7 +531,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "a0f21ca58983cbbae3672ee116228d17a02aa26e2de41894a63788a3dab5fb27"
+      "sha256_before": "94473a7508e1a4901302eda5bf418064c488fdab2fce616652fb279a4d85a604"
     },
     {
       "old_path": "docs/operational-validation-v0.7.md",
@@ -540,7 +540,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "74c3d70ecc8a5ce552567818da8584860935ceb3013d98f7ce53e742ad88f41d"
+      "sha256_before": "d3788a4884dd06f77cb8f1e027316748b3640a8602b1ec92a89e16b2245eed3b"
     },
     {
       "old_path": "docs/operational-validation-v0.8.md",
@@ -549,7 +549,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "359564f78d9a745694e87712574f9176a4f08b24dac4e523ef5d974172aebe69"
+      "sha256_before": "92246a92697318ae38c09f469cf150c76d5fbfeaceaf8cf9e236c15cabecfd90"
     },
     {
       "old_path": "docs/otx-adapter-foundation-v0.2.md",
@@ -558,7 +558,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "311ed47355b1a4e2c066ea56412cc862daaf0b91141d3a52dede2c3b73e1900d"
+      "sha256_before": "e622a4b6c32cf355b3d77af1d6de9e3a91c0cd76644981d5eb4346863ed9a8bf"
     },
     {
       "old_path": "docs/otx-official-connector-mapping-v0.7.md",
@@ -567,7 +567,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "3297e588bbbd6c06176dc3bc2f99b9d30c2a685a33f79c7b9b6b9d424c65e0a3"
+      "sha256_before": "50e1d8be9293c807107be6c966151b79c712217634426f7e23e08f90ef115d65"
     },
     {
       "old_path": "docs/product-architecture-validation-v0.5.md",
@@ -576,7 +576,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "002af4f131a5da46ab33acba726bed98eb63fd6ce772e2130dcc4a2cbdbbf781"
+      "sha256_before": "0bb9833243739ed73bd5d15bb76a7204413a8246a82b2799b3e97d7d3e364a79"
     },
     {
       "old_path": "docs/product-foundation-v0.3.md",
@@ -585,7 +585,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "e00a4bc2b883e2efaf932edacc63276c4e497cce49c6d72ff1e6fd022dfb3aa0"
+      "sha256_before": "46c173b7465f0bc3c1423fd7718db2a99e5919dfece0f3bbc4bf33e0be287141"
     },
     {
       "old_path": "docs/product-reference.md",
@@ -610,7 +610,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "bd2d0e7898b98a454c53e4d4ed7ff921f1ab46f0a1e52fd0200b4827df1a8929"
+      "sha256_before": "55bd0f0dde333783d554f9f03c13d345c0911faf2bb78118209be5ad547eb1c0"
     },
     {
       "old_path": "docs/release-process.md",
@@ -619,7 +619,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "595748ae2f5b84799d16f12fbcdc01866b0512f753c71d2b29905bad87f02246"
+      "sha256_before": "73bbdb546510b5c005947cbda640ad7685fb706dcfeaca4b2f1a51e9bca7e1f1"
     },
     {
       "old_path": "docs/release-v0.4.0.md",
@@ -628,7 +628,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "dc49694fc2747228a2dcfeaf9eca53cd0cc9a34a824bb2e4008093686d94d9e7"
+      "sha256_before": "d00196d477e5125dcfa84a9a409f68dfbdbe8c63eb257b09b0918919f224e1dd"
     },
     {
       "old_path": "docs/release-v0.5.0.md",
@@ -637,7 +637,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "1b9b77b5bbcf44d86a8c7c1e1e835dc4737a1a41445a21839aabdfd265c5d0c1"
+      "sha256_before": "1f8846ca98a171d9ed1a177dfc379fb03eb5eb090e87e7646656cad69994cc26"
     },
     {
       "old_path": "docs/release-v0.6.0.md",
@@ -646,7 +646,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "fab3c5494522946c7c765362d5534971f9c3515758b52c26247c05425416ffd7"
+      "sha256_before": "54e0b866854b11f9d7cf4400b96be3ff59f59b464d7b4b38205566581c8f59b0"
     },
     {
       "old_path": "docs/release-v0.7.0.md",
@@ -655,7 +655,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "cd5b7ff97eac3718da9e77fd7257502a6328a53170331a30eff49806ad51b48d"
+      "sha256_before": "82d18391a71b0cad5c111c25f139add40c4c444fd5d12b0174fe097c8e70abf9"
     },
     {
       "old_path": "docs/release-v0.8.0.md",
@@ -664,7 +664,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "fffe211cc805b29b3d91b730a6d8b7e960f8ad863b7944043fcc1d0ab6e20f6c"
+      "sha256_before": "51af5d722fc8b5b9a4b39a4b1c869a2bf45a06dceefbfa2f6866cba89f22d241"
     },
     {
       "old_path": "docs/release-v0.9.0.md",
@@ -673,7 +673,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "e1c8cd00cd4b110b96836bf6400af19fe89a31f99970e1f7b98e720df1a9e1a1"
+      "sha256_before": "ddc972fb09c99009b246a52dddb45aa1f15f67d798ec7c7de02b3b3ba1458fcd"
     },
     {
       "old_path": "docs/release-v1.0.0.md",
@@ -682,7 +682,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "daa007f822b1ae5263da4e1f54ddee047d470e11b3ca5f6424d7c4fef2f397a3"
+      "sha256_before": "404db47fafced3daa191dfc61ece3dfd5b361199b013a01eccf628d788389589"
     },
     {
       "old_path": "docs/release-v1.0.1.md",
@@ -691,7 +691,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "f9e9e6feb8606d2e1d8929a40f9c8bbb6e9e485e36e510dc64f66cf26a24caf5"
+      "sha256_before": "e1c21820bcd2971e40d700d3710126dbf8a283f6daddb16d5ed1abc46bb7917d"
     },
     {
       "old_path": "docs/release-v1.1.0.md",
@@ -700,7 +700,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "8c9282dbe3bce7ced6c0aeff79616937be33df04db2ae532cad230bc0694229a"
+      "sha256_before": "a1fc974c0e256b1cedb37cfdbda1712f87396abe3d6d30aa93bc5c00bf701b05"
     },
     {
       "old_path": "docs/release-v1.1.1.md",
@@ -709,7 +709,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "78529564c9456c84cb91c33ee6d4d5a8d414057a69604f7bb5bd29c7173d8bf1"
+      "sha256_before": "d6187d766b6acd218001c82f3eabc3ab9281c84fbac078c3254bbdb89f261ca6"
     },
     {
       "old_path": "docs/repository-structure.md",
@@ -734,7 +734,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "757cd369e9719d97e7c716ad4bd740c19c73f34cffb1c67e433a50a7fdf3633e"
+      "sha256_before": "ed3ddd43fa3f14466727718cf5b61225ca29b8f9972da9bb62fcd1bf56fcad42"
     },
     {
       "old_path": "docs/source-ingestion-modes-v0.7.md",
@@ -743,7 +743,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "0ce85343aa5a66b5044a0f24d3a55261748c78bb802492bb2b86a7079c9df0a4"
+      "sha256_before": "1db95e98fd3164f11753e959d830263c4bfab70708090f72c495ee3c435771ac"
     },
     {
       "old_path": "docs/support-diagnostics-v0.8.md",
@@ -752,7 +752,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "4723f14418c4e04ef3a1fa04867d8e9e6f4dc2297ec608b1bc7036ac7e44aea0"
+      "sha256_before": "5e7a332b29094992e38d87a811b54826c0f5a658065a67915905c23059f5277e"
     },
     {
       "old_path": "docs/w0-baseline-v1.1.1.json",
@@ -761,7 +761,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "d3eafedc4ef8f3f3975ddaa7c657e5c45650312c68bf679872413795d81bda39"
+      "sha256_before": "a4b45c18a6f0fb6d674e0e0cd4ad3a0bbaf1b33582fbd28e06f1f13a18282f77"
     },
     {
       "old_path": "docs/w0-baseline-v1.1.1.md",
@@ -770,7 +770,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "96e0610c5217a5f0e71a4cb180e2f91bdc97b9d7c7ca220d2ab27ef3569180db"
+      "sha256_before": "9cc18635aa4cfa5d802b0e0ba9e1918ef7a14f4febbafd1e0ceb8519f1327d09"
     },
     {
       "old_path": "docs/w0-config-baseline-v1.1.1.md",
@@ -779,7 +779,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "d97ad462ef950a71961f3db2baa2bbabe20f33686e1ae2363852a7a2d04c89f4"
+      "sha256_before": "ff4692e6f8e9a856726bf0714995420b1250e46e357c21d38a228801604360bf"
     },
     {
       "old_path": "docs/w0-test-inventory-v1.1.1.md",
@@ -788,7 +788,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "4537b43f5e97ab8f573a193397e1a6f6814a441dd8c7163cd91ccb3c73c8a8af"
+      "sha256_before": "29dcb5c3c2f6829881d2e3e5f43ff6e83e18cbdf348dd2da6bd42a6e704b1144"
     },
     {
       "old_path": "docs/w0-v1.1.0-to-v1.1.1-delta.md",
@@ -797,7 +797,7 @@
       "historical": true,
       "immutable": true,
       "disposition": "MOVE",
-      "sha256_before": "73484fda1c6a02827dd227489e5fdd0a07729d3f5f14126d32e375f628e4451c"
+      "sha256_before": "4ab1241c4e7103414f283136e3fb076ca621e0e104dc688898a9f71153eb2df7"
     }
   ]
 }
