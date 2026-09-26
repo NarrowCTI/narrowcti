@@ -2,9 +2,19 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import importlib.util
 from pathlib import Path
 
-from scripts.check_2_0_migration import scan
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location(
+    "pr22_migration_checker", ROOT / "scripts" / "check_2_0_migration.py"
+)
+CHECKER = importlib.util.module_from_spec(SPEC)
+assert SPEC.loader is not None
+sys.modules[SPEC.name] = CHECKER
+SPEC.loader.exec_module(CHECKER)
+scan = CHECKER.scan
 
 
 class MigrationCheckerTests(unittest.TestCase):
@@ -29,7 +39,7 @@ class MigrationCheckerTests(unittest.TestCase):
             self.assertEqual(1, len(findings))
             self.assertEqual("warning", findings[0].severity)
             result = subprocess.run(
-                [sys.executable, "scripts/check_2_0_migration.py", str(root), "--strict"],
+                [sys.executable, str(ROOT / "scripts" / "check_2_0_migration.py"), str(root), "--strict"],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -43,7 +53,7 @@ class MigrationCheckerTests(unittest.TestCase):
             findings = scan(root)
             self.assertEqual("error", findings[0].severity)
             result = subprocess.run(
-                [sys.executable, "scripts/check_2_0_migration.py", str(root)],
+                [sys.executable, str(ROOT / "scripts" / "check_2_0_migration.py"), str(root)],
                 check=False,
                 capture_output=True,
                 text=True,
