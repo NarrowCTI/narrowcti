@@ -642,6 +642,9 @@ artifact = DetectionArtifact(
 )
 contract = ValidationContract(
     "VC-wheel", requirement.id, behavior, artifact_id=artifact.id,
+    provider_preference="openaev",
+    expected_telemetry=True,
+    expected_detection=True,
     evidence_required=("execution",),
 )
 evidence = ValidationEvidence(

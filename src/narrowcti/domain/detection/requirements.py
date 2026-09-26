@@ -135,7 +135,12 @@ class DetectionRequirement:
     def from_dict(cls, value):
         if not isinstance(value, Mapping):
             raise ValueError("detection requirement must be a mapping")
-        evidence = value.get("evidence") or {}
+        relevance = value.get("relevance", {})
+        if not isinstance(relevance, Mapping):
+            raise ValueError("relevance must be a mapping")
+        evidence = value.get("evidence", {})
+        if not isinstance(evidence, Mapping):
+            raise ValueError("evidence must be a mapping")
         source_refs = value.get("source_refs")
         evidence_refs = evidence.get("references")
         if source_refs is not None and evidence_refs is not None:
@@ -149,8 +154,8 @@ class DetectionRequirement:
             source_refs=source_refs if source_refs is not None else evidence_refs or (),
             threat_context=ThreatContext.from_dict(value.get("threat_context") or {}),
             behavior=DetectionBehavior.from_dict(value.get("behavior") or {}),
-            priority=(value.get("relevance") or {}).get("priority", ""),
-            rationale=(value.get("relevance") or {}).get("rationale", ""),
+            priority=relevance.get("priority", ""),
+            rationale=relevance.get("rationale", ""),
             confidence=evidence.get("confidence"),
             provenance=evidence.get("provenance") or (),
             telemetry_requirements=value.get("telemetry_requirements") or (),

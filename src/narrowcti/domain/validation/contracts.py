@@ -30,9 +30,9 @@ class ValidationContract:
     requirement_id: str
     behavior: DetectionBehavior
     artifact_id: str | None = None
-    provider_preference: tuple[str, ...] = ()
-    expected_telemetry: tuple[str, ...] = ()
-    expected_detection: tuple[str, ...] = ()
+    provider_preference: str | None = None
+    expected_telemetry: bool = False
+    expected_detection: bool = False
     evidence_required: tuple[str, ...] = ()
     provenance: tuple[str, ...] = ()
     version: int = 1
@@ -44,9 +44,15 @@ class ValidationContract:
             raise ValueError("behavior must be a DetectionBehavior")
         if self.artifact_id is not None:
             object.__setattr__(self, "artifact_id", required_text(self.artifact_id, "artifact_id"))
-        object.__setattr__(self, "provider_preference", normalize_refs(self.provider_preference, "provider_preference"))
-        object.__setattr__(self, "expected_telemetry", normalize_refs(self.expected_telemetry, "expected_telemetry"))
-        object.__setattr__(self, "expected_detection", normalize_refs(self.expected_detection, "expected_detection"))
+        if self.provider_preference is not None:
+            object.__setattr__(
+                self,
+                "provider_preference",
+                required_text(self.provider_preference, "provider_preference"),
+            )
+        for field_name in ("expected_telemetry", "expected_detection"):
+            if not isinstance(getattr(self, field_name), bool):
+                raise ValueError(f"{field_name} must be a bool")
         evidence_required = normalize_refs(self.evidence_required, "evidence_required")
         if not evidence_required:
             raise ValueError("evidence_required must not be empty")
@@ -60,10 +66,10 @@ class ValidationContract:
             "requirement_id": self.requirement_id,
             "artifact_id": self.artifact_id,
             "behavior": self.behavior.to_dict(),
-            "provider_preference": list(self.provider_preference),
+            "provider_preference": self.provider_preference,
             "expected": {
-                "telemetry": list(self.expected_telemetry),
-                "detection": list(self.expected_detection),
+                "telemetry": self.expected_telemetry,
+                "detection": self.expected_detection,
             },
             "evidence_required": list(self.evidence_required),
             "provenance": list(self.provenance),
@@ -74,15 +80,17 @@ class ValidationContract:
     def from_dict(cls, value):
         if not isinstance(value, Mapping):
             raise ValueError("validation contract must be a mapping")
-        expected = value.get("expected") or {}
+        expected = value.get("expected", {})
+        if not isinstance(expected, Mapping):
+            raise ValueError("expected must be a mapping")
         return cls(
             id=value.get("id"),
             requirement_id=value.get("requirement_id"),
             artifact_id=value.get("artifact_id"),
             behavior=DetectionBehavior.from_dict(value.get("behavior") or {}),
-            provider_preference=value.get("provider_preference") or (),
-            expected_telemetry=expected.get("telemetry") or (),
-            expected_detection=expected.get("detection") or (),
+            provider_preference=value.get("provider_preference"),
+            expected_telemetry=expected.get("telemetry", False),
+            expected_detection=expected.get("detection", False),
             evidence_required=value.get("evidence_required") or (),
             provenance=value.get("provenance") or (),
             version=value.get("version", 1),

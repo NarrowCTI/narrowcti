@@ -88,18 +88,11 @@
       "rule_version"
     ],
     "expected": {
-      "detection": [
-        "alert"
-      ],
-      "telemetry": [
-        "process_creation"
-      ]
+      "detection": true,
+      "telemetry": true
     },
     "id": "VC-PR19-001",
-    "provider_preference": [
-      "manual",
-      "openaev"
-    ],
+    "provider_preference": "openaev",
     "provenance": [
       "decision:abc"
     ],

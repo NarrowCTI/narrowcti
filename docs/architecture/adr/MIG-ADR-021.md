@@ -32,9 +32,12 @@ parser mapping and freshness semantics are deferred because their vocabulary
 is not stable enough for this wave.
 
 `ValidationContract` uses explicit `requirement_id` and optional
-`artifact_id` references. `ValidationEvidence` records the exact artifact and
-version plus the exact telemetry contract and version used for a normalized
-result. Its status vocabulary is independent of
+`artifact_id` references. Its `provider_preference` is singular optional
+metadata, while `expected.telemetry` and `expected.detection` are booleans.
+`TelemetryContract` owns telemetry capability and field detail; the concrete
+observed references belong to `ValidationEvidence`. `ValidationEvidence`
+records the exact artifact and version plus the exact telemetry contract and
+version used for a normalized result. Its status vocabulary is independent of
 `OperationalValidationReport`.
 
 The detection lifecycle vocabulary is explicit and the domain accepts only

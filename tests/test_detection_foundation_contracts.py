@@ -129,13 +129,36 @@ class DetectionFoundationContractTests(unittest.TestCase):
 
     def test_validation_contract_has_explicit_requirement_and_optional_artifact(self):
         contract = ValidationContract(
-            "VC-1", "DR-1", self.behavior, evidence_required=("execution", "execution")
+            "VC-1", "DR-1", self.behavior, provider_preference="  openaev  ",
+            expected_telemetry=True, expected_detection=False,
+            evidence_required=("execution", "execution"),
         )
         self.assertEqual("DR-1", contract.requirement_id)
         self.assertIsNone(contract.artifact_id)
+        self.assertEqual("openaev", contract.provider_preference)
+        self.assertTrue(contract.expected_telemetry)
+        self.assertFalse(contract.expected_detection)
         self.assertEqual(("execution",), contract.evidence_required)
         with self.assertRaises(ValueError):
             ValidationContract("VC-2", "DR-1", self.behavior, evidence_required=())
+
+    def test_validation_contract_rejects_invalid_provider_and_expectation_values(self):
+        with self.assertRaises(ValueError):
+            ValidationContract("VC-2", "DR-1", self.behavior, provider_preference="  ")
+        with self.assertRaises(ValueError):
+            ValidationContract("VC-3", "DR-1", self.behavior, expected_telemetry="true")
+        with self.assertRaises(ValueError):
+            ValidationContract("VC-4", "DR-1", self.behavior, expected_detection=1)
+
+    def test_validation_contract_from_dict_rejects_malformed_nested_values(self):
+        with self.assertRaises(ValueError):
+            ValidationContract.from_dict({"id": "VC-2", "expected": []})
+
+    def test_detection_requirement_from_dict_rejects_malformed_nested_values(self):
+        with self.assertRaises(ValueError):
+            DetectionRequirement.from_dict({"id": "DR-2", "evidence": "invalid"})
+        with self.assertRaises(ValueError):
+            DetectionRequirement.from_dict({"id": "DR-3", "relevance": []})
 
     def test_validation_evidence_traces_exact_artifact_and_telemetry_versions(self):
         evidence = ValidationEvidence(

@@ -27,6 +27,10 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-019](MIG-ADR-019.md) | Capability registry and entitlement provider boundary | accepted for W6 / PR-18 |
 | [MIG-ADR-021](MIG-ADR-021.md) | Detection foundation domain contracts | accepted for W6 / PR-19 |
 
+MIG-ADR-020 is intentionally reserved for the Shared Web Architecture /
+Community Basic UI / Source Explorer / Web Security decision defined by the
+v0.5 migration plan.
+
 Each ADR must be reviewed and approved before the migration wave that depends
 on it. Accepted records remain bounded by their stated PR scope. PR-03 adds
 only the deterministic `src/narrowcti` compatibility bootstrap described in
