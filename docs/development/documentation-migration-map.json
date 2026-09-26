@@ -614,12 +614,11 @@
     },
     {
       "old_path": "docs/release-process.md",
-      "new_path": "docs/releases/release-process.md",
-      "classification": "historical",
-      "historical": true,
-      "immutable": true,
-      "disposition": "MOVE",
-      "sha256_before": "73bbdb546510b5c005947cbda640ad7685fb706dcfeaca4b2f1a51e9bca7e1f1"
+      "new_path": "docs/development/release-process.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
     },
     {
       "old_path": "docs/release-v0.4.0.md",

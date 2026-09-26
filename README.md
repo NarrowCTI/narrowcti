@@ -208,7 +208,7 @@ validation and bounded backfill. MISP should stay opt-in and guarded until local
 OpenCTI, queue and Elasticsearch behavior remains stable across repeated bounded
 runs. The runtime design is tracked in `docs/architecture/gateway-runtime-v0.5.md`, and the
 product/architecture continuity validation is tracked in
-`docs/product-architecture-validation-v0.5.md`.
+`docs/validation/product-architecture-validation-v0.5.md`.
 
 ## v0.6 Release Track
 
@@ -230,7 +230,7 @@ checks and operational reporting now include quarantine/release and MITRE cache
 posture for operator readiness.
 
 The detailed v0.6 design is tracked in
-`docs/quarantine-enrichment-v0.6.md`, and the release notes are
+`docs/architecture/quarantine-enrichment-v0.6.md`, and the release notes are
 tracked in `docs/releases/release-v0.6.0.md`.
 
 Initial quarantine CLI commands:
@@ -435,10 +435,16 @@ deployment/docker-compose.narrowcti-gateway.yml
 deployment/gateway.env.example
 ```
 
+The canonical owners live under
+`src/narrowcti/{domain,ports,application,adapters,infrastructure,api,cli}`.
+The top-level `core/`, `connectors/`, `exporters/` and `gateway/` trees are
+compatibility surfaces retained for supported legacy imports and entrypoints.
+
 The current template is dry-run/run-once by default and must be validated with
-`gateway.preflight` before any source execution. It uses the normal Compose
-network and supports routed or remote OpenCTI/MISP endpoints; an optional
-shared-network override is only needed for externally managed Docker networks.
+`gateway.preflight` before any source execution. Deployment is endpoint-driven
+and topology-independent: it uses the normal Compose network by default and
+supports routed or remote OpenCTI/MISP endpoints; an optional shared-network
+override is only needed for externally managed Docker networks.
 Its `ops` profile can run preflight, curation reporting,
 decision audit reporting, artifact correlation reporting, operational
 validation and support diagnostics without starting continuous ingestion. The
@@ -525,6 +531,7 @@ docs/architecture/graph-promotion-v0.8.md
 docs/validation/opencti-coverage-matrix-v0.8.md
 docs/development/repository-structure.md
 docs/development/development-guide.md
+docs/development/source-adapter-onboarding.md
 docs/community/community-issue-triage.md
 docs/releases/release-v1.1.1.md
 docs/releases/release-v1.0.1.md
@@ -532,7 +539,7 @@ docs/releases/release-v1.1.0.md
 docs/releases/release-v0.9.0.md
 docs/releases/release-v0.8.0.md
 docs/releases/release-v1.0.0.md
-docs/releases/release-process.md
+docs/development/release-process.md
 ```
 
 Development evidence and lab validation notes are retained only where they help

@@ -104,4 +104,4 @@ Release archives must exclude:
 - development validation notes marked with `export-ignore`.
 
 Before publishing a release, run the archive inspection described in
-`docs/releases/release-process.md`.
+`docs/development/release-process.md`.

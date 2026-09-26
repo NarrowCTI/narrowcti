@@ -158,7 +158,7 @@ surface or release packaging should also update:
 - `docs/product/container-images.md`;
 - `docs/product/deployment-operations.md`;
 - `docs/product/configuration-reference.md`;
-- `docs/releases/release-process.md`;
+- `docs/development/release-process.md`;
 - `.github/workflows/container-image.yml`, when image publishing changes.
 
 Container image tags are part of the public contract. Do not change tag naming

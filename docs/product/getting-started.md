@@ -136,5 +136,5 @@ replay.
 - `docs/product/curation-decision-reference.md`
 - `docs/product/environment-profiles.md`
 - `docs/validation/opencti-coverage-matrix-v0.8.md`
-- `docs/infrastructure-correlation-v0.8.md`
+- `docs/architecture/infrastructure-correlation-v0.8.md`
 - `docs/product/support-diagnostics-v0.8.md`

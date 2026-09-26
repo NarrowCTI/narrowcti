@@ -16,7 +16,7 @@ NarrowCTI predictable for contributors, operators and security reporters.
 | License | `LICENSE` | Apache-2.0 Community Edition license for the core project. |
 | Security | `SECURITY.md` | Supported versions, private reporting and disclosure process. |
 | Support | `SUPPORT.md` | Community support channels and data handling guidance. |
-| Release process | `docs/releases/release-process.md` | Tag, GitHub Release and image release process. |
+| Release process | `docs/development/release-process.md` | Tag, GitHub Release and image release process. |
 | Container images | `docs/product/container-images.md` | Image naming, tags and operator pinning guidance. |
 | Community governance | `docs/community/community-governance.md` | Contribution scope, permissions, review and branch settings. |
 | Code ownership | `.github/CODEOWNERS` | Default maintainer review responsibility. |

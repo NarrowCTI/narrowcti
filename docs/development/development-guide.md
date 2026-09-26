@@ -80,8 +80,8 @@ python -m unittest discover -s tests -v
 
 ## Source Adapter Work
 
-Use `docs/source-adapter-onboarding-v0.7.md` before adding or changing an
-adapter.
+Use `docs/development/source-adapter-onboarding.md` before adding or changing
+an adapter.
 
 Adapter work should document:
 

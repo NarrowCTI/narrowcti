@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -11,13 +12,13 @@ LEDGER = ROOT / "docs/development/documentation-migration-map.json"
 DISPOSITIONS = {"STAY", "MOVE", "LEGACY-RETAIN", "CANONICAL-REPLACEMENT"}
 
 
-def _canonical_text_bytes(path: Path) -> bytes:
-    """Hash tracked text content independent of checkout newline conversion."""
+def _git_index_bytes(path: Path) -> bytes:
+    """Read the exact tracked blob bytes from the current Git index."""
 
-    content = path.read_bytes()
-    if path.suffix.lower() in {".md", ".json"}:
-        return content.replace(b"\r\n", b"\n")
-    return content
+    return subprocess.check_output(
+        ["git", "show", f":{path.relative_to(ROOT).as_posix()}"],
+        cwd=ROOT,
+    )
 
 
 class DocumentationMigrationTests(unittest.TestCase):
@@ -39,7 +40,7 @@ class DocumentationMigrationTests(unittest.TestCase):
             if entry["disposition"] in {"MOVE", "CANONICAL-REPLACEMENT"}:
                 self.assertTrue(target.exists(), entry["new_path"])
             if entry["immutable"] and entry.get("sha256_before"):
-                digest = hashlib.sha256(_canonical_text_bytes(target)).hexdigest()
+                digest = hashlib.sha256(_git_index_bytes(target)).hexdigest()
                 self.assertEqual(entry["sha256_before"], digest, entry["old_path"])
 
     def test_current_docs_do_not_reference_moved_paths(self):
@@ -47,7 +48,7 @@ class DocumentationMigrationTests(unittest.TestCase):
         forbidden = {
             entry["old_path"]
             for entry in payload["entries"]
-            if entry["disposition"] == "MOVE" and not entry["historical"]
+            if entry["disposition"] == "MOVE"
         }
         files = {
             ROOT / name

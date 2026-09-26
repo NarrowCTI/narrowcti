@@ -17,7 +17,9 @@ The machine-readable migration ledger is
 - Validation: [`validation/opencti-coverage-matrix-v0.8.md`](validation/opencti-coverage-matrix-v0.8.md)
 - Community: [`community/community-governance.md`](community/community-governance.md),
   [`community/community-standards.md`](community/community-standards.md)
-- Development: [`development/development-guide.md`](development/development-guide.md)
+- Development: [`development/development-guide.md`](development/development-guide.md),
+  [`development/source-adapter-onboarding.md`](development/source-adapter-onboarding.md),
+  [`development/release-process.md`](development/release-process.md)
 - Releases: [`releases/release-v1.1.1.md`](releases/release-v1.1.1.md)
 
 `architecture.md` remains a compatibility stub pointing to the overview. The
@@ -31,9 +33,9 @@ uses `assets/brand/`.
 | `product/` | operator and product contracts |
 | `architecture/` | current architecture and historical design snapshots |
 | `community/` | governance and contributor guidance |
-| `development/` | contributor workflows and migration evidence |
+| `development/` | contributor workflows, release process and migration evidence |
 | `validation/` | validation, mapping and W0 evidence |
-| `releases/` | release process and immutable release notes |
+| `releases/` | release notes and immutable release snapshots |
 
 The six documentation categories are `product/`, `architecture/`, `community/`,
 `development/`, `validation/`, and `releases/`. Operational identity assets
