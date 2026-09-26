@@ -122,7 +122,10 @@ class PreflightTopologyContractTests(unittest.TestCase):
 
 
 def _settings(**overrides):
-    from tests.test_gateway_preflight import make_settings
+    if __package__:
+        from tests.test_gateway_preflight import make_settings
+    else:
+        from test_gateway_preflight import make_settings
 
     return make_settings(**overrides)
 

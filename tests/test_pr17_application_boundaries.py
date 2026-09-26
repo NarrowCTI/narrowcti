@@ -99,7 +99,10 @@ class PR17BoundaryTests(unittest.TestCase):
 
     def test_operational_validation_preflight_preserves_misp_tls_evidence(self):
         from gateway.operational_validation import build_preflight_report
-        from tests.test_gateway_preflight import make_settings
+        if __package__:
+            from tests.test_gateway_preflight import make_settings
+        else:
+            from test_gateway_preflight import make_settings
 
         report = build_preflight_report(
             make_settings(enabled_sources=["misp"]),

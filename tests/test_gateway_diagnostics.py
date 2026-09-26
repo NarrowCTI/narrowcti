@@ -12,15 +12,26 @@ from gateway.diagnostics import (
     write_html_snapshot,
     write_support_bundle,
 )
-from tests.test_gateway_curation_report import (
-    decision_record,
-    gateway_record,
-    graph_context_metadata,
-    release_event,
-    relationship_audit_evidence as incomplete_relationship_audit_evidence,
-    source_result,
-)
-from tests.test_gateway_preflight import make_settings
+if __package__:
+    from tests.test_gateway_curation_report import (
+        decision_record,
+        gateway_record,
+        graph_context_metadata,
+        release_event,
+        relationship_audit_evidence as incomplete_relationship_audit_evidence,
+        source_result,
+    )
+    from tests.test_gateway_preflight import make_settings
+else:
+    from test_gateway_curation_report import (
+        decision_record,
+        gateway_record,
+        graph_context_metadata,
+        release_event,
+        relationship_audit_evidence as incomplete_relationship_audit_evidence,
+        source_result,
+    )
+    from test_gateway_preflight import make_settings
 
 
 class GatewayDiagnosticsTests(unittest.TestCase):

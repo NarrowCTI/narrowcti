@@ -18,12 +18,20 @@ from gateway.operational_validation import (
     write_report,
 )
 from gateway.preflight import build_preflight_report as _build_preflight_report
-from tests.test_gateway_decisions import (
-    decision_record,
-    graph_export_plan,
-    graph_lookup_matches,
-)
-from tests.test_gateway_preflight import make_settings
+if __package__:
+    from tests.test_gateway_decisions import (
+        decision_record,
+        graph_export_plan,
+        graph_lookup_matches,
+    )
+    from tests.test_gateway_preflight import make_settings
+else:
+    from test_gateway_decisions import (
+        decision_record,
+        graph_export_plan,
+        graph_lookup_matches,
+    )
+    from test_gateway_preflight import make_settings
 
 
 def build_preflight_report(settings, env=None):
