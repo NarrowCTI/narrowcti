@@ -27,19 +27,29 @@ deployment/docker-compose.narrowcti-gateway.yml
 deployment/gateway.env.example
 ```
 
-The public template defaults to `opencti_default`. In the current NarrowCTI
-lab, OpenCTI and MISP share the externally managed `threat-net` network, so set
-the override before running Compose:
+The public template uses the normal Compose default network and does not
+require an external OpenCTI network. Configure `OPENCTI_URL` and `MISP_URL`
+with routed or remote endpoints as needed. When OpenCTI/MISP containers share
+an externally managed network, apply the optional override:
 
 ```powershell
 $env:NARROWCTI_DOCKER_NETWORK = "threat-net"
 ```
 
-Use the network name returned by the target OpenCTI Compose project in other
-deployments; do not create a second isolated network for the gateway.
+```powershell
+docker compose `
+  -f deployment\docker-compose.narrowcti-gateway.yml `
+  -f deployment\docker-compose.narrowcti-shared-network.yml config
+```
 
-The Compose template builds `Dockerfile.gateway`, joins an existing OpenCTI
-Docker network and stores runtime evidence in a Docker volume.
+The override retains both the default egress network and the selected external
+integration network, so mixed topologies remain supported. Use the network name
+returned by the target OpenCTI Compose project when selecting shared mode.
+
+The Compose template builds `Dockerfile.gateway` and stores runtime evidence in
+a Docker volume. The image runs as UID/GID `10001:10001`; new volumes inherit
+the prepared ownership. Existing root-owned volumes require an explicit,
+backed-up ownership migration before starting the new image.
 
 For local validation, the default image is `narrowcti/gateway:local`. The latest
 published stable release is v1.0. For release deployments, use a pinned
@@ -70,7 +80,7 @@ continuous execution or graph export.
 ## Optional Analyst Review API
 
 v0.9 adds an isolated `review-api` Compose profile. It shares only the
-NarrowCTI state volume and OpenCTI network with the gateway, runs with a
+NarrowCTI state volume and selected deployment networks with the gateway, runs with a
 read-only root filesystem, drops Linux capabilities and publishes its port to
 host loopback only.
 

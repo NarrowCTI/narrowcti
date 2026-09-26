@@ -75,7 +75,7 @@ The PR-04 inventory is therefore:
 | `NARROWCTI_GATEWAY_CONTAINER` | `narrowcti-gateway` | Container name for the gateway runtime service. |
 | `NARROWCTI_GATEWAY_ENV_FILE` | `./gateway.env.example` | Env file consumed by Compose. Set to `./gateway.env` for real local secrets. |
 | `NARROWCTI_GATEWAY_RESTART` | `no` | Restart policy for the gateway runtime. Keep `no` during validation. |
-| `NARROWCTI_DOCKER_NETWORK` | `opencti_default` | External Docker network used to reach OpenCTI. |
+| `NARROWCTI_DOCKER_NETWORK` | `opencti_default` | External Docker network used only by the optional shared-network Compose override. It is not read by the application and never rewrites endpoint URLs. |
 | `CONNECTOR_NAME` | `NarrowCTI Gateway` | Logical connector name used in runtime metadata and audit naming. Keep it stable across deployments. |
 
 ## Gateway Runtime
