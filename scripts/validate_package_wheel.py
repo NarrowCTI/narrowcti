@@ -118,6 +118,7 @@ REQUIRED_MODULES = (
     "narrowcti/infrastructure/capabilities.py",
     "narrowcti/infrastructure/runtime/__init__.py",
     "narrowcti/infrastructure/runtime/gateway_composition.py",
+    "narrowcti/infrastructure/runtime/topology.py",
     "narrowcti/infrastructure/runtime/summary_store.py",
     "narrowcti/adapters/opencti/client.py",
     "narrowcti/adapters/entitlements/__init__.py",

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidateNotNullOrEmpty()]
-    [string]$Image = 'opencti-connector-narrowcti',
+    [string]$Image = 'narrowcti/gateway:local',
 
     [switch]$SkipTests,
 

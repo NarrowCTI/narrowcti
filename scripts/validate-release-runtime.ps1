@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidateNotNullOrEmpty()]
-    [string]$Image = 'opencti-connector-narrowcti',
+    [string]$Image = 'narrowcti/gateway:local',
 
     [switch]$SkipTests,
 
@@ -13,124 +13,39 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RepoDir = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+$RuntimeHelper = Join-Path $PSScriptRoot 'validate_runtime_package.py'
 
-$CoreModules = @(
-    'connectors/otx/connector.py',
-    'connectors/otx/entity_extraction.py',
-    'connectors/otx/feed_adapter.py',
-    'connectors/otx/models.py',
-    'connectors/otx/processor.py',
-    'connectors/otx/runtime.py',
-    'connectors/otx/settings.py',
-    'connectors/otx/otx_client.py',
-    'connectors/misp/client.py',
-    'connectors/misp/connector.py',
-    'connectors/misp/feed_adapter.py',
-    'connectors/misp/models.py',
-    'connectors/misp/processor.py',
-    'connectors/misp/runtime.py',
-    'connectors/misp/settings.py',
-    'core/decision_audit.py',
-    'core/contextual_scoring.py',
-    'core/feed_contract.py',
-    'core/graph_candidates.py',
-    'core/graph_deduplication.py',
-    'core/graph_evidence.py',
-    'core/graph_export_plan.py',
-    'core/indicator_policy.py',
-    'core/mitre_attack.py',
-    'core/opencti_deduplication.py',
-    'core/opencti_graph_lookup.py',
-    'core/quarantine.py',
-    'core/scoring.py',
-    'core/policy.py',
-    'core/state_repository.py',
-    'core/tlp.py',
-    'exporters/opencti.py',
-    'exporters/stix_builder.py'
-)
-
-$GatewayModules = @(
-    'gateway/feature_gates.py',
-    'gateway/settings.py',
-    'gateway/preflight.py',
-    'gateway/report.py',
-    'gateway/curation_report.py',
-    'gateway/diagnostics.py',
-    'gateway/operational_validation.py',
-    'gateway/review.py',
-    'gateway/decisions.py',
-    'gateway/correlation.py',
-    'gateway/mitre.py',
-    'gateway/opencti_client.py',
-    'gateway/opencti_client_validation.py',
-    'gateway/quarantine.py',
-    'gateway/quarantine_export.py',
-    'gateway/review_api.py',
-    'gateway/review_auth.py'
-)
-
-function Invoke-DockerPython {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string[]]$PythonArgs,
-
-        [string]$RequirementsPath
-    )
-
-    $dockerArgs = @(
-        'run',
-        '--rm',
-        '-v',
-        "${RepoDir}:/repo",
-        '-w',
-        '/repo',
-        $Image
-    )
-
-    if ($RequirementsPath) {
-        $pythonCommand = 'python {0}' -f ($PythonArgs -join ' ')
-        $dockerArgs += @(
-            'sh',
-            '-lc',
-            "python -m pip install --no-cache-dir --requirement $RequirementsPath && $pythonCommand"
-        )
-    } else {
-        $dockerArgs += @('python') + $PythonArgs
-    }
-
-    Write-Host ('docker {0}' -f ($dockerArgs -join ' '))
-    if ($Preview) {
-        return
-    }
-
-    & docker @dockerArgs
-    $exitCode = $LASTEXITCODE
-
-    if ($exitCode -ne 0) {
-        throw "docker command failed with exit code $exitCode"
-    }
+if ($SkipTests -or $InstallTestDependencies) {
+    Write-Warning 'The immutable runtime image no longer installs development dependencies or runs the behavioral suite. Use CI for behavioral validation; the switches are retained for compatibility and are deprecated.'
 }
 
-Write-Host 'NarrowCTI release validation'
-Write-Host ('  repo={0}' -f $RepoDir)
+$dockerArgs = @(
+    'run',
+    '--rm',
+    '--read-only',
+    '--tmpfs',
+    '/tmp',
+    '--mount',
+    "type=bind,src=${RuntimeHelper},dst=/tmp/validate_runtime_package.py,readonly",
+    $Image,
+    'python',
+    '/tmp/validate_runtime_package.py',
+    '--compile',
+    '--imports'
+)
+
+Write-Host 'NarrowCTI release runtime validation'
 Write-Host ('  image={0}' -f $Image)
-Write-Host ('  skip_tests={0}' -f $SkipTests.IsPresent.ToString().ToLower())
+Write-Host '  behavioral tests: CI package-first gate (not production image)'
 if ($Preview) {
+    Write-Host ('docker {0}' -f ($dockerArgs -join ' '))
     Write-Host '  preview=true docker will not be executed'
+    exit 0
 }
 
-Invoke-DockerPython -PythonArgs (@('-m', 'py_compile') + $CoreModules)
-Invoke-DockerPython -PythonArgs (@('-m', 'py_compile') + $GatewayModules)
-
-if (-not $SkipTests) {
-    $testRequirements = $null
-    if ($InstallTestDependencies) {
-        $testRequirements = '/repo/requirements-dev.txt'
-    }
-    Invoke-DockerPython `
-        -PythonArgs @('-m', 'unittest', 'discover', '-s', 'tests', '-v') `
-        -RequirementsPath $testRequirements
+& docker @dockerArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "runtime validation failed with exit code $LASTEXITCODE"
 }
 
-Write-Host 'NarrowCTI release validation completed'
+Write-Host 'NarrowCTI release runtime validation completed'
