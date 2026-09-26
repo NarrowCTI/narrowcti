@@ -6,7 +6,10 @@ import tempfile
 import unittest
 
 from gateway.mitre import main
-from tests.test_mitre_attack import sample_attack_bundle
+if __package__:
+    from tests.test_mitre_attack import sample_attack_bundle
+else:
+    from test_mitre_attack import sample_attack_bundle
 
 
 class GatewayMITRETests(unittest.TestCase):

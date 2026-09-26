@@ -63,6 +63,11 @@ Then validate:
 powershell -ExecutionPolicy Bypass -File scripts\validate-release.ps1 -Image narrowcti/gateway:local
 ```
 
+The release validator checks the immutable runtime image only. It does not
+install development dependencies into that image; the behavioral suite runs in
+package-first CI. The runtime contains the installed NarrowCTI package, runs
+as a non-root user and does not require `PYTHONPATH`.
+
 ## Publish Workflow
 
 The GitHub Actions workflow in `.github/workflows/container-image.yml` builds and

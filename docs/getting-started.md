@@ -11,8 +11,9 @@ production-like upgrades, controlled graph export and operational handoff.
 - Access to an OpenCTI instance.
 - OpenCTI API token for connector import.
 - At least one source credential, such as OTX or MISP.
-- A Docker network that can reach OpenCTI. The deployment template defaults to
-  `opencti_default`.
+- An OpenCTI endpoint reachable from the deployment. The base Compose template
+  works with routed/remote endpoints; use the optional shared-network override
+  when OpenCTI or MISP runs on an external Docker network.
 
 ## Clone and Review
 

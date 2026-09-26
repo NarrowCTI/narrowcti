@@ -12,15 +12,26 @@ from gateway.diagnostics import (
     write_html_snapshot,
     write_support_bundle,
 )
-from tests.test_gateway_curation_report import (
-    decision_record,
-    gateway_record,
-    graph_context_metadata,
-    release_event,
-    relationship_audit_evidence as incomplete_relationship_audit_evidence,
-    source_result,
-)
-from tests.test_gateway_preflight import make_settings
+if __package__:
+    from tests.test_gateway_curation_report import (
+        decision_record,
+        gateway_record,
+        graph_context_metadata,
+        release_event,
+        relationship_audit_evidence as incomplete_relationship_audit_evidence,
+        source_result,
+    )
+    from tests.test_gateway_preflight import make_settings
+else:
+    from test_gateway_curation_report import (
+        decision_record,
+        gateway_record,
+        graph_context_metadata,
+        release_event,
+        relationship_audit_evidence as incomplete_relationship_audit_evidence,
+        source_result,
+    )
+    from test_gateway_preflight import make_settings
 
 
 class GatewayDiagnosticsTests(unittest.TestCase):
@@ -90,7 +101,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
 
             snapshot = build_support_diagnostics(
                 settings,
-                env={"OTX_DRY_RUN": "true"},
+                env={
+                    "OTX_DRY_RUN": "true",
+                    "OPENCTI_URL": "https://opencti.example.invalid",
+                },
                 generated_at="2026-06-24T10:02:00Z",
                 operational_validation_evidence_file=validation_evidence_file,
                 opencti_relationship_audit_file=relationship_audit_file,

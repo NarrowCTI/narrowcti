@@ -1,32 +1,54 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+RUN python -m venv /opt/narrowcti-venv \
+    && /opt/narrowcti-venv/bin/python -m pip install --no-cache-dir --upgrade \
+        pip setuptools==82.0.1 wheel
+
+COPY pyproject.toml VERSION README.md LICENSE /build/
+COPY connectors /build/connectors
+COPY core /build/core
+COPY exporters /build/exporters
+COPY gateway /build/gateway
+COPY src /build/src
+
+RUN /opt/narrowcti-venv/bin/python -m pip wheel \
+        --no-cache-dir --no-deps --wheel-dir /tmp/narrowcti-wheel /build \
+    && /opt/narrowcti-venv/bin/python -m pip install \
+        --no-cache-dir /tmp/narrowcti-wheel/narrowcti-*.whl
+
+FROM python:3.11-slim AS runtime
 
 WORKDIR /app
+
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/src:/app \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_DEFAULT_TIMEOUT=120
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH=/opt/narrowcti-venv/bin:$PATH
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y \
-    curl \
-    iputils-ping \
-    libmagic1 \
-    libmagic-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y curl libmagic1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 narrowcti \
+    && useradd --uid 10001 --gid 10001 --create-home --home-dir /home/narrowcti --shell /usr/sbin/nologin narrowcti \
+    && mkdir -p /app/state /tmp \
+    && chown 10001:10001 /app/state \
+    && chmod 0750 /app/state
 
-RUN for package in python3-msgpack python3-setuptools; do dpkg --purge "$package" || true; done
-RUN find /usr/local/lib /usr/lib -type d \( -name 'setuptools-*.dist-info' -o -name 'msgpack-*.dist-info' \) -prune -exec rm -rf {} +
+COPY --from=builder /opt/narrowcti-venv /opt/narrowcti-venv
 
-COPY connectors/otx/requirements.txt /app/requirements.txt
-RUN python -m pip install --no-cache-dir --retries 5 --force-reinstall setuptools==82.0.1
-RUN pip install --no-cache-dir --retries 5 -r requirements.txt
-RUN python -m pip uninstall --yes setuptools \
-    && find /usr/local/lib /usr/lib -type d -name 'setuptools*' -prune -exec rm -rf {} +
-RUN python -m pip uninstall --yes pip
+# Build tooling is needed only in the builder. Remove both distributions and
+# importable modules from the copied runtime environment.
+RUN /opt/narrowcti-venv/bin/python -m pip uninstall --yes pip setuptools wheel \
+    && rm -rf /opt/narrowcti-venv/bin/pip* \
+              /opt/narrowcti-venv/lib/python3.11/site-packages/pip* \
+              /opt/narrowcti-venv/lib/python3.11/site-packages/setuptools* \
+              /opt/narrowcti-venv/lib/python3.11/site-packages/wheel* \
+              /usr/local/bin/pip* \
+              /usr/local/lib/python3.11/site-packages/pip* \
+              /usr/local/lib/python3.11/site-packages/setuptools* \
+              /usr/local/lib/python3.11/site-packages/wheel*
 
-COPY connectors /app/connectors
-COPY core /app/core
-COPY exporters /app/exporters
-COPY gateway /app/gateway
-COPY src /app/src
+USER narrowcti:narrowcti
 
 CMD ["python", "-m", "gateway.connector"]

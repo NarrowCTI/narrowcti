@@ -64,9 +64,21 @@ jobs:
 
       - name: Smoke test candidate image
         run: |
-          docker run --rm -i narrowcti-gateway:scan python - <<'PY'
+          docker run --rm -i --read-only \
+            --tmpfs /tmp \
+            --tmpfs /app/state:uid=10001,gid=10001,mode=0750 \
+            narrowcti-gateway:scan python - <<'PY'
           import importlib
+          import importlib.metadata
+          import errno
+          import os
+          from pathlib import Path
           import sys
+
+          assert os.getuid() != 0
+          assert not os.environ.get("PYTHONPATH")
+          assert "/app/src" not in sys.path
+          assert not Path("/app/src").exists()
 
           import narrowcti
           import gateway.connector
@@ -79,9 +91,40 @@ jobs:
           legacy = importlib.import_module("core.feed_contract")
           assert canonical is legacy
           assert sys.modules["narrowcti.core.feed_contract"] is sys.modules["core.feed_contract"]
-          assert narrowcti.__version__
-          print("source-mode-canonical-identity-ok")
+          assert importlib.metadata.version("narrowcti") == narrowcti.__version__
+
+          Path("/app/state/smoke.txt").write_text("ok", encoding="utf-8")
+          Path("/tmp/smoke.txt").write_text("ok", encoding="utf-8")
+          try:
+              Path("/app/forbidden.txt").write_text("no", encoding="utf-8")
+          except OSError as exc:
+              assert exc.errno in {errno.EACCES, errno.EPERM, errno.EROFS}, exc
+          else:
+              raise AssertionError("/app must not be writable by the runtime user")
+
+          for module_name in ("pip", "setuptools", "wheel"):
+              try:
+                  importlib.import_module(module_name)
+              except ModuleNotFoundError:
+                  continue
+              raise AssertionError(f"build tooling remains importable: {module_name}")
+
+          print("installed-package-runtime-ok")
           PY
+
+      - name: Smoke test fresh state volume ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          volume="narrowcti-state-${GITHUB_RUN_ID}"
+          cleanup() { docker volume rm "${volume}" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          docker volume create "${volume}" >/dev/null
+          docker run --rm --read-only \
+            --tmpfs /tmp \
+            --mount "type=volume,src=${volume},dst=/app/state" \
+            narrowcti-gateway:scan \
+            python -c 'from pathlib import Path; Path("/app/state/volume-smoke.txt").write_text("ok", encoding="utf-8")'
 
       - name: Scan candidate image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

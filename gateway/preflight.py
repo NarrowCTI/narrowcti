@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from dataclasses import replace
 
 from core.mitre_attack import load_attack_cache
 from core.runtime_config import parse_misp_verify_tls
@@ -18,6 +19,11 @@ from narrowcti.application.preflight import (
     PreflightReport,
     build_preflight_report as _build_preflight_report,
 )
+from narrowcti.infrastructure.runtime.topology import (
+    validate_configured_endpoints,
+    validate_state_path,
+)
+
 
 def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=None):
     env = env if env is not None else os.environ
@@ -30,7 +36,7 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
         except ValueError as exc:
             misp_verify_tls = None
             misp_tls_error = str(exc)
-    return _build_preflight_report(
+    report = _build_preflight_report(
         settings,
         available_sources=available_sources,
         env=env,
@@ -41,6 +47,29 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
         misp_tls_error=misp_tls_error,
         mitre_issues=mitre_cache_issues(settings),
     )
+    # GatewaySettings intentionally does not own source credentials. The
+    # composition boundary validates their static endpoint contract for every
+    # active source, while remaining fully network-free.
+    topology_diagnostics = [
+        validate_state_path(settings.state_dir),
+        *validate_configured_endpoints(
+            opencti_url=env.get("OPENCTI_URL"),
+            misp_url=env.get("MISP_URL"),
+            enabled_sources=enabled,
+        )
+    ]
+    topology_issues = []
+    for item in topology_diagnostics:
+        if item.code in {"ok", "endpoint-not-configured", "state-path-not-configured"}:
+            continue
+        severity = "warning" if item.code == "state-path-absent" else "error"
+        topology_issues.append(PreflightIssue(severity, item.code, item.message))
+    if topology_issues:
+        report = replace(report, issues=report.issues + tuple(topology_issues))
+        if any(issue.severity == "error" for issue in topology_issues):
+            report = replace(report, ok=False)
+    return report
+
 
 def mitre_cache_issues(settings):
     if not getattr(settings, "enable_mitre_attack_resolution", True):
