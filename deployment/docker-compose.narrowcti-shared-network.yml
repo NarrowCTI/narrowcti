@@ -1,0 +1,27 @@
+services:
+  narrowcti-gateway:
+    networks: [default, opencti]
+  narrowcti-preflight:
+    networks: [default, opencti]
+  narrowcti-gateway-report:
+    networks: [default, opencti]
+  narrowcti-curation-report:
+    networks: [default, opencti]
+  narrowcti-decision-report:
+    networks: [default, opencti]
+  narrowcti-correlation-report:
+    networks: [default, opencti]
+  narrowcti-operational-validation:
+    networks: [default, opencti]
+  narrowcti-support-diagnostics:
+    networks: [default, opencti]
+  narrowcti-opencti-relationship-audit:
+    networks: [default, opencti]
+  narrowcti-review-api:
+    networks: [default, opencti]
+
+networks:
+  default: {}
+  opencti:
+    external: true
+    name: ${NARROWCTI_DOCKER_NETWORK:-opencti_default}
