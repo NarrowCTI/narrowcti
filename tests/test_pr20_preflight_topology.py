@@ -49,6 +49,8 @@ class PreflightTopologyContractTests(unittest.TestCase):
         self.assertEqual("opencti", diagnostic.hostname)
 
     def test_state_path_reports_existing_non_writable_directory(self):
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            self.skipTest("root can bypass directory mode-bit write checks")
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "state"
             path.mkdir()
