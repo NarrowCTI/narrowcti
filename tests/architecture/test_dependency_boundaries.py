@@ -18,6 +18,27 @@ LAYER_ROOTS = {
     "cli": SRC / "cli",
 }
 LEGACY = ("core", "connectors", "gateway", "exporters")
+PURE_LAYERS = {"domain", "ports", "application"}
+FORBIDDEN_PROVIDER_OR_IO = {
+    "pycti",
+    "stix2",
+    "sigma",
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "requests",
+    "httpx",
+    "httpx2",
+    "aiohttp",
+    "pymisp",
+    "OTXv2",
+    "socket",
+    "urllib",
+    "pathlib",
+    "os",
+    "shutil",
+    "subprocess",
+}
 
 BOUNDARY_ALLOWLIST = json.loads(
     (ROOT / "docs/development/architecture-boundary-allowlist.json").read_text(encoding="utf-8")
@@ -54,6 +75,26 @@ def _imports(path: Path) -> list[str]:
             values.extend(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom):
             values.append(_resolve_import(node, module))
+    return values
+
+
+def _dynamic_imports(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    values: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        function = node.func
+        is_import_module = (
+            isinstance(function, ast.Attribute)
+            and function.attr == "import_module"
+            and isinstance(function.value, ast.Name)
+            and function.value.id == "importlib"
+        )
+        is_builtin_import = isinstance(function, ast.Name) and function.id == "__import__"
+        if is_import_module or is_builtin_import:
+            argument = node.args[0]
+            values.append(argument.value if isinstance(argument, ast.Constant) and isinstance(argument.value, str) else "<dynamic>")
     return values
 
 
@@ -97,6 +138,32 @@ class DependencyBoundaryTests(unittest.TestCase):
                     if layer == "api" and imported.startswith("narrowcti."):
                         if imported.split(".")[1:2] and imported.split(".")[1] == "cli":
                             violations.append(f"{source} imports outward {imported}")
+        self.assertEqual([], violations, "\n".join(violations))
+
+    def test_pure_layers_do_not_import_provider_sdks_or_io(self):
+        violations: list[str] = []
+        for layer in PURE_LAYERS:
+            directory = LAYER_ROOTS[layer]
+            if not directory.exists():
+                continue
+            for path in directory.rglob("*.py"):
+                source = path.relative_to(SRC).as_posix()
+                for imported in _imports(path):
+                    root = imported.split(".", 1)[0]
+                    if root in FORBIDDEN_PROVIDER_OR_IO:
+                        violations.append(f"{source} imports forbidden provider/IO module {imported}")
+        self.assertEqual([], violations, "\n".join(violations))
+
+    def test_pure_layers_do_not_use_dynamic_imports(self):
+        violations: list[str] = []
+        for layer in PURE_LAYERS:
+            directory = LAYER_ROOTS[layer]
+            if not directory.exists():
+                continue
+            for path in directory.rglob("*.py"):
+                source = path.relative_to(SRC).as_posix()
+                for imported in _dynamic_imports(path):
+                    violations.append(f"{source} uses dynamic import {imported}")
         self.assertEqual([], violations, "\n".join(violations))
 
     def test_boundary_rules_are_not_implemented_as_wildcard_allowlists(self):

@@ -11,10 +11,15 @@ The dependency direction is intentionally inward:
 ```mermaid
 flowchart LR
   API[api / cli] --> INF[infrastructure composition]
-  INF --> ADP[adapters]
-  ADP --> APP[application]
-  APP --> PORTS[ports]
-  APP --> DOMAIN[domain]
+  API --> ADP[adapters]
+  API --> APP[application]
+  INF --> ADP
+  INF --> APP
+  ADP --> APP[application contracts]
+  ADP --> PORTS[ports]
+  ADP --> DOMAIN[domain]
+  APP --> PORTS
+  APP --> DOMAIN
   PORTS --> DOMAIN
 ```
 

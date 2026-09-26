@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import importlib.util
 import unittest
 from pathlib import Path
 
-from scripts.check_documentation_links import check_paths, extract_targets
-
-
 ROOT = Path(__file__).resolve().parents[2]
+CHECKER = ROOT / "scripts/check_documentation_links.py"
+_SPEC = importlib.util.spec_from_file_location("documentation_link_checker", CHECKER)
+assert _SPEC and _SPEC.loader
+_MODULE = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_MODULE)
+check_paths = _MODULE.check_paths
+extract_targets = _MODULE.extract_targets
 
 
 class DocumentationLinkTests(unittest.TestCase):

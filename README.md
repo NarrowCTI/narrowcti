@@ -268,7 +268,7 @@ ATT&CK techniques and relationships, and keep those relationships explainable
 before they affect the OpenCTI graph.
 
 The current operator contract is tracked in `docs/product/product-reference.md`, the
-active architecture in `docs/architecture/architecture-v1.0.md`, and current OpenCTI
+active architecture in `docs/architecture/overview.md`, and current OpenCTI
 coverage in `docs/product/opencti-coverage-matrix.md`. Historical v0.7 source,
 MITRE, MISP and OTX mapping documents remain available through
 `docs/documentation-map.md`; they explain evolution but do not override the
@@ -283,11 +283,11 @@ connector, before controlled graph promotion is enabled.
 
 The graph promotion design is tracked in `docs/architecture/graph-promotion-v0.8.md`, and
 the release notes are tracked in `docs/releases/release-v0.8.0.md`. Deployment, analyst
-review, curation reporting and support diagnostics are tracked in the dedicated
-v0.8 documents under `docs/`.
+review, curation reporting and support diagnostics are tracked in their canonical
+current documents under `docs/product/`.
 
 The relationship between NarrowCTI curation and OpenCTI post-ingestion
-inference rules is documented in `docs/opencti-rules-engine-v0.8.md`.
+inference rules is documented in `docs/architecture/opencti-rules-engine-v0.8.md`.
 NarrowCTI owns source-backed pre-ingestion decisions; OpenCTI Rules Engine can
 optionally infer additional relationships after the curated graph exists.
 OpenCTI tab coverage, current export status and backlog boundaries are tracked
@@ -402,128 +402,23 @@ behavior.
 
 ## NarrowCTI Gateway Runtime
 
-The NarrowCTI Gateway runtime is configured through environment variables. The
-current stable runtime uses the OTX adapter, and a safe template is provided at:
-
-```text
-connectors/otx/.env.example
-```
-
-The MISP adapter foundation has its own configuration template for controlled
-local validation:
-
-```text
-connectors/misp/.env.example
-```
-
-Real runtime files must be created locally as needed:
-
-```text
-connectors/otx/.env
-connectors/misp/.env
-```
-
-Do not commit real `.env` files. They contain OpenCTI, OTX or MISP credentials.
-
-Required OTX variables:
-
-```text
-OPENCTI_URL
-OPENCTI_TOKEN
-OTX_API_KEY
-OTX_QUERIES
-```
-
-Required MISP foundation variables:
-
-```text
-OPENCTI_URL
-OPENCTI_TOKEN
-MISP_URL
-MISP_KEY
-MISP_QUERIES
-```
-
-Recommended safe MISP validation controls for limited local machines:
-
-```text
-MISP_DRY_RUN=true
-MISP_RUN_ONCE=true
-MISP_MAX_EVENTS_PER_RUN=1
-MISP_MAX_ATTRIBUTES_PER_EVENT=1000
-MISP_MAX_IOCS_PER_EVENT=1000
-MISP_QUERIES=*
-MISP_FROM_DATE=YYYY-MM-DD
-MISP_TO_DATE=YYYY-MM-DD
-MISP_TAGS=tlp:green
-MISP_PUBLISHED_ONLY=true
-MISP_OVERSIZED_EVENT_ACTION=skip
-```
-
-For precise replay of a known MISP event during validation, use
-`MISP_QUERIES=event:<id>` or `MISP_QUERIES=uuid:<uuid>` instead of a broad
-search.
-
-
-Initial v0.5 gateway runtime command for development validation:
+The package-based gateway uses the deployment environment template and the
+Compose profiles documented in
+[`docs/product/deployment-operations.md`](docs/product/deployment-operations.md).
+Use the shortest safe path below; keep real credentials in the untracked
+environment file and begin with dry-run/run-once settings:
 
 ```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\NarrowCTI"
-docker run --rm --env-file config\.env.example -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.connector
+Copy-Item deployment\gateway.env.example deployment\gateway.env
+$env:NARROWCTI_GATEWAY_ENV_FILE = "./gateway.env"
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml build narrowcti-gateway
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm narrowcti-preflight
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narrowcti-gateway
 ```
 
-The example keeps `NARROWCTI_DRY_RUN=true` and `OTX_DRY_RUN=true` for safe local validation.
-
-Before running ingestion, operators can validate the gateway runtime posture
-without calling feed APIs or OpenCTI:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\NarrowCTI"
-docker run --rm --env-file config\.env.example -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.preflight
-docker run --rm --env-file config\.env.example -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.preflight --json
-```
-
-The preflight reports enabled sources, deduplication posture, OpenCTI lookup,
-aggregate summary output, source dry-run controls and local evidence paths for
-source state, decision audit, release audit, quarantine repository, MITRE cache
-and artifact deduplication. Unknown sources fail the check; weaker
-graph-hygiene, missing MITRE cache and operational settings are reported as
-warnings.
-
-After one or more gateway runs, operators can summarize the aggregate JSONL
-evidence written by `NARROWCTI_RUN_SUMMARY_FILE`:
-
-```powershell
-$LAB_ROOT = "<path-to-lab-root>"
-cd "$LAB_ROOT\NarrowCTI"
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.report --file state\gateway_runs.jsonl
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.report --file state\gateway_runs.jsonl --json
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.report --file state\gateway_runs.jsonl --quarantine-file state\quarantine.jsonl --output-file state\gateway-operational-report.txt
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.decisions --dir state\audit
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m gateway.correlation --file state\dedup_index.json
-```
-
-The report aggregates run count, time range, total outcomes and per-source
-outcomes for reviewed, ingested, dropped, quarantined, skipped, error and
-dry-run candidates. It also reports directional value metrics such as accepted
-items, filtered items, acceptance rate, filter rate and error rate, and it lists
-source failures captured during gateway runs. Per-query rollups show which
-searches produced reviewed, handled, accepted and filtered candidates. The
-decision audit report aggregates ingest, drop, quarantine, skip, dry-run and
-error reasons from source audit JSONL files, plus score ranges, averages and
-per-query decision rollups for operator review. It also lists recent
-quarantined candidates. When v0.7 `graph_export_plan` metadata is present, it
-also aggregates graph export modes, statuses, actions, held reasons,
-source/query rollups, deduplicated entity/relationship counts and dry-run
-would-create object/relationship counts. The correlation report summarizes the
-local artifact index, including cross-source fingerprints and source sighting
-counts.
-
-The unified gateway entrypoint composes enabled source runtimes and isolates
-source failures. Keep source-specific runtimes available for debugging and
-bounded backfills while the v0.5 gateway matures.
+Configuration, reports, audit evidence, state recovery and controlled graph
+export are maintained in the canonical product documents rather than duplicated
+here.
 
 ## Deployment
 
@@ -540,9 +435,11 @@ deployment/docker-compose.narrowcti-gateway.yml
 deployment/gateway.env.example
 ```
 
-The v0.8 template is dry-run/run-once by default, joins an existing OpenCTI
-Docker network and must be validated with `gateway.preflight` before any source
-execution. Its `ops` profile can run preflight, curation reporting,
+The current template is dry-run/run-once by default and must be validated with
+`gateway.preflight` before any source execution. It uses the normal Compose
+network and supports routed or remote OpenCTI/MISP endpoints; an optional
+shared-network override is only needed for externally managed Docker networks.
+Its `ops` profile can run preflight, curation reporting,
 decision audit reporting, artifact correlation reporting, operational
 validation and support diagnostics without starting continuous ingestion. The
 curation report service persists text, JSON and HTML artifacts under the
@@ -575,13 +472,10 @@ for the release. To inspect commands without executing Docker:
 .\scripts\validate-release.ps1 -Preview
 ```
 
-Manual equivalent:
-
-```powershell
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile connectors/otx/connector.py connectors/otx/entity_extraction.py connectors/otx/feed_adapter.py connectors/otx/models.py connectors/otx/processor.py connectors/otx/runtime.py connectors/otx/settings.py connectors/otx/otx_client.py connectors/misp/client.py connectors/misp/connector.py connectors/misp/feed_adapter.py connectors/misp/models.py connectors/misp/processor.py connectors/misp/runtime.py connectors/misp/settings.py core/decision_audit.py core/feed_contract.py core/graph_candidates.py core/graph_evidence.py core/indicator_policy.py core/mitre_attack.py core/quarantine.py core/scoring.py core/policy.py core/state_repository.py core/tlp.py exporters/opencti.py exporters/stix_builder.py
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m py_compile gateway/preflight.py gateway/report.py gateway/decisions.py gateway/correlation.py gateway/mitre.py gateway/quarantine.py gateway/quarantine_export.py
-docker run --rm -v "${LAB_ROOT}\NarrowCTI:/repo" -w /repo opencti-connector-narrowcti python -m unittest discover -s tests -v
-```
+For the full release validation sequence, use `scripts/validate-release.ps1`
+or the commands in `docs/product/getting-started.md` and
+`docs/product/deployment-operations.md`. This keeps the README focused on
+identity and the shortest supported operational path.
 
 ## Release Flow
 

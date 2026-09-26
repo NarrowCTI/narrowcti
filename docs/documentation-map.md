@@ -12,7 +12,18 @@ baseline path and its disposition.
 - Development: `docs/development/`
 - Validation: `docs/validation/`
 - Releases: `docs/releases/`
-- Brand assets: `docs/assets/brand/`
+
+The six documentation categories are:
+
+- `docs/product/`
+- `docs/architecture/`
+- `docs/community/`
+- `docs/development/`
+- `docs/validation/`
+- `docs/releases/`
+
+Operational assets are a separate sibling tree at `docs/assets/brand/`; they are
+not a seventh documentation category.
 
 The current architecture overview is
 [`architecture/overview.md`](architecture/overview.md). The current brand

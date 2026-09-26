@@ -34,6 +34,10 @@ uses `assets/brand/`.
 | `development/` | contributor workflows and migration evidence |
 | `validation/` | validation, mapping and W0 evidence |
 | `releases/` | release process and immutable release notes |
-| `assets/brand/` | official operational identity assets |
+
+The six documentation categories are `product/`, `architecture/`, `community/`,
+`development/`, `validation/`, and `releases/`. Operational identity assets
+are a sibling artifact tree under `assets/brand/`, not a seventh documentation
+category.
 
 See [`documentation-map.md`](documentation-map.md) for release/archive intent.

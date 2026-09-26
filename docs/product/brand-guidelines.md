@@ -17,6 +17,23 @@ compatibility consumers. New documentation should use the canonical brand
 tree. The CybersysBR authorship logo remains available at
 `docs/assets/cybersysbr-logo.png`.
 
+## Canonical asset table
+
+| Role | Dark/light use | Canonical file |
+| --- | --- | --- |
+| Expanded header | Match the surface background | [`horizontal-dark`](../assets/brand/logo/narrowcti-logo-horizontal-dark.svg) / [`horizontal-light`](../assets/brand/logo/narrowcti-logo-horizontal-light.svg) |
+| Compact identity | Dark/light compact surfaces | [`symbol-gradient`](../assets/brand/symbol/narrowcti-symbol-gradient.svg) / [`symbol-black`](../assets/brand/symbol/narrowcti-symbol-black.svg) / [`symbol-white`](../assets/brand/symbol/narrowcti-symbol-white.svg) |
+| Vertical lockup | Dark/light editorial surfaces | [`vertical-dark`](../assets/brand/logo/narrowcti-logo-vertical-dark.svg) / [`vertical-light`](../assets/brand/logo/narrowcti-logo-vertical-light.svg) |
+| Repository banner | README/repository presentation | [`README banner`](../assets/brand/banners/narrowcti-readme-banner-2172x724.png) |
+| Browser identity | Browser and tab identity | [`favicon`](../assets/brand/favicon/narrowcti-favicon.ico) |
+
+Keep clear space around the symbol at approximately 10% of the symbol height.
+At 32 px and below, prefer the isolated symbol rather than a full wordmark.
+For the future expanded header use the horizontal logo; for compact or
+collapsed identity use the isolated symbol; for browser identity use the
+favicon; and for dark/light surfaces use the matching approved variant. PR-21
+does not define the final browser layout; that belongs to a future UI wave.
+
 ## Core palette
 
 | Token | Hex | Use |

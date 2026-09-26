@@ -12,16 +12,20 @@ discoverable through a machine-readable migration ledger.
 
 ## Decision
 
-- Current documentation is organized under `architecture/`, `product/`,
-  `validation/`, `community/`, `development/`, `releases/`, and `assets/`.
+- Current documentation is organized into six categories: `architecture/`,
+  `product/`, `validation/`, `community/`, `development/`, and `releases/`.
+  Operational product assets live separately under `docs/assets/`.
 - `docs/architecture/overview.md` is the sole current architecture overview;
   `docs/architecture.md` remains a compatibility stub.
 - Historical files move without content rewrites and are verified by SHA-256.
 - Documentation links are checked locally, case-sensitively, with fenced and
   inline code masked. External URL availability is outside this gate.
-- The architecture direction is domain -> ports -> application -> adapters ->
-  infrastructure -> api/cli. Transitional imports are permitted only through
-  the exact allowlist documented in the overview and boundary tests.
+- The dependency direction follows explicit inward edges rather than a linear
+  chain: application depends on ports and domain; ports depend on domain;
+  adapters depend on application contracts, ports and domain; infrastructure
+  depends on application, ports and adapters; and API/CLI are delivery and
+  composition surfaces. Transitional imports are permitted only through the
+  exact allowlist documented in the overview and boundary tests.
 - Deployment documentation describes interoperable endpoints and the A-H
   topology matrix; it does not require direct access to backend databases or
   message stores.

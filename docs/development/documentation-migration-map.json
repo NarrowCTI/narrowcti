@@ -1,7 +1,9 @@
 {
   "schema_version": 1,
-  "baseline_ref": "HEAD",
+  "baseline_ref": "PR-20 merge baseline",
   "baseline_commit": "c224665d6adbba1f064202357d05f319a7908303",
+  "baseline_docs_count": 93,
+  "baseline_paths_sha256": "f7977a85c64fcb07a974c83165d4ce007d4a703d4a9423ee7d7e5a169e30c6cd",
   "generated_for": "W7 / PR-21",
   "entries": [
     {
