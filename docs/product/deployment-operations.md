@@ -3,7 +3,7 @@
 This is the current public deployment entry point for NarrowCTI Community
 Edition.
 
-The v0.8 detailed deployment snapshot is `deployment-operations-v0.8.md`.
+The v0.8 detailed deployment snapshot is `docs/product/deployment-operations-v0.8.md`.
 Versioned deployment files remain available as release history; operators
 should link to this unversioned document for the current deployment path.
 
@@ -145,12 +145,33 @@ posture are understood.
 
 ## Current Operational References
 
-- `deployment-operations-v0.8.md`: detailed v0.8 deployment snapshot.
-- `environment-profiles.md`: safe profiles for lab, validation, continuous
+## Supported deployment topology matrix
+
+The gateway and its dependencies may be colocated or routed independently.
+Interoperability means a reachable URL with working DNS/routing, TLS,
+authentication/authorization and a supported API/protocol; the same host,
+network or platform is not required.
+
+| Topology | OpenCTI | MISP | Supported posture |
+| --- | --- | --- | --- |
+| A | remote/routed | remote/routed | both services reached through configured endpoints |
+| B | shared Docker network | shared Docker network | services share a controlled Docker network |
+| C | separate Compose stack | separate Compose stack | optional shared integration network |
+| D | shared | remote/routed | local OpenCTI with routed MISP |
+| E | remote/routed | shared | routed OpenCTI with local MISP |
+| F | VM/bare metal endpoint | VM/bare metal endpoint | endpoints exposed by the host network |
+| G | Kubernetes endpoint | Kubernetes endpoint | service DNS and TLS route to both APIs |
+| H | reverse proxy/load balancer | reverse proxy/load balancer | proxy terminates or routes TLS and auth policy |
+
+NarrowCTI does **not** require direct access to OpenCTI Elasticsearch,
+RabbitMQ, Redis or PostgreSQL, nor to MISP databases or Redis. Only the
+supported OpenCTI and MISP APIs/protocols are part of the deployment contract.
+
+- `docs/product/environment-profiles.md`: safe profiles for lab, validation, continuous
   operation and controlled graph export.
-- `configuration-reference.md`: configuration variable reference.
-- `product-reference.md`: current product, version and decision contract.
-- `opencti-coverage-matrix.md`: current graph coverage and evidence boundary.
-- `analyst-review-api.md`: authenticated review API operations and security.
-- `curation-decision-reference.md`: decision behavior reference.
-- `support-diagnostics-v0.8.md`: support bundle and redaction behavior.
+- `docs/product/configuration-reference.md`: configuration variable reference.
+- `docs/product/product-reference.md`: current product, version and decision contract.
+- `docs/product/opencti-coverage-matrix.md`: current graph coverage and evidence boundary.
+- `docs/product/analyst-review-api.md`: authenticated review API operations and security.
+- `docs/product/curation-decision-reference.md`: decision behavior reference.
+- `docs/product/support-diagnostics-v0.8.md`: support bundle and redaction behavior.

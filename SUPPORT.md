@@ -9,12 +9,12 @@ Check the product documentation first:
 
 - `README.md`
 - `docs/README.md`
-- `docs/product-reference.md`
-- `docs/getting-started.md`
-- `docs/deployment-operations.md`
-- `docs/configuration-reference.md`
-- `docs/opencti-coverage-matrix.md`
-- `docs/release-v1.0.0.md` (current release)
+- `docs/product/product-reference.md`
+- `docs/product/getting-started.md`
+- `docs/product/deployment-operations.md`
+- `docs/product/configuration-reference.md`
+- `docs/product/opencti-coverage-matrix.md`
+- `docs/releases/release-v1.0.0.md` (current release)
 
 For local deployment problems, include the NarrowCTI version, enabled sources,
 runtime mode, relevant environment variable names without values, and sanitized

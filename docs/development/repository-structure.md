@@ -27,7 +27,7 @@ GitHub collaboration files live under `.github/`:
 - container image publication workflow.
 
 The public contribution and permission model is defined in
-`docs/community-governance.md`. GitHub branch protection, private reporting,
+`docs/community/community-governance.md`. GitHub branch protection, private reporting,
 secret scanning and repository roles are settings outside the Git tree and must
 be checked by the repository owner before release.
 
@@ -104,4 +104,4 @@ Release archives must exclude:
 - development validation notes marked with `export-ignore`.
 
 Before publishing a release, run the archive inspection described in
-`docs/release-process.md`.
+`docs/development/release-process.md`.
