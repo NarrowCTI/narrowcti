@@ -96,7 +96,9 @@ infrastructure and quarantine/release context before OpenCTI ingestion.
 - Maps source-backed actor, arsenal, MITRE ATT&CK, victimology, quarantine,
   release and graph-enrichment context.
 - Builds STIX bundles for OpenCTI ingestion.
-- Runs as a Dockerized connector inside an OpenCTI lab environment.
+- Runs as an endpoint-driven, topology-independent gateway that can reach
+  routed or remote OpenCTI and source endpoints without assuming a shared
+  Docker network.
 
 ## Architecture
 
@@ -110,16 +112,23 @@ External and internal intelligence sources
   -> OpenCTI exporter
 ```
 
-Main modules:
+Canonical owners:
 
 ```text
-connectors/otx/      OTX connector runtime, feed adapter, settings and processor
-connectors/misp/     MISP client, feed adapter, settings and processor foundation
-core/                Feed contracts, scoring, policy and persistent state handling
-exporters/           OpenCTI export and STIX bundle construction
-tests/               Unit coverage for the processor and shared pipeline logic
-docs/                Product, operations, architecture and release documentation
+src/narrowcti/domain/          domain contracts and pure intelligence logic
+src/narrowcti/ports/           canonical boundary contracts
+src/narrowcti/application/     candidate orchestration and application services
+src/narrowcti/adapters/        source, persistence, STIX and OpenCTI implementations
+src/narrowcti/infrastructure/  runtime and configuration composition
+src/narrowcti/api/             API delivery surfaces
+src/narrowcti/cli/             command-line delivery surfaces
 ```
+
+The top-level `core/`, `connectors/`, `exporters/` and `gateway/` trees remain
+temporary compatibility surfaces for supported legacy imports and entrypoints;
+they are not the canonical architecture. See
+[`docs/architecture/overview.md`](docs/architecture/overview.md) for the
+current dependency model.
 
 ## Product Role
 

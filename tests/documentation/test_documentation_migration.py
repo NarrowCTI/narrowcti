@@ -50,14 +50,25 @@ class DocumentationMigrationTests(unittest.TestCase):
             for entry in payload["entries"]
             if entry["disposition"] == "MOVE"
         }
+        historical_targets = {
+            Path(entry["new_path"]).as_posix()
+            for entry in payload["entries"]
+            if entry["historical"]
+        }
         files = {
             ROOT / name
-            for name in ("README.md", "CONTRIBUTING.md", "SUPPORT.md", "SECURITY.md")
+            for name in (
+                "README.md",
+                "CONTRIBUTING.md",
+                "SUPPORT.md",
+                "SECURITY.md",
+                "CODE_OF_CONDUCT.md",
+            )
         }
         files.update(
-            ROOT / entry["new_path"]
-            for entry in payload["entries"]
-            if not entry["historical"] and entry["new_path"].endswith(".md")
+            path
+            for path in (ROOT / "docs").rglob("*.md")
+            if path.relative_to(ROOT).as_posix() not in historical_targets
         )
         violations = []
         for path in sorted(files):
