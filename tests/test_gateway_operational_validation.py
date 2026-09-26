@@ -17,13 +17,22 @@ from gateway.operational_validation import (
     render_report,
     write_report,
 )
-from gateway.preflight import build_preflight_report
+from gateway.preflight import build_preflight_report as _build_preflight_report
 from tests.test_gateway_decisions import (
     decision_record,
     graph_export_plan,
     graph_lookup_matches,
 )
 from tests.test_gateway_preflight import make_settings
+
+
+def build_preflight_report(settings, env=None):
+    effective_env = {
+        "OPENCTI_URL": "https://opencti.example.invalid",
+        "MISP_URL": "https://misp.example.invalid",
+    }
+    effective_env.update(env or {})
+    return _build_preflight_report(settings, env=effective_env)
 
 
 class GatewayOperationalValidationTests(unittest.TestCase):

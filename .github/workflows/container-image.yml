@@ -70,6 +70,7 @@ jobs:
             narrowcti-gateway:scan python - <<'PY'
           import importlib
           import importlib.metadata
+          import errno
           import os
           from pathlib import Path
           import sys
@@ -96,8 +97,8 @@ jobs:
           Path("/tmp/smoke.txt").write_text("ok", encoding="utf-8")
           try:
               Path("/app/forbidden.txt").write_text("no", encoding="utf-8")
-          except PermissionError:
-              pass
+          except OSError as exc:
+              assert exc.errno in {errno.EACCES, errno.EPERM, errno.EROFS}, exc
           else:
               raise AssertionError("/app must not be writable by the runtime user")
 

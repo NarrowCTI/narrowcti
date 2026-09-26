@@ -6,7 +6,7 @@ import unittest
 from core.mitre_attack import build_attack_cache, save_attack_cache
 from gateway.preflight import (
     active_ingestion_mode,
-    build_preflight_report,
+    build_preflight_report as _build_preflight_report,
     format_text_report,
 )
 from gateway.settings import GatewaySettings
@@ -43,6 +43,18 @@ def make_settings(**overrides):
     }
     values.update(overrides)
     return GatewaySettings(**values)
+
+
+def build_preflight_report(settings, available_sources=None, env=None):
+    """Keep legacy unit fixtures explicit about valid endpoint structure."""
+
+    effective_env = {
+        "OPENCTI_URL": "https://opencti.example.invalid",
+        "MISP_URL": "https://misp.example.invalid",
+    }
+    effective_env.update(env or {})
+    kwargs = {} if available_sources is None else {"available_sources": available_sources}
+    return _build_preflight_report(settings, env=effective_env, **kwargs)
 
 
 class GatewayPreflightTests(unittest.TestCase):

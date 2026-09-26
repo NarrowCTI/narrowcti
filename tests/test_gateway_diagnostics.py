@@ -90,7 +90,10 @@ class GatewayDiagnosticsTests(unittest.TestCase):
 
             snapshot = build_support_diagnostics(
                 settings,
-                env={"OTX_DRY_RUN": "true"},
+                env={
+                    "OTX_DRY_RUN": "true",
+                    "OPENCTI_URL": "https://opencti.example.invalid",
+                },
                 generated_at="2026-06-24T10:02:00Z",
                 operational_validation_evidence_file=validation_evidence_file,
                 opencti_relationship_audit_file=relationship_audit_file,

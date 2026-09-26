@@ -47,26 +47,26 @@ def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=No
         misp_tls_error=misp_tls_error,
         mitre_issues=mitre_cache_issues(settings),
     )
-    # GatewaySettings intentionally does not own source credentials. Validate
-    # endpoint structure only when the endpoint surface is supplied, while
-    # leaving the provider-neutral application preflight network-free.
-    topology_diagnostics = [validate_state_path(settings.state_dir)]
-    if "OPENCTI_URL" in env or "MISP_URL" in env:
-        topology_diagnostics.extend(
-            validate_configured_endpoints(
-                opencti_url=env.get("OPENCTI_URL"),
-                misp_url=env.get("MISP_URL"),
-                enabled_sources=enabled,
-            )
+    # GatewaySettings intentionally does not own source credentials. The
+    # composition boundary validates their static endpoint contract for every
+    # active source, while remaining fully network-free.
+    topology_diagnostics = [
+        validate_state_path(settings.state_dir),
+        *validate_configured_endpoints(
+            opencti_url=env.get("OPENCTI_URL"),
+            misp_url=env.get("MISP_URL"),
+            enabled_sources=enabled,
         )
-    if topology_diagnostics:
-        topology_issues = tuple(
-            PreflightIssue("error", item.code, item.message)
-            for item in topology_diagnostics
-            if item.code not in {"ok", "endpoint-not-configured", "state-path-not-configured"}
-        )
-        report = replace(report, issues=report.issues + topology_issues)
-        if topology_issues:
+    ]
+    topology_issues = []
+    for item in topology_diagnostics:
+        if item.code in {"ok", "endpoint-not-configured", "state-path-not-configured"}:
+            continue
+        severity = "warning" if item.code == "state-path-absent" else "error"
+        topology_issues.append(PreflightIssue(severity, item.code, item.message))
+    if topology_issues:
+        report = replace(report, issues=report.issues + tuple(topology_issues))
+        if any(issue.severity == "error" for issue in topology_issues):
             report = replace(report, ok=False)
     return report
 

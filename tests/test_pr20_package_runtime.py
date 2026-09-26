@@ -12,9 +12,17 @@ class PackageRuntimeContractTests(unittest.TestCase):
         tree = ast.parse(source)
         self.assertIn('distribution("narrowcti")', source)
         self.assertIn("PYTHONPYCACHEPREFIX", source)
+        self.assertIn("submodule_search_locations", source)
+        self.assertIn("__path__", source)
         self.assertNotIn("os.walk", source)
         self.assertNotIn("site-packages", source)
         self.assertIsInstance(tree, ast.Module)
+
+    def test_namespace_package_roots_are_validated_without_init_files(self):
+        source = (ROOT / "scripts" / "validate_runtime_package.py").read_text(encoding="utf-8")
+        self.assertIn("package file or namespace locations", source)
+        for root in ("connectors", "core", "exporters", "gateway"):
+            self.assertIn(f'"{root}"', source)
 
     def test_ci_runs_installed_package_from_external_directory(self):
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")

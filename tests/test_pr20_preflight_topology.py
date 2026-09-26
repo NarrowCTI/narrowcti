@@ -1,8 +1,10 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
 
+from gateway.preflight import build_preflight_report
 from narrowcti.infrastructure.runtime.topology import (
     validate_configured_endpoints,
     validate_endpoint,
@@ -57,8 +59,72 @@ class PreflightTopologyContractTests(unittest.TestCase):
                 # still must never mutate ownership or permissions.
                 if diagnostic.code == "state-path-not-writable":
                     self.assertIn("state path", diagnostic.message)
+                elif os.name != "nt":
+                    self.fail(f"expected non-writable state path, got {diagnostic.code}")
             finally:
                 path.chmod(0o700)
+
+    def test_state_path_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "state.txt"
+            path.write_text("not a directory", encoding="utf-8")
+            diagnostic = validate_state_path(str(path))
+            self.assertEqual("state-path-not-directory", diagnostic.code)
+
+    def test_state_path_absent_is_neutral_and_does_not_promise_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            diagnostic = validate_state_path(str(Path(directory) / "new" / "state"))
+            self.assertEqual("state-path-absent", diagnostic.code)
+            self.assertNotIn("will be created", diagnostic.message)
+
+    def test_gateway_preflight_rejects_otx_without_opencti_url(self):
+        report = build_preflight_report(
+            _settings(enabled_sources=["otx"]),
+            env={"OTX_DRY_RUN": "true"},
+        )
+        self.assertFalse(report.ok)
+        self.assertIn("endpoint-missing", {issue.code for issue in report.issues})
+
+    def test_gateway_preflight_rejects_misp_without_misp_url(self):
+        report = build_preflight_report(
+            _settings(enabled_sources=["misp"]),
+            env={"OPENCTI_URL": "https://opencti.example.invalid"},
+        )
+        self.assertFalse(report.ok)
+        self.assertIn("endpoint-missing", {issue.code for issue in report.issues})
+
+    def test_gateway_preflight_otx_only_does_not_require_misp_url(self):
+        report = build_preflight_report(
+            _settings(enabled_sources=["otx"]),
+            env={"OPENCTI_URL": "https://opencti.example.invalid"},
+        )
+        endpoint_errors = {
+            issue.code
+            for issue in report.issues
+            if issue.code in {"endpoint-missing", "endpoint-invalid", "endpoint-credentials-embedded"}
+        }
+        self.assertEqual(set(), endpoint_errors)
+
+    def test_gateway_preflight_accepts_valid_misp_and_otx_endpoints(self):
+        report = build_preflight_report(
+            _settings(enabled_sources=["otx", "misp"]),
+            env={
+                "OPENCTI_URL": "https://opencti.example.invalid",
+                "MISP_URL": "https://misp.example.invalid",
+            },
+        )
+        endpoint_errors = {
+            issue.code
+            for issue in report.issues
+            if issue.code in {"endpoint-missing", "endpoint-invalid", "endpoint-credentials-embedded"}
+        }
+        self.assertEqual(set(), endpoint_errors)
+
+
+def _settings(**overrides):
+    from tests.test_gateway_preflight import make_settings
+
+    return make_settings(**overrides)
 
 
 if __name__ == "__main__":

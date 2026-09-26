@@ -88,10 +88,20 @@ for name in expected:
 for name in {roots!r}:
     module = importlib.import_module(name)
     location = getattr(module, "__file__", None)
-    if not location:
-        raise AssertionError(f"{{name}} has no package file")
-    if os.path.abspath(location).startswith(os.path.abspath({checkout!r})):
-        raise AssertionError(f"{{name}} resolved from checkout: {{location}}")
+    if location:
+        locations = [location]
+    else:
+        spec = getattr(module, "__spec__", None)
+        locations = list(getattr(spec, "submodule_search_locations", ()) or ())
+        if not locations:
+            locations = list(getattr(module, "__path__", ()) or ())
+        if not locations:
+            raise AssertionError(f"{{name}} has no package file or namespace locations")
+    for location in locations:
+        absolute = os.path.abspath(location)
+        checkout = os.path.abspath({checkout!r})
+        if os.path.commonpath([absolute, checkout]) == checkout:
+            raise AssertionError(f"{{name}} resolved from checkout: {{location}}")
 
 assert importlib.metadata.version("narrowcti")
 assert not os.environ.get("PYTHONPATH")

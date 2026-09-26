@@ -30,11 +30,9 @@ deployment/docker-compose.narrowcti-gateway.yml
 deployment/gateway.env.example
 ```
 
-The compose template builds `Dockerfile.gateway`, uses its normal project
-network and persists gateway evidence under `/app/state`. The optional
-`deployment/docker-compose.narrowcti-shared-network.yml` override attaches
-the services to an existing integration network while retaining the default
-network. The env template keeps `NARROWCTI_DRY_RUN=true`, `NARROWCTI_RUN_ONCE=true`,
+The compose template builds `Dockerfile.gateway`, joins an existing OpenCTI
+Docker network and persists gateway evidence under `/app/state`. The env
+template keeps `NARROWCTI_DRY_RUN=true`, `NARROWCTI_RUN_ONCE=true`,
 `OTX_DRY_RUN=true` and `MISP_DRY_RUN=true` so first execution is observable and
 bounded.
 
@@ -52,15 +50,13 @@ commands:
 | `narrowcti-support-diagnostics` | Builds a support-redacted HTML snapshot and support bundle under `/app/state`. |
 | `narrowcti-opencti-relationship-audit` | Runs a read-only OpenCTI relationship audit for one target object. |
 
-These services reuse the same image, env file, state volume and selected
-deployment networks as the gateway runtime. They do not start continuous
-ingestion by themselves.
+These services reuse the same image, env file, state volume and OpenCTI network
+as the gateway runtime. They do not start continuous ingestion by themselves.
 
 ## Installation Procedure
 
-1. Confirm the target OpenCTI endpoint is reachable from the deployment. If
-   OpenCTI or MISP runs on a shared Docker network, identify that network and
-   select the optional shared-network override.
+1. Confirm the target OpenCTI stack is running and identify its Docker network.
+   For a default local compose stack this is often `opencti_default`.
 2. Build the NarrowCTI gateway image from this repository.
 3. Copy `deployment/gateway.env.example` to `deployment/gateway.env`, which is
    ignored by git.
@@ -121,9 +117,8 @@ The resulting JSON includes `coverage.present_quadrants`,
 `needs-evidence` by the operational validation checklist, not as successful
 coverage.
 
-For a shared Docker topology, set `NARROWCTI_DOCKER_NETWORK` and include the
-optional network override with the base Compose file. Routed or remote
-endpoints do not require an external network.
+If the OpenCTI network name is not `opencti_default`, set
+`NARROWCTI_DOCKER_NETWORK` before running compose.
 
 The compose template defaults to `deployment/gateway.env.example` so
 `docker compose config` can validate the template before secrets exist. For real

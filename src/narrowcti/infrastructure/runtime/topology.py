@@ -107,7 +107,7 @@ def validate_configured_endpoints(
 
 
 def validate_state_path(path: str | None) -> EndpointDiagnostic:
-    """Check an existing state directory without changing ownership or mode."""
+    """Check state readiness without changing ownership, mode or filesystem."""
 
     raw = str(path or "").strip()
     if not raw:
@@ -118,6 +118,13 @@ def validate_state_path(path: str | None) -> EndpointDiagnostic:
             message="NARROWCTI_STATE_DIR is empty",
         )
     state_path = Path(raw)
+    if state_path.exists() and not state_path.is_dir():
+        return EndpointDiagnostic(
+            name="NARROWCTI_STATE_DIR",
+            configured=True,
+            code="state-path-not-directory",
+            message=f"state path is not a directory: {state_path}",
+        )
     if state_path.exists() and not os.access(state_path, os.W_OK | os.X_OK):
         return EndpointDiagnostic(
             name="NARROWCTI_STATE_DIR",
@@ -125,11 +132,29 @@ def validate_state_path(path: str | None) -> EndpointDiagnostic:
             code="state-path-not-writable",
             message=f"state path is not writable: {state_path}",
         )
+    if state_path.exists():
+        return EndpointDiagnostic(
+            name="NARROWCTI_STATE_DIR",
+            configured=True,
+            code="ok",
+            message="state path is an existing writable directory",
+        )
+
+    parent = state_path.parent
+    while not parent.exists() and parent != parent.parent:
+        parent = parent.parent
+    if not parent.is_dir() or not os.access(parent, os.W_OK | os.X_OK):
+        return EndpointDiagnostic(
+            name="NARROWCTI_STATE_DIR",
+            configured=True,
+            code="state-path-parent-not-writable",
+            message=f"state path does not exist and nearest parent is not writable: {parent}",
+        )
     return EndpointDiagnostic(
         name="NARROWCTI_STATE_DIR",
         configured=True,
-        code="ok",
-        message="state path is writable or will be created by the runtime",
+        code="state-path-absent",
+        message=f"state path does not exist; nearest existing parent is writable: {parent}",
     )
 
 
