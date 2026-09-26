@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/narrowcti-banner.png" alt="NarrowCTI banner" width="760">
+  <img src="docs/assets/brand/banners/narrowcti-readme-banner-2172x724.png" alt="NarrowCTI banner" width="760">
 </p>
 
 <p align="center">
@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
   <a href="https://github.com/NarrowCTI/narrowcti/actions/workflows/ci.yml"><img src="https://github.com/NarrowCTI/narrowcti/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="docs/README.md"><img src="https://img.shields.io/badge/docs-current-brightgreen.svg" alt="Documentation"></a>
-  <a href="docs/container-images.md"><img src="https://img.shields.io/badge/container-GHCR-blue.svg" alt="Container image"></a>
+  <a href="docs/product/container-images.md"><img src="https://img.shields.io/badge/container-GHCR-blue.svg" alt="Container image"></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/security-policy-informational.svg" alt="Security policy"></a>
 </p>
 
@@ -47,14 +47,14 @@ The release sequence is `v0.8.0` -> `v0.9.0` -> `v1.0.0` -> `v1.0.1` ->
 for the v1.1 Community Edition line.
 
 Release history is summarized in `CHANGELOG.md`; detailed operator-facing
-release notes are maintained under `docs/release-v*.md`.
+release notes are maintained under `docs/releases/release-v*.md`.
 
 ## Quick Start
 
 For a first safe evaluation, start with the current operator guide:
 
 ```text
-docs/getting-started.md
+  docs/product/getting-started.md
 ```
 
 The default deployment posture is dry-run, run-once and audit-first. Build the
@@ -67,7 +67,7 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops 
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narrowcti-gateway
 ```
 
-Use `docs/deployment-operations.md` for the authoritative deployment and
+Use `docs/product/deployment-operations.md` for the authoritative deployment and
 upgrade procedure.
 
 ## Product Identity
@@ -133,14 +133,14 @@ IoC forwarding. OTX, MISP and other approved source adapters use the same
 explainable ingestion model. Source-backed actors, arsenal, MITRE tactics and
 techniques, victimology, infrastructure, campaigns, vulnerabilities and
 detection context are exported when the evidence supports them. The public
-product boundary is tracked in `docs/product-reference.md`.
+product boundary is tracked in `docs/product/product-reference.md`.
 
 MITRE ATT&CK is treated as reference and curation context. The official MITRE
 connector should populate OpenCTI with the canonical ATT&CK baseline, while
 NarrowCTI uses ATT&CK ids found in OTX and MISP to enrich, score, filter,
 deduplicate, audit and relate curated intelligence to the OpenCTI graph. This
 decision is tracked in
-`docs/mitre-curation-architecture-v0.7.md`.
+`docs/architecture/mitre-curation-architecture-v0.7.md`.
 
 ## Deduplication Posture
 
@@ -206,7 +206,7 @@ isolation intact.
 The source-specific OTX and MISP runtimes should remain available for debugging,
 validation and bounded backfill. MISP should stay opt-in and guarded until local
 OpenCTI, queue and Elasticsearch behavior remains stable across repeated bounded
-runs. The runtime design is tracked in `docs/gateway-runtime-v0.5.md`, and the
+runs. The runtime design is tracked in `docs/architecture/gateway-runtime-v0.5.md`, and the
 product/architecture continuity validation is tracked in
 `docs/product-architecture-validation-v0.5.md`.
 
@@ -231,7 +231,7 @@ posture for operator readiness.
 
 The detailed v0.6 design is tracked in
 `docs/quarantine-enrichment-v0.6.md`, and the release notes are
-tracked in `docs/release-v0.6.0.md`.
+tracked in `docs/releases/release-v0.6.0.md`.
 
 Initial quarantine CLI commands:
 
@@ -267,9 +267,9 @@ malware, tools, infrastructure, vulnerabilities, campaigns, sectors, locations,
 ATT&CK techniques and relationships, and keep those relationships explainable
 before they affect the OpenCTI graph.
 
-The current operator contract is tracked in `docs/product-reference.md`, the
-active architecture in `docs/architecture-v1.0.md`, and current OpenCTI
-coverage in `docs/opencti-coverage-matrix.md`. Historical v0.7 source,
+The current operator contract is tracked in `docs/product/product-reference.md`, the
+active architecture in `docs/architecture/architecture-v1.0.md`, and current OpenCTI
+coverage in `docs/product/opencti-coverage-matrix.md`. Historical v0.7 source,
 MITRE, MISP and OTX mapping documents remain available through
 `docs/documentation-map.md`; they explain evolution but do not override the
 current product contract.
@@ -281,8 +281,8 @@ read-only OpenCTI graph lookup so NarrowCTI can detect canonical ATT&CK objects,
 such as existing `attack-pattern` entries loaded by the official MITRE
 connector, before controlled graph promotion is enabled.
 
-The graph promotion design is tracked in `docs/graph-promotion-v0.8.md`, and
-the release notes are tracked in `docs/release-v0.8.0.md`. Deployment, analyst
+The graph promotion design is tracked in `docs/architecture/graph-promotion-v0.8.md`, and
+the release notes are tracked in `docs/releases/release-v0.8.0.md`. Deployment, analyst
 review, curation reporting and support diagnostics are tracked in the dedicated
 v0.8 documents under `docs/`.
 
@@ -291,7 +291,7 @@ inference rules is documented in `docs/opencti-rules-engine-v0.8.md`.
 NarrowCTI owns source-backed pre-ingestion decisions; OpenCTI Rules Engine can
 optionally infer additional relationships after the curated graph exists.
 OpenCTI tab coverage, current export status and backlog boundaries are tracked
-in `docs/opencti-coverage-matrix-v0.8.md`.
+in `docs/validation/opencti-coverage-matrix-v0.8.md`.
 
 ## v0.9 Release
 
@@ -300,8 +300,8 @@ governed operator workflow. It adds the authenticated review API, exact
 relationship deduplication, OpenCTI compatibility boundaries, public
 contributor governance and blocking CI/CD security gates.
 
-The authoritative notes are in `docs/release-v0.9.0.md`. The published image
-and tag policy are in `docs/container-images.md`.
+The authoritative notes are in `docs/releases/release-v0.9.0.md`. The published image
+and tag policy are in `docs/product/container-images.md`.
 
 ## v1.0 Release
 
@@ -313,9 +313,9 @@ documentation and reproducible security, image and OpenCTI validation. It does
 not expand the source catalog. New direct adapters are outside the current
 release scope.
 
-The current product contract is `docs/product-reference.md`, the current
-OpenCTI coverage matrix is `docs/opencti-coverage-matrix.md`, and the current
-release evidence is `docs/release-v1.1.1.md`.
+The current product contract is `docs/product/product-reference.md`, the current
+OpenCTI coverage matrix is `docs/product/opencti-coverage-matrix.md`, and the current
+release evidence is `docs/releases/release-v1.1.1.md`.
 
 ## Curation Configuration
 
@@ -396,7 +396,7 @@ decision audit records, curation reports, export plans and `x_narrowcti_*`
 graph metadata.
 
 The full current configuration reference is tracked in
-`docs/configuration-reference.md`. Versioned configuration references remain
+`docs/product/configuration-reference.md`. Versioned configuration references remain
 available as release snapshots when a release note needs exact historical
 behavior.
 
@@ -530,7 +530,7 @@ bounded backfills while the v0.5 gateway matures.
 The authoritative current deployment and upgrade procedure is centralized in:
 
 ```text
-docs/deployment-operations.md
+docs/product/deployment-operations.md
 ```
 
 The deployment assets are:
@@ -549,12 +549,12 @@ curation report service persists text, JSON and HTML artifacts under the
 gateway state volume, while support diagnostics can produce a redacted HTML
 snapshot and support bundle for review. Older deployment snippets in
 release-specific documents are
-historical context; use `docs/deployment-operations.md` for the current
+historical context; use `docs/product/deployment-operations.md` for the current
 procedure.
 
 Source-specific OTX and MISP runtimes remain available for debugging and
 bounded backfill investigations, but they are not the current deployment source
-of truth. Use `docs/deployment-operations.md` for deployment and upgrade
+of truth. Use `docs/product/deployment-operations.md` for deployment and upgrade
 steps, and `scripts/misp-backfill-window.ps1 -Preview` only for controlled MISP
 backfill command inspection.
 
@@ -612,33 +612,33 @@ docs/README.md
 Recommended starting points:
 
 ```text
-docs/getting-started.md
-docs/deployment-operations.md
-docs/configuration-reference.md
-docs/architecture.md
-docs/curation-decision-reference.md
-docs/environment-profiles.md
-docs/product-reference.md
-docs/opencti-coverage-matrix.md
-docs/analyst-review-api.md
-docs/container-images.md
-docs/opencti-compatibility.md
-docs/security-quality-gates.md
-docs/community-standards.md
+docs/product/getting-started.md
+docs/product/deployment-operations.md
+docs/product/configuration-reference.md
+docs/architecture/overview.md
+docs/product/curation-decision-reference.md
+docs/product/environment-profiles.md
+docs/product/product-reference.md
+docs/product/opencti-coverage-matrix.md
+docs/product/analyst-review-api.md
+docs/product/container-images.md
+docs/product/opencti-compatibility.md
+docs/product/security-quality-gates.md
+docs/community/community-standards.md
 docs/documentation-map.md
-docs/architecture-v0.9.md
-docs/graph-promotion-v0.8.md
-docs/opencti-coverage-matrix-v0.8.md
-docs/repository-structure.md
-docs/development-guide.md
-docs/community-issue-triage.md
-docs/release-v1.1.1.md
-docs/release-v1.0.1.md
-docs/release-v1.1.0.md
-docs/release-v0.9.0.md
-docs/release-v0.8.0.md
-docs/release-v1.0.0.md
-docs/release-process.md
+docs/architecture/architecture-v0.9.md
+docs/architecture/graph-promotion-v0.8.md
+docs/validation/opencti-coverage-matrix-v0.8.md
+docs/development/repository-structure.md
+docs/development/development-guide.md
+docs/community/community-issue-triage.md
+docs/releases/release-v1.1.1.md
+docs/releases/release-v1.0.1.md
+docs/releases/release-v1.1.0.md
+docs/releases/release-v0.9.0.md
+docs/releases/release-v0.8.0.md
+docs/releases/release-v1.0.0.md
+docs/releases/release-process.md
 ```
 
 Development evidence and lab validation notes are retained only where they help
@@ -651,12 +651,12 @@ NarrowCTI is open to community contributions. Start with:
 
 ```text
 CONTRIBUTING.md
-docs/development-guide.md
-docs/community-issue-triage.md
+docs/development/development-guide.md
+docs/community/community-issue-triage.md
 CODE_OF_CONDUCT.md
 SUPPORT.md
 SECURITY.md
-docs/community-governance.md
+docs/community/community-governance.md
 ```
 
 Issues and pull requests should avoid secrets, `.env` files, local `state/`

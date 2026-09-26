@@ -99,12 +99,13 @@ and must not be used to skip a security fix review.
 
 ## Development Setup
 
-The full contributor guide is tracked in `docs/development-guide.md`.
+The full contributor guide is tracked in `docs/development/development-guide.md`.
 
 Install the Python dependencies used by the gateway image:
 
 ```text
-python -m pip install -r connectors/otx/requirements.txt
+python -m pip install -e .
+python -m pip install -r requirements-dev.txt
 ```
 
 Run the test suite:
@@ -154,10 +155,10 @@ Common components are `gateway`, `core`, `connectors`, `exporters`, `docs`,
 Changes that affect the Docker image, deployment template, public configuration
 surface or release packaging should also update:
 
-- `docs/container-images.md`;
-- `docs/deployment-operations.md`;
-- `docs/configuration-reference.md`;
-- `docs/release-process.md`;
+- `docs/product/container-images.md`;
+- `docs/product/deployment-operations.md`;
+- `docs/product/configuration-reference.md`;
+- `docs/releases/release-process.md`;
 - `.github/workflows/container-image.yml`, when image publishing changes.
 
 Container image tags are part of the public contract. Do not change tag naming

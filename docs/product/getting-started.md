@@ -2,7 +2,7 @@
 
 This guide is the shortest safe path to evaluate NarrowCTI Community Edition.
 
-Use the full deployment runbook in `docs/deployment-operations.md` for
+Use the full deployment runbook in `docs/product/deployment-operations.md` for
 production-like upgrades, controlled graph export and operational handoff.
 
 ## Prerequisites
@@ -27,8 +27,8 @@ Review the public entry points:
 ```text
 README.md
 docs/README.md
-docs/deployment-operations.md
-docs/configuration-reference.md
+docs/product/deployment-operations.md
+docs/product/configuration-reference.md
 ```
 
 ## Create Local Configuration
@@ -115,14 +115,14 @@ Do not start with broad graph export. The safe sequence is:
 5. Move to `NARROWCTI_GRAPH_EXPORT_MODE=export` only for a controlled test.
 6. Run operational validation and relationship audit before expanding scope.
 
-The current graph promotion design is in `docs/graph-promotion-v0.8.md`.
+The current graph promotion design is in `docs/architecture/graph-promotion-v0.8.md`.
 
 ## State And Recovery
 
 The gateway keeps checkpoints, deduplication indexes, quarantine records and
 reports in the `narrowcti-state` volume. Do not remove that volume when
 restarting or upgrading. Use the backup and restore procedure in
-`docs/deployment-operations.md` before changing the image or widening source
+`docs/product/deployment-operations.md` before changing the image or widening source
 scope.
 
 State JSON files are written atomically. A process interruption during a
@@ -131,10 +131,10 @@ replay.
 
 ## Next Reading
 
-- `docs/deployment-operations.md`
-- `docs/configuration-reference.md`
-- `docs/curation-decision-reference.md`
-- `docs/environment-profiles.md`
-- `docs/opencti-coverage-matrix-v0.8.md`
+- `docs/product/deployment-operations.md`
+- `docs/product/configuration-reference.md`
+- `docs/product/curation-decision-reference.md`
+- `docs/product/environment-profiles.md`
+- `docs/validation/opencti-coverage-matrix-v0.8.md`
 - `docs/infrastructure-correlation-v0.8.md`
-- `docs/support-diagnostics-v0.8.md`
+- `docs/product/support-diagnostics-v0.8.md`

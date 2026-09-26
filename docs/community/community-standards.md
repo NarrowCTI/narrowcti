@@ -16,9 +16,9 @@ NarrowCTI predictable for contributors, operators and security reporters.
 | License | `LICENSE` | Apache-2.0 Community Edition license for the core project. |
 | Security | `SECURITY.md` | Supported versions, private reporting and disclosure process. |
 | Support | `SUPPORT.md` | Community support channels and data handling guidance. |
-| Release process | `docs/release-process.md` | Tag, GitHub Release and image release process. |
-| Container images | `docs/container-images.md` | Image naming, tags and operator pinning guidance. |
-| Community governance | `docs/community-governance.md` | Contribution scope, permissions, review and branch settings. |
+| Release process | `docs/releases/release-process.md` | Tag, GitHub Release and image release process. |
+| Container images | `docs/product/container-images.md` | Image naming, tags and operator pinning guidance. |
+| Community governance | `docs/community/community-governance.md` | Contribution scope, permissions, review and branch settings. |
 | Code ownership | `.github/CODEOWNERS` | Default maintainer review responsibility. |
 | Dependency updates | `.github/dependabot.yml` | Automated dependency and GitHub Actions update proposals. |
 
@@ -47,7 +47,7 @@ Before a public release:
   present and linked.
 - The source archive excludes local state, secrets, raw payloads and local
   assistant/operator instructions.
-- `docs/container-images.md` matches the image workflow and compose examples.
+- `docs/product/container-images.md` matches the image workflow and compose examples.
 - GitHub Release notes mention validation status, known limitations and the
   canonical container image tag.
 - No development-only validation log is promoted as the primary product doc.

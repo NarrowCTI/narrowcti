@@ -8,7 +8,7 @@ This matrix is the W1/PR-02 runtime contract for the Community package.
 | Certified CI/release runtime | Python `3.11` only | `.github/workflows/ci.yml`, `.github/workflows/security-quality.yml` |
 | Ruff target | `py311` | `pyproject.toml` |
 | Release container | `python:3.11-slim` | `Dockerfile.gateway` |
-| Contributor setup | Python `3.11` | `docs/development-guide.md` |
+| Contributor setup | Python `3.11` | `docs/development/development-guide.md` |
 
 Python 3.14 remains a documented local laboratory environment only. Versions
 newer than 3.11 may be installable because the compatibility floor is `>=3.11`,
