@@ -147,8 +147,11 @@ def validate_state_path(path: str | None) -> EndpointDiagnostic:
         return EndpointDiagnostic(
             name="NARROWCTI_STATE_DIR",
             configured=True,
-            code="state-path-parent-not-writable",
-            message=f"state path does not exist and nearest parent is not writable: {parent}",
+            code="state-path-absent",
+            message=(
+                "state path does not exist; nearest existing parent is not writable "
+                f"and readiness is unknown: {parent}"
+            ),
         )
     return EndpointDiagnostic(
         name="NARROWCTI_STATE_DIR",
