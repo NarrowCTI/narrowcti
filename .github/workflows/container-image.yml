@@ -68,7 +68,6 @@ jobs:
             --tmpfs /tmp \
             --tmpfs /app/state:uid=10001,gid=10001,mode=0750 \
             narrowcti-gateway:scan python - <<'PY'
-          import importlib
           import importlib.metadata
           import errno
           import os
@@ -85,12 +84,12 @@ jobs:
           import gateway.preflight
           import gateway.review_api
           import exporters.stix_builder
+          from narrowcti.domain.intelligence import feed_contract
           from sigma.parser.collection import SigmaCollectionParser
 
-          canonical = importlib.import_module("narrowcti.core.feed_contract")
-          legacy = importlib.import_module("core.feed_contract")
-          assert canonical is legacy
-          assert sys.modules["narrowcti.core.feed_contract"] is sys.modules["core.feed_contract"]
+          import core.feed_contract as legacy_feed_contract
+          assert legacy_feed_contract.FeedSource is feed_contract.FeedSource
+          assert legacy_feed_contract.FeedCandidate is feed_contract.FeedCandidate
           assert importlib.metadata.version("narrowcti") == narrowcti.__version__
 
           Path("/app/state/smoke.txt").write_text("ok", encoding="utf-8")
@@ -104,7 +103,7 @@ jobs:
 
           for module_name in ("pip", "setuptools", "wheel"):
               try:
-                  importlib.import_module(module_name)
+                  __import__(module_name)
               except ModuleNotFoundError:
                   continue
               raise AssertionError(f"build tooling remains importable: {module_name}")

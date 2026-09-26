@@ -15,11 +15,13 @@ from pathlib import Path
 PACKAGE_ROOTS = ("narrowcti", "connectors", "core", "exporters", "gateway")
 PUBLIC_IMPORTS = (
     "narrowcti",
-    "gateway.connector",
-    "gateway.preflight",
-    "core.feed_contract",
-    "connectors.misp.feed_adapter",
-    "exporters.stix_builder",
+    "narrowcti.domain.intelligence.feed_contract",
+    "narrowcti.application.ingestion.pipeline",
+    "narrowcti.adapters.opencti.graph_lookup",
+    "narrowcti.adapters.stix.serializer",
+    "narrowcti.infrastructure.runtime.gateway_composition",
+    "narrowcti.api.review.app",
+    "narrowcti.cli.gateway",
 )
 
 

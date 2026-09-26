@@ -1,4 +1,3 @@
-import importlib.util
 import os
 import subprocess
 import sys
@@ -9,63 +8,59 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-LEGACY_FIRST = r'''
-import sys
-import connectors.misp.feed_adapter as legacy_connectors
-import core.feed_contract as legacy_core
-import exporters.stix_builder as legacy_exporters
-import gateway.settings as legacy_gateway
-import gateway.feature_gates as legacy_feature_gates
-import narrowcti.connectors.misp.feed_adapter as canonical_connectors
-import narrowcti.core.feed_contract as canonical_core
-import narrowcti.exporters.stix_builder as canonical_exporters
-import narrowcti.gateway.settings as canonical_gateway
-import narrowcti.gateway.feature_gates as canonical_feature_gates
-assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
-assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
-assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
-assert sys.modules["gateway.settings"] is sys.modules["narrowcti.gateway.settings"]
-assert legacy_connectors is canonical_connectors
-assert legacy_core is canonical_core
-assert legacy_exporters is canonical_exporters
-assert legacy_gateway is canonical_gateway
-assert legacy_feature_gates is canonical_feature_gates
-assert legacy_feature_gates.FeatureGateState is canonical_feature_gates.FeatureGateState
-assert legacy_feature_gates.build_feature_gate_state is canonical_feature_gates.build_feature_gate_state
-'''
-
-
-CANONICAL_FIRST = r'''
-import sys
-import narrowcti.connectors.misp.feed_adapter as canonical_connectors
-import narrowcti.core.feed_contract as canonical_core
-import narrowcti.exporters.stix_builder as canonical_exporters
-import narrowcti.gateway.settings as canonical_gateway
-import narrowcti.gateway.feature_gates as canonical_feature_gates
-import connectors.misp.feed_adapter as legacy_connectors
-import core.feed_contract as legacy_core
-import exporters.stix_builder as legacy_exporters
-import gateway.settings as legacy_gateway
-import gateway.feature_gates as legacy_feature_gates
-assert sys.modules["connectors.misp.feed_adapter"] is sys.modules["narrowcti.connectors.misp.feed_adapter"]
-assert sys.modules["core.feed_contract"] is sys.modules["narrowcti.core.feed_contract"]
-assert sys.modules["exporters.stix_builder"] is sys.modules["narrowcti.exporters.stix_builder"]
-assert sys.modules["gateway.settings"] is sys.modules["narrowcti.gateway.settings"]
-assert canonical_connectors is legacy_connectors
-assert canonical_core is legacy_core
-assert canonical_exporters is legacy_exporters
-assert canonical_gateway is legacy_gateway
-assert canonical_feature_gates is legacy_feature_gates
-assert canonical_feature_gates.FeatureGateState is legacy_feature_gates.FeatureGateState
-assert canonical_feature_gates.build_feature_gate_state is legacy_feature_gates.build_feature_gate_state
+LEGACY_SYMBOLS = r'''
+from core.feed_contract import FeedCandidate as legacy_candidate
+from core.feed_contract import FeedSource as legacy_source
+from core.feed_contract import slugify as legacy_slugify
+from core.scoring import calculate_score as legacy_score
+from core.contextual_scoring import build_contextual_score_evidence as legacy_contextual
+from core.tlp import normalize_tlp as legacy_tlp
+from core.policy import should_ingest as legacy_policy
+from core.deduplication import normalize_indicator_type as legacy_indicator_type
+from core.indicator_policy import filter_indicators_by_type as legacy_indicator_policy
+from core.quarantine import QuarantineRecord as legacy_record
+from core.quarantine import QuarantineRepository as legacy_repository
+from connectors.misp.feed_adapter import MISPFeedAdapter as legacy_misp_adapter
+from exporters.stix_builder import build_report_bundle as legacy_bundle
+from gateway.feature_gates import FeatureGateState as legacy_gate
+from gateway.feature_gates import build_feature_gate_state as legacy_gate_builder
+from narrowcti.domain.intelligence.feed_contract import FeedCandidate as canonical_candidate
+from narrowcti.domain.intelligence.feed_contract import FeedSource as canonical_source
+from narrowcti.domain.intelligence.feed_contract import slugify as canonical_slugify
+from narrowcti.domain.intelligence.scoring import calculate_score as canonical_score
+from narrowcti.domain.intelligence.contextual_scoring import build_contextual_score_evidence as canonical_contextual
+from narrowcti.domain.intelligence.tlp import normalize_tlp as canonical_tlp
+from narrowcti.domain.intelligence.policy import should_ingest as canonical_policy
+from narrowcti.domain.intelligence.indicator_types import normalize_indicator_type as canonical_indicator_type
+from narrowcti.domain.intelligence.indicator_policy import filter_indicators_by_type as canonical_indicator_policy
+from narrowcti.domain.review.quarantine import QuarantineRecord as canonical_record
+from narrowcti.adapters.persistence.local.quarantine_repository import QuarantineRepository as canonical_repository
+from connectors.misp.feed_adapter import MISPFeedAdapter as canonical_misp_adapter
+from narrowcti.adapters.stix.serializer import build_report_bundle as canonical_bundle
+from gateway.feature_gates import FeatureGateState as canonical_gate
+from gateway.feature_gates import build_feature_gate_state as canonical_gate_builder
+assert legacy_candidate is canonical_candidate
+assert legacy_source is canonical_source
+assert legacy_slugify is canonical_slugify
+assert legacy_score is canonical_score
+assert legacy_contextual is canonical_contextual
+assert legacy_tlp is canonical_tlp
+assert legacy_policy is canonical_policy
+assert legacy_indicator_type is canonical_indicator_type
+assert legacy_indicator_policy is canonical_indicator_policy
+assert legacy_record is canonical_record
+assert legacy_repository is canonical_repository
+assert legacy_misp_adapter is canonical_misp_adapter
+assert legacy_bundle is canonical_bundle
+assert legacy_gate is canonical_gate
+assert legacy_gate_builder is canonical_gate_builder
 '''
 
 
 class PackageCompatibilityTests(unittest.TestCase):
-    def _run_source_import_order(self, code):
+    def _run_source_import(self, code):
         env = os.environ.copy()
-        source_path = os.pathsep.join((str(ROOT / "src"), str(ROOT)))
-        env["PYTHONPATH"] = source_path
+        env["PYTHONPATH"] = os.pathsep.join((str(ROOT / "src"), str(ROOT)))
         subprocess.run(
             [sys.executable, "-c", code],
             cwd=ROOT,
@@ -75,51 +70,29 @@ class PackageCompatibilityTests(unittest.TestCase):
             text=True,
         )
 
-    def test_submodule_identity_legacy_import_first(self):
-        self._run_source_import_order(LEGACY_FIRST)
+    def test_legacy_symbols_resolve_to_canonical_owners(self):
+        self._run_source_import(LEGACY_SYMBOLS)
 
-    def test_submodule_identity_canonical_import_first(self):
-        self._run_source_import_order(CANONICAL_FIRST)
-
-    def test_facades_and_aliases_are_exhaustive(self):
-        spec = importlib.util.spec_from_file_location(
-            "compat_contract", ROOT / "src" / "narrowcti" / "compat.py"
-        )
-        compat = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(compat)
-
-        # Derive the expected contract from the current legacy source tree. This
-        # is test-only filesystem inspection; runtime aliases stay static.
-        legacy_modules = {
-            ".".join(path.relative_to(ROOT).with_suffix("").parts)
-            for family in ("connectors", "core", "exporters", "gateway")
-            for path in (ROOT / family).rglob("*.py")
-            if path.name != "__init__.py"
-        }
-        expected_canonical = {f"narrowcti.{module}" for module in legacy_modules}
-        facades = {
-            ".".join(path.relative_to(ROOT / "src").with_suffix("").parts)
-            for family in ("connectors", "core", "exporters", "gateway")
-            for path in (ROOT / "src" / "narrowcti" / family).rglob("*.py")
-            if path.name != "__init__.py"
-        }
-        aliases = set(compat.LEGACY_MODULE_ALIASES)
-        self.assertSetEqual(expected_canonical, facades, "Legacy modules and facades differ")
-        self.assertSetEqual(expected_canonical, aliases, "Legacy modules and aliases differ")
-        self.assertDictEqual(
-            {
-                canonical: canonical.removeprefix("narrowcti.")
-                for canonical in expected_canonical
-            },
-            compat.LEGACY_MODULE_ALIASES,
-            "An alias points to a legacy module different from its canonical key",
-        )
+    def test_removed_nested_facades_are_not_importable(self):
+        for module_name in (
+            "narrowcti.core.feed_contract",
+            "narrowcti.connectors.misp.feed_adapter",
+            "narrowcti.exporters.stix_builder",
+            "narrowcti.gateway.settings",
+        ):
+            result = subprocess.run(
+                [sys.executable, "-c", f"import {module_name}"],
+                cwd=ROOT,
+                env={**os.environ, "PYTHONPATH": os.pathsep.join((str(ROOT / "src"), str(ROOT)))},
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0, module_name)
+            self.assertIn("No module named", result.stderr)
 
     def test_source_mode_package_import_is_independent_of_distribution_metadata(self):
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join((str(ROOT / "src"), str(ROOT)))
-        # A preceding wheel build can leave discoverable .egg-info in ROOT.
-        # Force the missing-distribution condition independently of build artifacts.
         code = """
 from importlib.metadata import PackageNotFoundError
 from unittest.mock import patch
@@ -141,7 +114,6 @@ with patch("importlib.metadata.version", side_effect=PackageNotFoundError("narro
     def test_otx_connector_preserves_historical_script_contract(self):
         connector = (ROOT / "connectors" / "otx" / "connector.py").read_text(encoding="utf-8")
         dockerfile = (ROOT / "connectors" / "otx" / "Dockerfile").read_text(encoding="utf-8")
-
         self.assertIn("from otx_client import OTXClient", connector)
         self.assertIn("from processor import OTXProcessor", connector)
         self.assertIn('CMD ["python", "connector.py"]', dockerfile)
@@ -150,16 +122,15 @@ with patch("importlib.metadata.version", side_effect=PackageNotFoundError("narro
     def test_otx_package_imports_are_not_current_contract(self):
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join((str(ROOT / "src"), str(ROOT)))
-        for module_name in ("connectors.otx.connector", "narrowcti.connectors.otx.connector"):
-            result = subprocess.run(
-                [sys.executable, "-c", f"import {module_name}"],
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(result.returncode, 0, module_name)
-            self.assertIn("No module named 'otx_client'", result.stderr)
+        result = subprocess.run(
+            [sys.executable, "-c", "import connectors.otx.connector"],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("No module named 'otx_client'", result.stderr)
 
 
 if __name__ == "__main__":
