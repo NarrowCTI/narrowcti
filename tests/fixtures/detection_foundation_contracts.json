@@ -1,0 +1,134 @@
+{
+  "detection_artifact": {
+    "backend": "sigma",
+    "content": "title: Example detection\nlogsource:\n  product: windows\ndetection:\n  selection:\n    CommandLine|contains: whoami\n  condition: selection",
+    "content_ref": null,
+    "content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "format": "sigma",
+    "id": "DET-PR19-001",
+    "provenance": [
+      "git:abc123"
+    ],
+    "requirement_id": "DR-PR19-001",
+    "source_ref": "git:abc123",
+    "version": "2026.09"
+  },
+  "detection_requirement": {
+    "behavior": {
+      "attack_id": "T1059.001",
+      "procedure": "PowerShell is used to execute the behavior."
+    },
+    "evidence": {
+      "confidence": 85,
+      "provenance": [
+        "misp:event:822",
+        "analyst:manual"
+      ],
+      "references": [
+        "misp:event:822",
+        "decision:abc"
+      ]
+    },
+    "id": "DR-PR19-001",
+    "lifecycle": "proposed",
+    "relevance": {
+      "priority": "high",
+      "rationale": "Observed behavior requires a detection capability."
+    },
+    "scope": {
+      "environment_id": "prod",
+      "tenant_id": "community"
+    },
+    "source_refs": [
+      "misp:event:822",
+      "decision:abc"
+    ],
+    "telemetry_requirements": [
+      "process_creation",
+      "process.command_line"
+    ],
+    "threat_context": {
+      "actor": "Lazarus",
+      "campaign": "Example campaign",
+      "malware": "Example malware"
+    },
+    "version": 1
+  },
+  "telemetry_contract": {
+    "blocks": [
+      "DET-PR19-001"
+    ],
+    "capability": "process_creation",
+    "id": "TC-PR19-001",
+    "provider": "sentinelone",
+    "readiness": "incomplete",
+    "required_fields": {
+      "process.command_line": "available",
+      "process.name": "available",
+      "user.name": "missing"
+    },
+    "schema_version": "S1-2026.2",
+    "scope": {
+      "environment_id": "prod",
+      "tenant_id": "community"
+    },
+    "version": 1
+  },
+  "validation_contract": {
+    "artifact_id": "DET-PR19-001",
+    "behavior": {
+      "attack_id": "T1059.001",
+      "procedure": "PowerShell is used to execute the behavior."
+    },
+    "evidence_required": [
+      "execution",
+      "telemetry",
+      "detection",
+      "timestamp",
+      "rule_version"
+    ],
+    "expected": {
+      "detection": [
+        "alert"
+      ],
+      "telemetry": [
+        "process_creation"
+      ]
+    },
+    "id": "VC-PR19-001",
+    "provider_preference": [
+      "manual",
+      "openaev"
+    ],
+    "provenance": [
+      "decision:abc"
+    ],
+    "requirement_id": "DR-PR19-001",
+    "version": 1
+  },
+  "validation_evidence": {
+    "alert_refs": [
+      "alert:123"
+    ],
+    "artifact_version": "2026.09",
+    "completed_at": "2026-09-25T12:05:00Z",
+    "detection_artifact_id": "DET-PR19-001",
+    "detection_observed": true,
+    "execution_ref": "manual:run-123",
+    "id": "VE-PR19-001",
+    "latency_ms": 1200,
+    "provider": "manual",
+    "provenance": [
+      "manual:run-123"
+    ],
+    "started_at": "2026-09-25T12:04:58Z",
+    "status": "passed",
+    "telemetry_contract_id": "TC-PR19-001",
+    "telemetry_contract_version": 1,
+    "telemetry_observed": true,
+    "telemetry_refs": [
+      "telemetry:process_creation:123"
+    ],
+    "validation_contract_id": "VC-PR19-001"
+  }
+}

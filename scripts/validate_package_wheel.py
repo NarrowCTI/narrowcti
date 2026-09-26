@@ -39,6 +39,15 @@ REQUIRED_MODULES = (
     "narrowcti/adapters/persistence/local/artifact_index.py",
     "narrowcti/domain/review/__init__.py",
     "narrowcti/domain/review/quarantine.py",
+    "narrowcti/domain/detection/__init__.py",
+    "narrowcti/domain/detection/_normalization.py",
+    "narrowcti/domain/detection/requirements.py",
+    "narrowcti/domain/detection/telemetry.py",
+    "narrowcti/domain/detection/artifacts.py",
+    "narrowcti/domain/detection/lifecycle.py",
+    "narrowcti/domain/validation/__init__.py",
+    "narrowcti/domain/validation/contracts.py",
+    "narrowcti/domain/validation/evidence.py",
     "narrowcti/ports/quarantine.py",
     "narrowcti/ports/entitlements.py",
     "narrowcti/adapters/persistence/local/quarantine_repository.py",
@@ -609,6 +618,42 @@ assert entitlements.EntitlementProvider is not None
 assert community.CommunityEntitlements().granted_capabilities()
 assert legacy_preflight.build_preflight_report is not None
 print("installed-capability-contract-canonical-first-ok")
+""",
+            """
+from narrowcti.domain.detection import (
+    DetectionArtifact,
+    DetectionBehavior,
+    DetectionRequirement,
+    DetectionScope,
+    TelemetryContract,
+)
+from narrowcti.domain.validation import ValidationContract, ValidationEvidence
+
+scope = DetectionScope("community", "wheel")
+behavior = DetectionBehavior("t1059.001", "PowerShell")
+requirement = DetectionRequirement("DR-wheel", scope, behavior)
+telemetry = TelemetryContract(
+    "TC-wheel", scope, "manual", "process_creation", "1",
+    {"process.name": "available"},
+)
+artifact = DetectionArtifact(
+    "DET-wheel", requirement.id, "sigma", content="title: wheel",
+    version="1.0",
+)
+contract = ValidationContract(
+    "VC-wheel", requirement.id, behavior, artifact_id=artifact.id,
+    evidence_required=("execution",),
+)
+evidence = ValidationEvidence(
+    "VE-wheel", contract.id, artifact.id, artifact.version,
+    telemetry.id, telemetry.version, "unknown", "manual",
+)
+assert DetectionRequirement.from_dict(requirement.to_dict()) == requirement
+assert TelemetryContract.from_dict(telemetry.to_dict()) == telemetry
+assert DetectionArtifact.from_dict(artifact.to_dict()) == artifact
+assert ValidationContract.from_dict(contract.to_dict()) == contract
+assert ValidationEvidence.from_dict(evidence.to_dict()) == evidence
+print("installed-detection-foundation-contract-ok")
 """,
         )
         for import_code in compatibility_checks:
