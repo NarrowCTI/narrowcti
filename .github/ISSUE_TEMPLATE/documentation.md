@@ -17,6 +17,12 @@ assignees: ""
 - Release notes
 - Other:
 
+## Area
+
+- [ ] Documentation taxonomy/navigation
+- [ ] Brand/assets
+- [ ] Architecture/migration
+
 ## Problem
 
 What is unclear, missing or outdated?

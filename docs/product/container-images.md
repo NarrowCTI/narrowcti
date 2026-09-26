@@ -94,7 +94,7 @@ Pull requests and `dev` builds exercise the build, smoke, scan and SBOM path but
 do not publish stable image tags. `main` and version tags first retain the exact
 scanned candidate as a short-lived artifact. A separate publication job then
 loads that same candidate and publishes only after the `release` environment
-allows it. See `docs/security-quality-gates.md` for the blocking policy.
+allows it. See `docs/product/security-quality-gates.md` for the blocking policy.
 
 Docker Hub mirroring can be added later with explicit repository secrets and the
 same tag policy. Until then, GHCR is the canonical public registry.

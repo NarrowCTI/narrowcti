@@ -35,6 +35,14 @@ python -m unittest discover -s tests -v
 
 ## Review And Release Impact
 
+### Migration context (optional)
+
+- Migration wave / PR:
+- ADR:
+- Compatibility impact:
+- Documentation/archive impact:
+- Rollback:
+
 - [ ] This PR is ready for maintainer review; it is not a direct release.
 - [ ] Breaking changes, migrations or rollback behavior are documented.
 - [ ] Public docs and release-archive classification were reviewed.

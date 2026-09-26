@@ -1,0 +1,802 @@
+{
+  "schema_version": 1,
+  "baseline_ref": "PR-20 merge baseline",
+  "baseline_commit": "c224665d6adbba1f064202357d05f319a7908303",
+  "baseline_docs_count": 93,
+  "baseline_paths_sha256": "f7977a85c64fcb07a974c83165d4ce007d4a703d4a9423ee7d7e5a169e30c6cd",
+  "generated_for": "W7 / PR-21",
+  "entries": [
+    {
+      "old_path": "docs/README.md",
+      "new_path": "docs/README.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/analyst-review-api.md",
+      "new_path": "docs/product/analyst-review-api.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/analyst-review-v0.8.md",
+      "new_path": "docs/product/analyst-review-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "2ac50293313bf41d4a0145d7c2bf3847c4581040376a0daa820cd7beb7fb2316"
+    },
+    {
+      "old_path": "docs/architecture-v0.7.md",
+      "new_path": "docs/architecture/architecture-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "a7d08ef66fd6ef0b99ebf4a22071abd278a7c75bfeafeacfc78571b6d375c7f4"
+    },
+    {
+      "old_path": "docs/architecture-v0.8.md",
+      "new_path": "docs/architecture/architecture-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "19098f1aa93d69f6c54ccd3cf795850abd6abfba529b24309d673ff0e64beeb5"
+    },
+    {
+      "old_path": "docs/architecture-v0.9.md",
+      "new_path": "docs/architecture/architecture-v0.9.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "36f31e7cc66b8d78c89370d53e61cf71c8c72e093c07c1089a8324c44805ec8c"
+    },
+    {
+      "old_path": "docs/architecture-v1.0.md",
+      "new_path": "docs/architecture/architecture-v1.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "597e44c52b5ea96de0fbdaddbbe36ba7bdd598065beb11d593bce71f1e6a9ab0"
+    },
+    {
+      "old_path": "docs/architecture.md",
+      "new_path": "docs/architecture/overview.md",
+      "classification": "current compatibility stub",
+      "historical": false,
+      "immutable": false,
+      "disposition": "CANONICAL-REPLACEMENT"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-001.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-001.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-002.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-002.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-003.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-003.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-004.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-004.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-005.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-005.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-006.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-006.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-007.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-007.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-008.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-008.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-009.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-009.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-010.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-010.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-011.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-011.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-012.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-012.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-013.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-013.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-014.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-014.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-015.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-015.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-016.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-016.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-017.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-017.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-018.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-018.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-019.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-019.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-021.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-021.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/MIG-ADR-022.md",
+      "new_path": "docs/architecture/adr/MIG-ADR-022.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/README.md",
+      "new_path": "docs/architecture/adr/README.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/architecture/adr/template.md",
+      "new_path": "docs/architecture/adr/template.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/assets/cybersysbr-logo.png",
+      "new_path": "docs/assets/cybersysbr-logo.png",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/assets/narrowcti-banner.png",
+      "new_path": "docs/assets/narrowcti-banner.png",
+      "classification": "legacy asset",
+      "historical": false,
+      "immutable": true,
+      "disposition": "LEGACY-RETAIN",
+      "sha256_before": "a3986a7e13fffb2444d91274e8cb57e23db57b7a183c1ff7af73a14daa0542c4"
+    },
+    {
+      "old_path": "docs/assets/narrowcti-logo.png",
+      "new_path": "docs/assets/narrowcti-logo.png",
+      "classification": "legacy asset",
+      "historical": false,
+      "immutable": true,
+      "disposition": "LEGACY-RETAIN",
+      "sha256_before": "ff4216f3c7c909b7689e61fbdce0f419e1facae0b915718be74748170aa71037"
+    },
+    {
+      "old_path": "docs/community-governance.md",
+      "new_path": "docs/community/community-governance.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/community-issue-triage.md",
+      "new_path": "docs/community/community-issue-triage.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/community-standards.md",
+      "new_path": "docs/community/community-standards.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/configuration-reference-v0.5.md",
+      "new_path": "docs/product/configuration-reference-v0.5.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "d2d97f921b6c3979252473035aadcf97adcd1dbcd67943a9462a67f9d26a2e5d"
+    },
+    {
+      "old_path": "docs/configuration-reference-v0.6.md",
+      "new_path": "docs/product/configuration-reference-v0.6.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "509c43d7c39f4091f8c6ae916428300b1d6bf5d3acd79174b0c7f18c1850d397"
+    },
+    {
+      "old_path": "docs/configuration-reference.md",
+      "new_path": "docs/product/configuration-reference.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/container-images.md",
+      "new_path": "docs/product/container-images.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/contextual-scoring-reference-v0.7.md",
+      "new_path": "docs/architecture/contextual-scoring-reference-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "457758f4a553f0dd49ba62850491983b383aa206f139bfc2a9f346b63c5caf3b"
+    },
+    {
+      "old_path": "docs/curation-decision-reference.md",
+      "new_path": "docs/product/curation-decision-reference.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/curation-reporting-v0.8.md",
+      "new_path": "docs/product/curation-reporting-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "e0dcd0c5bb9fd960ba93cad1b3b19e11f70b4c677a322455b6f4cb9cbaa0ec5e"
+    },
+    {
+      "old_path": "docs/deployment-operations-v0.8.md",
+      "new_path": "docs/product/deployment-operations-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "6f35d74bfe783defd0b1c1b8fc106f88f9b55e7156fcbd1790a968955330333f"
+    },
+    {
+      "old_path": "docs/deployment-operations.md",
+      "new_path": "docs/product/deployment-operations.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/development-guide.md",
+      "new_path": "docs/development/development-guide.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/documentation-map.md",
+      "new_path": "docs/documentation-map.md",
+      "classification": "current",
+      "historical": false,
+      "immutable": false,
+      "disposition": "STAY"
+    },
+    {
+      "old_path": "docs/environment-profiles.md",
+      "new_path": "docs/product/environment-profiles.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/gateway-runtime-v0.5.md",
+      "new_path": "docs/architecture/gateway-runtime-v0.5.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "7daa4592a30ec7bfea6cc3685283a48016c8cbe7b28c082ea7405bfdefa78351"
+    },
+    {
+      "old_path": "docs/getting-started.md",
+      "new_path": "docs/product/getting-started.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/graph-enrichment-v0.7.md",
+      "new_path": "docs/architecture/graph-enrichment-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "1cb790dfa6062e786cf368adc4d6ace1c41d72f4fff00a488b621a86d84a7e0d"
+    },
+    {
+      "old_path": "docs/graph-promotion-v0.8.md",
+      "new_path": "docs/architecture/graph-promotion-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "190a612ca6c5869b51eb8bd26dd476b6691270d94592aa207f8b823678d2a8a5"
+    },
+    {
+      "old_path": "docs/infrastructure-correlation-v0.8.md",
+      "new_path": "docs/architecture/infrastructure-correlation-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "f9192f960818531426ab970f30cc78707dcf2b9f9b374604615a97668290b06b"
+    },
+    {
+      "old_path": "docs/metadata-validation-v0.7.md",
+      "new_path": "docs/validation/metadata-validation-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "3f8a89bcfb66833feaea55875944e422659ed1bec1307c25bb82775eb342cd20"
+    },
+    {
+      "old_path": "docs/misp-official-connector-mapping-v0.7.md",
+      "new_path": "docs/validation/misp-official-connector-mapping-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "5c8e58a534b03a15147703be3d4b9935e2c4882179b1d25b4d1ef166661af8bf"
+    },
+    {
+      "old_path": "docs/misp-validation-v0.4.md",
+      "new_path": "docs/validation/misp-validation-v0.4.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "c81e71ff9a8b82346ea9b4e7c46ed0672305cc0f3eccfbb57617ec530eb3f873"
+    },
+    {
+      "old_path": "docs/mitre-curation-architecture-v0.7.md",
+      "new_path": "docs/architecture/mitre-curation-architecture-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "e5f9086e1536a94f945fa47ec93ea39196e75f9eb01074d94a219ce99e438f83"
+    },
+    {
+      "old_path": "docs/multi-feed-expansion-v0.4.md",
+      "new_path": "docs/architecture/multi-feed-expansion-v0.4.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "a032de99a5233bf6f5b78781a48e918e3e8d07e480782eb87b82ae631506ef72"
+    },
+    {
+      "old_path": "docs/opencti-compatibility.md",
+      "new_path": "docs/product/opencti-compatibility.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/opencti-coverage-matrix-v0.8.md",
+      "new_path": "docs/validation/opencti-coverage-matrix-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "d6a44425011e2a5dcdd24719df81c80f558ba0411bb7a2017fed7f567e62cc6b"
+    },
+    {
+      "old_path": "docs/opencti-coverage-matrix.md",
+      "new_path": "docs/product/opencti-coverage-matrix.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/opencti-rules-engine-v0.8.md",
+      "new_path": "docs/architecture/opencti-rules-engine-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "94473a7508e1a4901302eda5bf418064c488fdab2fce616652fb279a4d85a604"
+    },
+    {
+      "old_path": "docs/operational-validation-v0.7.md",
+      "new_path": "docs/validation/operational-validation-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "d3788a4884dd06f77cb8f1e027316748b3640a8602b1ec92a89e16b2245eed3b"
+    },
+    {
+      "old_path": "docs/operational-validation-v0.8.md",
+      "new_path": "docs/validation/operational-validation-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "92246a92697318ae38c09f469cf150c76d5fbfeaceaf8cf9e236c15cabecfd90"
+    },
+    {
+      "old_path": "docs/otx-adapter-foundation-v0.2.md",
+      "new_path": "docs/architecture/otx-adapter-foundation-v0.2.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "e622a4b6c32cf355b3d77af1d6de9e3a91c0cd76644981d5eb4346863ed9a8bf"
+    },
+    {
+      "old_path": "docs/otx-official-connector-mapping-v0.7.md",
+      "new_path": "docs/validation/otx-official-connector-mapping-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "50e1d8be9293c807107be6c966151b79c712217634426f7e23e08f90ef115d65"
+    },
+    {
+      "old_path": "docs/product-architecture-validation-v0.5.md",
+      "new_path": "docs/validation/product-architecture-validation-v0.5.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "0bb9833243739ed73bd5d15bb76a7204413a8246a82b2799b3e97d7d3e364a79"
+    },
+    {
+      "old_path": "docs/product-foundation-v0.3.md",
+      "new_path": "docs/architecture/product-foundation-v0.3.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "46c173b7465f0bc3c1423fd7718db2a99e5919dfece0f3bbc4bf33e0be287141"
+    },
+    {
+      "old_path": "docs/product-reference.md",
+      "new_path": "docs/product/product-reference.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/python-runtime-matrix.md",
+      "new_path": "docs/development/python-runtime-matrix.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/quarantine-enrichment-v0.6.md",
+      "new_path": "docs/architecture/quarantine-enrichment-v0.6.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "55bd0f0dde333783d554f9f03c13d345c0911faf2bb78118209be5ad547eb1c0"
+    },
+    {
+      "old_path": "docs/release-process.md",
+      "new_path": "docs/development/release-process.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/release-v0.4.0.md",
+      "new_path": "docs/releases/release-v0.4.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "d00196d477e5125dcfa84a9a409f68dfbdbe8c63eb257b09b0918919f224e1dd"
+    },
+    {
+      "old_path": "docs/release-v0.5.0.md",
+      "new_path": "docs/releases/release-v0.5.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "1f8846ca98a171d9ed1a177dfc379fb03eb5eb090e87e7646656cad69994cc26"
+    },
+    {
+      "old_path": "docs/release-v0.6.0.md",
+      "new_path": "docs/releases/release-v0.6.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "54e0b866854b11f9d7cf4400b96be3ff59f59b464d7b4b38205566581c8f59b0"
+    },
+    {
+      "old_path": "docs/release-v0.7.0.md",
+      "new_path": "docs/releases/release-v0.7.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "82d18391a71b0cad5c111c25f139add40c4c444fd5d12b0174fe097c8e70abf9"
+    },
+    {
+      "old_path": "docs/release-v0.8.0.md",
+      "new_path": "docs/releases/release-v0.8.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "51af5d722fc8b5b9a4b39a4b1c869a2bf45a06dceefbfa2f6866cba89f22d241"
+    },
+    {
+      "old_path": "docs/release-v0.9.0.md",
+      "new_path": "docs/releases/release-v0.9.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "ddc972fb09c99009b246a52dddb45aa1f15f67d798ec7c7de02b3b3ba1458fcd"
+    },
+    {
+      "old_path": "docs/release-v1.0.0.md",
+      "new_path": "docs/releases/release-v1.0.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "404db47fafced3daa191dfc61ece3dfd5b361199b013a01eccf628d788389589"
+    },
+    {
+      "old_path": "docs/release-v1.0.1.md",
+      "new_path": "docs/releases/release-v1.0.1.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "e1c21820bcd2971e40d700d3710126dbf8a283f6daddb16d5ed1abc46bb7917d"
+    },
+    {
+      "old_path": "docs/release-v1.1.0.md",
+      "new_path": "docs/releases/release-v1.1.0.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "a1fc974c0e256b1cedb37cfdbda1712f87396abe3d6d30aa93bc5c00bf701b05"
+    },
+    {
+      "old_path": "docs/release-v1.1.1.md",
+      "new_path": "docs/releases/release-v1.1.1.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "d6187d766b6acd218001c82f3eabc3ab9281c84fbac078c3254bbdb89f261ca6"
+    },
+    {
+      "old_path": "docs/repository-structure.md",
+      "new_path": "docs/development/repository-structure.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/security-quality-gates.md",
+      "new_path": "docs/product/security-quality-gates.md",
+      "classification": "current document",
+      "historical": false,
+      "immutable": false,
+      "disposition": "MOVE"
+    },
+    {
+      "old_path": "docs/source-adapter-onboarding-v0.7.md",
+      "new_path": "docs/development/source-adapter-onboarding-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "ed3ddd43fa3f14466727718cf5b61225ca29b8f9972da9bb62fcd1bf56fcad42"
+    },
+    {
+      "old_path": "docs/source-ingestion-modes-v0.7.md",
+      "new_path": "docs/architecture/source-ingestion-modes-v0.7.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "1db95e98fd3164f11753e959d830263c4bfab70708090f72c495ee3c435771ac"
+    },
+    {
+      "old_path": "docs/support-diagnostics-v0.8.md",
+      "new_path": "docs/product/support-diagnostics-v0.8.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "5e7a332b29094992e38d87a811b54826c0f5a658065a67915905c23059f5277e"
+    },
+    {
+      "old_path": "docs/w0-baseline-v1.1.1.json",
+      "new_path": "docs/validation/w0-baseline-v1.1.1.json",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "a4b45c18a6f0fb6d674e0e0cd4ad3a0bbaf1b33582fbd28e06f1f13a18282f77"
+    },
+    {
+      "old_path": "docs/w0-baseline-v1.1.1.md",
+      "new_path": "docs/validation/w0-baseline-v1.1.1.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "9cc18635aa4cfa5d802b0e0ba9e1918ef7a14f4febbafd1e0ceb8519f1327d09"
+    },
+    {
+      "old_path": "docs/w0-config-baseline-v1.1.1.md",
+      "new_path": "docs/validation/w0-config-baseline-v1.1.1.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "ff4692e6f8e9a856726bf0714995420b1250e46e357c21d38a228801604360bf"
+    },
+    {
+      "old_path": "docs/w0-test-inventory-v1.1.1.md",
+      "new_path": "docs/validation/w0-test-inventory-v1.1.1.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "29dcb5c3c2f6829881d2e3e5f43ff6e83e18cbdf348dd2da6bd42a6e704b1144"
+    },
+    {
+      "old_path": "docs/w0-v1.1.0-to-v1.1.1-delta.md",
+      "new_path": "docs/validation/w0-v1.1.0-to-v1.1.1-delta.md",
+      "classification": "historical",
+      "historical": true,
+      "immutable": true,
+      "disposition": "MOVE",
+      "sha256_before": "4ab1241c4e7103414f283136e3fb076ca621e0e104dc688898a9f71153eb2df7"
+    }
+  ]
+}

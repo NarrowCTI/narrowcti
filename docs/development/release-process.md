@@ -20,18 +20,21 @@ upgrade guidance.
 - `VERSION` contains the target version.
 - `README.md` points to the current release and public docs.
 - `CHANGELOG.md` summarizes the release for public repository visitors.
-- `docs/getting-started.md` and `docs/development-guide.md` are current.
-- `docs/architecture.md`, `docs/deployment-operations.md`,
-  `docs/configuration-reference.md`, `docs/curation-decision-reference.md` and
-  `docs/environment-profiles.md` describe the current product behavior.
-- `docs/container-images.md` describes the current image naming and tag policy.
-- `docs/security-quality-gates.md` describes the current security, quality,
+- `docs/product/getting-started.md` and `docs/development/development-guide.md`
+  are current.
+- `docs/architecture/overview.md`, `docs/product/deployment-operations.md`,
+  `docs/product/configuration-reference.md`,
+  `docs/product/curation-decision-reference.md` and
+  `docs/product/environment-profiles.md` describe the current product behavior.
+- `docs/product/container-images.md` describes the current image naming and tag policy.
+- `docs/product/security-quality-gates.md` describes the current security, quality,
   image and DAST release policy.
 - `docs/documentation-map.md` classifies public docs and development evidence.
-- `docs/community-governance.md` describes contribution scope, permissions and
-  maintainer review.
-- `docs/release-vX.Y.Z.md` is product-facing and does not read like a lab log.
-- Versioned docs such as `docs/deployment-operations-vX.Y.md` are kept only as
+- `docs/community/community-governance.md` describes contribution scope,
+  permissions and maintainer review.
+- `docs/releases/release-vX.Y.Z.md` is product-facing and does not read like a
+  lab log.
+- Versioned docs such as `docs/product/deployment-operations-vX.Y.md` are kept only as
   release snapshots when needed.
 - `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md` are
   present.
@@ -83,7 +86,7 @@ runs in package-first CI. The legacy `-SkipTests` and
 for compatibility.
 
 Security and quality policy, blocking thresholds and required evidence are
-defined in `docs/security-quality-gates.md`.
+defined in `docs/product/security-quality-gates.md`.
 
 ## Source Archive Policy
 

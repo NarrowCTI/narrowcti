@@ -27,26 +27,35 @@ GitHub collaboration files live under `.github/`:
 - container image publication workflow.
 
 The public contribution and permission model is defined in
-`docs/community-governance.md`. GitHub branch protection, private reporting,
+`docs/community/community-governance.md`. GitHub branch protection, private reporting,
 secret scanning and repository roles are settings outside the Git tree and must
 be checked by the repository owner before release.
 
 ## Source Layout
 
-- `src/narrowcti/`: canonical package namespace and deterministic compatibility
-  facades for the current flat runtime modules. The facades do not move or
-  duplicate implementation modules.
+- `src/narrowcti/domain/`: canonical domain owners and pure intelligence logic.
+- `src/narrowcti/ports/`: canonical contracts at application and infrastructure
+  boundaries.
+- `src/narrowcti/application/`: canonical orchestration and application
+  services.
+- `src/narrowcti/adapters/`: canonical source, persistence, STIX and OpenCTI
+  implementations.
+- `src/narrowcti/infrastructure/`: runtime, configuration and composition.
+- `src/narrowcti/api/` and `src/narrowcti/cli/`: delivery surfaces.
+- `core/`, `connectors/`, `exporters/` and `gateway/`: compatibility surfaces
+  retained for supported legacy imports and entrypoints until their approved
+  cutovers. They are not the canonical implementation layout.
 - `config/`: sample and shared configuration files.
-- `connectors/`: source adapters such as OTX and MISP.
-- `core/`: scoring, policy, graph evidence, deduplication, quarantine and state
-  primitives.
-- `exporters/`: STIX and OpenCTI export logic.
-- `gateway/`: unified gateway runtime, preflight, reporting and operator CLIs.
 - `deployment/`: deployment templates and compose-facing material.
 - `docs/assets/`: public README and documentation assets such as the project
   logo.
 - `scripts/`: validation and maintenance helpers.
 - `tests/`: unit and behavior tests.
+
+The dependency direction and current ownership model are defined in
+[`docs/architecture/overview.md`](../architecture/overview.md). This document
+describes the current layout and does not promise removal of the compatibility
+surfaces in this PR.
 
 ## Documentation Layout
 
@@ -104,4 +113,4 @@ Release archives must exclude:
 - development validation notes marked with `export-ignore`.
 
 Before publishing a release, run the archive inspection described in
-`docs/release-process.md`.
+`docs/development/release-process.md`.

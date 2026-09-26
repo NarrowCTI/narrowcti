@@ -10,3 +10,9 @@ connectors/ @fagner-fmlo
 exporters/ @fagner-fmlo
 gateway/ @fagner-fmlo
 deployment/ @fagner-fmlo
+/src/narrowcti/ @fagner-fmlo
+/docs/ @fagner-fmlo
+/docs/assets/brand/ @fagner-fmlo
+/tests/architecture/ @fagner-fmlo
+/tests/documentation/ @fagner-fmlo
+/scripts/check_documentation_links.py @fagner-fmlo

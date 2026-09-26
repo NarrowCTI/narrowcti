@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "scope": "W7 / PR-21",
+  "exceptions": [
+    {
+      "source": "src/narrowcti/application/runtime.py",
+      "module": "core.decision_audit",
+      "reason": "preserve runtime audit behavior",
+      "owner": "core.decision_audit",
+      "removal_target": "application/evidence wave"
+    },
+    {
+      "source": "src/narrowcti/adapters/opencti/exporter.py",
+      "module": "core.graph_export_plan",
+      "reason": "preserve OpenCTI export parity",
+      "owner": "core.graph_export_plan",
+      "removal_target": "graph/export follow-up"
+    },
+    {
+      "source": "src/narrowcti/adapters/opencti/exporter.py",
+      "module": "core.opencti_graph_lookup",
+      "reason": "preserve OpenCTI export parity",
+      "owner": "core.opencti_graph_lookup",
+      "removal_target": "graph/export follow-up"
+    },
+    {
+      "source": "src/narrowcti/adapters/opencti/graph_lookup.py",
+      "module": "core.graph_export_plan",
+      "reason": "preserve lookup plan contract",
+      "owner": "core.graph_export_plan",
+      "removal_target": "graph/export follow-up"
+    },
+    {
+      "source": "src/narrowcti/infrastructure/config/settings.py",
+      "module": "core.graph_export_plan",
+      "reason": "configuration compatibility",
+      "owner": "core.graph_export_plan",
+      "removal_target": "configuration/runtime follow-up"
+    },
+    {
+      "source": "src/narrowcti/infrastructure/config/settings.py",
+      "module": "core.mitre_attack",
+      "reason": "configuration compatibility",
+      "owner": "core.mitre_attack",
+      "removal_target": "configuration/runtime follow-up"
+    },
+    {
+      "source": "src/narrowcti/infrastructure/config/settings.py",
+      "module": "core.runtime_config",
+      "reason": "configuration compatibility",
+      "owner": "core.runtime_config",
+      "removal_target": "configuration/runtime follow-up"
+    },
+    {
+      "source": "src/narrowcti/infrastructure/runtime/gateway_composition.py",
+      "module": "connectors.misp",
+      "reason": "source runtime composition",
+      "owner": "connectors.misp",
+      "removal_target": "source/runtime follow-up"
+    },
+    {
+      "source": "src/narrowcti/infrastructure/runtime/gateway_composition.py",
+      "module": "connectors.otx",
+      "reason": "source runtime composition",
+      "owner": "connectors.otx",
+      "removal_target": "source/runtime follow-up"
+    },
+    {
+      "source": "src/narrowcti/infrastructure/runtime/gateway_composition.py",
+      "module": "core.decision_audit",
+      "reason": "runtime composition compatibility",
+      "owner": "core.decision_audit",
+      "removal_target": "source/runtime follow-up"
+    },
+    {
+      "source": "src/narrowcti/infrastructure/runtime/gateway_composition.py",
+      "module": "core.runtime_config",
+      "reason": "runtime composition compatibility",
+      "owner": "core.runtime_config",
+      "removal_target": "source/runtime follow-up"
+    },
+    {
+      "source": "src/narrowcti/api/review/app.py",
+      "module": "core.runtime_config",
+      "reason": "review API compatibility",
+      "owner": "core.runtime_config",
+      "removal_target": "API/configuration follow-up"
+    }
+  ]
+}
