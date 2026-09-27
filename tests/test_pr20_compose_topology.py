@@ -30,6 +30,18 @@ class ComposeTopologyContractTests(unittest.TestCase):
         for secret in ("OTX_API_KEY", "MISP_KEY", "MISP_URL", "OPENCTI_TOKEN"):
             self.assertNotIn(secret, source)
 
+    def test_web_env_example_keeps_real_export_opt_in(self):
+        from narrowcti.api.review.app import load_review_api_settings
+
+        source = (ROOT / "deployment" / "web.env.example").read_text(encoding="utf-8")
+        values = dict(
+            line.split("=", 1)
+            for line in source.splitlines()
+            if line and not line.startswith("#") and "=" in line
+        )
+        self.assertEqual("false", values["NARROWCTI_REVIEW_API_ALLOW_EXPORT"])
+        self.assertFalse(load_review_api_settings(values).allow_export)
+
     def test_base_is_not_bound_to_external_opencti_network(self):
         source = BASE.read_text(encoding="utf-8")
         self.assertNotIn("PYTHONPATH", source)

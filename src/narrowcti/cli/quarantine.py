@@ -269,6 +269,8 @@ def command_export_released_via_worker(args):
                 quarantine_id, released_indicators(record)
             ),
         )
+        if job.get("status") == "failed":
+            job = jobs.retry_failed(job["job_id"])
         deadline = time.monotonic() + timeout
         current = job
         while current.get("status") not in {"succeeded", "failed"} and time.monotonic() < deadline:

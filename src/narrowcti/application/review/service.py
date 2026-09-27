@@ -100,6 +100,7 @@ class AnalystReviewService:
         self, quarantine_id="", limit=0, api_client=None, artifact_dedup=None,
         identity_name="NarrowCTI Gateway", logger=None, dry_run=True,
         exported_by="gateway.quarantine", exporter=None, coordination=None,
+        strict_artifact_mark=False,
     ):
         operation = self.export_operation if exporter is None else exporter
         export_service = QuarantineExporter(
@@ -112,6 +113,7 @@ class AnalystReviewService:
             dry_run=dry_run,
             exported_by=exported_by,
             coordination=coordination or self.coordination,
+            strict_artifact_mark=strict_artifact_mark,
         )
         return export_service.export_pending(quarantine_id, limit=limit)
 

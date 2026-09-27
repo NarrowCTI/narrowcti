@@ -7,6 +7,10 @@ from fastapi.testclient import TestClient
 from core.quarantine import QuarantineRecord, QuarantineRepository
 from gateway.review import AnalystReviewService
 from gateway.review_api import ReviewApiSettings, create_app
+from narrowcti.adapters.persistence.local.job_repository import SQLiteJobRepository
+from narrowcti.adapters.persistence.local.sqlite_runtime_store import SQLiteRuntimeStore
+from narrowcti.domain.review.quarantine import released_indicators
+from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB, quarantine_export_idempotency_key
 from gateway.review_auth import (
     ReviewCredentialStore,
     normalize_credentials,
@@ -60,6 +64,7 @@ class FakeJobRepository:
         self.mode = mode
         self.jobs = {}
         self.keys = []
+        self.retry_calls = []
 
     def submit(self, job_type, source, payload, idempotency_key):
         self.keys.append(idempotency_key)
@@ -83,6 +88,10 @@ class FakeJobRepository:
 
     def get(self, job_id):
         return self.jobs.get(job_id)
+
+    def retry_failed(self, job_id):
+        self.retry_calls.append(job_id)
+        return self.jobs[job_id]
 
 
 class ReviewApiTests(unittest.TestCase):
@@ -329,7 +338,7 @@ class ReviewApiTests(unittest.TestCase):
         self.assertEqual(2, len(jobs.keys))
         self.assertEqual(jobs.keys[0], jobs.keys[1])
 
-    def test_job_export_failure_is_deterministic(self):
+    def test_job_export_failure_triggers_explicit_retry_for_new_request(self):
         self.repository.release(self.record["quarantine_id"], "approved")
         client, jobs = self._job_client(self.repository, mode="failed")
         try:
@@ -341,7 +350,53 @@ class ReviewApiTests(unittest.TestCase):
             client.close()
         self.assertEqual(502, response.status_code)
         self.assertEqual("synthetic failure", response.json()["detail"]["error"])
+        self.assertEqual([next(iter(jobs.jobs))], jobs.retry_calls)
         self.assertEqual(1, len(jobs.jobs))
+
+    def test_web_request_requeues_existing_failed_job_with_same_identity(self):
+        self.repository.release(self.record["quarantine_id"], "approved")
+        runtime_db = os.path.join(self.tmpdir.name, "retry-runtime.db")
+        key = quarantine_export_idempotency_key(
+            self.record["quarantine_id"],
+            released_indicators(self.repository.get(self.record["quarantine_id"])),
+        )
+        jobs = SQLiteJobRepository(SQLiteRuntimeStore(runtime_db))
+        original = jobs.submit(
+            QUARANTINE_EXPORT_JOB,
+            "review-api",
+            {"quarantine_id": self.record["quarantine_id"]},
+            key,
+        )
+        claim = jobs.claim_next("previous-worker")
+        jobs.fail(claim["job_id"], "previous-worker", claim["attempt"], "transient failure")
+        settings = ReviewApiSettings(
+            repository_file=self.repository.repository_file,
+            release_audit_file=self.repository.release_audit_file,
+            credentials_file="unused-in-tests.json",
+            allow_export=True,
+            runtime_db_file=runtime_db,
+            export_job_timeout_seconds=0.02,
+        )
+        client = TestClient(
+            create_app(
+                settings=settings,
+                review_service=AnalystReviewService(self.repository, require_reason=True),
+                credential_store=credential_store(),
+            )
+        )
+        try:
+            response = client.post(
+                f"/api/v1/review/records/{self.record['quarantine_id']}/export",
+                headers=auth("exporter"),
+            )
+        finally:
+            client.close()
+        self.assertEqual(504, response.status_code)
+        self.assertEqual(original["job_id"], response.json()["detail"]["job_id"])
+        requeued = jobs.get(original["job_id"])
+        self.assertEqual(key, requeued["idempotency_key"])
+        self.assertEqual("pending", requeued["status"])
+        self.assertEqual(1, requeued["attempt"])
 
     def test_job_export_timeout_returns_job_id_without_deleting_job(self):
         self.repository.release(self.record["quarantine_id"], "approved")

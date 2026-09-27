@@ -73,6 +73,30 @@ class SQLiteJobRepository:
             connection.close()
         return _decode(row)
 
+    def retry_failed(self, job_id: str) -> dict:
+        """Atomically requeue a failed job without changing its identity."""
+        with self.store.transaction(immediate=True) as connection:
+            row = connection.execute(
+                "SELECT * FROM jobs WHERE job_id=?", (job_id,)
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"unknown job: {job_id}")
+            if row["status"] == "failed":
+                connection.execute(
+                    """
+                    UPDATE jobs
+                    SET status='pending', claim_owner=NULL, claimed_at=NULL,
+                        lease_until=NULL, started_at=NULL, finished_at=NULL,
+                        result_json=NULL, error=NULL
+                    WHERE job_id=? AND status='failed'
+                    """,
+                    (job_id,),
+                )
+                row = connection.execute(
+                    "SELECT * FROM jobs WHERE job_id=?", (job_id,)
+                ).fetchone()
+        return _decode(row)
+
     def claim_next(self, owner: str, lease_seconds: int = 300) -> dict | None:
         if not owner:
             raise ValueError("job owner is required")

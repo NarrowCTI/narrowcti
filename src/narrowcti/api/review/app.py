@@ -308,6 +308,8 @@ def create_app(settings=None, review_service=None, credential_store=None, openct
                     quarantine_id, released_indicators(record)
                 ),
             )
+            if job.get("status") == "failed":
+                job = app.state.job_repository.retry_failed(job["job_id"])
             deadline = time.monotonic() + settings.export_job_timeout_seconds
             current = job
             while current.get("status") not in {"succeeded", "failed"} and time.monotonic() < deadline:

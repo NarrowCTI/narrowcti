@@ -44,7 +44,7 @@ class QuarantineExporter:
         self, repository, api_client=None, exporter: Callable | None = None,
         artifact_dedup=None, identity_name="NarrowCTI Gateway", logger=None,
         dry_run=True, exported_by="gateway.quarantine",
-        coordination=None,
+        coordination=None, strict_artifact_mark=False,
     ):
         self.repository = repository
         self.api_client = api_client
@@ -55,6 +55,7 @@ class QuarantineExporter:
         self.dry_run = dry_run
         self.exported_by = exported_by or "gateway.quarantine"
         self.coordination = coordination
+        self.strict_artifact_mark = bool(strict_artifact_mark)
 
     def export_pending(self, quarantine_id="", limit=0):
         if quarantine_id:
@@ -161,6 +162,8 @@ class QuarantineExporter:
                 external_id=record.get("external_id", ""), title=record_title(record),
             )
         except Exception as exc:
+            if self.strict_artifact_mark:
+                raise RuntimeError("Artifact index update failed") from exc
             self.logger(
                 "Quarantine export dedup mark failed: "
                 f"id={record.get('quarantine_id')} error={exc}"

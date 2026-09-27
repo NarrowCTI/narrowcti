@@ -85,6 +85,7 @@ def _execute_export_job(job, settings, logger):
     from narrowcti.adapters.persistence.local.quarantine_repository import QuarantineRepository
     from narrowcti.application.review.service import AnalystReviewService
     from narrowcti.api.review.app import default_opencti_client_factory
+    from narrowcti.domain.review.quarantine import released_indicators
 
     payload = dict(job.get("payload") or {})
     coordination = SQLiteProcessCoordinationRepository(SQLiteRuntimeStore(settings.runtime_db_file))
@@ -96,23 +97,58 @@ def _execute_export_job(job, settings, logger):
     )
     api_client = default_opencti_client_factory()
     local_index = ArtifactDeduplicationIndex(settings.dedup_state_file) if settings.dedup_state_file else None
-    remote_lookup = OpenCTIArtifactLookup(api_client) if settings.opencti_dedup_lookup else None
-    dedup = CompositeArtifactDeduplication(local_index=local_index, opencti_lookup=remote_lookup)
-    service = AnalystReviewService(repository, coordination=coordination)
-    results = service.export_released(
-        payload.get("quarantine_id", ""),
-        api_client=api_client,
-        artifact_dedup=dedup,
-        identity_name=payload.get("identity_name", "NarrowCTI Gateway"),
-        logger=logger,
-        dry_run=False,
-        exported_by=payload.get("exported_by", "review-api"),
-        exporter=send_bundle,
-    )
-    items = [item.to_dict() for item in results]
-    if any(item.get("action") == "error" for item in items):
-        raise RuntimeError("quarantine export failed")
-    return {"items": items}
+    recovery = int(job.get("attempt") or 1) > 1
+    if recovery:
+        if local_index is None:
+            raise RuntimeError("OpenCTI recovery requires a local artifact index")
+        # Recovery already checked the released set strictly. A second
+        # best-effort remote lookup could turn an outage into a blind export.
+        remote_lookup = None
+    else:
+        remote_lookup = OpenCTIArtifactLookup(api_client) if settings.opencti_dedup_lookup else None
+
+    def export_under_current_coordination(*, coordinated):
+        dedup = CompositeArtifactDeduplication(local_index=local_index, opencti_lookup=remote_lookup)
+        service = AnalystReviewService(
+            repository,
+            coordination=None if coordinated else coordination,
+        )
+        results = service.export_released(
+            payload.get("quarantine_id", ""),
+            api_client=api_client,
+            artifact_dedup=dedup,
+            identity_name=payload.get("identity_name", "NarrowCTI Gateway"),
+            logger=logger,
+            dry_run=False,
+            exported_by=payload.get("exported_by", "review-api"),
+            exporter=send_bundle,
+            strict_artifact_mark=recovery,
+        )
+        items = [item.to_dict() for item in results]
+        if any(item.get("action") == "error" for item in items):
+            raise RuntimeError("quarantine export failed")
+        return {"items": items}
+
+    if not recovery:
+        return export_under_current_coordination(coordinated=False)
+
+    scope = f"artifact-export:{repository.repository_file}"
+    with coordination.exclusive(scope):
+        record = repository.get(payload.get("quarantine_id", ""))
+        lookup = OpenCTIArtifactLookup(api_client)
+        known = [
+            indicator
+            for indicator in released_indicators(record)
+            if lookup.has_indicator_for_recovery(indicator)
+        ]
+        if known:
+            local_index.mark_indicators(
+                known,
+                source_key=record.get("source_key", ""),
+                external_id=record.get("external_id", ""),
+                title=record.get("title", ""),
+            )
+        return export_under_current_coordination(coordinated=True)
 
 
 def process_pending_jobs(settings, owner_token, logger, *, lease_seconds=None):

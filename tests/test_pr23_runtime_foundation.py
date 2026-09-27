@@ -8,7 +8,11 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from core.quarantine import QuarantineRecord
-from narrowcti.adapters.persistence.local.artifact_index import ArtifactDeduplicationIndex
+from narrowcti.adapters.persistence.local.artifact_index import (
+    ArtifactDeduplicationIndex,
+    indicator_fingerprint,
+)
+from narrowcti.adapters.stix.patterns import indicator_pattern
 from narrowcti.adapters.persistence.local.job_repository import SQLiteJobRepository
 from narrowcti.adapters.persistence.local.process_coordination import (
     SQLiteProcessCoordinationRepository,
@@ -20,7 +24,13 @@ from narrowcti.adapters.persistence.local.lease_heartbeat import LeaseHeartbeat
 from narrowcti.application.review.export import QuarantineExporter
 from narrowcti.application.runtime_roles import WORKER_LEASE_HELD_EXIT_CODE, RuntimeRole
 from narrowcti.cli.quarantine import command_export_released
-from narrowcti.cli.worker import WorkerLeaseUnavailable, run_worker, run_worker_loop
+from narrowcti.cli.worker import (
+    WorkerLeaseUnavailable,
+    process_pending_jobs,
+    run_worker,
+    run_worker_loop,
+)
+from narrowcti.domain.review.quarantine import released_indicators
 from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB, quarantine_export_idempotency_key
 
 
@@ -33,6 +43,27 @@ def _claim_job(path, barrier, owner, queue):
     repository = SQLiteJobRepository(SQLiteRuntimeStore(path))
     barrier.wait()
     queue.put(repository.claim_next(owner, lease_seconds=30))
+
+
+def _retry_failed_job(path, job_id, barrier, queue):
+    repository = SQLiteJobRepository(SQLiteRuntimeStore(path))
+    barrier.wait()
+    queue.put(repository.retry_failed(job_id))
+
+
+class FakeRecoveryOpenCTI:
+    def __init__(self, known_patterns=(), fail=False):
+        self.known_patterns = set(known_patterns)
+        self.fail = fail
+        self.patterns_queried = []
+
+    def query(self, _query, variables):
+        if self.fail:
+            raise RuntimeError("synthetic OpenCTI outage")
+        pattern = variables["filters"]["filters"][0]["values"][0]
+        self.patterns_queried.append(pattern)
+        edges = [{"node": {"id": "indicator--remote"}}] if pattern in self.known_patterns else []
+        return {"data": {"indicators": {"edges": edges}}}
 
 
 def _acquire_lease(path, owner, queue):
@@ -118,12 +149,120 @@ class PR23RuntimeFoundationTests(unittest.TestCase):
             process.close()
         return [queue.get() for _ in processes]
 
+    def _seed_export_job(self, directory, indicators):
+        quarantine_path = str(Path(directory) / "quarantine.jsonl")
+        audit_path = str(Path(directory) / "audit.jsonl")
+        runtime_db = str(Path(directory) / "runtime.db")
+        artifact_path = str(Path(directory) / "artifacts.json")
+        repository = QuarantineRepository(quarantine_path, audit_path, runtime_db_file=runtime_db)
+        record = repository.add(
+            QuarantineRecord(
+                source_key="misp:misp",
+                external_id="event-recovery",
+                title="Recovery test",
+                reason="review",
+                indicators=indicators,
+            )
+        )
+        repository.release(record["quarantine_id"], "approved")
+        store = SQLiteRuntimeStore(runtime_db)
+        jobs = SQLiteJobRepository(store)
+        job = jobs.submit(
+            QUARANTINE_EXPORT_JOB,
+            "review-api",
+            {"quarantine_id": record["quarantine_id"], "identity_name": "NarrowCTI", "exported_by": "review-api:test"},
+            "recovery-key",
+        )
+        settings = SimpleNamespace(
+            quarantine_repository_file=quarantine_path,
+            release_audit_file=audit_path,
+            runtime_db_file=runtime_db,
+            dedup_state_file=artifact_path,
+            opencti_dedup_lookup=False,
+        )
+        return repository, jobs, store, settings, job, artifact_path
+
+    @staticmethod
+    def _expire_claim(store, job_id):
+        connection = store.connect()
+        try:
+            connection.execute("UPDATE jobs SET lease_until=0 WHERE job_id=?", (job_id,))
+            connection.commit()
+        finally:
+            connection.close()
+
     def test_job_submission_is_idempotent_across_processes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = str(Path(directory) / "runtime.db")
             results = self._run_processes(_submit_job, [(path, "same-key"), (path, "same-key")])
             self.assertEqual(results[0]["job_id"], results[1]["job_id"])
             self.assertEqual("pending", results[0]["status"])
+
+    def test_submit_reuses_pending_running_and_succeeded_jobs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = SQLiteJobRepository(SQLiteRuntimeStore(str(Path(directory) / "runtime.db")))
+            pending = repository.submit("bounded", "test", {"v": 1}, "same")
+            self.assertEqual(pending["job_id"], repository.submit("bounded", "other", {"v": 2}, "same")["job_id"])
+            running = repository.claim_next("worker")
+            self.assertEqual("running", running["status"])
+            self.assertEqual(running["job_id"], repository.submit("bounded", "test", {}, "same")["job_id"])
+            succeeded = repository.complete(running["job_id"], "worker", running["attempt"], {"ok": True})
+            reused = repository.submit("bounded", "test", {}, "same")
+            self.assertEqual("succeeded", reused["status"])
+            self.assertEqual(succeeded["job_id"], reused["job_id"])
+
+    def test_failed_job_retry_preserves_identity_clears_execution_and_increments_claim(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = SQLiteRuntimeStore(str(Path(directory) / "runtime.db"))
+            repository = SQLiteJobRepository(store)
+            original = repository.submit("bounded", "test", {"payload": "same"}, "retry-key")
+            first_claim = repository.claim_next("old-owner")
+            failed = repository.fail(first_claim["job_id"], "old-owner", first_claim["attempt"], "temporary")
+            connection = store.connect()
+            try:
+                connection.execute(
+                    "UPDATE jobs SET result_json=? WHERE job_id=?",
+                    ('{"stale":true}', original["job_id"]),
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            pending = repository.retry_failed(original["job_id"])
+            self.assertEqual("pending", pending["status"])
+            self.assertEqual(original["job_id"], pending["job_id"])
+            self.assertEqual(original["job_type"], pending["job_type"])
+            self.assertEqual(original["payload"], pending["payload"])
+            self.assertEqual(original["idempotency_key"], pending["idempotency_key"])
+            self.assertEqual(original["created_at"], pending["created_at"])
+            self.assertEqual(failed["attempt"], pending["attempt"])
+            for field in ("claim_owner", "claimed_at", "lease_until", "started_at", "finished_at", "result", "error"):
+                self.assertIsNone(pending[field], field)
+
+            self.assertEqual(pending["job_id"], repository.submit("bounded", "test", {}, "retry-key")["job_id"])
+            second_claim = repository.claim_next("new-owner")
+            self.assertEqual(first_claim["attempt"] + 1, second_claim["attempt"])
+            with self.assertRaises(PermissionError):
+                repository.complete(second_claim["job_id"], "old-owner", first_claim["attempt"], {})
+            self.assertEqual("succeeded", repository.complete(second_claim["job_id"], "new-owner", second_claim["attempt"], {})["status"])
+            self.assertEqual("succeeded", repository.retry_failed(second_claim["job_id"])["status"])
+
+    def test_only_one_concurrent_retry_requeues_a_failed_job(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "runtime.db")
+            repository = SQLiteJobRepository(SQLiteRuntimeStore(path))
+            job = repository.submit("bounded", "test", {}, "retry-race")
+            claim = repository.claim_next("first-owner")
+            repository.fail(claim["job_id"], "first-owner", claim["attempt"], "temporary")
+            barrier = self.context.Barrier(2)
+            results = self._run_processes(
+                _retry_failed_job,
+                [(path, job["job_id"], barrier), (path, job["job_id"], barrier)],
+            )
+            self.assertEqual({"pending"}, {result["status"] for result in results})
+            self.assertEqual(1, len({result["job_id"] for result in results}))
+            claimed = repository.claim_next("retry-owner")
+            self.assertEqual(2, claimed["attempt"])
 
     def test_atomic_claim_has_one_winner(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -175,6 +314,101 @@ class PR23RuntimeFoundationTests(unittest.TestCase):
             time.sleep(1.2)
             reclaimed = repository.claim_next("other-owner", lease_seconds=10)
             self.assertEqual(submitted["job_id"], reclaimed["job_id"])
+
+    def test_reclaimed_export_reconciles_remote_crash_and_repairs_local_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            indicator = {"type": "domain", "indicator": "already-exported.example"}
+            repository, jobs, store, settings, submitted, artifact_path = self._seed_export_job(directory, [indicator])
+            remote = FakeRecoveryOpenCTI()
+            logs = []
+
+            def export_then_crash(_api, _title, _description, _score, indicators, **_kwargs):
+                remote.known_patterns.update(indicator_pattern(item) for item in indicators)
+                raise SystemExit("simulated process death after remote success")
+
+            with patch("narrowcti.api.review.app.default_opencti_client_factory", return_value=remote), patch(
+                "narrowcti.adapters.opencti.exporter.send_bundle", side_effect=export_then_crash
+            ):
+                with self.assertRaises(SystemExit):
+                    process_pending_jobs(settings, "worker-first", logs.append, lease_seconds=3)
+
+            first = jobs.get(submitted["job_id"])
+            self.assertEqual("running", first["status"])
+            self.assertEqual(1, first["attempt"])
+            local = ArtifactDeduplicationIndex(artifact_path)
+            fingerprint = indicator_fingerprint(indicator)
+            self.assertFalse(local.has_fingerprint(fingerprint))
+            self.assertFalse(repository.get(first["payload"]["quarantine_id"])["review"].get("exported", False))
+
+            self._expire_claim(store, submitted["job_id"])
+            with patch("narrowcti.api.review.app.default_opencti_client_factory", return_value=remote), patch(
+                "narrowcti.adapters.opencti.exporter.send_bundle", side_effect=AssertionError("blind duplicate export")
+            ) as exporter:
+                process_pending_jobs(settings, "worker-recovery", logs.append, lease_seconds=3)
+
+            recovered = jobs.get(submitted["job_id"])
+            self.assertEqual("succeeded", recovered["status"])
+            self.assertEqual(2, recovered["attempt"])
+            self.assertEqual("dedup-skip", recovered["result"]["items"][0]["action"])
+            exporter.assert_not_called()
+            self.assertEqual([indicator_pattern(indicator)], remote.patterns_queried)
+            self.assertTrue(local.has_fingerprint(fingerprint))
+            artifact = local.artifact_record(fingerprint)
+            self.assertEqual(["misp:misp"], artifact["sources"])
+            self.assertEqual("event-recovery", artifact["sightings"][0]["external_id"])
+            final_record = repository.get(first["payload"]["quarantine_id"])
+            self.assertTrue(final_record["review"]["exported"])
+
+    def test_reclaimed_export_lookup_error_fails_without_blind_export(self):
+        with tempfile.TemporaryDirectory() as directory:
+            indicator = {"type": "domain", "indicator": "lookup-error.example"}
+            repository, jobs, store, settings, submitted, artifact_path = self._seed_export_job(directory, [indicator])
+            initial = jobs.claim_next("crashed-worker", lease_seconds=1)
+            self._expire_claim(store, submitted["job_id"])
+            remote = FakeRecoveryOpenCTI(fail=True)
+            logs = []
+            with patch("narrowcti.api.review.app.default_opencti_client_factory", return_value=remote), patch(
+                "narrowcti.adapters.opencti.exporter.send_bundle", side_effect=AssertionError("must not export")
+            ) as exporter:
+                process_pending_jobs(settings, "recovery-worker", logs.append, lease_seconds=3)
+            failed = jobs.get(submitted["job_id"])
+            self.assertEqual(2, failed["attempt"])
+            self.assertEqual("failed", failed["status"])
+            exporter.assert_not_called()
+            self.assertIn("runtime job failed", logs[0])
+            current = repository.get(initial["payload"]["quarantine_id"])
+            self.assertFalse(current["review"].get("exported", False))
+            local = ArtifactDeduplicationIndex(artifact_path)
+            self.assertFalse(local.has_fingerprint(indicator_fingerprint(indicator)))
+
+    def test_reclaimed_export_reconciles_known_and_exports_only_missing_indicators(self):
+        with tempfile.TemporaryDirectory() as directory:
+            known = {"type": "domain", "indicator": "known.example"}
+            missing = {"type": "domain", "indicator": "missing.example"}
+            repository, jobs, store, settings, submitted, artifact_path = self._seed_export_job(directory, [known, missing])
+            jobs.claim_next("crashed-worker", lease_seconds=1)
+            self._expire_claim(store, submitted["job_id"])
+            remote = FakeRecoveryOpenCTI({indicator_pattern(known)})
+            exported = []
+
+            def export_missing(_api, _title, _description, _score, indicators, **_kwargs):
+                exported.extend(indicators)
+                return len(indicators)
+
+            with patch("narrowcti.api.review.app.default_opencti_client_factory", return_value=remote), patch(
+                "narrowcti.adapters.opencti.exporter.send_bundle", side_effect=export_missing
+            ):
+                process_pending_jobs(settings, "recovery-worker", lambda _message: None, lease_seconds=3)
+
+            self.assertEqual([missing], exported)
+            final_record = repository.get(submitted["payload"]["quarantine_id"])
+            self.assertTrue(final_record["review"]["exported"])
+            self.assertEqual(1, final_record["review"]["exported_indicator_count"])
+            self.assertEqual(1, final_record["review"]["dedup_duplicate_count"])
+            local = ArtifactDeduplicationIndex(artifact_path)
+            for indicator in (known, missing):
+                self.assertTrue(local.has_fingerprint(indicator_fingerprint(indicator)))
+                self.assertEqual("event-recovery", local.artifact_record(indicator_fingerprint(indicator))["sightings"][0]["external_id"])
 
     def test_worker_heartbeat_prevents_second_owner_until_crash(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -412,6 +646,61 @@ class PR23RuntimeFoundationTests(unittest.TestCase):
             finally:
                 connection.close()
             self.assertEqual("pending", row["status"])
+
+    def test_ops_new_export_request_requeues_same_failed_job(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository_path = str(Path(directory) / "quarantine.jsonl")
+            audit_path = str(Path(directory) / "audit.jsonl")
+            runtime_db = str(Path(directory) / "runtime.db")
+            repository = QuarantineRepository(repository_path, audit_path)
+            record = repository.add(
+                QuarantineRecord(
+                    source_key="ops-test",
+                    external_id="ops-event-retry",
+                    title="Ops retry",
+                    reason="review",
+                    indicators=[{"type": "domain", "indicator": "ops-retry.example"}],
+                )
+            )
+            repository.release(record["quarantine_id"], "approved")
+            jobs = SQLiteJobRepository(SQLiteRuntimeStore(runtime_db))
+            identity = quarantine_export_idempotency_key(
+                record["quarantine_id"], released_indicators(repository.get(record["quarantine_id"]))
+            )
+            submitted = jobs.submit(
+                QUARANTINE_EXPORT_JOB,
+                "ops",
+                {"quarantine_id": record["quarantine_id"]},
+                identity,
+            )
+            claim = jobs.claim_next("previous-worker")
+            jobs.fail(claim["job_id"], "previous-worker", claim["attempt"], "transient provider error")
+            args = SimpleNamespace(
+                execute=True,
+                repository=repository_path,
+                release_audit_file=audit_path,
+                id=record["quarantine_id"],
+                limit=0,
+                identity_name="NarrowCTI Gateway",
+                json=True,
+                reviewer="operator",
+            )
+            with patch.dict(
+                "os.environ",
+                {
+                    "NARROWCTI_RUNTIME_DB": runtime_db,
+                    "NARROWCTI_QUARANTINE_REPOSITORY": repository_path,
+                    "NARROWCTI_RELEASE_AUDIT_FILE": audit_path,
+                    "NARROWCTI_REVIEW_EXPORT_TIMEOUT_SECONDS": "0.01",
+                },
+                clear=False,
+            ), patch("narrowcti.cli.quarantine.send_bundle", side_effect=AssertionError("local export")):
+                self.assertEqual(75, command_export_released(args))
+            current = jobs.get(submitted["job_id"])
+            self.assertEqual(submitted["job_id"], current["job_id"])
+            self.assertEqual(identity, current["idempotency_key"])
+            self.assertEqual("pending", current["status"])
+            self.assertEqual(1, current["attempt"])
 
 
 if __name__ == "__main__":
