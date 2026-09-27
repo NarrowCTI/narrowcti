@@ -9,8 +9,45 @@ services:
       - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
-    command: ["python", "-m", "gateway.connector"]
+      NARROWCTI_RUNTIME_DB: /app/state/runtime.db
+    command: ["python", "-m", "narrowcti.cli.worker"]
     restart: ${NARROWCTI_GATEWAY_RESTART:-no}
+    volumes:
+      - narrowcti-state:/app/state
+
+  narrowcti-web:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    container_name: ${NARROWCTI_WEB_CONTAINER:-narrowcti-web}
+    env_file:
+      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      NARROWCTI_REVIEW_API_HOST: 0.0.0.0
+      NARROWCTI_REVIEW_API_PORT: 8081
+      NARROWCTI_RUNTIME_DB: /app/state/runtime.db
+    command: ["python", "-m", "narrowcti.cli.web"]
+    restart: ${NARROWCTI_WEB_RESTART:-no}
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    ports:
+      - "127.0.0.1:${NARROWCTI_WEB_PUBLISHED_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    profiles:
+      - web
     volumes:
       - narrowcti-state:/app/state
 

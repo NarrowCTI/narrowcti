@@ -84,8 +84,15 @@ jobs:
           import gateway.preflight
           import gateway.review_api
           import exporters.stix_builder
+          from narrowcti.application.runtime_roles import OPS, WEB, WORKER
+          from narrowcti.cli import web as web_role
+          from narrowcti.cli import worker as worker_role
           from narrowcti.domain.intelligence import feed_contract
           from sigma.parser.collection import SigmaCollectionParser
+
+          assert {OPS, WEB, WORKER} == {"ops", "web", "worker"}
+          assert callable(web_role.main)
+          assert callable(worker_role.main)
 
           import core.feed_contract as legacy_feed_contract
           assert legacy_feed_contract.FeedSource is feed_contract.FeedSource
