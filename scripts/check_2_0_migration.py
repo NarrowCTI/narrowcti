@@ -26,15 +26,28 @@ class Finding:
     message: str
 
 
-def _module_name(node: ast.AST) -> str | None:
+def _imported_modules(node: ast.AST) -> tuple[str, ...]:
     if isinstance(node, ast.Import):
-        names = [alias.name for alias in node.names]
-        return names[0] if names else None
+        return tuple(alias.name for alias in node.names)
     if isinstance(node, ast.ImportFrom):
         if node.level:
-            return None
-        return node.module
-    return None
+            return ()
+        module = node.module or ""
+        if module == "narrowcti":
+            return tuple(
+                f"narrowcti.{alias.name}"
+                for alias in node.names
+                if alias.name in LEGACY_ROOTS
+            )
+        return (module,) if module else ()
+    return ()
+
+
+def _is_removed_prefix(module: str) -> bool:
+    return module == "narrowcti.compat" or any(
+        module == prefix or module.startswith(f"{prefix}.")
+        for prefix in REMOVED_PREFIXES
+    )
 
 
 def iter_python_files(root: Path):
@@ -53,20 +66,22 @@ def scan(root: Path) -> tuple[Finding, ...]:
             findings.append(Finding(path, getattr(exc, "lineno", 1) or 1, "error", f"cannot read/parse: {exc}"))
             continue
         for node in ast.walk(tree):
-            module = _module_name(node)
-            if not module:
-                continue
-            if module == "narrowcti.compat" or module.startswith(REMOVED_PREFIXES):
-                findings.append(Finding(path, node.lineno, "error", f"removed transitional path: {module}"))
-            elif module.split(".", 1)[0] in LEGACY_ROOTS:
-                findings.append(
-                    Finding(
-                        path,
-                        node.lineno,
-                        "warning",
-                        f"legacy compatibility import: {module}; manual migration required",
+            for module in _imported_modules(node):
+                if not module:
+                    continue
+                if _is_removed_prefix(module):
+                    findings.append(
+                        Finding(path, node.lineno, "error", f"removed transitional path: {module}")
                     )
-                )
+                elif module.split(".", 1)[0] in LEGACY_ROOTS:
+                    findings.append(
+                        Finding(
+                            path,
+                            node.lineno,
+                            "warning",
+                            f"legacy compatibility import: {module}; manual migration required",
+                        )
+                    )
     return tuple(findings)
 
 

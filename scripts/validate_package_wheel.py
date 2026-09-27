@@ -30,24 +30,50 @@ FORBIDDEN_PREFIXES = (
     "deployment/",
     "state/",
 )
-REQUIRED_MODULES = (
-    "narrowcti/__init__.py",
-    "narrowcti/domain/intelligence/feed_contract.py",
-    "narrowcti/domain/graph/evidence/__init__.py",
-    "narrowcti/application/ingestion/pipeline.py",
-    "narrowcti/adapters/opencti/graph_lookup.py",
-    "narrowcti/adapters/stix/serializer.py",
-    "narrowcti/adapters/persistence/local/quarantine_repository.py",
-    "narrowcti/infrastructure/runtime/gateway_composition.py",
-    "narrowcti/api/review/app.py",
-    "narrowcti/cli/gateway.py",
-    "connectors/misp/processor.py",
-    "connectors/otx/processor.py",
-    "core/decision_audit.py",
-    "core/graph_export_plan.py",
-    "exporters/stix_builder.py",
-    "gateway/connector.py",
+SOURCE_PACKAGE_ROOTS = (
+    ("src/narrowcti", "narrowcti"),
+    ("connectors", "connectors"),
+    ("core", "core"),
+    ("exporters", "exporters"),
+    ("gateway", "gateway"),
 )
+
+
+def expected_runtime_modules(root: Path = ROOT) -> set[str]:
+    """Derive every runtime Python file that the wheel must contain."""
+
+    expected: set[str] = set()
+    for source_root_name, archive_root in SOURCE_PACKAGE_ROOTS:
+        source_root = root / Path(source_root_name)
+        if not source_root.exists():
+            continue
+        for path in source_root.rglob("*.py"):
+            relative = path.relative_to(source_root)
+            archive_name = (Path(archive_root) / relative).as_posix()
+            if archive_name == "narrowcti/compat.py" or archive_name.startswith(REMOVED_PREFIXES):
+                continue
+            expected.add(archive_name)
+    return expected
+
+
+def wheel_runtime_modules(names: list[str] | set[str]) -> set[str]:
+    return {
+        name
+        for name in names
+        if name.endswith(".py") and name.startswith(ALLOWED_PREFIXES)
+    }
+
+
+def assert_runtime_inventory(names: list[str] | set[str], root: Path = ROOT) -> None:
+    expected = expected_runtime_modules(root)
+    actual = wheel_runtime_modules(names)
+    missing = sorted(expected - actual)
+    unexpected = sorted(actual - expected)
+    if missing or unexpected:
+        raise AssertionError(
+            "wheel runtime inventory differs from source inventory: "
+            f"missing={missing}, unexpected={unexpected}"
+        )
 
 
 def run(*args: str, cwd: Path, env: dict[str, str] | None = None) -> None:
@@ -72,9 +98,7 @@ def main() -> None:
         missing = [prefix for prefix in ALLOWED_PREFIXES if not any(name.startswith(prefix) for name in names)]
         if missing:
             raise AssertionError(f"wheel is missing allowlisted runtime packages: {missing}")
-        missing_modules = [module for module in REQUIRED_MODULES if module not in names]
-        if missing_modules:
-            raise AssertionError(f"wheel is missing required runtime modules: {missing_modules}")
+        assert_runtime_inventory(names)
         forbidden = [name for name in names if name.startswith(FORBIDDEN_PREFIXES)]
         if forbidden:
             raise AssertionError(f"wheel contains forbidden paths: {forbidden}")

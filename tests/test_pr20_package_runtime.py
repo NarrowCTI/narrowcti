@@ -39,6 +39,17 @@ class PackageRuntimeContractTests(unittest.TestCase):
         self.assertNotIn('"narrowcti.core.', source)
         self.assertNotIn('"narrowcti.gateway.', source)
 
+    def test_runtime_validator_keeps_high_value_legacy_smoke_imports(self):
+        source = (ROOT / "scripts" / "validate_runtime_package.py").read_text(encoding="utf-8")
+        for module in (
+            "gateway.connector",
+            "gateway.preflight",
+            "core.feed_contract",
+            "connectors.misp.feed_adapter",
+            "exporters.stix_builder",
+        ):
+            self.assertIn(f'"{module}"', source)
+
     def test_ci_runs_installed_package_from_external_directory(self):
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertIn("python -m pip install .", workflow)

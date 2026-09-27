@@ -35,10 +35,7 @@ from narrowcti.domain.intelligence.indicator_types import normalize_indicator_ty
 from narrowcti.domain.intelligence.indicator_policy import filter_indicators_by_type as canonical_indicator_policy
 from narrowcti.domain.review.quarantine import QuarantineRecord as canonical_record
 from narrowcti.adapters.persistence.local.quarantine_repository import QuarantineRepository as canonical_repository
-from connectors.misp.feed_adapter import MISPFeedAdapter as canonical_misp_adapter
 from narrowcti.adapters.stix.serializer import build_report_bundle as canonical_bundle
-from gateway.feature_gates import FeatureGateState as canonical_gate
-from gateway.feature_gates import build_feature_gate_state as canonical_gate_builder
 assert legacy_candidate is canonical_candidate
 assert legacy_source is canonical_source
 assert legacy_slugify is canonical_slugify
@@ -50,10 +47,17 @@ assert legacy_indicator_type is canonical_indicator_type
 assert legacy_indicator_policy is canonical_indicator_policy
 assert legacy_record is canonical_record
 assert legacy_repository is canonical_repository
-assert legacy_misp_adapter is canonical_misp_adapter
 assert legacy_bundle is canonical_bundle
-assert legacy_gate is canonical_gate
-assert legacy_gate_builder is canonical_gate_builder
+
+# These are residual legacy implementations without a separate canonical
+# owner in the current migration wave.  Protect importability and behavior,
+# not a tautological identity assertion against the same module.
+assert isinstance(legacy_misp_adapter, type)
+assert callable(legacy_misp_adapter.search)
+legacy_gate_state = legacy_gate_builder()
+assert isinstance(legacy_gate_state, legacy_gate)
+assert legacy_gate_state.open_source is True
+assert isinstance(legacy_gate_state.to_dict(), dict)
 '''
 
 

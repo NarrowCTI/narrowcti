@@ -60,6 +60,32 @@ class MigrationCheckerTests(unittest.TestCase):
             )
             self.assertEqual(1, result.returncode)
 
+    def test_all_multi_import_aliases_are_scanned(self):
+        temp, root = self._tree(
+            {
+                "consumer.py": (
+                    "import os, narrowcti.core.feed_contract\n"
+                    "import narrowcti.core.feed_contract, os\n"
+                )
+            }
+        )
+        with temp:
+            findings = scan(root)
+            self.assertEqual(2, len(findings))
+            self.assertTrue(all(finding.severity == "error" for finding in findings))
+
+    def test_removed_prefix_matching_uses_module_boundaries(self):
+        temp, root = self._tree({"consumer.py": "import narrowcti.coretools\n"})
+        with temp:
+            self.assertEqual((), scan(root))
+
+    def test_from_narrowcti_legacy_namespace_is_error(self):
+        temp, root = self._tree({"consumer.py": "from narrowcti import core\n"})
+        with temp:
+            findings = scan(root)
+            self.assertEqual(1, len(findings))
+            self.assertEqual("error", findings[0].severity)
+
     def test_exclusions_are_not_scanned(self):
         temp, root = self._tree(
             {
