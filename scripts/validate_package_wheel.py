@@ -135,6 +135,11 @@ import core.quarantine as legacy_quarantine
 import connectors.misp.feed_adapter as legacy_misp
 import exporters.stix_builder as legacy_stix
 import gateway.connector as legacy_gateway
+import gateway.review_api as legacy_review_api
+import gateway.preflight as legacy_preflight
+from narrowcti.application.runtime_roles import OPS, WEB, WORKER
+from narrowcti.cli import web as web_role
+from narrowcti.cli import worker as worker_role
 from narrowcti.domain.intelligence import feed_contract, scoring
 from narrowcti.domain.review import quarantine
 from narrowcti.adapters.stix import serializer
@@ -150,6 +155,11 @@ assert legacy_quarantine.QuarantineRepository is importlib.import_module(
 assert legacy_misp.MISPFeedAdapter is not None
 assert legacy_stix.build_report_bundle is serializer.build_report_bundle
 assert legacy_gateway.main is not None
+assert legacy_review_api.main is not None
+assert legacy_preflight.build_preflight_report is not None
+assert {OPS, WEB, WORKER} == {"ops", "web", "worker"}
+assert callable(web_role.main)
+assert callable(worker_role.main)
 for removed in (
     "narrowcti.core.feed_contract",
     "narrowcti.connectors.misp.feed_adapter",
