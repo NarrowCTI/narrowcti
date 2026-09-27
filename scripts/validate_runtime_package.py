@@ -22,10 +22,16 @@ PUBLIC_IMPORTS = (
     "narrowcti.infrastructure.runtime.gateway_composition",
     "narrowcti.api.review.app",
     "narrowcti.cli.gateway",
+    "narrowcti.cli.worker",
+    "narrowcti.cli.web",
+    "narrowcti.application.runtime_roles",
 )
 LEGACY_COMPAT_IMPORTS = (
     "gateway.connector",
     "gateway.preflight",
+    "gateway.review_api",
+    "gateway.quarantine",
+    "gateway.report",
     "core.feed_contract",
     "connectors.misp.feed_adapter",
     "exporters.stix_builder",

@@ -55,12 +55,19 @@ class GatewaySettings:
     enable_mitre_attack_resolution: bool = True
     mitre_cache_file: str = ""
     mitre_stix_url: str = DEFAULT_MITRE_STIX_URL
+    runtime_db_file: str = ""
+    job_poll_seconds: float = 2.0
+    worker_lease_seconds: int = 120
 
     def __post_init__(self):
         if not self.enabled_sources:
             raise ValueError("enabled_sources must contain at least one source")
         if self.source_interval_seconds < 1:
             raise ValueError("source_interval_seconds must be greater than zero")
+        if self.job_poll_seconds <= 0:
+            raise ValueError("job_poll_seconds must be greater than zero")
+        if self.worker_lease_seconds < 3:
+            raise ValueError("worker_lease_seconds must be at least three seconds")
         if self.dedup_mode not in ["off", "source", "artifact", "hybrid"]:
             raise ValueError("dedup_mode must be off, source, artifact or hybrid")
         object.__setattr__(self, "contextual_scoring_mode", normalize_contextual_scoring_mode(self.contextual_scoring_mode))
@@ -102,6 +109,8 @@ def load_settings(environ: Mapping[str, str] | None = None):
         dry_run=env_bool("NARROWCTI_DRY_RUN", False, env),
         run_once=env_bool("NARROWCTI_RUN_ONCE", False, env),
         source_interval_seconds=env_int("NARROWCTI_SOURCE_INTERVAL_SECONDS", legacy_interval, env),
+        job_poll_seconds=float(env.get("NARROWCTI_JOB_POLL_SECONDS", "2")),
+        worker_lease_seconds=env_int("NARROWCTI_WORKER_LEASE_SECONDS", 120, env),
         state_dir=state_dir,
         decision_audit_dir=env.get("NARROWCTI_DECISION_AUDIT_DIR", "/app/state/audit"),
         quarantine_repository_file=env.get("NARROWCTI_QUARANTINE_REPOSITORY", default_quarantine_file),
@@ -127,6 +136,7 @@ def load_settings(environ: Mapping[str, str] | None = None):
         enable_mitre_attack_resolution=env_bool("NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION", True, env),
         mitre_cache_file=env.get("NARROWCTI_MITRE_CACHE_FILE", ""),
         mitre_stix_url=env.get("NARROWCTI_MITRE_STIX_URL", DEFAULT_MITRE_STIX_URL),
+        runtime_db_file=env.get("NARROWCTI_RUNTIME_DB", os.path.join(state_dir, "runtime.db")),
     )
 
 

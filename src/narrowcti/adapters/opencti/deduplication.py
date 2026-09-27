@@ -49,6 +49,35 @@ class OpenCTIArtifactLookup:
         )
         return bool(edges)
 
+    def has_indicator_for_recovery(self, indicator):
+        """Strict lookup for a reclaimed export attempt; errors fail closed."""
+        pattern = indicator_pattern(indicator)
+        if not pattern:
+            raise RuntimeError("OpenCTI recovery lookup cannot identify indicator")
+        variables = {
+            "filters": {
+                "mode": "and",
+                "filters": [{"key": "pattern", "values": [pattern], "operator": "eq"}],
+                "filterGroups": [],
+            }
+        }
+        try:
+            result = self.api_client.query(INDICATOR_LOOKUP_QUERY, variables)
+        except Exception as exc:
+            raise RuntimeError("OpenCTI recovery lookup failed") from exc
+        if not isinstance(result, dict) or result.get("errors"):
+            raise RuntimeError("OpenCTI recovery lookup returned an invalid response")
+        data = result.get("data")
+        indicators = data.get("indicators") if isinstance(data, dict) else None
+        edges = indicators.get("edges") if isinstance(indicators, dict) else None
+        if not isinstance(edges, list):
+            raise RuntimeError("OpenCTI recovery lookup returned an invalid response")
+        for edge in edges:
+            node = edge.get("node") if isinstance(edge, dict) else None
+            if not isinstance(node, dict) or not node.get("id"):
+                raise RuntimeError("OpenCTI recovery lookup returned an invalid response")
+        return bool(edges)
+
 
 class CompositeArtifactDeduplication:
     def __init__(self, local_index=None, opencti_lookup=None, logger=None):

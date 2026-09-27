@@ -41,6 +41,24 @@ the runtime; API and CLI entry points consume the composition.
 The legacy roots (`core`, `connectors`, `exporters`, `gateway`) remain
 compatibility surfaces while their canonical owners are migrated incrementally.
 
+## Community runtime role foundation
+
+Community 2.0 uses one package, image and version with explicit runtime roles:
+
+- **Web** (`python -m narrowcti.cli.web`) serves the review API and owns no
+  source polling loop.
+- **Worker** (`python -m narrowcti.cli.worker`) runs the existing bounded source
+  cycle and is the only process allowed to hold the `worker` lease.
+- **Ops** runs preflight, reports and other one-shot operational commands.
+
+All roles share the mounted state volume. A small SQLite database at
+`NARROWCTI_RUNTIME_DB` (defaulting to `<NARROWCTI_STATE_DIR>/runtime.db`) owns
+job, lease and mutation-coordination metadata; source checkpoints, quarantine,
+deduplication indexes and audit evidence remain in their existing JSON/JSONL
+files. The Community foundation is deliberately one-worker and process-safe:
+there is no scheduler, broker, multi-worker claim model or commercial
+entitlement behavior in this wave.
+
 ## Transitional boundary allowlist
 
 The following imports are deliberate and temporary; they are tested as exact

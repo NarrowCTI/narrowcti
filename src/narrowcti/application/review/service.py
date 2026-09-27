@@ -37,12 +37,14 @@ class AnalystReviewService:
         export_operation: Callable | None = None,
         reviewer="operator",
         require_reason=True,
+        coordination=None,
     ):
         self.repository = repository
         self.audit_reader = audit_reader or (lambda: [])
         self.export_operation = export_operation
         self.reviewer = reviewer or "operator"
         self.require_reason = bool(require_reason)
+        self.coordination = coordination
 
     def list_records(self, status="pending", source_key="", limit=0):
         records = self.repository.records(status=None if status == "all" else status)
@@ -97,7 +99,8 @@ class AnalystReviewService:
     def export_released(
         self, quarantine_id="", limit=0, api_client=None, artifact_dedup=None,
         identity_name="NarrowCTI Gateway", logger=None, dry_run=True,
-        exported_by="gateway.quarantine", exporter=None,
+        exported_by="gateway.quarantine", exporter=None, coordination=None,
+        strict_artifact_mark=False,
     ):
         operation = self.export_operation if exporter is None else exporter
         export_service = QuarantineExporter(
@@ -109,6 +112,8 @@ class AnalystReviewService:
             logger=logger,
             dry_run=dry_run,
             exported_by=exported_by,
+            coordination=coordination or self.coordination,
+            strict_artifact_mark=strict_artifact_mark,
         )
         return export_service.export_pending(quarantine_id, limit=limit)
 

@@ -11,6 +11,37 @@ SHARED = ROOT / "deployment" / "docker-compose.narrowcti-shared-network.yml"
 
 
 class ComposeTopologyContractTests(unittest.TestCase):
+    def test_canonical_web_role_is_scoped_and_authenticated(self):
+        source = BASE.read_text(encoding="utf-8")
+        web = source.split("  narrowcti-web:", 1)[1].split("  narrowcti-preflight:", 1)[0]
+        self.assertIn("NARROWCTI_WEB_ENV_FILE", web)
+        self.assertIn("NARROWCTI_RUNTIME_DB: /app/state/runtime.db", web)
+        self.assertIn("NARROWCTI_REVIEW_API_CREDENTIALS_FILE: /run/secrets/narrowcti-review-api-credentials.json", web)
+        self.assertIn("/run/secrets/narrowcti-review-api-credentials.json:ro", web)
+        self.assertIn('"127.0.0.1:${NARROWCTI_WEB_PUBLISHED_PORT:-8081}:8081"', web)
+        self.assertIn("read_only: true", web)
+        self.assertIn("cap_drop:", web)
+        self.assertIn("- ALL", web)
+        self.assertIn("no-new-privileges:true", web)
+        self.assertNotIn("NARROWCTI_GATEWAY_ENV_FILE", web)
+
+    def test_web_env_example_contains_no_ingestion_credentials(self):
+        source = (ROOT / "deployment" / "web.env.example").read_text(encoding="utf-8")
+        for secret in ("OTX_API_KEY", "MISP_KEY", "MISP_URL", "OPENCTI_TOKEN"):
+            self.assertNotIn(secret, source)
+
+    def test_web_env_example_keeps_real_export_opt_in(self):
+        from narrowcti.api.review.app import load_review_api_settings
+
+        source = (ROOT / "deployment" / "web.env.example").read_text(encoding="utf-8")
+        values = dict(
+            line.split("=", 1)
+            for line in source.splitlines()
+            if line and not line.startswith("#") and "=" in line
+        )
+        self.assertEqual("false", values["NARROWCTI_REVIEW_API_ALLOW_EXPORT"])
+        self.assertFalse(load_review_api_settings(values).allow_export)
+
     def test_base_is_not_bound_to_external_opencti_network(self):
         source = BASE.read_text(encoding="utf-8")
         self.assertNotIn("PYTHONPATH", source)

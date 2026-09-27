@@ -1,6 +1,7 @@
 """Historical exporter surface backed by the canonical application owner."""
 
 from narrowcti.adapters.opencti.exporter import send_bundle
+from narrowcti.adapters.persistence.local.process_coordination import coordination_for_path
 from narrowcti.application.review.export import (
     QuarantineExportResult,
     QuarantineExporter as _QuarantineExporter,
@@ -24,6 +25,9 @@ class QuarantineExporter(_QuarantineExporter):
         dry_run=True,
         exported_by="gateway.quarantine",
     ):
+        coordination = None
+        if not dry_run:
+            coordination = coordination_for_path(repository.repository_file)
         super().__init__(
             repository,
             api_client=api_client,
@@ -33,6 +37,7 @@ class QuarantineExporter(_QuarantineExporter):
             logger=logger,
             dry_run=dry_run,
             exported_by=exported_by,
+            coordination=coordination,
         )
 
 

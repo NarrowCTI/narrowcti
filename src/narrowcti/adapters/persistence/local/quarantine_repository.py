@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
+from contextlib import contextmanager
 
 from narrowcti.domain.review.quarantine import (
     PENDING,
@@ -17,31 +19,51 @@ from narrowcti.domain.review.quarantine import (
     utc_now,
     validate_review_reason,
 )
+from .process_coordination import coordination_for_path
+from .sqlite_runtime_store import SQLiteRuntimeStore
 
 
 class QuarantineRepository:
     """Concrete Community repository preserving the historical API."""
 
-    def __init__(self, repository_file, release_audit_file=""):
+    def __init__(self, repository_file, release_audit_file="", coordination=None, runtime_db_file=""):
         self.repository_file = repository_file
         self.release_audit_file = release_audit_file
+        self.coordination = coordination
+        self.runtime_db_file = runtime_db_file
+
+    @contextmanager
+    def _mutation(self):
+        if self.coordination is None:
+            if self.runtime_db_file:
+                from .process_coordination import SQLiteProcessCoordinationRepository
+
+                self.coordination = SQLiteProcessCoordinationRepository(
+                    SQLiteRuntimeStore(self.runtime_db_file)
+                )
+            else:
+                self.coordination = coordination_for_path(self.repository_file)
+        scope = f"quarantine:{os.path.abspath(self.repository_file)}"
+        with self.coordination.exclusive(scope, owner_token=str(uuid.uuid4())):
+            yield
 
     def add(self, record):
-        data = record.to_dict() if hasattr(record, "to_dict") else dict(record)
-        data["status"] = normalize_status(data.get("status", PENDING))
-        if data["status"] != PENDING:
-            raise ValueError("new quarantine records must start as pending")
-        data["quarantine_id"] = data.get("quarantine_id") or quarantine_id_for(data)
-        existing = self.find(data["quarantine_id"])
-        if existing:
-            return existing
-        data["created_at"] = data.get("created_at") or utc_now()
-        data["updated_at"] = data.get("updated_at") or data["created_at"]
-        data["indicator_count"] = int(
-            data.get("indicator_count") or len(data.get("indicators") or [])
-        )
-        self._append(data)
-        return data
+        with self._mutation():
+            data = record.to_dict() if hasattr(record, "to_dict") else dict(record)
+            data["status"] = normalize_status(data.get("status", PENDING))
+            if data["status"] != PENDING:
+                raise ValueError("new quarantine records must start as pending")
+            data["quarantine_id"] = data.get("quarantine_id") or quarantine_id_for(data)
+            existing = self.find(data["quarantine_id"])
+            if existing:
+                return existing
+            data["created_at"] = data.get("created_at") or utc_now()
+            data["updated_at"] = data.get("updated_at") or data["created_at"]
+            data["indicator_count"] = int(
+                data.get("indicator_count") or len(data.get("indicators") or [])
+            )
+            self._append(data)
+            return data
 
     def records(self, status=None):
         current = {}
@@ -89,32 +111,34 @@ class QuarantineRepository:
         return None
 
     def reject(self, quarantine_id, reason, reviewer="operator", require_reason=True):
-        validate_review_reason(reason, require_reason)
-        current = self.get(quarantine_id)
-        updated = transition_reject(
-            current,
-            reason,
-            reviewer=reviewer,
-            require_reason=require_reason,
-            recorded_at=utc_now(),
-        )
-        self._append(updated)
-        self._append_release_audit(updated)
-        return updated
+        with self._mutation():
+            validate_review_reason(reason, require_reason)
+            current = self.get(quarantine_id)
+            updated = transition_reject(
+                current,
+                reason,
+                reviewer=reviewer,
+                require_reason=require_reason,
+                recorded_at=utc_now(),
+            )
+            self._append(updated)
+            self._append_release_audit(updated)
+            return updated
 
     def release(self, quarantine_id, reason, reviewer="operator", require_reason=True):
-        validate_review_reason(reason, require_reason)
-        current = self.get(quarantine_id)
-        updated = transition_release(
-            current,
-            reason,
-            reviewer=reviewer,
-            require_reason=require_reason,
-            recorded_at=utc_now(),
-        )
-        self._append(updated)
-        self._append_release_audit(updated)
-        return updated
+        with self._mutation():
+            validate_review_reason(reason, require_reason)
+            current = self.get(quarantine_id)
+            updated = transition_release(
+                current,
+                reason,
+                reviewer=reviewer,
+                require_reason=require_reason,
+                recorded_at=utc_now(),
+            )
+            self._append(updated)
+            self._append_release_audit(updated)
+            return updated
 
     def release_indicators(
         self,
@@ -124,22 +148,23 @@ class QuarantineRepository:
         reviewer="operator",
         require_reason=True,
     ):
-        selected_types = normalize_indicator_types(indicator_types)
-        if not selected_types:
-            raise ValueError("at least one indicator type is required")
-        validate_review_reason(reason, require_reason)
-        current = self.get(quarantine_id)
-        updated = transition_release_indicators(
-            current,
-            selected_types,
-            reason,
-            reviewer=reviewer,
-            require_reason=require_reason,
-            recorded_at=utc_now(),
-        )
-        self._append(updated)
-        self._append_release_audit(updated)
-        return updated
+        with self._mutation():
+            selected_types = normalize_indicator_types(indicator_types)
+            if not selected_types:
+                raise ValueError("at least one indicator type is required")
+            validate_review_reason(reason, require_reason)
+            current = self.get(quarantine_id)
+            updated = transition_release_indicators(
+                current,
+                selected_types,
+                reason,
+                reviewer=reviewer,
+                require_reason=require_reason,
+                recorded_at=utc_now(),
+            )
+            self._append(updated)
+            self._append_release_audit(updated)
+            return updated
 
     def mark_exported(
         self,
@@ -148,17 +173,18 @@ class QuarantineRepository:
         dedup_duplicate_count=0,
         exported_by="gateway.quarantine",
     ):
-        current = self.get(quarantine_id)
-        updated = transition_mark_exported(
-            current,
-            exported_indicator_count,
-            dedup_duplicate_count=dedup_duplicate_count,
-            exported_by=exported_by,
-            recorded_at=utc_now(),
-        )
-        self._append(updated)
-        self._append_release_audit(updated, action="export")
-        return updated
+        with self._mutation():
+            current = self.get(quarantine_id)
+            updated = transition_mark_exported(
+                current,
+                exported_indicator_count,
+                dedup_duplicate_count=dedup_duplicate_count,
+                exported_by=exported_by,
+                recorded_at=utc_now(),
+            )
+            self._append(updated)
+            self._append_release_audit(updated, action="export")
+            return updated
 
     def _append(self, record):
         if not self.repository_file:

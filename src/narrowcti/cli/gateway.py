@@ -27,6 +27,9 @@ def _run_once(settings, registry, logger):
     )
 
 
+run_gateway_once = _run_once
+
+
 def run_gateway_loop(settings, registry, logger, sleeper=time.sleep):
     while True:
         _run_once(settings, registry, logger)
@@ -43,5 +46,5 @@ def main():
     run_gateway_loop(settings, registry, log)
 
 
-__all__ = ["log", "run_gateway_loop", "main"]
+__all__ = ["log", "run_gateway_loop", "run_gateway_once", "main"]
 

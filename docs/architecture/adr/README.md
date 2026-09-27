@@ -29,6 +29,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-022](MIG-ADR-022.md) | Package-based runtime and deployment portability | accepted for W7 / PR-20 |
 | [MIG-ADR-023](MIG-ADR-023.md) | Documentation architecture, boundaries, and brand integration | accepted for W7 / PR-21 |
 | [MIG-ADR-024](MIG-ADR-024.md) | Community 2.0 compatibility cutover | accepted for W7 / PR-22 |
+| [MIG-ADR-025](MIG-ADR-025.md) | Runtime Role Foundation | accepted for W8 / PR-23 |
 
 MIG-ADR-020 is intentionally reserved for the Shared Web Architecture /
 Community Basic UI / Source Explorer / Web Security decision defined by the

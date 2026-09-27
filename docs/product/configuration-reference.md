@@ -89,6 +89,7 @@ The PR-04 inventory is therefore:
 | `NARROWCTI_SOURCE_INTERVAL_SECONDS` | `CONNECTOR_RUN_INTERVAL` or `3600` | Any safe value | Match operational cadence | Delay between source runs in continuous mode. |
 | `CONNECTOR_RUN_INTERVAL` | `3600` | Optional legacy interval | Optional legacy interval | Legacy interval fallback used by source runtimes. |
 | `NARROWCTI_STATE_DIR` | `/app/state` | Default | Persistent volume | Base state directory. |
+| `NARROWCTI_RUNTIME_DB` | `<NARROWCTI_STATE_DIR>/runtime.db` | `/app/state/runtime.db` | Shared state volume | SQLite coordination database for bounded jobs, the single Worker lease and cross-process mutation locks. It does not replace source, quarantine, deduplication or audit JSON/JSONL state. |
 | `NARROWCTI_DECISION_AUDIT_DIR` | `/app/state/audit` | Required for review | Required | Derived decision audit directory for sources. |
 | `NARROWCTI_RUN_SUMMARY_FILE` | Empty unless configured | `/app/state/gateway_runs.jsonl` | Required for reports | Aggregate gateway run JSONL. |
 

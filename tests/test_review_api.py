@@ -7,6 +7,10 @@ from fastapi.testclient import TestClient
 from core.quarantine import QuarantineRecord, QuarantineRepository
 from gateway.review import AnalystReviewService
 from gateway.review_api import ReviewApiSettings, create_app
+from narrowcti.adapters.persistence.local.job_repository import SQLiteJobRepository
+from narrowcti.adapters.persistence.local.sqlite_runtime_store import SQLiteRuntimeStore
+from narrowcti.domain.review.quarantine import released_indicators
+from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB, quarantine_export_idempotency_key
 from gateway.review_auth import (
     ReviewCredentialStore,
     normalize_credentials,
@@ -53,6 +57,41 @@ class RecordingExportService:
     def export_released(self, quarantine_id, **kwargs):
         self.export_arguments = {"quarantine_id": quarantine_id, **kwargs}
         return [FakeExportResult()]
+
+
+class FakeJobRepository:
+    def __init__(self, mode="succeeded"):
+        self.mode = mode
+        self.jobs = {}
+        self.keys = []
+        self.retry_calls = []
+
+    def submit(self, job_type, source, payload, idempotency_key):
+        self.keys.append(idempotency_key)
+        for job in self.jobs.values():
+            if job["idempotency_key"] == idempotency_key:
+                return job
+        job_id = f"job-{len(self.jobs) + 1}"
+        job = {
+            "job_id": job_id,
+            "job_type": job_type,
+            "source": source,
+            "payload": dict(payload),
+            "idempotency_key": idempotency_key,
+            "status": self.mode,
+            "result": {"count": 1, "items": [{"action": "export", "dry_run": False}]}
+            if self.mode == "succeeded" else None,
+            "error": "synthetic failure" if self.mode == "failed" else None,
+        }
+        self.jobs[job_id] = job
+        return job
+
+    def get(self, job_id):
+        return self.jobs.get(job_id)
+
+    def retry_failed(self, job_id):
+        self.retry_calls.append(job_id)
+        return self.jobs[job_id]
 
 
 class ReviewApiTests(unittest.TestCase):
@@ -264,6 +303,139 @@ class ReviewApiTests(unittest.TestCase):
             service.export_arguments["exported_by"],
         )
         self.assertFalse(service.export_arguments["dry_run"])
+
+    def _job_client(self, repository, mode="succeeded", timeout=0.05):
+        settings = ReviewApiSettings(
+            repository_file=repository.repository_file,
+            release_audit_file=repository.release_audit_file,
+            credentials_file="unused-in-tests.json",
+            allow_export=True,
+            runtime_db_file=os.path.join(self.tmpdir.name, "job-runtime.db"),
+            export_job_timeout_seconds=timeout,
+        )
+        service = AnalystReviewService(repository, require_reason=True)
+        app = create_app(
+            settings=settings,
+            review_service=service,
+            credential_store=credential_store(),
+        )
+        jobs = FakeJobRepository(mode)
+        app.state.job_repository = jobs
+        return TestClient(app), jobs
+
+    def test_job_export_success_preserves_response_shape_and_reuses_equivalent_request(self):
+        self.repository.release(self.record["quarantine_id"], "approved")
+        client, jobs = self._job_client(self.repository)
+        try:
+            path = f"/api/v1/review/records/{self.record['quarantine_id']}/export"
+            first = client.post(path, headers=auth("exporter"))
+            second = client.post(path, headers=auth("exporter"))
+        finally:
+            client.close()
+        self.assertEqual(200, first.status_code)
+        self.assertEqual({"count", "items"}, set(first.json()))
+        self.assertEqual(first.json(), second.json())
+        self.assertEqual(2, len(jobs.keys))
+        self.assertEqual(jobs.keys[0], jobs.keys[1])
+
+    def test_job_export_failure_triggers_explicit_retry_for_new_request(self):
+        self.repository.release(self.record["quarantine_id"], "approved")
+        client, jobs = self._job_client(self.repository, mode="failed")
+        try:
+            response = client.post(
+                f"/api/v1/review/records/{self.record['quarantine_id']}/export",
+                headers=auth("exporter"),
+            )
+        finally:
+            client.close()
+        self.assertEqual(502, response.status_code)
+        self.assertEqual("synthetic failure", response.json()["detail"]["error"])
+        self.assertEqual([next(iter(jobs.jobs))], jobs.retry_calls)
+        self.assertEqual(1, len(jobs.jobs))
+
+    def test_web_request_requeues_existing_failed_job_with_same_identity(self):
+        self.repository.release(self.record["quarantine_id"], "approved")
+        runtime_db = os.path.join(self.tmpdir.name, "retry-runtime.db")
+        key = quarantine_export_idempotency_key(
+            self.record["quarantine_id"],
+            released_indicators(self.repository.get(self.record["quarantine_id"])),
+        )
+        jobs = SQLiteJobRepository(SQLiteRuntimeStore(runtime_db))
+        original = jobs.submit(
+            QUARANTINE_EXPORT_JOB,
+            "review-api",
+            {"quarantine_id": self.record["quarantine_id"]},
+            key,
+        )
+        claim = jobs.claim_next("previous-worker")
+        jobs.fail(claim["job_id"], "previous-worker", claim["attempt"], "transient failure")
+        settings = ReviewApiSettings(
+            repository_file=self.repository.repository_file,
+            release_audit_file=self.repository.release_audit_file,
+            credentials_file="unused-in-tests.json",
+            allow_export=True,
+            runtime_db_file=runtime_db,
+            export_job_timeout_seconds=0.02,
+        )
+        client = TestClient(
+            create_app(
+                settings=settings,
+                review_service=AnalystReviewService(self.repository, require_reason=True),
+                credential_store=credential_store(),
+            )
+        )
+        try:
+            response = client.post(
+                f"/api/v1/review/records/{self.record['quarantine_id']}/export",
+                headers=auth("exporter"),
+            )
+        finally:
+            client.close()
+        self.assertEqual(504, response.status_code)
+        self.assertEqual(original["job_id"], response.json()["detail"]["job_id"])
+        requeued = jobs.get(original["job_id"])
+        self.assertEqual(key, requeued["idempotency_key"])
+        self.assertEqual("pending", requeued["status"])
+        self.assertEqual(1, requeued["attempt"])
+
+    def test_job_export_timeout_returns_job_id_without_deleting_job(self):
+        self.repository.release(self.record["quarantine_id"], "approved")
+        client, jobs = self._job_client(self.repository, mode="pending", timeout=0.01)
+        try:
+            response = client.post(
+                f"/api/v1/review/records/{self.record['quarantine_id']}/export",
+                headers=auth("exporter"),
+            )
+        finally:
+            client.close()
+        self.assertEqual(504, response.status_code)
+        job_id = response.json()["detail"]["job_id"]
+        self.assertIn(job_id, jobs.jobs)
+        self.assertEqual("pending", jobs.jobs[job_id]["status"])
+
+    def test_different_released_artifact_sets_use_different_job_keys(self):
+        self.repository.release(self.record["quarantine_id"], "approved")
+        second_record = self.repository.add(
+            QuarantineRecord(
+                source_key="misp",
+                external_id="event-2",
+                title="Second event",
+                reason="Needs review",
+                indicators=[{"type": "domain", "indicator": "different.test"}],
+            )
+        )
+        self.repository.release(second_record["quarantine_id"], "approved")
+        client, jobs = self._job_client(self.repository)
+        try:
+            for record in (self.record, second_record):
+                response = client.post(
+                    f"/api/v1/review/records/{record['quarantine_id']}/export",
+                    headers=auth("exporter"),
+                )
+                self.assertEqual(200, response.status_code)
+        finally:
+            client.close()
+        self.assertEqual(2, len(set(jobs.keys)))
 
 
 if __name__ == "__main__":

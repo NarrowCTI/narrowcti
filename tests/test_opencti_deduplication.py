@@ -39,6 +39,18 @@ class OpenCTIArtifactLookupTests(unittest.TestCase):
         )
         self.assertIn("OpenCTI dedup lookup failed", logs[0])
 
+    def test_recovery_lookup_fails_closed_on_provider_error_or_invalid_response(self):
+        def fail_query(*_args):
+            raise RuntimeError("offline")
+
+        lookup = OpenCTIArtifactLookup(SimpleNamespace(query=fail_query))
+        with self.assertRaisesRegex(RuntimeError, "recovery lookup failed"):
+            lookup.has_indicator_for_recovery({"type": "domain", "indicator": "example.test"})
+
+        malformed = OpenCTIArtifactLookup(SimpleNamespace(query=lambda *_args: {"data": {}}))
+        with self.assertRaisesRegex(RuntimeError, "invalid response"):
+            malformed.has_indicator_for_recovery({"type": "domain", "indicator": "example.test"})
+
 
 class CompositeArtifactDeduplicationTests(unittest.TestCase):
     def test_filter_new_indicators_combines_local_and_opencti_duplicates(self):

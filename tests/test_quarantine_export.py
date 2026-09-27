@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from core.quarantine import QuarantineRecord, QuarantineRepository
 from gateway.quarantine_export import QuarantineExporter
+from narrowcti.application.review.export import QuarantineExporter as CanonicalQuarantineExporter
 
 
 class QuarantineExportTests(unittest.TestCase):
@@ -78,6 +79,28 @@ class QuarantineExportTests(unittest.TestCase):
             current = repository.get(record["quarantine_id"])
             self.assertTrue(current["review"]["exported"])
             self.assertEqual(1, current["review"]["exported_indicator_count"])
+
+    def test_strict_artifact_mark_failure_does_not_mark_quarantine_exported(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repository, record = released_repository(tmpdir)
+
+            def fail_mark(*_args, **_kwargs):
+                raise OSError("disk unavailable")
+
+            artifact_dedup = SimpleNamespace(
+                filter_new_indicators=lambda indicators: (indicators, 0),
+                mark_indicators=fail_mark,
+            )
+            service = CanonicalQuarantineExporter(
+                repository,
+                exporter=lambda *_args, **_kwargs: 1,
+                artifact_dedup=artifact_dedup,
+                dry_run=False,
+                strict_artifact_mark=True,
+            )
+            with self.assertRaisesRegex(RuntimeError, "Artifact index update failed"):
+                service.export_pending(record["quarantine_id"])
+            self.assertFalse(repository.get(record["quarantine_id"])["review"].get("exported", False))
 
     def test_partial_release_exports_only_selected_indicator_types(self):
         with tempfile.TemporaryDirectory() as tmpdir:
