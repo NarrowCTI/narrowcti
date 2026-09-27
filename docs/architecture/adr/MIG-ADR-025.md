@@ -42,10 +42,19 @@ metadata and schema metadata. Existing checkpoints, quarantine, release audit,
 artifact/graph indexes, decision audit and summaries remain JSON/JSONL and
 retain their schemas.
 
+The Worker separates source-ingestion cadence from bounded-job polling through
+`NARROWCTI_JOB_POLL_SECONDS`. Worker, active-job and mutation-coordination
+leases are renewed by bounded heartbeats while their owners are live; expired
+leases remain reclaimable after a process crash. Unsupported runtime database
+schema versions fail closed rather than being overwritten.
+
 Quarantine/release mutations retain synchronous API behavior and are
 serialized with a cross-process coordination boundary. Real artifact export
 and artifact marking have one Worker mutation owner; the Review API remains a
-synchronous bounded command facade. No Web UI, Scheduler, broker,
+synchronous bounded command facade. The canonical Web role receives only
+review/runtime configuration and its credential file, while source credentials
+remain Worker-owned. The canonical Ops real-export command submits the same
+bounded job contract rather than bypassing Worker ownership. No Web UI, Scheduler, broker,
 multi-worker Community runtime, commercial persistence or domain semantic
 rewrite is introduced.
 

@@ -3,15 +3,22 @@
 import argparse
 import json
 import os
+import sys
+import time
 
 from narrowcti.adapters.opencti.client import build_opencti_client
 from narrowcti.adapters.opencti.deduplication import CompositeArtifactDeduplication, OpenCTIArtifactLookup
 from narrowcti.adapters.opencti.exporter import send_bundle
+from narrowcti.adapters.persistence.local.job_repository import SQLiteJobRepository
+from narrowcti.adapters.persistence.local.sqlite_runtime_store import SQLiteRuntimeStore
 from narrowcti.adapters.persistence.local.artifact_index import ArtifactDeduplicationIndex
 from narrowcti.adapters.persistence.local.quarantine_repository import QuarantineRepository
 from narrowcti.adapters.persistence.local.review_audit import read_audit_events
 from narrowcti.adapters.persistence.local.process_coordination import coordination_for_path
 from narrowcti.application.review.service import AnalystReviewService
+from narrowcti.application.review.export import exportable_records
+from narrowcti.domain.review.quarantine import released_indicators
+from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB, quarantine_export_idempotency_key
 
 DEFAULT_REPOSITORY = "/app/state/quarantine.jsonl"
 DEFAULT_RELEASE_AUDIT = "/app/state/audit/releases.jsonl"
@@ -226,12 +233,61 @@ def command_release_indicators(args):
 
 def command_export_released(args):
     dry_run = not args.execute
+    if args.execute:
+        return command_export_released_via_worker(args)
     api_client = build_opencti_client_from_env() if args.opencti_dedup_lookup or not dry_run else None
     dedup = build_artifact_dedup(args, api_client)
     service = review_service_from_args(args, coordinate=not dry_run)
     results = service.export_released(args.id, limit=args.limit, api_client=api_client, artifact_dedup=dedup, identity_name=args.identity_name, dry_run=dry_run, exporter=send_bundle)
     data = [result.to_dict() for result in results]
     print(json.dumps(data, sort_keys=True) if args.json else format_export_results(data))
+    return 0
+
+
+def command_export_released_via_worker(args):
+    """Submit real exports to the canonical Worker and wait boundedly."""
+    repository = repository_from_args(args)
+    records = exportable_records(repository.records(), args.id)
+    if args.limit and args.limit > 0:
+        records = records[: args.limit]
+    state_dir = os.getenv("NARROWCTI_STATE_DIR", "/app/state")
+    runtime_db = os.getenv("NARROWCTI_RUNTIME_DB", os.path.join(state_dir, "runtime.db"))
+    jobs = SQLiteJobRepository(SQLiteRuntimeStore(runtime_db))
+    timeout = float(os.getenv("NARROWCTI_REVIEW_EXPORT_TIMEOUT_SECONDS", "30"))
+    results = []
+    for record in records:
+        quarantine_id = record.get("quarantine_id", "")
+        job = jobs.submit(
+            QUARANTINE_EXPORT_JOB,
+            "ops",
+            {
+                "quarantine_id": quarantine_id,
+                "identity_name": args.identity_name,
+                "exported_by": reviewer(args),
+            },
+            idempotency_key=quarantine_export_idempotency_key(
+                quarantine_id, released_indicators(record)
+            ),
+        )
+        deadline = time.monotonic() + timeout
+        current = job
+        while current.get("status") not in {"succeeded", "failed"} and time.monotonic() < deadline:
+            time.sleep(0.1)
+            current = jobs.get(job["job_id"]) or current
+        if current.get("status") not in {"succeeded", "failed"}:
+            print(
+                f"export job timed out: job_id={job['job_id']} status={current.get('status')}",
+                file=sys.stderr,
+            )
+            return 75
+        if current.get("status") == "failed":
+            print(
+                f"export job failed: job_id={job['job_id']} error={current.get('error', 'unknown')}",
+                file=sys.stderr,
+            )
+            return 1
+        results.extend((current.get("result") or {}).get("items") or [])
+    print(json.dumps(results, sort_keys=True) if args.json else format_export_results(results))
     return 0
 
 

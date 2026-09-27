@@ -30,6 +30,8 @@ from narrowcti.adapters.persistence.local.sqlite_runtime_store import SQLiteRunt
 from narrowcti.adapters.persistence.local.job_repository import SQLiteJobRepository
 from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB
 from narrowcti.application.review.service import AnalystReviewService
+from narrowcti.domain.review.quarantine import released_indicators
+from narrowcti.ports.jobs import quarantine_export_idempotency_key
 from .auth import ReviewCredentialStore, ReviewPrincipal
 
 
@@ -290,6 +292,10 @@ def create_app(settings=None, review_service=None, credential_store=None, openct
         if not settings.allow_export:
             raise HTTPException(status_code=403, detail="real export is disabled")
         if app.state.job_repository is not None:
+            try:
+                record = review_service.get_record(quarantine_id)
+            except KeyError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from None
             job = app.state.job_repository.submit(
                 QUARANTINE_EXPORT_JOB,
                 "review-api",
@@ -298,7 +304,9 @@ def create_app(settings=None, review_service=None, credential_store=None, openct
                     "identity_name": settings.identity_name,
                     "exported_by": f"review-api:{principal.principal}",
                 },
-                idempotency_key=f"{QUARANTINE_EXPORT_JOB}:{quarantine_id}",
+                idempotency_key=quarantine_export_idempotency_key(
+                    quarantine_id, released_indicators(record)
+                ),
             )
             deadline = time.monotonic() + settings.export_job_timeout_seconds
             current = job

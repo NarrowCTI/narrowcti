@@ -22,11 +22,12 @@ services:
     image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
     container_name: ${NARROWCTI_WEB_CONTAINER:-narrowcti-web}
     env_file:
-      - ${NARROWCTI_GATEWAY_ENV_FILE:-./gateway.env.example}
+      - ${NARROWCTI_WEB_ENV_FILE:-./web.env.example}
     environment:
       PYTHONUNBUFFERED: "1"
       NARROWCTI_REVIEW_API_HOST: 0.0.0.0
       NARROWCTI_REVIEW_API_PORT: 8081
+      NARROWCTI_REVIEW_API_CREDENTIALS_FILE: /run/secrets/narrowcti-review-api-credentials.json
       NARROWCTI_RUNTIME_DB: /app/state/runtime.db
     command: ["python", "-m", "narrowcti.cli.web"]
     restart: ${NARROWCTI_WEB_RESTART:-no}
@@ -50,6 +51,7 @@ services:
       - web
     volumes:
       - narrowcti-state:/app/state
+      - ${NARROWCTI_REVIEW_API_CREDENTIALS_SOURCE:-./review-api-credentials.example.json}:/run/secrets/narrowcti-review-api-credentials.json:ro
 
   narrowcti-preflight:
     build:

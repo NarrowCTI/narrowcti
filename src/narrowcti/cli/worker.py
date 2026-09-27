@@ -12,7 +12,9 @@ from narrowcti.adapters.persistence.local.worker_lease import (
     WORKER_LEASE_HELD_EXIT_CODE,
     SQLiteWorkerLeaseRepository,
     new_owner_token,
+    start_heartbeat,
 )
+from narrowcti.adapters.persistence.local.lease_heartbeat import LeaseHeartbeat
 from narrowcti.adapters.persistence.local.process_coordination import SQLiteProcessCoordinationRepository
 from narrowcti.infrastructure.config.settings import load_settings
 from narrowcti.infrastructure.runtime.gateway_composition import default_source_registry
@@ -47,25 +49,32 @@ def run_worker(
         return run_loop(settings, registry, logger)
 
     owner = new_owner_token()
-    lease_seconds = max(int(getattr(settings, "source_interval_seconds", 60)) * 3, 120)
+    lease_seconds = max(int(getattr(settings, "worker_lease_seconds", 120)), 3)
     leases = SQLiteWorkerLeaseRepository(SQLiteRuntimeStore(runtime_db))
     if not leases.acquire("worker", owner, lease_seconds=lease_seconds):
         logger("worker lease already held")
         raise WorkerLeaseUnavailable("worker lease already held")
     try:
+        heartbeat = start_heartbeat(leases, "worker", owner, lease_seconds)
         if getattr(settings, "run_once", False):
-            return run_once(settings, registry, logger)
-        if run_loop is run_worker_loop or getattr(run_loop, "__module__", "").startswith("gateway"):
-            return run_worker_loop(
+            result = run_once(settings, registry, logger)
+        elif run_loop is run_worker_loop or getattr(run_loop, "__module__", "").startswith("gateway"):
+            result = run_worker_loop(
                 settings,
                 registry,
                 logger,
                 owner_token=owner,
                 lease_repository=leases,
                 lease_seconds=lease_seconds,
+                heartbeat=heartbeat,
             )
-        return run_loop(settings, registry, logger)
+        else:
+            result = run_loop(settings, registry, logger)
+        if heartbeat.lost:
+            raise WorkerLeaseUnavailable("worker lease heartbeat was lost")
+        return result
     finally:
+        heartbeat.stop()
         leases.release("worker", owner)
 
 
@@ -106,17 +115,23 @@ def _execute_export_job(job, settings, logger):
     return {"items": items}
 
 
-def process_pending_jobs(settings, owner_token, logger):
+def process_pending_jobs(settings, owner_token, logger, *, lease_seconds=None):
     runtime_db = getattr(settings, "runtime_db_file", "")
     if not runtime_db:
         return 0
     jobs = SQLiteJobRepository(SQLiteRuntimeStore(runtime_db))
     processed = 0
     while True:
-        job = jobs.claim_next(owner_token, lease_seconds=max(int(getattr(settings, "source_interval_seconds", 60)) * 3, 120))
+        job_lease_seconds = max(int(lease_seconds or getattr(settings, "worker_lease_seconds", 120)), 3)
+        job = jobs.claim_next(owner_token, lease_seconds=job_lease_seconds)
         if not job:
             return processed
         processed += 1
+        heartbeat = LeaseHeartbeat(
+            lambda job_id=job["job_id"], attempt=job["attempt"], lease=job_lease_seconds:
+            jobs.renew(job_id, owner_token, attempt, lease),
+            job_lease_seconds,
+        ).start()
         try:
             if job["job_type"] != EXPORT_QUARANTINE_JOB:
                 raise ValueError(f"unsupported job type: {job['job_type']}")
@@ -124,7 +139,12 @@ def process_pending_jobs(settings, owner_token, logger):
             jobs.complete(job["job_id"], owner_token, job["attempt"], result)
         except Exception as exc:
             logger(f"runtime job failed: type={job['job_type']} error={exc}")
-            jobs.fail(job["job_id"], owner_token, job["attempt"], str(exc))
+            try:
+                jobs.fail(job["job_id"], owner_token, job["attempt"], str(exc))
+            except PermissionError:
+                logger(f"runtime job claim lost: id={job['job_id']}")
+        finally:
+            heartbeat.stop()
 
 
 def run_worker_loop(
@@ -135,18 +155,32 @@ def run_worker_loop(
     owner_token=None,
     lease_repository=None,
     lease_seconds=300,
+    heartbeat=None,
+    clock=time.monotonic,
 ):
     """Canonical continuous Worker loop with bounded job polling."""
 
     owner_token = owner_token or new_owner_token()
+    next_source_deadline = clock()
+    next_job_deadline = clock()
     while True:
-        if lease_repository and not lease_repository.renew("worker", owner_token, lease_seconds):
-            raise WorkerLeaseUnavailable("worker lease is no longer held")
-        process_pending_jobs(settings, owner_token, logger)
-        run_gateway_once(settings, registry, logger)
-        process_pending_jobs(settings, owner_token, logger)
-        logger(f"Gateway sleeping {settings.source_interval_seconds}s")
-        sleeper(settings.source_interval_seconds)
+        if heartbeat and heartbeat.lost:
+            raise WorkerLeaseUnavailable("worker lease heartbeat was lost")
+        now = clock()
+        if now >= next_job_deadline:
+            process_pending_jobs(settings, owner_token, logger, lease_seconds=lease_seconds)
+            next_job_deadline = clock() + max(float(getattr(settings, "job_poll_seconds", 2.0)), 0.05)
+        if clock() >= next_source_deadline:
+            run_gateway_once(settings, registry, logger)
+            next_source_deadline = clock() + max(int(getattr(settings, "source_interval_seconds", 60)), 1)
+            process_pending_jobs(settings, owner_token, logger, lease_seconds=lease_seconds)
+        wait_seconds = max(
+            min(next_source_deadline, next_job_deadline) - clock(),
+            0.0,
+        )
+        if wait_seconds:
+            logger(f"Gateway sleeping {wait_seconds:.3f}s until next runtime deadline")
+            sleeper(wait_seconds)
 
 
 def main():

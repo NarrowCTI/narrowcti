@@ -100,10 +100,19 @@ class SQLiteRuntimeStore:
             )
             for statement in statements:
                 connection.execute(statement)
-            connection.execute(
-                "INSERT OR REPLACE INTO schema_metadata(key, value) VALUES('schema_version', ?)",
-                (str(SCHEMA_VERSION),),
-            )
+            row = connection.execute(
+                "SELECT value FROM schema_metadata WHERE key='schema_version'"
+            ).fetchone()
+            if row is None:
+                connection.execute(
+                    "INSERT INTO schema_metadata(key, value) VALUES('schema_version', ?)",
+                    (str(SCHEMA_VERSION),),
+                )
+            elif int(row["value"]) != SCHEMA_VERSION:
+                raise RuntimeError(
+                    "unsupported runtime database schema version: "
+                    f"{row['value']} (expected {SCHEMA_VERSION})"
+                )
         try:
             os.chmod(self.path, 0o600)
         except OSError:

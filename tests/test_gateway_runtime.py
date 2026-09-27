@@ -30,6 +30,8 @@ class GatewaySettingsTests(unittest.TestCase):
             "NARROWCTI_DRY_RUN": "true",
             "NARROWCTI_RUN_ONCE": "yes",
             "NARROWCTI_SOURCE_INTERVAL_SECONDS": "300",
+            "NARROWCTI_JOB_POLL_SECONDS": "2.5",
+            "NARROWCTI_WORKER_LEASE_SECONDS": "90",
             "NARROWCTI_DEDUP_MODE": "hybrid",
             "NARROWCTI_OPENCTI_DEDUP_LOOKUP": "1",
             "NARROWCTI_DEDUP_STATE_FILE": "/state/dedup.json",
@@ -61,6 +63,8 @@ class GatewaySettingsTests(unittest.TestCase):
         self.assertTrue(settings.dry_run)
         self.assertTrue(settings.run_once)
         self.assertEqual(300, settings.source_interval_seconds)
+        self.assertEqual(2.5, settings.job_poll_seconds)
+        self.assertEqual(90, settings.worker_lease_seconds)
         self.assertEqual("hybrid", settings.dedup_mode)
         self.assertTrue(settings.opencti_dedup_lookup)
         self.assertEqual("/state/dedup.json", settings.dedup_state_file)

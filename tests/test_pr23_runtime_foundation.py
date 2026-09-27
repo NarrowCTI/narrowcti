@@ -1,8 +1,11 @@
 import multiprocessing
+import sqlite3
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from core.quarantine import QuarantineRecord
 from narrowcti.adapters.persistence.local.artifact_index import ArtifactDeduplicationIndex
@@ -13,9 +16,12 @@ from narrowcti.adapters.persistence.local.process_coordination import (
 from narrowcti.adapters.persistence.local.quarantine_repository import QuarantineRepository
 from narrowcti.adapters.persistence.local.sqlite_runtime_store import SQLiteRuntimeStore
 from narrowcti.adapters.persistence.local.worker_lease import SQLiteWorkerLeaseRepository
+from narrowcti.adapters.persistence.local.lease_heartbeat import LeaseHeartbeat
 from narrowcti.application.review.export import QuarantineExporter
 from narrowcti.application.runtime_roles import WORKER_LEASE_HELD_EXIT_CODE, RuntimeRole
-from narrowcti.cli.worker import WorkerLeaseUnavailable, run_worker
+from narrowcti.cli.quarantine import command_export_released
+from narrowcti.cli.worker import WorkerLeaseUnavailable, run_worker, run_worker_loop
+from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB, quarantine_export_idempotency_key
 
 
 def _submit_job(path, key, queue):
@@ -32,6 +38,36 @@ def _claim_job(path, barrier, owner, queue):
 def _acquire_lease(path, owner, queue):
     repository = SQLiteWorkerLeaseRepository(SQLiteRuntimeStore(path))
     queue.put(repository.acquire("worker", owner, lease_seconds=30))
+
+
+def _hold_worker_lease(path, ready, stop):
+    repository = SQLiteWorkerLeaseRepository(SQLiteRuntimeStore(path))
+    owner = "healthy-owner"
+    repository.acquire("worker", owner, lease_seconds=1)
+    heartbeat = LeaseHeartbeat(
+        lambda: repository.renew("worker", owner, lease_seconds=1), 1
+    ).start()
+    ready.set()
+    stop.wait(10)
+    heartbeat.stop()
+
+
+def _hold_job_lease(path, ready, stop):
+    repository = SQLiteJobRepository(SQLiteRuntimeStore(path))
+    job = repository.claim_next("job-owner", lease_seconds=1)
+    heartbeat = LeaseHeartbeat(
+        lambda: repository.renew(job["job_id"], "job-owner", job["attempt"], 1), 1
+    ).start()
+    ready.set()
+    stop.wait(10)
+    heartbeat.stop()
+
+
+def _hold_coordination(path, ready, stop):
+    repository = SQLiteProcessCoordinationRepository(SQLiteRuntimeStore(path))
+    with repository.exclusive("scope", owner_token="healthy-owner", lease_seconds=1):
+        ready.set()
+        stop.wait(10)
 
 
 def _quarantine_add(path, runtime_db, external_id, queue):
@@ -122,6 +158,73 @@ class PR23RuntimeFoundationTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 repository.fail(second["job_id"], "owner-b", second["attempt"], "conflict")
 
+    def test_job_heartbeat_keeps_long_running_claim_and_crash_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "runtime.db")
+            repository = SQLiteJobRepository(SQLiteRuntimeStore(path))
+            submitted = repository.submit("bounded", "test", {}, "heartbeat")
+            ready = self.context.Event()
+            stop = self.context.Event()
+            holder = self.context.Process(target=_hold_job_lease, args=(path, ready, stop))
+            holder.start()
+            self.assertTrue(ready.wait(10))
+            time.sleep(1.4)
+            self.assertIsNone(repository.claim_next("other-owner", lease_seconds=1))
+            holder.terminate()
+            holder.join(10)
+            time.sleep(1.2)
+            reclaimed = repository.claim_next("other-owner", lease_seconds=10)
+            self.assertEqual(submitted["job_id"], reclaimed["job_id"])
+
+    def test_worker_heartbeat_prevents_second_owner_until_crash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "runtime.db")
+            ready = self.context.Event()
+            stop = self.context.Event()
+            holder = self.context.Process(target=_hold_worker_lease, args=(path, ready, stop))
+            holder.start()
+            self.assertTrue(ready.wait(10))
+            time.sleep(1.4)
+            repository = SQLiteWorkerLeaseRepository(SQLiteRuntimeStore(path))
+            self.assertFalse(repository.acquire("worker", "other-owner", lease_seconds=1))
+            stop.set()
+            holder.join(10)
+            self.assertEqual(0, holder.exitcode)
+            crashed_ready = self.context.Event()
+            crashed_stop = self.context.Event()
+            crashed = self.context.Process(target=_hold_worker_lease, args=(path, crashed_ready, crashed_stop))
+            crashed.start()
+            self.assertTrue(crashed_ready.wait(10))
+            crashed.terminate()
+            crashed.join(10)
+            time.sleep(1.2)
+            self.assertTrue(repository.acquire("worker", "recovery-owner", lease_seconds=1))
+            repository.release("worker", "recovery-owner")
+
+    def test_process_coordination_heartbeat_prevents_overlap_until_release_or_crash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "runtime.db")
+            ready = self.context.Event()
+            stop = self.context.Event()
+            holder = self.context.Process(target=_hold_coordination, args=(path, ready, stop))
+            holder.start()
+            self.assertTrue(ready.wait(10))
+            time.sleep(1.4)
+            repository = SQLiteProcessCoordinationRepository(SQLiteRuntimeStore(path))
+            self.assertFalse(repository.acquire("scope", "other-owner", timeout_seconds=0, lease_seconds=1))
+            stop.set()
+            holder.join(10)
+            crashed_ready = self.context.Event()
+            crashed_stop = self.context.Event()
+            crashed = self.context.Process(target=_hold_coordination, args=(path, crashed_ready, crashed_stop))
+            crashed.start()
+            self.assertTrue(crashed_ready.wait(10))
+            crashed.terminate()
+            crashed.join(10)
+            time.sleep(1.2)
+            self.assertTrue(repository.acquire("scope", "recovery-owner", timeout_seconds=0, lease_seconds=1))
+            repository.release("scope", "recovery-owner")
+
     def test_worker_lease_has_one_owner_and_supports_release(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             path = str(Path(directory) / "runtime.db")
@@ -158,6 +261,35 @@ class PR23RuntimeFoundationTests(unittest.TestCase):
             repository = SQLiteWorkerLeaseRepository(SQLiteRuntimeStore(path))
             self.assertIsNone(repository.inspect("worker"))
             del repository
+
+    def test_worker_polls_jobs_between_slow_source_cycles(self):
+        clock_value = [0.0]
+        pending_calls = []
+        source_calls = []
+
+        def clock():
+            return clock_value[0]
+
+        def sleeper(seconds):
+            self.assertLessEqual(seconds, 2.0)
+            clock_value[0] += seconds
+
+        def pending(*_args, **_kwargs):
+            pending_calls.append(clock_value[0])
+            if len(pending_calls) >= 3:
+                raise StopIteration
+
+        settings = SimpleNamespace(source_interval_seconds=300, job_poll_seconds=2)
+        from unittest.mock import patch
+
+        with patch("narrowcti.cli.worker.process_pending_jobs", side_effect=pending), patch(
+            "narrowcti.cli.worker.run_gateway_once", side_effect=lambda *_args: source_calls.append(True)
+        ):
+            with self.assertRaises(StopIteration):
+                run_worker_loop(settings, None, lambda _message: None, sleeper=sleeper, clock=clock)
+
+        self.assertGreaterEqual(len(pending_calls), 3)
+        self.assertEqual([True], source_calls)
 
     def test_quarantine_writers_are_serialized_across_processes(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -205,6 +337,81 @@ class PR23RuntimeFoundationTests(unittest.TestCase):
         self.assertTrue(RuntimeRole("worker").is_worker)
         self.assertTrue(RuntimeRole("ops").is_ops)
         self.assertEqual(75, WORKER_LEASE_HELD_EXIT_CODE)
+
+    def test_runtime_schema_rejects_unsupported_newer_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "runtime.db")
+            SQLiteRuntimeStore(path)
+            connection = sqlite3.connect(path)
+            try:
+                connection.execute(
+                    "UPDATE schema_metadata SET value='99' WHERE key='schema_version'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            with self.assertRaisesRegex(RuntimeError, "unsupported runtime database schema version"):
+                SQLiteRuntimeStore(path)
+
+    def test_export_job_key_is_stable_and_changes_with_released_set(self):
+        first = [{"type": "domain", "indicator": "a.example"}]
+        reordered = [{"indicator": "a.example", "type": "domain"}]
+        changed = [{"type": "domain", "indicator": "b.example"}]
+        self.assertEqual(
+            quarantine_export_idempotency_key("q-1", first),
+            quarantine_export_idempotency_key("q-1", reordered),
+        )
+        self.assertNotEqual(
+            quarantine_export_idempotency_key("q-1", first),
+            quarantine_export_idempotency_key("q-1", changed),
+        )
+        self.assertNotIn("a.example", quarantine_export_idempotency_key("q-1", first))
+
+    def test_ops_execute_submits_job_and_never_exports_locally(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository_path = str(Path(directory) / "quarantine.jsonl")
+            audit_path = str(Path(directory) / "audit.jsonl")
+            runtime_db = str(Path(directory) / "runtime.db")
+            repository = QuarantineRepository(repository_path, audit_path)
+            record = repository.add(
+                QuarantineRecord(
+                    source_key="ops-test",
+                    external_id="ops-event",
+                    title="Ops",
+                    reason="review",
+                    indicators=[{"type": "domain", "indicator": "ops.example"}],
+                )
+            )
+            repository.release(record["quarantine_id"], "approved")
+            args = SimpleNamespace(
+                execute=True,
+                repository=repository_path,
+                release_audit_file=audit_path,
+                id=record["quarantine_id"],
+                limit=0,
+                identity_name="NarrowCTI Gateway",
+                json=True,
+                reviewer="operator",
+            )
+            with patch.dict(
+                "os.environ",
+                {
+                    "NARROWCTI_RUNTIME_DB": runtime_db,
+                    "NARROWCTI_QUARANTINE_REPOSITORY": repository_path,
+                    "NARROWCTI_RELEASE_AUDIT_FILE": audit_path,
+                    "NARROWCTI_REVIEW_EXPORT_TIMEOUT_SECONDS": "0.01",
+                },
+                clear=False,
+            ), patch("narrowcti.cli.quarantine.send_bundle", side_effect=AssertionError("local export")):
+                self.assertEqual(75, command_export_released(args))
+            connection = SQLiteRuntimeStore(runtime_db).connect()
+            try:
+                row = connection.execute(
+                    "SELECT status FROM jobs WHERE job_type=?", (QUARANTINE_EXPORT_JOB,)
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual("pending", row["status"])
 
 
 if __name__ == "__main__":

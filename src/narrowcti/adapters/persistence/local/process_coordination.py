@@ -7,6 +7,7 @@ import uuid
 from contextlib import contextmanager
 
 from .sqlite_runtime_store import SQLiteRuntimeStore
+from .lease_heartbeat import LeaseHeartbeat
 
 
 class SQLiteProcessCoordinationRepository:
@@ -49,14 +50,29 @@ class SQLiteProcessCoordinationRepository:
             )
         return deleted.rowcount == 1
 
+    def renew(self, scope: str, owner_token: str, lease_seconds: int = 120) -> bool:
+        until = time.time() + max(int(lease_seconds), 1)
+        with self.store.transaction(immediate=True) as connection:
+            updated = connection.execute(
+                "UPDATE mutation_coordination SET lease_until=? WHERE scope=? AND owner_token=?",
+                (until, scope, owner_token),
+            )
+        return updated.rowcount == 1
+
     @contextmanager
     def exclusive(self, scope: str, owner_token: str | None = None, timeout_seconds: float = 30.0, lease_seconds: int = 120):
         owner_token = owner_token or str(uuid.uuid4())
         if not self.acquire(scope, owner_token, timeout_seconds, lease_seconds):
             raise TimeoutError(f"timed out waiting for coordination scope: {scope}")
+        heartbeat = LeaseHeartbeat(
+            lambda: self.renew(scope, owner_token, lease_seconds), lease_seconds
+        ).start()
         try:
             yield owner_token
+            if heartbeat.lost:
+                raise RuntimeError(f"coordination lease lost: {scope}")
         finally:
+            heartbeat.stop()
             self.release(scope, owner_token)
 
 

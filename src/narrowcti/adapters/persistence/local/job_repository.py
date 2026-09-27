@@ -66,8 +66,11 @@ class SQLiteJobRepository:
         return _decode(row)
 
     def get(self, job_id: str) -> dict | None:
-        with self.store.connect() as connection:
+        connection = self.store.connect()
+        try:
             row = connection.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+        finally:
+            connection.close()
         return _decode(row)
 
     def claim_next(self, owner: str, lease_seconds: int = 300) -> dict | None:
@@ -108,6 +111,18 @@ class SQLiteJobRepository:
 
     def complete(self, job_id: str, owner: str, attempt: int, result: Mapping[str, Any] | None = None) -> dict:
         return self._finish(job_id, owner, attempt, "succeeded", result=result, error=None)
+
+    def renew(self, job_id: str, owner: str, attempt: int, lease_seconds: int = 300) -> bool:
+        """Renew only the currently fenced running claim."""
+        with self.store.transaction(immediate=True) as connection:
+            updated = connection.execute(
+                """
+                UPDATE jobs SET lease_until=?
+                WHERE job_id=? AND status='running' AND claim_owner=? AND attempt=?
+                """,
+                (time.time() + max(int(lease_seconds), 1), job_id, owner, int(attempt)),
+            )
+        return updated.rowcount == 1
 
     def fail(self, job_id: str, owner: str, attempt: int, error: str) -> dict:
         return self._finish(job_id, owner, attempt, "failed", result=None, error=str(error))

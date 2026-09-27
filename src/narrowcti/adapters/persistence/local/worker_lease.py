@@ -7,6 +7,7 @@ import uuid
 
 from .job_repository import utc_now
 from .sqlite_runtime_store import SQLiteRuntimeStore
+from .lease_heartbeat import LeaseHeartbeat
 
 
 WORKER_LEASE_HELD_EXIT_CODE = 75
@@ -56,8 +57,11 @@ class SQLiteWorkerLeaseRepository:
         return deleted.rowcount == 1
 
     def inspect(self, role: str) -> dict | None:
-        with self.store.connect() as connection:
+        connection = self.store.connect()
+        try:
             row = connection.execute("SELECT * FROM worker_leases WHERE role=?", (role,)).fetchone()
+        finally:
+            connection.close()
         return dict(row) if row else None
 
 
@@ -65,4 +69,11 @@ def new_owner_token() -> str:
     return str(uuid.uuid4())
 
 
-__all__ = ["SQLiteWorkerLeaseRepository", "WORKER_LEASE_HELD_EXIT_CODE", "new_owner_token"]
+def start_heartbeat(repository, role, owner_token, lease_seconds):
+    return LeaseHeartbeat(
+        lambda: repository.renew(role, owner_token, lease_seconds),
+        lease_seconds,
+    ).start()
+
+
+__all__ = ["SQLiteWorkerLeaseRepository", "WORKER_LEASE_HELD_EXIT_CODE", "new_owner_token", "start_heartbeat"]
