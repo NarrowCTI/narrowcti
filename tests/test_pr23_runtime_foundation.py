@@ -151,11 +151,13 @@ class PR23RuntimeFoundationTests(unittest.TestCase):
             self.assertTrue(leases.release("worker", "continuous"))
 
     def test_worker_run_once_releases_lease_on_graceful_exit(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             path = str(Path(directory) / "runtime.db")
             settings = SimpleNamespace(runtime_db_file=path, source_interval_seconds=1, run_once=True)
             run_worker(settings, None, lambda _message: None, run_once=lambda *_args: "done")
-            self.assertIsNone(SQLiteWorkerLeaseRepository(SQLiteRuntimeStore(path)).inspect("worker"))
+            repository = SQLiteWorkerLeaseRepository(SQLiteRuntimeStore(path))
+            self.assertIsNone(repository.inspect("worker"))
+            del repository
 
     def test_quarantine_writers_are_serialized_across_processes(self):
         with tempfile.TemporaryDirectory() as directory:
