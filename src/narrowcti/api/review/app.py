@@ -1,6 +1,7 @@
 """Canonical analyst review HTTP API composition."""
 
 import os
+import time
 from dataclasses import dataclass
 from threading import RLock
 from typing import Annotated, Literal, Mapping
@@ -22,6 +23,12 @@ from narrowcti.adapters.opencti.exporter import send_bundle
 from narrowcti.adapters.persistence.local.artifact_index import ArtifactDeduplicationIndex
 from narrowcti.adapters.persistence.local.quarantine_repository import QuarantineRepository
 from narrowcti.adapters.persistence.local.review_audit import read_audit_events
+from narrowcti.adapters.persistence.local.process_coordination import (
+    SQLiteProcessCoordinationRepository,
+)
+from narrowcti.adapters.persistence.local.sqlite_runtime_store import SQLiteRuntimeStore
+from narrowcti.adapters.persistence.local.job_repository import SQLiteJobRepository
+from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB
 from narrowcti.application.review.service import AnalystReviewService
 from .auth import ReviewCredentialStore, ReviewPrincipal
 
@@ -44,6 +51,8 @@ class ReviewApiSettings:
     opencti_dedup_lookup: bool = False
     allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost", "testserver")
     max_request_body_bytes: int = 16384
+    runtime_db_file: str = ""
+    export_job_timeout_seconds: float = 30.0
 
     def __post_init__(self):
         if not self.repository_file:
@@ -58,6 +67,8 @@ class ReviewApiSettings:
             raise ValueError("review API allowed hosts must not be empty")
         if self.max_request_body_bytes < 1024:
             raise ValueError("review API max request body must be at least 1024 bytes")
+        if self.export_job_timeout_seconds <= 0:
+            raise ValueError("export job timeout must be greater than zero")
 
 
 class DecisionRequest(BaseModel):
@@ -114,6 +125,8 @@ def load_review_api_settings(environ=None):
         opencti_dedup_lookup=env_bool("NARROWCTI_OPENCTI_DEDUP_LOOKUP", False, environ),
         allowed_hosts=tuple(host.strip() for host in environ.get("NARROWCTI_REVIEW_API_ALLOWED_HOSTS", "127.0.0.1,localhost,testserver").split(",") if host.strip()),
         max_request_body_bytes=int(environ.get("NARROWCTI_REVIEW_API_MAX_BODY_BYTES", "16384")),
+        runtime_db_file=environ.get("NARROWCTI_RUNTIME_DB", os.path.join(state_dir, "runtime.db")),
+        export_job_timeout_seconds=float(environ.get("NARROWCTI_REVIEW_EXPORT_TIMEOUT_SECONDS", "30")),
     )
 
 
@@ -137,11 +150,19 @@ def create_app(settings=None, review_service=None, credential_store=None, openct
     settings = settings or load_review_api_settings()
     credential_store = credential_store or ReviewCredentialStore.from_file(settings.credentials_file)
     if review_service is None:
-        repository = QuarantineRepository(settings.repository_file, settings.release_audit_file)
+        repository = QuarantineRepository(
+            settings.repository_file,
+            settings.release_audit_file,
+            runtime_db_file=settings.runtime_db_file,
+        )
+        coordination = None
+        if settings.runtime_db_file:
+            coordination = SQLiteProcessCoordinationRepository(SQLiteRuntimeStore(settings.runtime_db_file))
         review_service = AnalystReviewService(
             repository,
             audit_reader=lambda: read_audit_events(settings.release_audit_file),
             require_reason=settings.require_reason,
+            coordination=coordination,
         )
     opencti_client_factory = opencti_client_factory or default_opencti_client_factory
     repository_lock = RLock()
@@ -151,6 +172,11 @@ def create_app(settings=None, review_service=None, credential_store=None, openct
         redoc_url=None, openapi_url="/openapi.json" if settings.docs_enabled else None,
     )
     app.state.settings = settings
+    app.state.job_repository = (
+        SQLiteJobRepository(SQLiteRuntimeStore(settings.runtime_db_file))
+        if settings.runtime_db_file
+        else None
+    )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
     bearer = HTTPBearer(auto_error=False)
 
@@ -263,6 +289,30 @@ def create_app(settings=None, review_service=None, credential_store=None, openct
     def export(quarantine_id: str, principal: Annotated[ReviewPrincipal, Depends(export_principal)]):
         if not settings.allow_export:
             raise HTTPException(status_code=403, detail="real export is disabled")
+        if app.state.job_repository is not None:
+            job = app.state.job_repository.submit(
+                QUARANTINE_EXPORT_JOB,
+                "review-api",
+                {
+                    "quarantine_id": quarantine_id,
+                    "identity_name": settings.identity_name,
+                    "exported_by": f"review-api:{principal.principal}",
+                },
+                idempotency_key=f"{QUARANTINE_EXPORT_JOB}:{quarantine_id}",
+            )
+            deadline = time.monotonic() + settings.export_job_timeout_seconds
+            current = job
+            while current.get("status") not in {"succeeded", "failed"} and time.monotonic() < deadline:
+                time.sleep(0.1)
+                current = app.state.job_repository.get(job["job_id"]) or current
+            if current.get("status") not in {"succeeded", "failed"}:
+                raise HTTPException(
+                    status_code=504,
+                    detail={"job_id": job["job_id"], "status": current.get("status"), "detail": "export worker timeout"},
+                )
+            if current.get("status") == "failed":
+                raise HTTPException(status_code=502, detail={"job_id": job["job_id"], "error": current.get("error", "export failed")})
+            return current.get("result") or {"count": 0, "items": []}
         try:
             api_client = opencti_client_factory()
             dedup = build_export_dedup(settings, api_client)

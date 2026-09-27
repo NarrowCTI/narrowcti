@@ -1,5 +1,6 @@
 """Review export orchestration with an explicitly injected export callable."""
 
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -43,6 +44,7 @@ class QuarantineExporter:
         self, repository, api_client=None, exporter: Callable | None = None,
         artifact_dedup=None, identity_name="NarrowCTI Gateway", logger=None,
         dry_run=True, exported_by="gateway.quarantine",
+        coordination=None,
     ):
         self.repository = repository
         self.api_client = api_client
@@ -52,6 +54,7 @@ class QuarantineExporter:
         self.logger = logger or (lambda message: None)
         self.dry_run = dry_run
         self.exported_by = exported_by or "gateway.quarantine"
+        self.coordination = coordination
 
     def export_pending(self, quarantine_id="", limit=0):
         if quarantine_id:
@@ -62,6 +65,21 @@ class QuarantineExporter:
         return [self.export_record(record) for record in records]
 
     def export_record(self, record):
+        if self.dry_run:
+            return self._export_record(record)
+        with self._export_coordination(record):
+            quarantine_id = record.get("quarantine_id")
+            if quarantine_id:
+                record = self.repository.get(quarantine_id)
+            return self._export_record(record)
+
+    def _export_coordination(self, record):
+        if self.coordination is None:
+            return nullcontext()
+        scope = f"artifact-export:{getattr(self.repository, 'repository_file', '')}"
+        return self.coordination.exclusive(scope)
+
+    def _export_record(self, record):
         base = result_base(record, dry_run=self.dry_run)
         status = normalize_status(record.get("status"))
         if status not in EXPORTABLE_STATUSES:

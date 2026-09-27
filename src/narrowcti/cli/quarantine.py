@@ -10,6 +10,7 @@ from narrowcti.adapters.opencti.exporter import send_bundle
 from narrowcti.adapters.persistence.local.artifact_index import ArtifactDeduplicationIndex
 from narrowcti.adapters.persistence.local.quarantine_repository import QuarantineRepository
 from narrowcti.adapters.persistence.local.review_audit import read_audit_events
+from narrowcti.adapters.persistence.local.process_coordination import coordination_for_path
 from narrowcti.application.review.service import AnalystReviewService
 
 DEFAULT_REPOSITORY = "/app/state/quarantine.jsonl"
@@ -31,7 +32,7 @@ def repository_from_args(args):
     )
 
 
-def review_service_from_args(args):
+def review_service_from_args(args, *, coordinate=False):
     repository = repository_from_args(args)
     audit_path = repository.release_audit_file
     return AnalystReviewService(
@@ -40,6 +41,7 @@ def review_service_from_args(args):
         export_operation=send_bundle,
         reviewer=reviewer(args),
         require_reason=reason_required(),
+        coordination=coordination_for_path(repository.repository_file) if coordinate else None,
     )
 
 
@@ -226,7 +228,7 @@ def command_export_released(args):
     dry_run = not args.execute
     api_client = build_opencti_client_from_env() if args.opencti_dedup_lookup or not dry_run else None
     dedup = build_artifact_dedup(args, api_client)
-    service = review_service_from_args(args)
+    service = review_service_from_args(args, coordinate=not dry_run)
     results = service.export_released(args.id, limit=args.limit, api_client=api_client, artifact_dedup=dedup, identity_name=args.identity_name, dry_run=dry_run, exporter=send_bundle)
     data = [result.to_dict() for result in results]
     print(json.dumps(data, sort_keys=True) if args.json else format_export_results(data))
