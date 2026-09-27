@@ -51,6 +51,27 @@ a Docker volume. The image runs as UID/GID `10001:10001`; new volumes inherit
 the prepared ownership. Existing root-owned volumes require an explicit,
 backed-up ownership migration before starting the new image.
 
+## Community runtime roles
+
+The same image exposes explicit role entry points. Run exactly one Worker for a
+state volume; its SQLite lease prevents a second Worker from processing the same
+runtime at the same time. The Web role is an endpoint-driven review API and the
+Ops role is reserved for bounded one-shot commands:
+
+```text
+Worker: python -m narrowcti.cli.worker
+Web:    python -m narrowcti.cli.web
+Ops:    python -m gateway.preflight (or another documented one-shot command)
+```
+
+Set `NARROWCTI_RUNTIME_DB` to a path on the shared `narrowcti-state` volume (the
+default is `/app/state/runtime.db`). It contains only job, lease and
+cross-process mutation-coordination metadata. Existing JSON/JSONL checkpoints,
+quarantine records, artifact indexes and audit evidence remain authoritative and
+retain their historical formats. The `web` and `review-api` Compose profiles
+are alternative API entry points; do not run both against the same published
+host port.
+
 For local validation, the default image is `narrowcti/gateway:local`. The latest
 published stable release is v1.0. For release deployments, use a pinned
 published image such as:

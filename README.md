@@ -70,6 +70,13 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narro
 Use `docs/product/deployment-operations.md` for the authoritative deployment and
 upgrade procedure.
 
+Community 2.0 uses the same package and image for three explicit roles: Web
+(`python -m narrowcti.cli.web`), Worker (`python -m narrowcti.cli.worker`) and
+Ops one-shot commands. Only one Worker may hold the Community lease for a state
+volume. Job and coordination metadata live in `NARROWCTI_RUNTIME_DB` (default
+`/app/state/runtime.db`); source checkpoints, quarantine, deduplication and
+audit evidence retain their existing JSON/JSONL formats.
+
 ## Product Identity
 
 The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
