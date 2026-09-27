@@ -24,6 +24,32 @@ class PackageRuntimeContractTests(unittest.TestCase):
         for root in ("connectors", "core", "exporters", "gateway"):
             self.assertIn(f'"{root}"', source)
 
+    def test_runtime_validator_uses_canonical_public_imports(self):
+        source = (ROOT / "scripts" / "validate_runtime_package.py").read_text(encoding="utf-8")
+        for module in (
+            "narrowcti.domain.intelligence.feed_contract",
+            "narrowcti.application.ingestion.pipeline",
+            "narrowcti.adapters.opencti.graph_lookup",
+            "narrowcti.adapters.stix.serializer",
+            "narrowcti.infrastructure.runtime.gateway_composition",
+            "narrowcti.api.review.app",
+            "narrowcti.cli.gateway",
+        ):
+            self.assertIn(f'"{module}"', source)
+        self.assertNotIn('"narrowcti.core.', source)
+        self.assertNotIn('"narrowcti.gateway.', source)
+
+    def test_runtime_validator_keeps_high_value_legacy_smoke_imports(self):
+        source = (ROOT / "scripts" / "validate_runtime_package.py").read_text(encoding="utf-8")
+        for module in (
+            "gateway.connector",
+            "gateway.preflight",
+            "core.feed_contract",
+            "connectors.misp.feed_adapter",
+            "exporters.stix_builder",
+        ):
+            self.assertIn(f'"{module}"', source)
+
     def test_ci_runs_installed_package_from_external_directory(self):
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertIn("python -m pip install .", workflow)

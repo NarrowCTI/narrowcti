@@ -15,6 +15,15 @@ from pathlib import Path
 PACKAGE_ROOTS = ("narrowcti", "connectors", "core", "exporters", "gateway")
 PUBLIC_IMPORTS = (
     "narrowcti",
+    "narrowcti.domain.intelligence.feed_contract",
+    "narrowcti.application.ingestion.pipeline",
+    "narrowcti.adapters.opencti.graph_lookup",
+    "narrowcti.adapters.stix.serializer",
+    "narrowcti.infrastructure.runtime.gateway_composition",
+    "narrowcti.api.review.app",
+    "narrowcti.cli.gateway",
+)
+LEGACY_COMPAT_IMPORTS = (
     "gateway.connector",
     "gateway.preflight",
     "core.feed_contract",
@@ -85,6 +94,14 @@ for name in expected:
     if os.path.abspath(location).startswith(os.path.abspath({checkout!r})):
         raise AssertionError(f"{{name}} resolved from checkout: {{location}}")
 
+for name in {legacy_imports!r}:
+    module = importlib.import_module(name)
+    location = getattr(module, "__file__", None)
+    if not location:
+        raise AssertionError(f"{{name}} has no installed file")
+    if os.path.abspath(location).startswith(os.path.abspath({checkout!r})):
+        raise AssertionError(f"{{name}} resolved from checkout: {{location}}")
+
 for name in {roots!r}:
     module = importlib.import_module(name)
     location = getattr(module, "__file__", None)
@@ -109,6 +126,7 @@ assert "/app/src" not in sys.path
 print("installed-package-imports-ok")
 """.format(
             imports=PUBLIC_IMPORTS,
+            legacy_imports=LEGACY_COMPAT_IMPORTS,
             roots=PACKAGE_ROOTS,
             checkout=str(Path.cwd().resolve()),
         )

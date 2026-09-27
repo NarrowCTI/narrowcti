@@ -1,6 +1,3 @@
-import os
-import subprocess
-import sys
 import unittest
 from pathlib import Path
 
@@ -92,42 +89,17 @@ class QuarantineDomainTests(unittest.TestCase):
         repository = QuarantineRepository("unused")
         self.assertIsInstance(repository, QuarantineStore)
 
-    def test_legacy_and_canonical_quarantine_symbols_are_identical_both_orders(self):
-        snippets = (
-            """
-import sys
-import core.quarantine as legacy
-import narrowcti.core.quarantine as facade
-import narrowcti.domain.review.quarantine as domain
-import narrowcti.adapters.persistence.local.quarantine_repository as adapter
-assert sys.modules['core.quarantine'] is sys.modules['narrowcti.core.quarantine']
-assert legacy is facade
-assert legacy.QuarantineRecord is domain.QuarantineRecord
-assert legacy.QuarantineRepository is adapter.QuarantineRepository
-""",
-            """
-import sys
-import narrowcti.core.quarantine as facade
-import narrowcti.domain.review.quarantine as domain
-import narrowcti.adapters.persistence.local.quarantine_repository as adapter
-import core.quarantine as legacy
-assert sys.modules['core.quarantine'] is sys.modules['narrowcti.core.quarantine']
-assert legacy is facade
-assert legacy.QuarantineRecord is domain.QuarantineRecord
-assert legacy.QuarantineRepository is adapter.QuarantineRepository
-""",
+    def test_legacy_quarantine_symbols_match_canonical_owners(self):
+        from narrowcti.adapters.persistence.local.quarantine_repository import (
+            QuarantineRepository as canonical_repository,
         )
-        environment = os.environ.copy()
-        environment["PYTHONPATH"] = os.pathsep.join((str(ROOT / "src"), str(ROOT)))
-        for snippet in snippets:
-            subprocess.run(
-                [sys.executable, "-c", snippet],
-                cwd=ROOT,
-                env=environment,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+        from narrowcti.domain.review.quarantine import QuarantineRecord as canonical_record
+
+        self.assertIs(QuarantineRecord, canonical_record)
+        self.assertIs(QuarantineRepository, canonical_repository)
+
+    def test_removed_nested_quarantine_facade_is_not_a_contract(self):
+        self.assertFalse((ROOT / "src" / "narrowcti" / "core" / "quarantine.py").exists())
 
 
 if __name__ == "__main__":
