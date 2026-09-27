@@ -55,6 +55,7 @@ class GatewaySettings:
     enable_mitre_attack_resolution: bool = True
     mitre_cache_file: str = ""
     mitre_stix_url: str = DEFAULT_MITRE_STIX_URL
+    runtime_db_file: str = ""
 
     def __post_init__(self):
         if not self.enabled_sources:
@@ -127,6 +128,7 @@ def load_settings(environ: Mapping[str, str] | None = None):
         enable_mitre_attack_resolution=env_bool("NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION", True, env),
         mitre_cache_file=env.get("NARROWCTI_MITRE_CACHE_FILE", ""),
         mitre_stix_url=env.get("NARROWCTI_MITRE_STIX_URL", DEFAULT_MITRE_STIX_URL),
+        runtime_db_file=env.get("NARROWCTI_RUNTIME_DB", os.path.join(state_dir, "runtime.db")),
     )
 
 
