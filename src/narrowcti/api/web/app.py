@@ -5,6 +5,7 @@ from __future__ import annotations
 import hmac
 import re
 import secrets
+from dataclasses import replace
 from pathlib import Path
 from threading import BoundedSemaphore, Lock
 from urllib.parse import parse_qs, urlsplit
@@ -18,6 +19,12 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from narrowcti.api.review.app import create_app as create_review_api_app
 from narrowcti.api.review.app import load_review_api_settings
 from narrowcti.api.review.auth import ReviewCredentialStore
+from narrowcti.application.identity.passwords import (
+    LocalOperatorAuthenticator,
+    PasswordPolicyError,
+    PasswordService,
+)
+from narrowcti.domain.security.identity import LocalOperatorPrincipal
 from narrowcti.adapters.entitlements.community import CommunityEntitlements
 from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB, quarantine_export_idempotency_key
 from narrowcti.application.capabilities import (
@@ -27,7 +34,11 @@ from narrowcti.application.capabilities import (
 )
 from narrowcti.application.source_explorer import SourceExplorerService
 from narrowcti.infrastructure.config.web_settings import WebSettings, load_web_settings
-from narrowcti.infrastructure.runtime.web_composition import build_source_explorer, build_web_evidence
+from narrowcti.infrastructure.runtime.web_composition import (
+    build_operator_authentication,
+    build_source_explorer,
+    build_web_evidence,
+)
 from narrowcti.ports.jobs import ActiveJobLimitReached, INGESTION_DRY_RUN_JOB, INGESTION_PREVIEW_JOB, INGESTION_RUN_ONCE_JOB
 from narrowcti.ports.source_explorer import ExplorerError, ExplorerSearchRequest
 from narrowcti.domain.review.quarantine import released_indicators
@@ -202,10 +213,17 @@ def create_web_app(
     session_store: InMemoryWebSessionStore | None = None,
     job_repository=None,
     evidence_service=None,
+    operator_store=None,
+    operator_authenticator: LocalOperatorAuthenticator | None = None,
 ):
-    """Create the Web role without changing the existing bearer API contract."""
+    """Compose browser operator sessions and the independent bearer API."""
     settings = settings or load_web_settings()
     credential_store = credential_store or ReviewCredentialStore.from_file(settings.credentials_file)
+    if operator_store is None:
+        operator_store, default_authenticator = build_operator_authentication(settings)
+        operator_authenticator = operator_authenticator or default_authenticator
+    elif operator_authenticator is None:
+        operator_authenticator = LocalOperatorAuthenticator(operator_store, PasswordService())
     source_explorer = source_explorer or build_source_explorer(settings.sources)
     session_store = session_store or InMemoryWebSessionStore(
         settings.session_idle_seconds,
@@ -222,6 +240,7 @@ def create_web_app(
     app = FastAPI(title="NarrowCTI Community Web", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
     app.state.session_store = session_store
+    app.state.operator_store = operator_store
     app.state.source_explorer = source_explorer
     app.state.job_repository = job_repository
     app.state.review_service = getattr(
@@ -238,6 +257,8 @@ def create_web_app(
     }
     request_limiter = SlidingWindowRateLimiter()
     login_limiter = SlidingWindowRateLimiter(max_keys=4096)
+    password_change_limiter = SlidingWindowRateLimiter(max_keys=4096)
+    auth_work = BoundedSemaphore(2)
     ingestion_limiter = SlidingWindowRateLimiter(max_keys=10_000)
     provider_semaphore_lock = Lock()
     provider_semaphores = {}
@@ -270,7 +291,30 @@ def create_web_app(
 
     def current_session(request: Request) -> tuple[str | None, WebSession | None]:
         session_id = request.cookies.get(cookie_name)
-        return session_id, session_store.get(session_id)
+        session = session_store.get(session_id)
+        if not session or not session.principal:
+            return session_id, session
+        try:
+            operator = operator_store.get_by_id(session.principal.operator_id)
+        except Exception:
+            session_store.delete(session_id)
+            return session_id, None
+        if (
+            not operator
+            or not operator.enabled
+            or operator.auth_revision != session.principal.auth_revision
+        ):
+            session_store.delete(session_id)
+            return session_id, None
+        principal = LocalOperatorPrincipal(
+            operator_id=operator.operator_id,
+            principal=operator.username,
+            roles=operator.roles,
+            auth_revision=operator.auth_revision,
+        )
+        # Authorization is derived from the current durable record on every
+        # request; role changes cannot remain stale in an in-memory session.
+        return session_id, replace(session, principal=principal)
 
     def require_permission(session: WebSession | None, permission: str):
         if not session or not session.principal:
@@ -342,7 +386,21 @@ def create_web_app(
             if not login_limiter.allow(f"login-page:{address}", limit=20, interval=60):
                 raise HTTPException(status_code=429, detail="login temporarily unavailable")
             session_id, session = session_store.create_anonymous()
-        response = _template_response("login.html", _template_context(request, session))
+        try:
+            setup_required = not operator_store.has_operators()
+            setup_unavailable = False
+        except Exception:
+            setup_required = False
+            setup_unavailable = True
+        response = _template_response(
+            "login.html",
+            _template_context(
+                request,
+                session,
+                setup_required=setup_required,
+                setup_unavailable=setup_unavailable,
+            ),
+        )
         if session_id and request.cookies.get(cookie_name) != session_id:
             _set_session_cookie(response, cookie_name, session_id, settings)
         return response
@@ -354,23 +412,124 @@ def create_web_app(
         if not login_limiter.allow(f"login:{address}", limit=5, interval=60):
             raise HTTPException(status_code=429, detail="login temporarily unavailable")
         values = parse_form(request, await request.body())
-        token = values.get("credential", "")
-        principal = credential_store.authenticate(token)
-        del token  # Do not retain the submitted bearer token beyond validation.
+        username = values.pop("username", "")
+        password = values.pop("password", "")
         values.clear()
-        if not principal or not session or session.principal:
+        operator = None
+        unavailable = False
+        if not auth_work.acquire(blocking=False):
+            password = ""
+            raise HTTPException(status_code=429, detail="login temporarily unavailable")
+        try:
+            try:
+                operator = await run_in_threadpool(
+                    operator_authenticator.authenticate,
+                    username,
+                    password,
+                )
+            except Exception:
+                operator = None
+                unavailable = True
+            else:
+                unavailable = False
+        finally:
+            auth_work.release()
+            password = ""
+            username = ""
+        if unavailable:
+            error = "Authentication is temporarily unavailable."
+            status_code = 503
+        elif not operator or not session or session.principal:
+            error = "Invalid username or password."
+            status_code = 401
+        else:
+            principal = LocalOperatorPrincipal(
+                operator_id=operator.operator_id,
+                principal=operator.username,
+                roles=operator.roles,
+                auth_revision=operator.auth_revision,
+            )
+            session_id, _authenticated = session_store.authenticate(old_session_id or "", principal)
+            response = RedirectResponse("/", status_code=303)
+            _set_session_cookie(response, cookie_name, session_id, settings)
+            return response
+        if not operator or not session or session.principal:
             response = _template_response(
                 "login.html",
-                _template_context(request, session, error="The supplied credential is invalid."),
-                status_code=401,
+                _template_context(
+                    request,
+                    session,
+                    error=error,
+                    setup_required=False,
+                    setup_unavailable=unavailable,
+                ),
+                status_code=status_code,
             )
             if old_session_id:
                 _set_session_cookie(response, cookie_name, old_session_id, settings)
             return response
-        session_id, _authenticated = session_store.authenticate(old_session_id or "", principal)
-        response = RedirectResponse("/", status_code=303)
-        _set_session_cookie(response, cookie_name, session_id, settings)
-        return response
+
+    @app.get("/account", response_class=HTMLResponse)
+    async def account_page(request: Request):
+        _session_id, session = current_session(request)
+        session = require_permission(session, "review:read")
+        return _template_response("account.html", _template_context(request, session))
+
+    @app.post("/account/password", dependencies=[Depends(require_csrf)])
+    async def change_own_password(request: Request):
+        session_id, session = current_session(request)
+        session = require_permission(session, "review:read")
+        values = parse_form(request, await request.body())
+        current_password = values.get("current_password", "")
+        new_password = values.get("new_password", "")
+        confirmation = values.get("confirm_password", "")
+        values.clear()
+        limiter_key = f"password-change:{session.principal.operator_id}"
+        if not password_change_limiter.allow(limiter_key, limit=3, interval=300):
+            current_password = new_password = confirmation = ""
+            raise HTTPException(status_code=429, detail="password change temporarily unavailable")
+        if new_password != confirmation:
+            error = "The new passwords do not match."
+            status_code = 400
+        elif not auth_work.acquire(blocking=False):
+            current_password = new_password = confirmation = ""
+            raise HTTPException(status_code=429, detail="authentication temporarily busy")
+        else:
+            try:
+                try:
+                    changed = await run_in_threadpool(
+                        operator_authenticator.change_password,
+                        session.principal.operator_id,
+                        current_password,
+                        new_password,
+                    )
+                    error = "Current password is incorrect." if not changed else ""
+                    status_code = 400 if not changed else 303
+                except PasswordPolicyError as exc:
+                    error = str(exc)
+                    status_code = 400
+                except Exception:
+                    error = "Authentication is temporarily unavailable."
+                    status_code = 503
+            finally:
+                auth_work.release()
+                current_password = new_password = confirmation = ""
+        if status_code == 303:
+            session_store.delete(session_id)
+            response = RedirectResponse("/login", status_code=303)
+            response.delete_cookie(
+                cookie_name,
+                path="/",
+                secure=settings.cookie_secure,
+                httponly=True,
+                samesite="lax",
+            )
+            return response
+        return _template_response(
+            "account.html",
+            _template_context(request, session, error=error),
+            status_code=status_code,
+        )
 
     @app.post("/logout", dependencies=[Depends(require_csrf)])
     async def logout(request: Request):

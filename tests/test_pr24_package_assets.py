@@ -68,6 +68,7 @@ class HtmxAssetProvenanceTests(unittest.TestCase):
         template = (ROOT / "src" / "narrowcti" / "api" / "web" / "templates" / "base.html").read_text(encoding="utf-8")
         self.assertIn("integrity=\"" + next(line.split("SRI: ", 1)[1] for line in version.splitlines() if line.startswith("SRI: ")), template)
         self.assertIn("href=\"#main-content\"", template)
+        self.assertIn("narrowcti-logo-horizontal-dark.svg", template)
 
 
 if __name__ == "__main__":

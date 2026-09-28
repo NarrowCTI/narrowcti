@@ -16,6 +16,8 @@ class ComposeTopologyContractTests(unittest.TestCase):
         web = source.split("  narrowcti-web:", 1)[1].split("  narrowcti-preflight:", 1)[0]
         self.assertIn("NARROWCTI_WEB_ENV_FILE", web)
         self.assertIn("NARROWCTI_RUNTIME_DB: /app/state/runtime.db", web)
+        self.assertIn("NARROWCTI_AUTH_DB: /app/auth/auth.db", web)
+        self.assertIn("narrowcti-auth:/app/auth", web)
         self.assertIn("NARROWCTI_REVIEW_API_CREDENTIALS_FILE: /run/secrets/narrowcti-review-api-credentials.json", web)
         self.assertIn("/run/secrets/narrowcti-review-api-credentials.json:ro", web)
         self.assertIn('"127.0.0.1:${NARROWCTI_WEB_PUBLISHED_PORT:-8081}:8081"', web)
@@ -24,6 +26,15 @@ class ComposeTopologyContractTests(unittest.TestCase):
         self.assertIn("- ALL", web)
         self.assertIn("no-new-privileges:true", web)
         self.assertNotIn("NARROWCTI_GATEWAY_ENV_FILE", web)
+
+    def test_auth_volume_is_not_mounted_into_worker_and_has_one_shot_provisioning_role(self):
+        source = BASE.read_text(encoding="utf-8")
+        worker = source.split("  narrowcti-gateway:", 1)[1].split("  narrowcti-web:", 1)[0]
+        self.assertNotIn("narrowcti-auth", worker)
+        helper = source.split("  narrowcti-operator-auth:", 1)[1].split("  narrowcti-gateway-report:", 1)[0]
+        self.assertIn("/app/auth/auth.db", helper)
+        self.assertIn("narrowcti-auth:/app/auth", helper)
+        self.assertIn("narrowcti-operator-auth", source)
 
     def test_web_env_example_contains_no_ingestion_credentials(self):
         source = (ROOT / "deployment" / "web.env.example").read_text(encoding="utf-8")

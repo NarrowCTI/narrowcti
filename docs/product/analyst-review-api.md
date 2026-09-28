@@ -44,15 +44,16 @@ application are `review:read`, `review:decide`, `review:raw`,
 
 ## Credential Provisioning
 
-Generate a random token and its hash (used by the bearer API and to establish a
-browser session):
+Generate a random token and its hash for API clients and automation only:
 
 ```powershell
 python -m gateway.review_auth
 ```
 
 The command prints the raw token once and its SHA-256 hash. Store the raw token
-in a secret manager and put only the hash in the local credential file:
+in a secret manager and put only the hash in the local credential file. This
+bearer token cannot sign in to the Community browser UI; browser operators are
+separately provisioned in the local operator database:
 
 ```json
 {

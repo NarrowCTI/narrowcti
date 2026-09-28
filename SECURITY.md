@@ -45,6 +45,8 @@ Useful report categories include:
 - source adapter behavior that bypasses TLP, score, quarantine or dedup policy;
 - container image, dependency or build pipeline weaknesses;
 - denial-of-service conditions caused by unbounded feed ingestion.
+- local operator authentication, password-hash handling, session revocation or
+  cross-channel authentication between the Community browser UI and Review API.
 
 ## Sensitive Data Handling
 

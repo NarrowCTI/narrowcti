@@ -77,6 +77,13 @@ volume. Job and coordination metadata live in `NARROWCTI_RUNTIME_DB` (default
 `/app/state/runtime.db`); source checkpoints, quarantine, deduplication and
 audit evidence retain their existing JSON/JSONL formats.
 
+Community browser access uses deployment-managed local operator accounts in a
+separate `NARROWCTI_AUTH_DB` (`/app/auth/auth.db` by default). Provision the
+first administrator with the `narrowcti-operator-auth` one-shot Compose helper;
+Review API bearer credentials remain for API clients only. See the
+[`Community Web and Source Explorer guide`](docs/product/web-source-explorer.md)
+for the operator bootstrap procedure.
+
 ## Product Identity
 
 The v0.2 line was the modular OTX connector foundation. The v0.3 line is the

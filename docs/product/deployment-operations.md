@@ -72,6 +72,12 @@ quarantine records, artifact indexes and audit evidence remain authoritative and
 retain their historical formats. The `web` profile starts the shared UI/API
 process. There is no separate Review API service or second HTTP process.
 
+The browser identity is separate from Review API bearer credentials. Its
+versioned local SQLite database defaults to `NARROWCTI_AUTH_DB=/app/auth/auth.db`
+and is persisted in the dedicated `narrowcti-auth` volume. The Worker does not
+mount or require this volume. `NARROWCTI_RUNTIME_DB` remains separate and
+contains runtime coordination only.
+
 For local validation, the default image is `narrowcti/gateway:local`. The latest
 published stable release is v1.0. For release deployments, use a pinned
 published image such as:
@@ -97,6 +103,24 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narro
 
 Keep the first run dry-run, run-once and audit-first. Review reports before any
 continuous execution or graph export.
+
+For the Community browser UI, provision the first local administrator through
+the one-shot Ops helper. It uses the same image and auth volume as Web:
+
+```powershell
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile web --profile ops up -d --build narrowcti-web
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm --no-deps narrowcti-operator-auth create-operator --username fagner --role admin
+```
+
+The CLI prompts for a password and confirmation without terminal echo. The
+first account must be an admin; there is no default account or password. For
+automation, use `--password-stdin` and pipe one line from a protected secret
+source—never put the password in a command-line argument. Then open
+`http://127.0.0.1:8081` and sign in with the local username and password. API
+bearer tokens remain exclusively for API clients and do not work as browser
+credentials. The one-shot helper also supports `list-operators`,
+`set-password`, `set-roles`, `enable` and `disable`; the last enabled admin
+cannot be disabled or demoted.
 
 ## Community Web UI, Source Explorer and Review API
 

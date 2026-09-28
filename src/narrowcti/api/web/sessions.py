@@ -8,12 +8,12 @@ from dataclasses import dataclass, field
 from threading import RLock
 from typing import Callable
 
-from narrowcti.api.review.auth import ReviewPrincipal
+from narrowcti.domain.security.identity import LocalOperatorPrincipal
 
 
 @dataclass(frozen=True)
 class WebSession:
-    principal: ReviewPrincipal | None
+    principal: LocalOperatorPrincipal | None
     created_at: float
     last_activity: float
     absolute_expiry: float
@@ -65,7 +65,7 @@ class InMemoryWebSessionStore:
             self._sessions[session_id] = session
         return session_id, session
 
-    def authenticate(self, session_id: str, principal: ReviewPrincipal) -> tuple[str, WebSession]:
+    def authenticate(self, session_id: str, principal: LocalOperatorPrincipal) -> tuple[str, WebSession]:
         """Rotate the pre-auth session identifier to prevent fixation."""
         now = self._clock()
         session = WebSession(

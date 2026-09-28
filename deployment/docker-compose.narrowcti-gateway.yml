@@ -29,6 +29,7 @@ services:
       NARROWCTI_REVIEW_API_PORT: 8081
       NARROWCTI_REVIEW_API_CREDENTIALS_FILE: /run/secrets/narrowcti-review-api-credentials.json
       NARROWCTI_RUNTIME_DB: /app/state/runtime.db
+      NARROWCTI_AUTH_DB: /app/auth/auth.db
     command: ["python", "-m", "narrowcti.cli.web"]
     restart: ${NARROWCTI_WEB_RESTART:-no}
     init: true
@@ -51,6 +52,7 @@ services:
       - web
     volumes:
       - narrowcti-state:/app/state
+      - narrowcti-auth:/app/auth
       - ${NARROWCTI_REVIEW_API_CREDENTIALS_SOURCE:-./review-api-credentials.example.json}:/run/secrets/narrowcti-review-api-credentials.json:ro
 
   narrowcti-preflight:
@@ -68,6 +70,32 @@ services:
       - ops
     volumes:
       - narrowcti-state:/app/state
+
+  narrowcti-operator-auth:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_WEB_ENV_FILE:-./web.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      NARROWCTI_AUTH_DB: /app/auth/auth.db
+      NARROWCTI_RUNTIME_DB: /app/state/runtime.db
+    entrypoint: ["python", "-m", "narrowcti.cli.auth"]
+    command: ["--help"]
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    profiles:
+      - ops
+    volumes:
+      - narrowcti-auth:/app/auth
 
   narrowcti-gateway-report:
     build:
@@ -251,3 +279,4 @@ services:
 
 volumes:
   narrowcti-state:
+  narrowcti-auth:

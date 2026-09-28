@@ -21,7 +21,7 @@ their applicable gates before a version tag and GitHub Release are created.
 | Secret protection | Prevent credentials from entering history | GitHub secret scanning/push protection and release-history scan evidence | Any verified secret blocks publication and requires rotation. |
 | Container scan | Detect operating-system and Python package vulnerabilities in the final image | Scan of the exact image before publication | Unaccepted high or critical findings block image push. |
 | SBOM | Record release image contents | Machine-readable SBOM attached to the workflow or release | Missing SBOM blocks the final release image. |
-| DAST | Test exposed HTTP surfaces at runtime | Authenticated disposable Review API OWASP ZAP scan plus authenticated browser/UI scan using synthetic credentials and unavailable/fake source providers | Both scans must verify successful authentication before scanning; alerts require triage before release. |
+| DAST | Test exposed HTTP surfaces at runtime | Authenticated disposable Review API OWASP ZAP scan using a synthetic bearer token plus authenticated browser/UI scan using a separately provisioned synthetic local username/password and unavailable/fake source providers | Both scans must verify their distinct authentication channels before scanning; alerts require triage before release. |
 | OpenCTI end-to-end | Validate claimed graph behavior | Controlled ingestion and relationship audit evidence | Missing evidence blocks the related release claim. |
 | Upgrade and recovery | Protect operator continuity | Documented v0.9 to v1.0 upgrade and rollback/recovery result | Failure blocks release. |
 
@@ -69,9 +69,10 @@ DAST must run only against a disposable test deployment created for CI or an
 isolated release-validation environment. It must not target production or a
 shared OpenCTI/MISP lab containing operational data.
 
-The authenticated Community Web scan must also verify browser login and logout,
+The authenticated Community Web scan must also verify local username/password
+browser login and logout, API bearer compatibility and channel isolation,
 server-side permissions for navigation/page groups, CSRF rejection,
-rate-limit responses, bearer API compatibility, and absence of provider
+rate-limit responses, and absence of provider
 credentials, raw evidence metadata, local paths and exception details. Use
 synthetic credentials and unavailable or fake providers. If the API docs flag
 is enabled for a controlled environment, `/docs` and `/openapi.json` must

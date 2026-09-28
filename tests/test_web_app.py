@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
+import tempfile
 import unittest
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -12,6 +14,8 @@ from narrowcti.api.review.auth import ReviewCredentialStore, token_sha256
 from narrowcti.api.web.app import SESSION_COOKIE_LOCAL, SESSION_COOKIE_SECURE, create_web_app
 from narrowcti.infrastructure.config.web_settings import WebSettings
 from narrowcti.api.web.sessions import InMemoryWebSessionStore
+from narrowcti.adapters.persistence.local.operator_store import LocalOperatorStore
+from narrowcti.application.identity.passwords import LocalOperatorAuthenticator, PasswordService
 from narrowcti.application.reporting.web_evidence import WebEvidenceService
 from narrowcti.ports.source_explorer import (
     ExplorerItemDetail,
@@ -20,10 +24,18 @@ from narrowcti.ports.source_explorer import (
     ProviderDescriptor,
     ProviderOperation,
 )
+from argon2 import PasswordHasher
+from argon2.low_level import Type
 
 
 TOKEN = "synthetic-browser-login-token-not-a-real-secret"
 ADMIN_TOKEN = "synthetic-browser-admin-token-not-a-real-secret"
+READER_PASSWORD = "reader synthetic phrase 01"
+ADMIN_PASSWORD = "admin synthetic phrase 02"
+
+
+def _test_passwords():
+    return PasswordService(PasswordHasher(time_cost=1, memory_cost=8, parallelism=1, hash_len=16, salt_len=8, type=Type.ID))
 
 
 class _Summary:
@@ -88,6 +100,17 @@ class _Jobs:
 
 class WebAppTests(unittest.TestCase):
     def setUp(self):
+        self._temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self._temporary.cleanup)
+        self.operator_store = LocalOperatorStore(Path(self._temporary.name) / "auth.db")
+        self.passwords = _test_passwords()
+        self.admin_operator = self.operator_store.create_operator(
+            "admin", self.passwords.hash_password(ADMIN_PASSWORD), ["admin"]
+        )
+        self.reader_operator = self.operator_store.create_operator(
+            "reader", self.passwords.hash_password(READER_PASSWORD), ["reader"]
+        )
+        self.operator_authenticator = LocalOperatorAuthenticator(self.operator_store, self.passwords)
         self.credential_store = ReviewCredentialStore(
             (
                 {
@@ -109,6 +132,8 @@ class WebAppTests(unittest.TestCase):
         self.session_store = InMemoryWebSessionStore(300, 3600)
         self.settings = WebSettings(
             credentials_file="synthetic-credentials-file",
+            auth_db=str(Path(self._temporary.name) / "auth.db"),
+            runtime_db_file=str(Path(self._temporary.name) / "runtime.db"),
             allowed_hosts=("testserver", "localhost"),
             cookie_secure=False,
         )
@@ -127,6 +152,8 @@ class WebAppTests(unittest.TestCase):
             self.settings,
             source_explorer=self.explorer,
             credential_store=self.credential_store,
+            operator_store=self.operator_store,
+            operator_authenticator=self.operator_authenticator,
             review_api_app=api,
             session_store=self.session_store,
             job_repository=self.jobs,
@@ -153,7 +180,11 @@ class WebAppTests(unittest.TestCase):
         csrf = re.search(r'name="_csrf" value="([^"]+)"', response.text).group(1)
         result = client.post(
             "/login",
-            data={"_csrf": csrf, "credential": token},
+            data={
+                "_csrf": csrf,
+                "username": "admin" if token == ADMIN_TOKEN else "reader",
+                "password": ADMIN_PASSWORD if token == ADMIN_TOKEN else READER_PASSWORD,
+            },
             follow_redirects=False,
         )
         self.assertEqual(result.status_code, 303)
@@ -162,6 +193,11 @@ class WebAppTests(unittest.TestCase):
         return result
 
     def test_browser_login_rotates_session_and_never_places_bearer_in_cookie_or_session(self):
+        login_page = self.client.get("/login")
+        self.assertIn('name="username"', login_page.text)
+        self.assertIn('name="password"', login_page.text)
+        self.assertNotIn('name="credential"', login_page.text)
+        self.assertNotIn("Review API", login_page.text)
         login_response = self._login()
         response = self.client.get("/", follow_redirects=False)
         self.assertEqual(response.status_code, 200)
@@ -174,9 +210,84 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("samesite=lax", cookie)
         self.assertNotIn("; secure", cookie)
 
+    def test_review_bearer_is_not_a_browser_credential_and_web_cookie_is_not_api_auth(self):
+        page = self.client.get("/login")
+        csrf = re.search(r'name="_csrf" value="([^"]+)"', page.text).group(1)
+        response = self.client.post(
+            "/login",
+            data={"_csrf": csrf, "username": "reader", "password": TOKEN},
+            follow_redirects=False,
+        )
+        self.assertEqual(401, response.status_code)
+        self.assertIn("Invalid username or password.", response.text)
+        self._login()
+        self.assertEqual(401, self.client.get("/api/v1/review/summary").status_code)
+
+    def test_unknown_wrong_and_disabled_accounts_have_the_same_public_error(self):
+        errors = []
+        for username, password in (
+            ("missing", READER_PASSWORD),
+            ("reader", "wrong synthetic passphrase"),
+        ):
+            client = TestClient(self.app, base_url="https://testserver")
+            page = client.get("/login")
+            csrf = re.search(r'name="_csrf" value="([^"]+)"', page.text).group(1)
+            response = client.post("/login", data={"_csrf": csrf, "username": username, "password": password})
+            errors.append((response.status_code, response.text.split("<p class=\"alert\" role=\"alert\">", 1)[1].split("</p>", 1)[0]))
+        self.operator_store.set_enabled(self.reader_operator.operator_id, False)
+        client = TestClient(self.app, base_url="https://testserver")
+        page = client.get("/login")
+        csrf = re.search(r'name="_csrf" value="([^"]+)"', page.text).group(1)
+        response = client.post("/login", data={"_csrf": csrf, "username": "reader", "password": READER_PASSWORD})
+        errors.append((response.status_code, response.text.split("<p class=\"alert\" role=\"alert\">", 1)[1].split("</p>", 1)[0]))
+        self.assertEqual([(401, "Invalid username or password.")] * 3, errors)
+
+    def test_local_operator_setup_state_is_visible_without_default_account(self):
+        empty = LocalOperatorStore(Path(self._temporary.name) / "empty-auth.db")
+        app = create_web_app(
+            self.settings,
+            source_explorer=self.explorer,
+            credential_store=self.credential_store,
+            operator_store=empty,
+            operator_authenticator=LocalOperatorAuthenticator(empty, self.passwords),
+            review_api_app=self.review_api_app,
+        )
+        page = TestClient(app, base_url="https://testserver").get("/login")
+        self.assertIn("No local NarrowCTI operator has been configured.", page.text)
+        self.assertFalse(empty.has_operators())
+
+    def test_role_disable_and_password_changes_revoke_existing_sessions(self):
+        self._login()
+        self.operator_store.set_roles(self.reader_operator.operator_id, ["reader", "reviewer"])
+        self.assertEqual(303, self.client.get("/", follow_redirects=False).status_code)
+
+        self._login()
+        account = self.client.get("/account")
+        csrf = re.search(r'name="_csrf" value="([^"]+)"', account.text).group(1)
+        changed = self.client.post(
+            "/account/password",
+            data={
+                "_csrf": csrf,
+                "current_password": READER_PASSWORD,
+                "new_password": "synthetic new reader passphrase",
+                "confirm_password": "synthetic new reader passphrase",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(303, changed.status_code)
+        self.assertEqual("/login", changed.headers["location"])
+        self.assertEqual(303, self.client.get("/", follow_redirects=False).status_code)
+        self.assertIsNone(self.operator_authenticator.authenticate("reader", READER_PASSWORD))
+        self.assertIsNotNone(self.operator_authenticator.authenticate("reader", "synthetic new reader passphrase"))
+
+        self.operator_store.set_enabled(self.reader_operator.operator_id, False)
+        self.assertIsNone(self.operator_authenticator.authenticate("reader", "synthetic new reader passphrase"))
+        self.operator_store.set_enabled(self.reader_operator.operator_id, True)
+        self.assertEqual(303, self.client.get("/", follow_redirects=False).status_code)
+
     def test_browser_posts_require_csrf_and_logout_is_explicit(self):
         self.client.get("/login")
-        denied = self.client.post("/login", data={"credential": TOKEN})
+        denied = self.client.post("/login", data={"username": "reader", "password": READER_PASSWORD})
         self.assertEqual(denied.status_code, 403)
 
         self._login()
@@ -193,10 +304,10 @@ class WebAppTests(unittest.TestCase):
         csrf = re.search(r'name="_csrf" value="([^"]+)"', login.text).group(1)
         initial_count = len(self.session_store)
         for _ in range(5):
-            response = self.client.post("/login", data={"_csrf": csrf, "credential": "invalid"})
+            response = self.client.post("/login", data={"_csrf": csrf, "username": "missing-user", "password": "invalid synthetic phrase"})
             self.assertEqual(401, response.status_code)
-            self.assertIn("The supplied credential is invalid.", response.text)
-        blocked = self.client.post("/login", data={"_csrf": csrf, "credential": "invalid"})
+            self.assertIn("Invalid username or password.", response.text)
+        blocked = self.client.post("/login", data={"_csrf": csrf, "username": "missing-user", "password": "invalid synthetic phrase"})
         self.assertEqual(429, blocked.status_code)
         self.assertEqual(initial_count, len(self.session_store))
 
@@ -335,6 +446,8 @@ class WebAppTests(unittest.TestCase):
             settings,
             source_explorer=self.explorer,
             credential_store=self.credential_store,
+            operator_store=self.operator_store,
+            operator_authenticator=self.operator_authenticator,
             review_api_app=self.review_api_app,
             session_store=InMemoryWebSessionStore(300, 3600),
             job_repository=self.jobs,
@@ -384,6 +497,8 @@ class WebAppTests(unittest.TestCase):
             self.settings,
             source_explorer=self.explorer,
             credential_store=self.credential_store,
+            operator_store=self.operator_store,
+            operator_authenticator=self.operator_authenticator,
             review_api_app=api,
             session_store=InMemoryWebSessionStore(300, 3600),
             job_repository=self.jobs,

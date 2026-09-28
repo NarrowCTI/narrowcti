@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Mapping
 from urllib.parse import urlsplit
 
@@ -37,6 +38,8 @@ class WebSettings:
     host: str = "127.0.0.1"
     port: int = 8081
     credentials_file: str = ""
+    auth_db: str = "/app/auth/auth.db"
+    runtime_db_file: str = field(default="/app/state/runtime.db", repr=False)
     allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost", "testserver")
     public_origin: str = ""
     cookie_secure: bool = True
@@ -47,6 +50,10 @@ class WebSettings:
     sources: SourceExplorerSettings = field(default_factory=SourceExplorerSettings)
 
     def __post_init__(self):
+        if not self.auth_db:
+            raise ValueError("NARROWCTI_AUTH_DB must not be empty")
+        if Path(self.auth_db).resolve() == Path(self.runtime_db_file).resolve():
+            raise ValueError("operator authentication database must be separate from runtime.db")
         if not 1 <= self.port <= 65535:
             raise ValueError("web port must be between 1 and 65535")
         if not self.allowed_hosts:
@@ -96,6 +103,8 @@ def load_web_settings(environ: Mapping[str, str] | None = None) -> WebSettings:
         host=env.get("NARROWCTI_REVIEW_API_HOST", "127.0.0.1"),
         port=int(env.get("NARROWCTI_REVIEW_API_PORT", "8081")),
         credentials_file=env.get("NARROWCTI_REVIEW_API_CREDENTIALS_FILE", ""),
+        auth_db=env.get("NARROWCTI_AUTH_DB", "/app/auth/auth.db"),
+        runtime_db_file=env.get("NARROWCTI_RUNTIME_DB", "/app/state/runtime.db"),
         allowed_hosts=hosts,
         public_origin=env.get("NARROWCTI_WEB_PUBLIC_ORIGIN", "").strip().rstrip("/"),
         cookie_secure=_strict_bool(

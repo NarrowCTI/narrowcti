@@ -51,12 +51,16 @@ Community 2.0 uses one package, image and version with explicit runtime roles:
   performing ingestion in the Web process. Its Community shell includes
   Overview, Sources / Explorer, Review / Quarantine, Evidence / Decisions and
   Reports; the latter two are bounded safe projections/catalogs, not a
-  scheduler or a second reporting runtime.
+  scheduler or a second reporting runtime. Browser operators use local
+  username/password accounts in a dedicated auth database; Review API clients
+  independently use bearer credentials.
 - **Worker** (`python -m narrowcti.cli.worker`) runs the existing bounded source
   cycle and is the only process allowed to hold the `worker` lease.
 - **Ops** runs preflight, reports and other one-shot operational commands.
 
-All roles share the mounted state volume. A small SQLite database at
+Worker, Web and Ops share the mounted runtime state volume. A separate named
+`narrowcti-auth` volume is mounted only by Web and its one-shot operator
+provisioning helper; Worker does not receive browser identity data. A small SQLite database at
 `NARROWCTI_RUNTIME_DB` (defaulting to `<NARROWCTI_STATE_DIR>/runtime.db`) owns
 job, lease and mutation-coordination metadata; source checkpoints, quarantine,
 deduplication indexes and audit evidence remain in their existing JSON/JSONL

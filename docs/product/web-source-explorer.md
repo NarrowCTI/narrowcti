@@ -30,12 +30,11 @@ offers no scheduled or commercial reporting.
 
 ## Start the Web role
 
-Create a local credential file using the schema in
-`deployment/review-api-credentials.example.json`. Generate a random token and
-hash with `python -m gateway.review_auth`; keep the raw token in a password
-manager and store only the hash in the JSON file. Use a reviewer/admin role for
-the browser; the same credential remains a bearer credential for
-`/api/v1/review/*`.
+Browser operators and API clients use separate authentication channels. Create
+a Review API bearer credential as described in the
+[Analyst Review API guide](analyst-review-api.md) for API clients only. Browser
+operators use local username/password accounts provisioned through the
+deployment CLI; a bearer token cannot sign in to the UI.
 
 ```powershell
 Copy-Item deployment\web.env.example deployment\web.env
@@ -45,6 +44,23 @@ $env:NARROWCTI_REVIEW_API_CREDENTIALS_SOURCE = "./review-api-credentials.json"
 $env:NARROWCTI_WEB_PUBLISHED_PORT = "8081"
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile web up -d --build narrowcti-web
 ```
+
+Create the first local administrator in the dedicated `narrowcti-auth` volume
+before signing in:
+
+```powershell
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm --no-deps narrowcti-operator-auth create-operator --username fagner --role admin
+```
+
+The CLI prompts for a password and confirmation without echoing them. For
+automation only, pass one line through stdin with `--password-stdin`; never put
+a password in a command-line argument. The first account must include `admin`,
+and the last enabled admin cannot be disabled or demoted. There are no default
+credentials or self-registration. Manage additional accounts with
+`list-operators`, `set-password`, `set-roles`, `enable` and `disable` using the
+same `narrowcti-operator-auth` one-shot service. A password or role change
+increments `auth_revision` and invalidates existing sessions on their next
+request.
 
 The example credential hash is intentionally unusable. Replace it before
 starting the service. Compose publishes only to loopback by default. Put remote
@@ -107,8 +123,16 @@ automatically replayed.
 ## Sessions and browser protections
 
 The Web process stores opaque 32-byte random session identifiers and CSRF
-secrets in memory. Bearer tokens are validated and discarded; they are not
-stored in sessions or browser storage. Restarting Web invalidates sessions.
+secrets in memory. Local operator passwords use `argon2-cffi==25.1.0` with
+Argon2id (`m=19456 KiB`, `t=2`, `p=1`, 32-byte output, 16-byte salt), with PHC
+encoded hashes and rehash-on-success support. The baseline follows current
+[OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+and the maintained [argon2-cffi parameters guidance](https://argon2-cffi.readthedocs.io/en/stable/parameters.html).
+Passwords are never stored in plaintext or retained in sessions. Restarting Web invalidates
+sessions; password, role and enabled-state changes revoke them through
+`auth_revision` without waiting for TTL expiry. The separate API bearer token
+is never accepted as a browser password. Browser cookies do not authenticate
+the Review API.
 Production cookies are `HttpOnly`, `Secure`, `SameSite=Lax`, host-only and
 `Path=/`. `NARROWCTI_WEB_COOKIE_SECURE=false` is permitted only for local HTTP
 development.

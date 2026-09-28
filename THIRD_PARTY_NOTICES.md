@@ -19,6 +19,7 @@ requests==2.33.0
 python-dateutil==2.9.0.post0
 urllib3==2.7.0
 sigmatools==0.23.1
+argon2-cffi==25.1.0
 ```
 
 The legacy compatibility projection is maintained in:
@@ -31,6 +32,11 @@ connectors/otx/requirements.txt
 dependency. `sigmatools 0.23.1` is used only to mirror the Sigma syntax validation boundary
 of supported OpenCTI `6.9.x` environments. It is distributed under LGPL-3.0;
 NarrowCTI does not modify or relicense that dependency.
+
+`argon2-cffi 25.1.0` (MIT) is used for local Community operator password
+hashing with Argon2id. Its `argon2-cffi-bindings` dependency (MIT) supplies the
+maintained native implementation; both upstream license notices remain
+applicable.
 
 ## External Platforms
 

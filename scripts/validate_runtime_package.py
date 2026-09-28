@@ -22,9 +22,14 @@ PUBLIC_IMPORTS = (
     "narrowcti.infrastructure.runtime.gateway_composition",
     "narrowcti.api.review.app",
     "narrowcti.api.web.app",
+    "narrowcti.api.web.sessions",
     "narrowcti.cli.gateway",
     "narrowcti.cli.worker",
     "narrowcti.cli.web",
+    "narrowcti.cli.auth",
+    "narrowcti.application.identity.passwords",
+    "narrowcti.domain.security.identity",
+    "narrowcti.adapters.persistence.local.operator_store",
     "narrowcti.application.runtime_roles",
 )
 LEGACY_COMPAT_IMPORTS = (
@@ -133,13 +138,14 @@ web_package = files("narrowcti.api.web")
 for resource in (
     "templates/base.html",
     "templates/login.html",
+    "templates/account.html",
     "templates/evidence.html",
     "templates/reports.html",
     "templates/sources.html",
     "templates/source_detail.html",
     "static/app.css",
     "static/htmx.min.js",
-    "static/brand/logo/narrowcti-logo-horizontal-light.svg",
+    "static/brand/logo/narrowcti-logo-horizontal-dark.svg",
     "static/brand/favicon/narrowcti-favicon.ico",
 ):
     assert web_package.joinpath(*resource.split("/")).is_file(), resource

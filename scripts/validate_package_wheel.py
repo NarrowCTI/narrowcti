@@ -178,6 +178,10 @@ from narrowcti.domain.review import quarantine
 from narrowcti.adapters.stix import serializer
 from narrowcti.api.web import app as web_app
 from narrowcti.infrastructure.config.web_settings import WebSettings
+from narrowcti.adapters.persistence.local.operator_store import LocalOperatorStore
+from narrowcti.application.identity.passwords import PasswordService
+from narrowcti.cli import auth as auth_cli
+from narrowcti.domain.security.identity import LocalOperatorPrincipal
 
 assert legacy_feed.FeedSource is feed_contract.FeedSource
 assert legacy_feed.FeedCandidate is feed_contract.FeedCandidate
@@ -195,15 +199,20 @@ assert legacy_preflight.build_preflight_report is not None
 assert {OPS, WEB, WORKER} == {"ops", "web", "worker"}
 assert callable(web_role.main)
 assert callable(worker_role.main)
+assert callable(auth_cli.main)
+assert LocalOperatorStore is not None
+assert PasswordService is not None
+assert LocalOperatorPrincipal is not None
 web_package = files("narrowcti.api.web")
 for resource in (
     "templates/base.html",
     "templates/login.html",
+    "templates/account.html",
     "templates/evidence.html",
     "templates/reports.html",
     "static/app.css",
     "static/htmx.min.js",
-    "static/brand/logo/narrowcti-logo-horizontal-light.svg",
+    "static/brand/logo/narrowcti-logo-horizontal-dark.svg",
     "static/brand/favicon/narrowcti-favicon.ico",
 ):
     assert web_package.joinpath(*resource.split("/")).is_file(), resource

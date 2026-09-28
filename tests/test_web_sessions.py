@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from narrowcti.api.review.auth import ReviewPrincipal
+from narrowcti.domain.security.identity import LocalOperatorPrincipal
 from narrowcti.api.web.sessions import InMemoryWebSessionStore
 
 
@@ -13,7 +13,7 @@ class InMemoryWebSessionStoreTests(unittest.TestCase):
         now = [1000.0]
         store = InMemoryWebSessionStore(60, 120, clock=lambda: now[0])
         old_id, anonymous = store.create_anonymous()
-        principal = ReviewPrincipal("analyst", frozenset({"reader"}), "reader-1")
+        principal = LocalOperatorPrincipal("operator-1", "analyst", frozenset({"reader"}), 1)
 
         new_id, authenticated = store.authenticate(old_id, principal)
 

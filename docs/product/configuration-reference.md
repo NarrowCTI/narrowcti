@@ -67,6 +67,20 @@ The PR-04 inventory is therefore:
 | `MISP_URL` | MISP | Required for MISP | MISP base URL used by the MISP adapter. |
 | `MISP_KEY` | MISP | Required for MISP | MISP API key. Must never be committed. |
 
+## Local Web Operator Identity
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `NARROWCTI_AUTH_DB` | `/app/auth/auth.db` | Dedicated versioned SQLite store for local Community browser operators. It must not point to `NARROWCTI_RUNTIME_DB`. |
+
+The auth database stores Argon2id password hashes and account authorization
+state, not plaintext passwords or API bearer tokens. Compose mounts its named
+`narrowcti-auth` volume only into the Web role and the one-shot operator
+provisioning role; the Worker does not mount it. Local passwords are not
+trimmed, require at least 12 characters and are bounded to 1024 UTF-8 bytes.
+Usernames are case-insensitive ASCII identifiers, 1–64 characters from
+letters, digits, dot, underscore and hyphen. There are no default accounts.
+
 ## Compose Deployment Variables
 
 | Variable | Default | Effect |

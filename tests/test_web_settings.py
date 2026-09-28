@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from narrowcti.infrastructure.config.web_settings import load_web_settings
+from narrowcti.infrastructure.config.web_settings import WebSettings, load_web_settings
 
 
 class WebSettingsCompatibilityTests(unittest.TestCase):
@@ -25,6 +25,13 @@ class WebSettingsCompatibilityTests(unittest.TestCase):
         })
         self.assertEqual(("web.example",), settings.allowed_hosts)
         self.assertEqual(65536, settings.max_request_body_bytes)
+
+    def test_auth_database_defaults_to_separate_identity_location(self):
+        settings = load_web_settings({})
+        self.assertEqual("/app/auth/auth.db", settings.auth_db)
+        self.assertEqual("/app/state/runtime.db", settings.runtime_db_file)
+        with self.assertRaisesRegex(ValueError, "separate from runtime.db"):
+            WebSettings(auth_db="/var/lib/narrowcti/runtime.db", runtime_db_file="/var/lib/narrowcti/runtime.db")
 
 
 if __name__ == "__main__":

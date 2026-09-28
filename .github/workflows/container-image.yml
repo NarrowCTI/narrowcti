@@ -87,12 +87,16 @@ jobs:
           from narrowcti.application.runtime_roles import OPS, WEB, WORKER
           from narrowcti.cli import web as web_role
           from narrowcti.cli import worker as worker_role
+          from narrowcti.cli import auth as auth_role
+          from narrowcti.application.identity.passwords import PasswordService
           from narrowcti.domain.intelligence import feed_contract
           from sigma.parser.collection import SigmaCollectionParser
 
           assert {OPS, WEB, WORKER} == {"ops", "web", "worker"}
           assert callable(web_role.main)
           assert callable(worker_role.main)
+          assert callable(auth_role.main)
+          assert PasswordService is not None
 
           import core.feed_contract as legacy_feed_contract
           assert legacy_feed_contract.FeedSource is feed_contract.FeedSource
@@ -138,17 +142,22 @@ jobs:
           set -euo pipefail
           name="narrowcti-web-smoke-${GITHUB_RUN_ID}"
           volume="narrowcti-web-state-${GITHUB_RUN_ID}"
+          auth_volume="narrowcti-web-auth-${GITHUB_RUN_ID}"
           cleanup() {
             docker rm -f "${name}" >/dev/null 2>&1 || true
             docker volume rm "${volume}" >/dev/null 2>&1 || true
+            docker volume rm "${auth_volume}" >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
           docker volume create "${volume}" >/dev/null
+          docker volume create "${auth_volume}" >/dev/null
           docker run -d --name "${name}" --read-only --tmpfs /tmp \
             --mount "type=volume,src=${volume},dst=/app/state" \
+            --mount "type=volume,src=${auth_volume},dst=/app/auth" \
             --mount "type=bind,src=${GITHUB_WORKSPACE}/deployment/review-api-credentials.example.json,dst=/run/secrets/narrowcti-review-api-credentials.json,readonly" \
             -e NARROWCTI_STATE_DIR=/app/state \
             -e NARROWCTI_RUNTIME_DB=/app/state/runtime.db \
+            -e NARROWCTI_AUTH_DB=/app/auth/auth.db \
             -e NARROWCTI_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl \
             -e NARROWCTI_RELEASE_AUDIT_FILE=/app/state/audit/releases.jsonl \
             -e NARROWCTI_REVIEW_API_CREDENTIALS_FILE=/run/secrets/narrowcti-review-api-credentials.json \

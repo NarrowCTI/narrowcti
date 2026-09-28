@@ -7,6 +7,8 @@ from pathlib import Path
 from narrowcti.adapters.sources.misp.explorer import MISPSourceExplorer
 from narrowcti.adapters.sources.otx.explorer import OTXSourceExplorer
 from narrowcti.adapters.persistence.local.web_evidence_reader import read_recent_records
+from narrowcti.adapters.persistence.local.operator_store import LocalOperatorStore
+from narrowcti.application.identity.passwords import LocalOperatorAuthenticator, PasswordService
 from narrowcti.application.source_explorer import SourceExplorerService
 from narrowcti.application.reporting.web_evidence import WebEvidenceService
 from narrowcti.infrastructure.config.web_settings import SourceExplorerSettings
@@ -48,4 +50,10 @@ def build_web_evidence(settings) -> WebEvidenceService:
     return WebEvidenceService(reader)
 
 
-__all__ = ["build_source_explorer", "build_web_evidence"]
+def build_operator_authentication(settings):
+    """Compose local operator persistence and password authentication for Web."""
+    store = LocalOperatorStore(settings.auth_db)
+    return store, LocalOperatorAuthenticator(store, PasswordService())
+
+
+__all__ = ["build_operator_authentication", "build_source_explorer", "build_web_evidence"]

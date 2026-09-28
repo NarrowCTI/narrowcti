@@ -121,15 +121,45 @@ introducing commercial control-plane scope.
 - Existing Review API bearer authentication, routes, permissions, payloads
   and status behavior remain unchanged. API endpoints remain bearer-only and
   do not accept browser session cookies.
-- Web login validates an existing provisioned NarrowCTI credential using the
-  current `ReviewCredentialStore`, discards the raw token, and creates a
-  separate opaque in-memory server-side session. The bearer token is never
-  stored in browser storage/cookies/HTML/URLs/logs or returned to JavaScript.
+- Community browser identity uses deployment-provisioned local operator
+  accounts. The login form accepts username and password and verifies the
+  password with Argon2id through `LocalOperatorStore`; it never accepts a
+  Review API bearer token as a human login credential.
+- Review API bearer authentication remains an independent, backward-compatible
+  API/automation channel using `ReviewCredentialStore`. Browser sessions do not
+  authenticate `/api/v1/review/*`, and bearer tokens do not establish Web
+  sessions.
+- Operator identity is stored in a dedicated versioned SQLite auth database
+  (`NARROWCTI_AUTH_DB`, Compose default `/app/auth/auth.db`) on a named
+  `narrowcti-auth` volume. It is separate from `NARROWCTI_RUNTIME_DB`, which
+  remains job, lease and process-coordination state. Worker has no auth-volume
+  mount. A one-shot Ops helper provisions accounts through
+  `python -m narrowcti.cli.auth`.
+- The first operator must be an admin; the store refuses to disable or demote
+  the last enabled admin. There are no default credentials or self-registration.
+  Account administration is deployment-managed through CLI commands; the
+  browser exposes only the signed-in operator's My Account and own-password
+  change surface. Community does not add SSO/OIDC/SAML, MFA or graphical IAM.
+- Passwords use the directly declared `argon2-cffi` dependency with Argon2id
+  parameters `m=19456 KiB`, `t=2`, `p=1`, 32-byte output and 16-byte salt,
+  selected from current OWASP password-storage guidance and maintained
+  `argon2-cffi` parameter guidance. PHC hashes support rehash-on-success when
+  parameters change; transparent parameter-only rehash does not increment
+  `auth_revision`.
+- Successful local authentication creates a separate opaque in-memory
+  server-side session. Passwords and hashes never enter sessions, cookies,
+  HTML, URLs, logs or browser storage. Password, role or enabled-state changes
+  increment `auth_revision`; authenticated requests load the current operator,
+  reject stale/disabled identities and derive current roles.
+- Login uses the same public error for unknown, wrong-password and disabled
+  accounts, dummy Argon2 verification for unknown/malformed hashes, bounded
+  password input, process-local throttling and bounded concurrent KDF work.
+  Failed attempts reuse the anonymous CSRF session; successful authentication
+  rotates it.
 - Sessions use cryptographically random identifiers, bounded in-memory
   storage, absolute and idle expiry, session rotation after login, logout
-  deletion, credential revocation and session-bound CSRF material. Web
-  restart invalidates all sessions; credential-file changes require restart
-  and therefore also invalidate sessions. No session SQLite database or
+  deletion, operator auth-revision validation and session-bound CSRF material.
+  Web restart invalidates all sessions. No session SQLite database or
   `runtime.db` session data is introduced.
 - Production cookie defaults are `HttpOnly`, `Secure`, `SameSite=Lax`,
   `Path=/`, no `Domain` and bounded `Max-Age`. Secure-cookie disablement is an

@@ -161,9 +161,12 @@ jobs:
         run: |
           set -euo pipefail
           root="${RUNNER_TEMP}/narrowcti-web-ui-dast"
-          mkdir -p "${root}/state/audit" "${root}/reports"
+          mkdir -p "${root}/state/audit" "${root}/reports" "${root}/auth"
           token="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
           echo "::add-mask::${token}"
+          operator_password="$(python -c 'import secrets; print(secrets.token_urlsafe(24))')"
+          echo "::add-mask::${operator_password}"
+          chmod -R 0777 "${root}/auth"
           token_hash="$(TOKEN="${token}" python -c 'import hashlib, os; print(hashlib.sha256(os.environ["TOKEN"].encode()).hexdigest())')"
           TOKEN_HASH="${token_hash}" CREDENTIALS_PATH="${root}/credentials.json" python - <<'PY'
           import json
@@ -186,6 +189,20 @@ jobs:
           chmod -R 0777 "${root}/state" "${root}/reports"
           echo "NARROWCTI_WEB_DAST_ROOT=${root}" >> "${GITHUB_ENV}"
           echo "NARROWCTI_WEB_DAST_TOKEN=${token}" >> "${GITHUB_ENV}"
+          echo "NARROWCTI_WEB_DAST_USERNAME=web-dast-admin" >> "${GITHUB_ENV}"
+          echo "NARROWCTI_WEB_DAST_PASSWORD=${operator_password}" >> "${GITHUB_ENV}"
+
+      - name: Provision synthetic local browser operator
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "${NARROWCTI_WEB_DAST_PASSWORD}" | docker run --rm -i \
+            --read-only --tmpfs /tmp \
+            --volume "${NARROWCTI_WEB_DAST_ROOT}/auth:/app/auth" \
+            --env NARROWCTI_AUTH_DB=/app/auth/auth.db \
+            narrowcti-web-ui-dast:scan \
+            python -m narrowcti.cli.auth create-operator \
+              --username "${NARROWCTI_WEB_DAST_USERNAME}" --role admin --password-stdin
 
       - name: Start disposable Community Web role
         shell: bash
@@ -208,9 +225,11 @@ jobs:
             --env NARROWCTI_WEB_COOKIE_SECURE=true \
             --env NARROWCTI_STATE_DIR=/app/state \
             --env NARROWCTI_RUNTIME_DB=/app/state/runtime.db \
+            --env NARROWCTI_AUTH_DB=/app/auth/auth.db \
             --env NARROWCTI_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl \
             --env NARROWCTI_RELEASE_AUDIT_FILE=/app/state/audit/releases.jsonl \
             --volume "${NARROWCTI_WEB_DAST_ROOT}/state:/app/state" \
+            --volume "${NARROWCTI_WEB_DAST_ROOT}/auth:/app/auth" \
             --volume "${NARROWCTI_WEB_DAST_ROOT}/credentials.json:/run/secrets/credentials.json:ro" \
             --publish 127.0.0.1:18082:8081 \
             narrowcti-web-ui-dast:scan \
@@ -263,9 +282,32 @@ jobs:
           if not initial_cookie:
               raise SystemExit("anonymous session cookie was not issued")
 
+          # API tokens are not browser identities, even in this shared Web process.
+          bearer_as_password = Request(
+              base + "/login",
+              data=urlencode({
+                  "username": os.environ["NARROWCTI_WEB_DAST_USERNAME"],
+                  "password": os.environ["NARROWCTI_WEB_DAST_TOKEN"],
+                  "_csrf": parser.token,
+              }).encode(),
+              headers={"Content-Type": "application/x-www-form-urlencoded", "Origin": base, "Cookie": initial_cookie},
+              method="POST",
+          )
+          try:
+              opener.open(bearer_as_password, timeout=5)
+          except HTTPError as error:
+              if error.code != 401:
+                  raise
+          else:
+              raise SystemExit("Review API bearer unexpectedly authenticated browser login")
+
           post = Request(
               base + "/login",
-              data=urlencode({"credential": os.environ["NARROWCTI_WEB_DAST_TOKEN"], "_csrf": parser.token}).encode(),
+              data=urlencode({
+                  "username": os.environ["NARROWCTI_WEB_DAST_USERNAME"],
+                  "password": os.environ["NARROWCTI_WEB_DAST_PASSWORD"],
+                  "_csrf": parser.token,
+              }).encode(),
               headers={
                   "Content-Type": "application/x-www-form-urlencoded",
                   "Origin": base,
@@ -289,12 +331,28 @@ jobs:
               request = Request(base + path, headers={"Cookie": authenticated_cookie})
               return opener.open(request, timeout=5)
 
+          try:
+              opener.open(Request(base + "/api/v1/review/summary", headers={"Cookie": authenticated_cookie}), timeout=5)
+          except HTTPError as error:
+              if error.code != 401:
+                  raise
+          else:
+              raise SystemExit("browser cookie unexpectedly authenticated the bearer API")
+          api_request = Request(
+              base + "/api/v1/review/summary",
+              headers={"Authorization": "Bearer " + os.environ["NARROWCTI_WEB_DAST_TOKEN"]},
+          )
+          with opener.open(api_request, timeout=5) as api_response:
+              if api_response.status != 200:
+                  raise SystemExit("Review API bearer authentication failed")
+
           for path, marker in (
               ("/", "Community workspace"),
               ("/explorer", "Source Explorer"),
               ("/review", "Quarantine review"),
               ("/evidence", "Evidence and decisions"),
               ("/reports", "Report inventory"),
+              ("/account", "My account"),
               ("/openapi.json", '"openapi"'),
               ("/docs", "Swagger UI"),
           ):
