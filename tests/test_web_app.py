@@ -256,6 +256,13 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("No local NarrowCTI operator has been configured.", page.text)
         self.assertFalse(empty.has_operators())
 
+    def test_account_password_form_matches_minimum_policy(self):
+        self._login()
+        response = self.client.get("/account")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(2, response.text.count('minlength="15"'))
+        self.assertEqual(3, response.text.count('maxlength="1024"'))
+
     def test_role_disable_and_password_changes_revoke_existing_sessions(self):
         self._login()
         self.operator_store.set_roles(self.reader_operator.operator_id, ["reader", "reviewer"])

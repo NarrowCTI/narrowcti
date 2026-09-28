@@ -11,7 +11,7 @@ from argon2.low_level import Type
 from narrowcti.domain.security.operators import OperatorRecord
 from narrowcti.ports.operator_store import OperatorStore
 
-MIN_PASSWORD_CHARACTERS = 12
+MIN_PASSWORD_CHARACTERS = 15
 MAX_PASSWORD_BYTES = 1024
 ARGON2_TIME_COST = 2
 ARGON2_MEMORY_COST_KIB = 19 * 1024
@@ -62,9 +62,9 @@ class PasswordService:
             self.hasher.verify(password_hash, password)
             return True
         except VerifyMismatchError:
-            return None
-        except (InvalidHashError, VerificationError, ValueError, TypeError):
             return False
+        except (InvalidHashError, VerificationError, ValueError, TypeError):
+            return None
 
     def needs_rehash(self, password_hash: str) -> bool:
         try:
