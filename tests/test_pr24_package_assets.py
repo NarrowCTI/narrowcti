@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
 
-from scripts.validate_package_wheel import assert_brand_asset_projection
+
+ROOT = Path(__file__).resolve().parents[1]
+VALIDATOR_SPEC = importlib.util.spec_from_file_location(
+    "narrowcti_wheel_validator", ROOT / "scripts" / "validate_package_wheel.py"
+)
+if VALIDATOR_SPEC is None or VALIDATOR_SPEC.loader is None:
+    raise RuntimeError("could not load the wheel validator")
+VALIDATOR = importlib.util.module_from_spec(VALIDATOR_SPEC)
+VALIDATOR_SPEC.loader.exec_module(VALIDATOR)
+assert_brand_asset_projection = VALIDATOR.assert_brand_asset_projection
 
 
 class BrandAssetProjectionTests(unittest.TestCase):
@@ -44,12 +54,11 @@ class BrandAssetProjectionTests(unittest.TestCase):
 
 class HtmxAssetProvenanceTests(unittest.TestCase):
     def test_vendored_htmx_version_checksum_license_and_notice_are_consistent(self):
-        root = Path(__file__).resolve().parents[1]
-        static = root / "src" / "narrowcti" / "api" / "web" / "static"
+        static = ROOT / "src" / "narrowcti" / "api" / "web" / "static"
         asset = static / "htmx.min.js"
         version = (static / "HTMX-VERSION.txt").read_text(encoding="utf-8")
         license_text = (static / "HTMX-LICENSE.txt").read_text(encoding="utf-8")
-        notices = (root / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+        notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
 
         self.assertIn("htmx 2.0.11", version)
         self.assertIn("SHA-256: " + hashlib.sha256(asset.read_bytes()).hexdigest(), version)

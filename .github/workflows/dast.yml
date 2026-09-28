@@ -336,6 +336,7 @@ jobs:
             ghcr.io/zaproxy/zaproxy:2.17.0 \
             zap-baseline.py \
             -t http://narrowcti-web-ui-dast:8081/explorer \
+            -I \
             -m 5 \
             -J narrowcti-web-ui-zap.json \
             -r narrowcti-web-ui-zap.html \
