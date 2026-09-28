@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ item.summary.title }} · Source Explorer{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="/explorer">Source Explorer</a> / {{ item.summary.provider_key|upper }}</p>
+<section class="hero compact">
+  <h1>{{ item.summary.title }}</h1>
+  <p class="muted">External ID {{ item.summary.external_id }}{% if item.summary.published_at %} · Published {{ item.summary.published_at }}{% endif %}</p>
+  {% if item.summary.tags %}<div class="tag-list">{% for tag in item.summary.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}
+</section>
+<section class="panel">
+  <h2>Source details</h2>
+  {% if item.fields.description %}<p class="description">{{ item.fields.description }}</p>{% endif %}
+  <dl class="detail-grid">
+    {% for key, value in item.fields.items() if key not in ('description', 'attributes', 'indicators', 'tags') and value is not none %}
+    <dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>
+    {% endfor %}
+  </dl>
+  {% set observables = item.fields.attributes or item.fields.indicators or [] %}
+  {% if observables %}<h3>Indicators ({{ observables|length }} shown)</h3><ul class="observable-list">{% for observable in observables %}<li><code>{{ observable.type }}</code><span>{{ observable.value }}</span></li>{% endfor %}</ul>{% endif %}
+  {% if item.summary.revision_fingerprint %}<p class="fingerprint"><span class="muted">Revision fingerprint:</span> <code>{{ item.summary.revision_fingerprint }}</code></p>{% endif %}
+</section>
+{% if item.summary.revision_fingerprint %}
+<section class="panel">
+  <h2>Evaluate with the governed Worker</h2>
+  <p class="muted">Preview is ephemeral. Dry-run may record local decision evidence and quarantine outcomes but never exports to OpenCTI or checkpoints successful ingestion.</p>
+  {% for mode, permission, label in [('preview', 'ingestion:preview', 'Preview'), ('dry-run', 'ingestion:dry_run', 'Dry-run'), ('run-once', 'ingestion:run', 'Run once')] %}
+    {% if principal.has_permission(permission) %}
+    <form method="post" action="/explorer/{{ item.summary.provider_key }}/{{ item.summary.external_id|urlencode }}/{{ mode }}" class="inline-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <input type="hidden" name="request_id" value="{{ request_id }}">
+      <input type="hidden" name="expected_fingerprint" value="{{ item.summary.revision_fingerprint }}">
+      <button class="button {{ 'primary' if mode == 'preview' else 'quiet' }}" type="submit">{{ label }}</button>
+    </form>
+    {% endif %}
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

@@ -8,6 +8,18 @@ from typing import Any, Mapping, Protocol
 
 
 QUARANTINE_EXPORT_JOB = "quarantine.export"
+INGESTION_PREVIEW_JOB = "ingestion.preview"
+INGESTION_DRY_RUN_JOB = "ingestion.dry_run"
+INGESTION_RUN_ONCE_JOB = "ingestion.run_once"
+INGESTION_JOB_TYPES = frozenset({
+    INGESTION_PREVIEW_JOB,
+    INGESTION_DRY_RUN_JOB,
+    INGESTION_RUN_ONCE_JOB,
+})
+
+
+class ActiveJobLimitReached(RuntimeError):
+    """The bounded active-job allowance has been reached."""
 
 
 def quarantine_export_idempotency_key(quarantine_id: str, released_indicators) -> str:
@@ -40,6 +52,8 @@ class JobRepository(Protocol):
         source: str,
         payload: Mapping[str, Any],
         idempotency_key: str,
+        *,
+        active_limit: int | None = None,
     ) -> Mapping[str, Any]: ...
 
     def get(self, job_id: str) -> Mapping[str, Any] | None: ...
@@ -67,4 +81,13 @@ class JobRepository(Protocol):
     ) -> Mapping[str, Any]: ...
 
 
-__all__ = ["JobRepository", "QUARANTINE_EXPORT_JOB", "quarantine_export_idempotency_key"]
+__all__ = [
+    "ActiveJobLimitReached",
+    "INGESTION_DRY_RUN_JOB",
+    "INGESTION_JOB_TYPES",
+    "INGESTION_PREVIEW_JOB",
+    "INGESTION_RUN_ONCE_JOB",
+    "JobRepository",
+    "QUARANTINE_EXPORT_JOB",
+    "quarantine_export_idempotency_key",
+]

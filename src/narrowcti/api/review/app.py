@@ -174,6 +174,7 @@ def create_app(settings=None, review_service=None, credential_store=None, openct
         redoc_url=None, openapi_url="/openapi.json" if settings.docs_enabled else None,
     )
     app.state.settings = settings
+    app.state.review_service = review_service
     app.state.job_repository = (
         SQLiteJobRepository(SQLiteRuntimeStore(settings.runtime_db_file))
         if settings.runtime_db_file

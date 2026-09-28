@@ -8,13 +8,12 @@ import re
 import secrets
 from dataclasses import dataclass
 
-VALID_ROLES = frozenset({"reader", "reviewer", "exporter", "admin"})
-ROLE_PERMISSIONS = {
-    "reader": frozenset({"review:read"}),
-    "reviewer": frozenset({"review:read", "review:decide", "export:preview"}),
-    "exporter": frozenset({"review:read", "export:preview", "export:execute"}),
-    "admin": frozenset({"*"}),
-}
+from narrowcti.domain.security.identity import (
+    ROLE_PERMISSIONS,
+    VALID_ROLES,
+    has_permission,
+)
+
 PRINCIPAL_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._@-]{0,127}$")
 SHA256_PATTERN = re.compile(r"^[a-fA-F0-9]{64}$")
 
@@ -26,10 +25,7 @@ class ReviewPrincipal:
     credential_id: str = ""
 
     def has_permission(self, permission):
-        granted = set()
-        for role in self.roles:
-            granted.update(ROLE_PERMISSIONS[role])
-        return "*" in granted or permission in granted
+        return has_permission(self.roles, permission)
 
 
 class ReviewCredentialStore:

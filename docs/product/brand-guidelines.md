@@ -29,10 +29,11 @@ tree. The CybersysBR authorship logo remains available at
 
 Keep clear space around the symbol at approximately 10% of the symbol height.
 At 32 px and below, prefer the isolated symbol rather than a full wordmark.
-For the future expanded header use the horizontal logo; for compact or
-collapsed identity use the isolated symbol; for browser identity use the
-favicon; and for dark/light surfaces use the matching approved variant. PR-21
-does not define the final browser layout; that belongs to a future UI wave.
+The Community Web expanded header uses the approved horizontal logo. Use the
+isolated symbol only for a compact identity surface, the canonical favicon for
+browser identity, and the matching approved variant for dark/light surfaces.
+The application uses the build-projected canonical files from
+`docs/assets/brand/`; do not copy or edit alternative artwork in runtime code.
 
 ## Core palette
 
@@ -46,6 +47,10 @@ does not define the final browser layout; that belongs to a future UI wave.
 
 The official SVG logo artwork also contains `#081827`, `#1FDCF0` and `#008EE8`.
 Those are logo-only rendering tokens and are not additional UI palette tokens.
+Community Web uses the canonical palette above: Navy `#102A43` for the shell,
+Slate `#1E3A5F` for panels, Cloud `#F8FAFC` for primary text, Muted `#94A3B8`
+for secondary text/borders, and Cyan `#00A8E8` for actions and current-page
+emphasis. Preserve readable contrast when applying the palette responsively.
 
 ## Usage
 

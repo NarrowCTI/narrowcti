@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Community workspace · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">Community workspace</p>
+  <h1>Welcome, {{ principal.principal }}</h1>
+  <p class="muted">A bounded view of configured Community services. Source operations remain read-only until explicitly submitted to the Worker.</p>
+</section>
+<section class="panel">
+  <div class="section-heading">
+    <div><p class="eyebrow">Read-only discovery</p><h2>Source Explorer</h2></div>
+    <a class="button primary" href="/explorer">Browse sources</a>
+  </div>
+  <p class="muted">Search and inspect configured providers. Exploration does not create ingestion jobs or alter source data.</p>
+  <div class="provider-grid">
+    {% for provider in providers %}
+    <article class="provider-card">
+      <span class="status-dot {{ 'available' if provider.available else 'unavailable' }}" aria-hidden="true"></span>
+      <h3>{{ provider.display_name }}</h3>
+      <p>{{ 'Available' if provider.available else 'Not configured' }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+<section class="panel status-panel" aria-labelledby="review-status-heading">
+  <div class="section-heading"><div><p class="eyebrow">Local review service</p><h2 id="review-status-heading">Quarantine status</h2></div>
+  {% if principal.has_permission('review:read') %}<a class="button quiet" href="/review">Open review queue</a>{% endif %}</div>
+  {% if review_summary.status == 'available' %}
+  <dl class="status-grid">
+    <div><dt>Pending</dt><dd>{{ review_summary.pending if review_summary.pending is not none else 'Not reported' }}</dd></div>
+    <div><dt>Released</dt><dd>{{ review_summary.released if review_summary.released is not none else 'Not reported' }}</dd></div>
+    <div><dt>Records</dt><dd>{{ review_summary.records if review_summary.records is not none else 'Not reported' }}</dd></div>
+  </dl>
+  {% elif review_summary.status == 'error' %}<p role="status">Review status could not be read.</p>
+  {% else %}<p class="muted">Review status is unavailable.</p>{% endif %}
+</section>
+{% if principal.has_permission('review:read') and capabilities.get('reporting.operational') %}
+<section class="panel"><div class="section-heading"><div><p class="eyebrow">Audit trail</p><h2>Evidence and reports</h2></div></div>
+  <p class="muted">Recent decisions are safely projected from local audit records. Existing Ops reports are listed separately; this Web role does not schedule report generation.</p>
+  <div class="action-row"><a class="button quiet" href="/evidence">View evidence</a><a class="button quiet" href="/reports">Report inventory</a></div>
+</section>
+{% endif %}
+{% if principal.has_permission('review:read') %}
+<section class="panel">
+  <div class="section-heading"><div><p class="eyebrow">Analyst workflow</p><h2>Quarantine review</h2></div><a class="button quiet" href="/review">Open review queue</a></div>
+  <p class="muted">Review decisions remain explicit and auditable. Exported intelligence is submitted to the Worker.</p>
+</section>
+{% endif %}
+{% endblock %}

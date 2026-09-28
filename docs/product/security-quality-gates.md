@@ -21,7 +21,7 @@ their applicable gates before a version tag and GitHub Release are created.
 | Secret protection | Prevent credentials from entering history | GitHub secret scanning/push protection and release-history scan evidence | Any verified secret blocks publication and requires rotation. |
 | Container scan | Detect operating-system and Python package vulnerabilities in the final image | Scan of the exact image before publication | Unaccepted high or critical findings block image push. |
 | SBOM | Record release image contents | Machine-readable SBOM attached to the workflow or release | Missing SBOM blocks the final release image. |
-| DAST | Test an exposed HTTP surface at runtime | Baseline scan of a disposable analyst review API deployment | Required once the HTTP API exists; alerts require triage before release. |
+| DAST | Test exposed HTTP surfaces at runtime | Authenticated disposable Review API OWASP ZAP scan using a synthetic bearer token plus authenticated browser/UI scan using a separately provisioned synthetic local username/password and unavailable/fake source providers | Both scans must verify their distinct authentication channels before scanning; alerts require triage before release. |
 | OpenCTI end-to-end | Validate claimed graph behavior | Controlled ingestion and relationship audit evidence | Missing evidence blocks the related release claim. |
 | Upgrade and recovery | Protect operator continuity | Documented v0.9 to v1.0 upgrade and rollback/recovery result | Failure blocks release. |
 
@@ -55,7 +55,7 @@ The initial v0.9 audit established:
   dependency audit reported no known vulnerabilities.
 - A version-scoped, fail-closed compatibility client was live-validated against
   OpenCTI `6.9.4`: two imports, zero rejected objects and exactly one Report.
-- The v0.9 analyst HTTP API now has a dedicated DAST workflow. It creates an
+- The analyst bearer HTTP API has a dedicated DAST workflow. It creates an
   isolated API deployment, validates unauthenticated and authenticated access,
   runs OWASP ZAP `2.17.0` against its OpenAPI contract, archives JSON/HTML
   evidence and removes the deployment after every run.
@@ -68,6 +68,15 @@ refresh the checks against the release commit and image.
 DAST must run only against a disposable test deployment created for CI or an
 isolated release-validation environment. It must not target production or a
 shared OpenCTI/MISP lab containing operational data.
+
+The authenticated Community Web scan must also verify local username/password
+browser login and logout, API bearer compatibility and channel isolation,
+server-side permissions for navigation/page groups, CSRF rejection,
+rate-limit responses, and absence of provider
+credentials, raw evidence metadata, local paths and exception details. Use
+synthetic credentials and unavailable or fake providers. If the API docs flag
+is enabled for a controlled environment, `/docs` and `/openapi.json` must
+remain reachable without relaxing the global CSP.
 
 The release cannot close until the DAST workflow starts the disposable service,
 waits for its health endpoint, proves protected endpoints reject missing
@@ -100,8 +109,8 @@ reviewers and branch/tag restrictions before it is considered a blocking gate.
 
 GitHub Rulesets require job check names rather than workflow display names. The
 current blocking job names are `Python tests`, `Python quality, SAST and
-dependencies`, `Build, scan and publish gateway image` and `Analyst review API
-OWASP ZAP`. A check should be selected only when its workflow runs for the
+dependencies`, `Build, scan and publish gateway image`, `Analyst review API
+OWASP ZAP` and `Community Web UI OWASP ZAP`. A check should be selected only when its workflow runs for the
 target pull request or release ref.
 
 ## Release Evidence

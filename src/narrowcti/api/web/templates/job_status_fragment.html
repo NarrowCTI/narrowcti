@@ -1,0 +1,10 @@
+<section class="panel" {% if job.status in ('pending', 'running') %}hx-get="/jobs/{{ job.job_id }}/status" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  {% if job.error %}<h2>Could not complete</h2><p>{{ job.error }}</p>{% endif %}
+  {% if job.result %}
+  <h2>Bounded result</h2>
+  <dl class="detail-grid">
+    {% for key, value in job.result.items() if key != 'items' %}<dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>{% endfor %}
+  </dl>
+  {% for item in job.result.items or [] %}<article><strong>{{ item.action }}</strong><dl class="detail-grid">{% for key, value in item.items() if key != 'action' %}<dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></article>{% endfor %}
+  {% endif %}
+</section>

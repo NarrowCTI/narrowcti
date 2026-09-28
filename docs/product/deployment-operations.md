@@ -55,8 +55,9 @@ backed-up ownership migration before starting the new image.
 
 The same image exposes explicit role entry points. Run exactly one Worker for a
 state volume; its SQLite lease prevents a second Worker from processing the same
-runtime at the same time. The Web role is an endpoint-driven review API and the
-Ops role is reserved for bounded one-shot commands:
+runtime at the same time. The Web role serves the browser UI and bearer API in
+one endpoint-driven process; the Ops role is reserved for bounded one-shot
+commands:
 
 ```text
 Worker: python -m narrowcti.cli.worker
@@ -68,9 +69,14 @@ Set `NARROWCTI_RUNTIME_DB` to a path on the shared `narrowcti-state` volume (the
 default is `/app/state/runtime.db`). It contains only job, lease and
 cross-process mutation-coordination metadata. Existing JSON/JSONL checkpoints,
 quarantine records, artifact indexes and audit evidence remain authoritative and
-retain their historical formats. The `web` and `review-api` Compose profiles
-are alternative API entry points; do not run both against the same published
-host port.
+retain their historical formats. The `web` profile starts the shared UI/API
+process. There is no separate Review API service or second HTTP process.
+
+The browser identity is separate from Review API bearer credentials. Its
+versioned local SQLite database defaults to `NARROWCTI_AUTH_DB=/app/auth/auth.db`
+and is persisted in the dedicated `narrowcti-auth` volume. The Worker does not
+mount or require this volume. `NARROWCTI_RUNTIME_DB` remains separate and
+contains runtime coordination only.
 
 For local validation, the default image is `narrowcti/gateway:local`. The latest
 published stable release is v1.0. For release deployments, use a pinned
@@ -98,18 +104,39 @@ docker compose -f deployment\docker-compose.narrowcti-gateway.yml run --rm narro
 Keep the first run dry-run, run-once and audit-first. Review reports before any
 continuous execution or graph export.
 
-## Optional Analyst Review API
+For the Community browser UI, provision the first local administrator through
+the one-shot Ops helper. It uses the same image and auth volume as Web:
 
-v0.9 adds an isolated `review-api` Compose profile. It shares only the
-NarrowCTI state volume and selected deployment networks with the gateway, runs with a
-read-only root filesystem, drops Linux capabilities and publishes its port to
-host loopback only.
+```powershell
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile web --profile ops up -d --build narrowcti-web
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile ops run --rm --no-deps narrowcti-operator-auth create-operator --username fagner --role admin
+```
+
+The CLI prompts for a password and confirmation without terminal echo. The
+first account must be an admin; there is no default account or password. For
+automation, use `--password-stdin` and pipe one line from a protected secret
+source—never put the password in a command-line argument. Then open
+`http://127.0.0.1:8081` and sign in with the local username and password. API
+bearer tokens remain exclusively for API clients and do not work as browser
+credentials. The one-shot helper also supports `list-operators`,
+`set-password`, `set-roles`, `enable` and `disable`; the last enabled admin
+cannot be disabled or demoted.
+
+## Community Web UI, Source Explorer and Review API
+
+The `web` Compose profile starts the server-rendered Community UI, Source
+Explorer and existing bearer Review API together in `narrowcti-web`. Browser
+HTML routes use in-memory server-side sessions; `/api/v1/review/*` remains
+bearer-only and preserves its existing contract. See
+[`web-source-explorer.md`](web-source-explorer.md) for credentials, permissions,
+provider overlays, evaluation jobs and browser security.
 
 Create a hashed credential file before starting it. The versioned example is
 deliberately unusable.
 
 ```powershell
 python -m gateway.review_auth
+Copy-Item deployment\web.env.example deployment\web.env
 Copy-Item deployment\review-api-credentials.example.json deployment\review-api-credentials.json
 ```
 
@@ -118,12 +145,22 @@ a Compose host interpolation, so set it in the shell and start the service:
 
 ```powershell
 $env:NARROWCTI_REVIEW_API_CREDENTIALS_SOURCE = "./review-api-credentials.json"
-$env:NARROWCTI_REVIEW_API_PUBLISHED_PORT = "8081"
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile review-api up -d --build narrowcti-review-api
+$env:NARROWCTI_WEB_ENV_FILE = "./web.env"
+$env:NARROWCTI_WEB_PUBLISHED_PORT = "8081"
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile web up -d --build narrowcti-web
 ```
 
-Keep real export disabled until preview and deduplication checks pass. See
-`analyst-review-api.md` for the complete security and role model.
+Keep real export disabled until preview and deduplication checks pass. The Web
+service and API share credential hashes but not an authentication mechanism:
+browser pages require a session plus CSRF, while API routes require a bearer
+header.
+
+The Web shell includes Overview, Sources / Explorer, Review / Quarantine,
+Evidence / Decisions and Reports. The evidence view is a bounded, redacted
+projection of configured local decision JSONL; report inventory does not write
+files or schedule jobs. Failed login attempts and each ingestion operation
+have separate process-local rate limits. Provider calls reject immediately
+with a stable busy result rather than growing an unbounded wait queue.
 
 ## State Backup And Restore
 

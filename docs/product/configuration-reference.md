@@ -67,6 +67,20 @@ The PR-04 inventory is therefore:
 | `MISP_URL` | MISP | Required for MISP | MISP base URL used by the MISP adapter. |
 | `MISP_KEY` | MISP | Required for MISP | MISP API key. Must never be committed. |
 
+## Local Web Operator Identity
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `NARROWCTI_AUTH_DB` | `/app/auth/auth.db` | Dedicated versioned SQLite store for local Community browser operators. It must not point to `NARROWCTI_RUNTIME_DB`. |
+
+The auth database stores Argon2id password hashes and account authorization
+state, not plaintext passwords or API bearer tokens. Compose mounts its named
+`narrowcti-auth` volume only into the Web role and the one-shot operator
+provisioning role; the Worker does not mount it. Local passwords are not
+trimmed, require at least 15 characters and are bounded to 1024 UTF-8 bytes.
+Usernames are case-insensitive ASCII identifiers, 1–64 characters from
+letters, digits, dot, underscore and hyphen. There are no default accounts.
+
 ## Compose Deployment Variables
 
 | Variable | Default | Effect |
@@ -158,6 +172,31 @@ indicator-type filter that removes every exportable indicator. Start with
 
 Credential format, roles and endpoint behavior are documented in
 `analyst-review-api.md`.
+
+### Community Web and Source Explorer
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `NARROWCTI_WEB_ALLOWED_HOSTS` | `NARROWCTI_REVIEW_API_ALLOWED_HOSTS`, otherwise `127.0.0.1,localhost,testserver` | Host allowlist for the Web role. Configure the externally visible host explicitly when using a reverse proxy; forwarded headers are not trusted implicitly. The legacy Review API variable remains a fallback only. |
+| `NARROWCTI_WEB_PUBLIC_ORIGIN` | Empty | Exact externally visible HTTP(S) origin used for CSRF Origin validation behind a TLS-terminating proxy. Remote origins must use HTTPS; do not include a path. |
+| `NARROWCTI_WEB_COOKIE_SECURE` | `true` | Enables the production `Secure` session cookie. `false` is permitted only with local HTTP development. |
+| `NARROWCTI_WEB_MAX_BODY_BYTES` | `NARROWCTI_REVIEW_API_MAX_BODY_BYTES`, otherwise `16384` | Bounds browser request bodies, including requests without Content-Length. The legacy Review API variable remains a fallback only. |
+| `NARROWCTI_WEB_SESSION_IDLE_SECONDS` | `1800` | Idle session expiration. |
+| `NARROWCTI_WEB_SESSION_ABSOLUTE_SECONDS` | `28800` | Absolute in-memory session lifetime; a Web restart invalidates all sessions. |
+| `NARROWCTI_DECISION_AUDIT_DIR` | `/app/state/audit` | Fixed local JSONL source for the Web Evidence projection. The browser cannot provide or choose a path. Reads are bounded and allowlisted fields only are returned. |
+| `NARROWCTI_WEB_MISP_URL` | Empty | Dedicated configured MISP endpoint for transient Source Explorer reads. No user-supplied URL is accepted. |
+| `NARROWCTI_WEB_MISP_KEY_FILE` | `/run/secrets/narrowcti-web-misp-key` in the example | File containing a dedicated MISP Explorer identity; no fallback to `MISP_KEY`. |
+| `NARROWCTI_WEB_MISP_VERIFY_TLS` | `true` | Strict TLS verification for MISP Explorer. Invalid values fail startup closed. |
+| `NARROWCTI_WEB_OTX_KEY_FILE` | `/run/secrets/narrowcti-web-otx-key` in the example | File containing a dedicated OTX Explorer key; no fallback to `OTX_API_KEY`. |
+| `NARROWCTI_WEB_SOURCE_MAX_RESPONSE_BYTES` | `1000000` | Maximum byte size of one Explorer provider response. |
+| `NARROWCTI_WEB_PUBLISHED_PORT` | `8081` | Compose host port bound to loopback for the shared Web/API service. |
+| `NARROWCTI_WEB_ENV_FILE` | `./web.env.example` in Compose | Host path to the Web role environment file. |
+| `NARROWCTI_WEB_MISP_KEY_SOURCE` | Unset | Optional Compose overlay host path to the dedicated MISP key file. |
+| `NARROWCTI_WEB_OTX_KEY_SOURCE` | Unset | Optional Compose overlay host path to the dedicated OTX key file. |
+
+Explorer providers remain unavailable when their endpoint/key is absent; this
+does not disable the Web UI or the independent bearer API. See
+[`web-source-explorer.md`](web-source-explorer.md) for setup and safe operation.
 
 ## OTX Source
 

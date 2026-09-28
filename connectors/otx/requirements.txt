@@ -2,9 +2,11 @@ pycti==7.260910.0
 setuptools==82.0.1
 msgpack==1.2.2
 fastapi==0.141.1
+jinja2==3.1.6
 uvicorn==0.52.4
 stix2==3.0.2
 requests==2.33.0
 python-dateutil==2.9.0.post0
 urllib3==2.7.0
 sigmatools==0.23.1
+argon2-cffi==25.1.0

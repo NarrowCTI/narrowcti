@@ -6,7 +6,8 @@ RUN python -m venv /opt/narrowcti-venv \
     && /opt/narrowcti-venv/bin/python -m pip install --no-cache-dir --upgrade \
         pip setuptools==82.0.1 wheel
 
-COPY pyproject.toml VERSION README.md LICENSE /build/
+COPY pyproject.toml VERSION README.md LICENSE setup.py MANIFEST.in /build/
+COPY docs/assets/brand /build/docs/assets/brand
 COPY connectors /build/connectors
 COPY core /build/core
 COPY exporters /build/exporters
@@ -31,9 +32,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 narrowcti \
     && useradd --uid 10001 --gid 10001 --create-home --home-dir /home/narrowcti --shell /usr/sbin/nologin narrowcti \
-    && mkdir -p /app/state /tmp \
+    && mkdir -p /app/state /app/auth /tmp \
     && chown 10001:10001 /app/state \
-    && chmod 0750 /app/state
+    && chown 10001:10001 /app/auth \
+    && chmod 0750 /app/state /app/auth
 
 COPY --from=builder /opt/narrowcti-venv /opt/narrowcti-venv
 

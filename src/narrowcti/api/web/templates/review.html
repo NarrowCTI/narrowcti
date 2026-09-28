@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Quarantine review · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero compact">
+  <p class="eyebrow">Analyst workflow</p>
+  <h1>Quarantine review</h1>
+  <p class="muted">Review evidence is shown without raw source snapshots.</p>
+</section>
+<section class="panel">
+  <form method="get" action="/review" class="search-form">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      {% for value in ('pending', 'released', 'partially-released', 'rejected', 'expired', 'all') %}
+      <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ value }}</option>
+      {% endfor %}
+    </select>
+    <button class="button quiet" type="submit">Filter</button>
+  </form>
+</section>
+{% if records %}
+  {% for record in records %}
+  <article class="panel review-record">
+    <p class="eyebrow">{{ record.source_key }} · {{ record.external_id }}</p>
+    <h2>{{ record.title }}</h2>
+    <p>{{ record.reason }}</p>
+    <p class="muted">{{ record.status }} · {{ record.indicator_count }} indicators · {{ record.created_at }}</p>
+    {% if record.status == 'pending' %}
+      {% if principal.has_permission('review:decide') %}
+      {% for action, label in (('release', 'Release all'), ('reject', 'Reject')) %}
+      <form method="post" action="/review/records/{{ record.quarantine_id }}/{{ action }}" class="inline-form">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <label class="visually-hidden" for="reason-{{ record.quarantine_id }}-{{ action }}">Reason</label>
+        <input id="reason-{{ record.quarantine_id }}-{{ action }}" name="reason" maxlength="2000" required placeholder="Reason for {{ action }}">
+        <button class="button quiet" type="submit">{{ label }}</button>
+      </form>
+      {% endfor %}
+      {% endif %}
+    {% endif %}
+    {% if record.status in ('released', 'partially-released') %}
+      {% if principal.has_permission('export:preview') %}
+      <form method="post" action="/review/records/{{ record.quarantine_id }}/export-preview" class="inline-form">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button quiet" type="submit">Preview export</button>
+      </form>
+      {% endif %}
+      {% if principal.has_permission('export:execute') %}
+      <form method="post" action="/review/records/{{ record.quarantine_id }}/export" class="inline-form">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button primary" type="submit">Submit export to Worker</button>
+      </form>
+      {% endif %}
+    {% endif %}
+  </article>
+  {% endfor %}
+{% else %}
+<section class="panel"><p>No records in this view.</p></section>
+{% endif %}
+{% endblock %}

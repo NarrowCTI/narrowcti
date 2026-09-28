@@ -5,7 +5,6 @@ from narrowcti.adapters.entitlements.community import (
     CommunityEntitlements,
 )
 from narrowcti.application.capabilities import (
-    COMMUNITY_FUTURE_CAPABILITIES,
     COMMUNITY_CAPABILITY_NAMES,
     CapabilityRegistry,
 )
@@ -27,7 +26,7 @@ class CapabilityRegistryTests(unittest.TestCase):
         self.assertEqual(tuple(sorted(COMMUNITY_ENTITLED_CAPABILITIES)), resolution.entitled)
         self.assertNotIn("mssp.multi_environment", resolution.enabled)
 
-    def test_future_community_and_commercial_capabilities_are_not_enabled(self):
+    def test_pr24_community_features_are_enabled_but_commercial_control_plane_is_not(self):
         resolution = self.registry.resolve(
             requested=["ui.basic", "source.explorer", "ingestion.run_once", "environment.multi"],
             implemented=COMMUNITY_IMPLEMENTED_CAPABILITIES,
@@ -37,7 +36,9 @@ class CapabilityRegistryTests(unittest.TestCase):
             ("ui.basic", "source.explorer", "ingestion.run_once", "environment.multi"),
             resolution.requested,
         )
-        self.assertFalse(set(COMMUNITY_FUTURE_CAPABILITIES) & set(resolution.enabled))
+        self.assertIn("ui.basic", resolution.enabled)
+        self.assertIn("source.explorer", resolution.enabled)
+        self.assertIn("ingestion.run_once", resolution.enabled)
         self.assertNotIn("environment.multi", resolution.enabled)
 
     def test_aliases_resolve_without_double_counting(self):
@@ -125,7 +126,9 @@ class CommunityEntitlementsTests(unittest.TestCase):
         provider = CommunityEntitlements()
         self.assertIsInstance(provider, EntitlementProvider)
         self.assertEqual(COMMUNITY_ENTITLED_CAPABILITIES, provider.granted_capabilities())
-        self.assertNotIn("ui.basic", provider.granted_capabilities())
+        self.assertIn("ui.basic", provider.granted_capabilities())
+        self.assertIn("source.explorer", provider.granted_capabilities())
+        self.assertIn("ingestion.run_once", provider.granted_capabilities())
         self.assertNotIn("environment.multi", provider.granted_capabilities())
 
 

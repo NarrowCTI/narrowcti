@@ -18,7 +18,7 @@ from narrowcti.adapters.persistence.local.lease_heartbeat import LeaseHeartbeat
 from narrowcti.adapters.persistence.local.process_coordination import SQLiteProcessCoordinationRepository
 from narrowcti.infrastructure.config.settings import load_settings
 from narrowcti.infrastructure.runtime.gateway_composition import default_source_registry
-from narrowcti.ports.jobs import QUARANTINE_EXPORT_JOB
+from narrowcti.ports.jobs import INGESTION_JOB_TYPES, QUARANTINE_EXPORT_JOB
 
 from .gateway import run_gateway_loop, run_gateway_once
 
@@ -151,7 +151,7 @@ def _execute_export_job(job, settings, logger):
         return export_under_current_coordination(coordinated=True)
 
 
-def process_pending_jobs(settings, owner_token, logger, *, lease_seconds=None):
+def process_pending_jobs(settings, owner_token, logger, *, lease_seconds=None, registry=None):
     runtime_db = getattr(settings, "runtime_db_file", "")
     if not runtime_db:
         return 0
@@ -169,14 +169,29 @@ def process_pending_jobs(settings, owner_token, logger, *, lease_seconds=None):
             job_lease_seconds,
         ).start()
         try:
-            if job["job_type"] != EXPORT_QUARANTINE_JOB:
+            if job["job_type"] == EXPORT_QUARANTINE_JOB:
+                result = _execute_export_job(job, settings, logger)
+            elif job["job_type"] in INGESTION_JOB_TYPES:
+                from narrowcti.cli.ingestion_jobs import execute_ingestion_job
+
+                if registry is None:
+                    registry = default_source_registry(logger, settings)
+                result = execute_ingestion_job(job, settings, registry, logger)
+            else:
                 raise ValueError(f"unsupported job type: {job['job_type']}")
-            result = _execute_export_job(job, settings, logger)
             jobs.complete(job["job_id"], owner_token, job["attempt"], result)
         except Exception as exc:
-            logger(f"runtime job failed: type={job['job_type']} error={exc}")
+            if job["job_type"] in INGESTION_JOB_TYPES:
+                from narrowcti.cli.ingestion_jobs import IngestionJobFailure
+
+                public_error = exc.code if isinstance(exc, IngestionJobFailure) else "ingestion_failed"
+                logger(f"runtime job failed: type={job['job_type']} code={public_error}")
+                error_message = public_error
+            else:
+                logger(f"runtime job failed: type={job['job_type']} error={exc}")
+                error_message = str(exc)
             try:
-                jobs.fail(job["job_id"], owner_token, job["attempt"], str(exc))
+                jobs.fail(job["job_id"], owner_token, job["attempt"], error_message)
             except PermissionError:
                 logger(f"runtime job claim lost: id={job['job_id']}")
         finally:
@@ -204,12 +219,12 @@ def run_worker_loop(
             raise WorkerLeaseUnavailable("worker lease heartbeat was lost")
         now = clock()
         if now >= next_job_deadline:
-            process_pending_jobs(settings, owner_token, logger, lease_seconds=lease_seconds)
+            process_pending_jobs(settings, owner_token, logger, lease_seconds=lease_seconds, registry=registry)
             next_job_deadline = clock() + max(float(getattr(settings, "job_poll_seconds", 2.0)), 0.05)
         if clock() >= next_source_deadline:
             run_gateway_once(settings, registry, logger)
             next_source_deadline = clock() + max(int(getattr(settings, "source_interval_seconds", 60)), 1)
-            process_pending_jobs(settings, owner_token, logger, lease_seconds=lease_seconds)
+            process_pending_jobs(settings, owner_token, logger, lease_seconds=lease_seconds, registry=registry)
         wait_seconds = max(
             min(next_source_deadline, next_job_deadline) - clock(),
             0.0,

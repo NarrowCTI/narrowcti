@@ -77,6 +77,13 @@ volume. Job and coordination metadata live in `NARROWCTI_RUNTIME_DB` (default
 `/app/state/runtime.db`); source checkpoints, quarantine, deduplication and
 audit evidence retain their existing JSON/JSONL formats.
 
+Community browser access uses deployment-managed local operator accounts in a
+separate `NARROWCTI_AUTH_DB` (`/app/auth/auth.db` by default). Provision the
+first administrator with the `narrowcti-operator-auth` one-shot Compose helper;
+Review API bearer credentials remain for API clients only. See the
+[`Community Web and Source Explorer guide`](docs/product/web-source-explorer.md)
+for the operator bootstrap procedure.
+
 ## Product Identity
 
 The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
@@ -106,6 +113,12 @@ infrastructure and quarantine/release context before OpenCTI ingestion.
 - Runs as an endpoint-driven, topology-independent gateway that can reach
   routed or remote OpenCTI and source endpoints without assuming a shared
   Docker network.
+- Provides an optional Community Web UI and Source Explorer with transient
+  bounded provider reads, session-bound browser protections and Worker-owned
+  preview, dry-run and Admin-only run-once jobs.
+- Provides a permission-driven Community Overview, Review / Quarantine,
+  Evidence / Decisions and an inventory of existing Ops reports. The Web role
+  does not generate or schedule reports.
 
 ## Architecture
 

@@ -1,0 +1,7 @@
+services:
+  narrowcti-web:
+    volumes:
+      - type: bind
+        source: ${NARROWCTI_WEB_OTX_KEY_SOURCE:?set NARROWCTI_WEB_OTX_KEY_SOURCE to a dedicated OTX Explorer key file}
+        target: /run/secrets/narrowcti-web-otx-key
+        read_only: true

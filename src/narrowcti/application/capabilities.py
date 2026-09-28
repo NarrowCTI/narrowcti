@@ -14,6 +14,9 @@ from typing import Iterable, Mapping
 COMMUNITY_CAPABILITY_NAMES = (
     "source.otx",
     "source.misp",
+    "ui.basic",
+    "source.explorer",
+    "ingestion.run_once",
     "enrichment.otx_entities",
     "enrichment.mitre_attack",
     "curation.scoring",
@@ -30,11 +33,7 @@ COMMUNITY_CAPABILITY_NAMES = (
     "deployment.templates",
 )
 
-COMMUNITY_FUTURE_CAPABILITIES = (
-    "ui.basic",
-    "source.explorer",
-    "ingestion.run_once",
-)
+COMMUNITY_FUTURE_CAPABILITIES: tuple[str, ...] = ()
 
 COMMERCIAL_CAPABILITIES = (
     "ui.control_plane",

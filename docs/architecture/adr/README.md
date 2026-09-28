@@ -25,15 +25,12 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-017](MIG-ADR-017.md) | MISP source extraction boundary | accepted for PR-09 |
 | [MIG-ADR-018](MIG-ADR-018.md) | Gateway runtime and source provider registry boundary | accepted for W5 / PR-15 |
 | [MIG-ADR-019](MIG-ADR-019.md) | Capability registry and entitlement provider boundary | accepted for W6 / PR-18 |
+| [MIG-ADR-020](MIG-ADR-020.md) | Shared Web architecture, Community Basic UI, Source Explorer and Web security | accepted for W8 / PR-24 |
 | [MIG-ADR-021](MIG-ADR-021.md) | Detection foundation domain contracts | accepted for W6 / PR-19 |
 | [MIG-ADR-022](MIG-ADR-022.md) | Package-based runtime and deployment portability | accepted for W7 / PR-20 |
 | [MIG-ADR-023](MIG-ADR-023.md) | Documentation architecture, boundaries, and brand integration | accepted for W7 / PR-21 |
 | [MIG-ADR-024](MIG-ADR-024.md) | Community 2.0 compatibility cutover | accepted for W7 / PR-22 |
 | [MIG-ADR-025](MIG-ADR-025.md) | Runtime Role Foundation | accepted for W8 / PR-23 |
-
-MIG-ADR-020 is intentionally reserved for the Shared Web Architecture /
-Community Basic UI / Source Explorer / Web Security decision defined by the
-v0.5 migration plan.
 
 Each ADR must be reviewed and approved before the migration wave that depends
 on it. Accepted records remain bounded by their stated PR scope. PR-03 adds

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Worker job · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero compact">
+  <p class="eyebrow">Worker job</p>
+  <h1>{{ job.job_type }}</h1>
+  <p>Status: <strong>{{ job.status }}</strong></p>
+  <p class="muted">Job {{ job.job_id }} · submitted {{ job.created_at }}</p>
+</section>
+{% include "job_status_fragment.html" %}
+<p><a class="button quiet" href="/explorer">Return to Source Explorer</a></p>
+{% endblock %}

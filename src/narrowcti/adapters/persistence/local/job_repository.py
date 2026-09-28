@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Mapping
 
 from .sqlite_runtime_store import SQLiteRuntimeStore
+from narrowcti.ports.jobs import ActiveJobLimitReached
 
 
 TERMINAL_STATES = frozenset({"succeeded", "failed"})
@@ -43,6 +44,8 @@ class SQLiteJobRepository:
         source: str,
         payload: Mapping[str, Any],
         idempotency_key: str,
+        *,
+        active_limit: int | None = None,
     ) -> dict:
         if not job_type or not idempotency_key:
             raise ValueError("job_type and idempotency_key are required")
@@ -50,6 +53,21 @@ class SQLiteJobRepository:
         created_at = utc_now()
         payload_json = json.dumps(dict(payload), sort_keys=True)
         with self.store.transaction(immediate=True) as connection:
+            existing = connection.execute(
+                "SELECT * FROM jobs WHERE job_type=? AND idempotency_key=?",
+                (str(job_type), str(idempotency_key)),
+            ).fetchone()
+            if existing is not None:
+                return _decode(existing)
+            if active_limit is not None:
+                if active_limit < 1:
+                    raise ValueError("active job limit must be positive")
+                active_count = connection.execute(
+                    "SELECT COUNT(*) AS count FROM jobs WHERE job_type=? AND status IN ('pending', 'running')",
+                    (str(job_type),),
+                ).fetchone()["count"]
+                if int(active_count) >= active_limit:
+                    raise ActiveJobLimitReached(str(job_type))
             connection.execute(
                 """
                 INSERT OR IGNORE INTO jobs(

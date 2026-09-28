@@ -1,0 +1,3 @@
+recursive-include docs/assets/brand *
+recursive-include src/narrowcti/api/web/templates *.html
+recursive-include src/narrowcti/api/web/static *

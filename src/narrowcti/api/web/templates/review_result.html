@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero compact"><p class="eyebrow">Analyst workflow</p><h1>{{ title }}</h1><p class="muted">This preview does not export or mark artifacts.</p></section>
+{% for item in items %}
+<article class="panel"><h2>{{ item.action }}</h2><dl class="detail-grid">{% for key, value in item.items() if key != 'action' %}<dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></article>
+{% else %}<section class="panel"><p>No exportable indicators were found.</p></section>{% endfor %}
+<p><a class="button quiet" href="/review">Return to review queue</a></p>
+{% endblock %}
