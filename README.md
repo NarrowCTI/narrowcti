@@ -106,6 +106,9 @@ infrastructure and quarantine/release context before OpenCTI ingestion.
 - Runs as an endpoint-driven, topology-independent gateway that can reach
   routed or remote OpenCTI and source endpoints without assuming a shared
   Docker network.
+- Provides an optional Community Web UI and Source Explorer with transient
+  bounded provider reads, session-bound browser protections and Worker-owned
+  preview, dry-run and Admin-only run-once jobs.
 
 ## Architecture
 

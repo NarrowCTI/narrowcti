@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Source Explorer · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero compact">
+  <p class="eyebrow">Read-only discovery</p>
+  <h1>Source Explorer</h1>
+  <p class="muted">Search a configured provider. Results are transient and are not added to the graph.</p>
+</section>
+<section class="panel">
+  <form method="post" action="/explorer/search" hx-post="/explorer/search" hx-target="#explorer-results" hx-swap="innerHTML" class="search-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <label for="provider">Provider</label>
+    <select id="provider" name="provider_key" required>
+      {% for provider in providers %}
+      <option value="{{ provider.key }}" {% if not provider.available %}disabled{% endif %}>{{ provider.display_name }}{% if not provider.available %} — not configured{% endif %}</option>
+      {% endfor %}
+    </select>
+    <label for="query">Search</label>
+    <input id="query" name="query" maxlength="256" required placeholder="Threat, actor, campaign, or keyword">
+    <label for="tag">Tag <span class="muted">(MISP only)</span></label>
+    <input id="tag" name="tag" maxlength="128" placeholder="Optional MISP tag">
+    <button class="button primary" type="submit">Search</button>
+  </form>
+</section>
+<section id="explorer-results" aria-live="polite" class="results-region"></section>
+{% if initial_result %}
+  {% include "search_results.html" %}
+{% endif %}
+{% endblock %}

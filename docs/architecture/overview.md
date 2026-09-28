@@ -45,8 +45,10 @@ compatibility surfaces while their canonical owners are migrated incrementally.
 
 Community 2.0 uses one package, image and version with explicit runtime roles:
 
-- **Web** (`python -m narrowcti.cli.web`) serves the review API and owns no
-  source polling loop.
+- **Web** (`python -m narrowcti.cli.web`) serves the SSR Community UI, transient
+  Source Explorer and bearer Review API together; it owns no source polling
+  loop. Browser evaluation requests enqueue bounded Worker jobs rather than
+  performing ingestion in the Web process.
 - **Worker** (`python -m narrowcti.cli.worker`) runs the existing bounded source
   cycle and is the only process allowed to hold the `worker` lease.
 - **Ops** runs preflight, reports and other one-shot operational commands.

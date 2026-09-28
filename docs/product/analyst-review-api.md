@@ -1,8 +1,9 @@
 # Analyst Review API
 
-The NarrowCTI analyst review API exposes the quarantine workflow through an
-authenticated HTTP boundary. It is an operator API for reviewing, releasing,
-rejecting and previewing quarantined decisions. It does not replace or bypass
+The NarrowCTI analyst review API exposes the quarantine workflow through a
+bearer-authenticated HTTP boundary inside the shared Community Web process.
+It is an operator API for reviewing, releasing, rejecting and previewing
+quarantined decisions. It does not replace or bypass
 `AnalystReviewService`: the CLI and HTTP paths use the same repository,
 reason policy, export path and append-only audit records.
 
@@ -12,7 +13,9 @@ a historical design snapshot.
 ## Scope And Safety
 
 - The service binds to host loopback by default in Compose.
-- Every review route requires a bearer credential; only `/healthz` is public.
+- Every `/api/v1/review/*` route requires a bearer credential; browser pages
+  use a separate server-side session and CSRF contract. Only `/healthz` is
+  public without either credential.
 - Credential files store SHA-256 token hashes, never raw bearer tokens.
 - The authenticated principal, not a request field, is written to review audit
   evidence.
@@ -41,7 +44,8 @@ application are `review:read`, `review:decide`, `review:raw`,
 
 ## Credential Provisioning
 
-Generate a random token and its hash:
+Generate a random token and its hash (used by the bearer API and to establish a
+browser session):
 
 ```powershell
 python -m gateway.review_auth
@@ -83,13 +87,19 @@ The credential source and published port are Compose host interpolations:
 ```powershell
 $env:NARROWCTI_REVIEW_API_CREDENTIALS_SOURCE = "./review-api-credentials.json"
 $env:NARROWCTI_REVIEW_API_PUBLISHED_PORT = "8081"
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile review-api up -d --build narrowcti-review-api
-docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile review-api ps
+Copy-Item deployment\web.env.example deployment\web.env
+$env:NARROWCTI_WEB_ENV_FILE = "./web.env"
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile web up -d --build narrowcti-web
+docker compose -f deployment\docker-compose.narrowcti-gateway.yml --profile web ps
 ```
 
-The default endpoint is `http://127.0.0.1:8081`. Put it behind authenticated
+The UI and API default endpoint is `http://127.0.0.1:8081`. Put it behind authenticated
 TLS and a restricted reverse proxy before remote access. Do not publish the
 container port broadly on an untrusted network.
+
+The browser UI does not send its session cookie to `/api/v1/review/*`; those
+routes remain bearer-only. See [`web-source-explorer.md`](web-source-explorer.md)
+for the HTML session, Source Explorer and governed Worker job contracts.
 
 ## HTTP Contract
 

@@ -48,3 +48,14 @@ deployments, verify and archive:
 This file is not a legal opinion. It is a release engineering control to ensure
 license and terms review is explicit before packaging or operating NarrowCTI for
 others.
+
+## Vendored Browser Assets
+
+The Community Web UI vendors `htmx 2.0.11` under the Zero-Clause BSD (0BSD)
+license. The source URL, SRI value, and SHA-256 checksum are recorded alongside
+the asset in `src/narrowcti/api/web/static/HTMX-VERSION.txt`; the license text is
+in `HTMX-LICENSE.txt`.
+
+This PR intentionally remains on the htmx 2.x compatibility line. A separate
+major-version migration is deferred so its breaking behavior changes can be
+reviewed and tested independently.

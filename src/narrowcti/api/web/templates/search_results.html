@@ -1,0 +1,18 @@
+{% if error %}
+<div class="alert" role="alert"><strong>{{ error.code }}</strong> — {{ error.message }}</div>
+{% elif result.items %}
+<div class="panel results-panel">
+  <div class="section-heading"><div><p class="eyebrow">{{ result.provider_key|upper }}</p><h2>Search results</h2></div><span class="muted">{{ result.items|length }} shown{% if result.has_more %} · more available{% endif %}</span></div>
+  <ul class="result-list">
+    {% for item in result.items %}
+    <li class="result-item">
+      <div><h3><a href="/explorer/{{ item.provider_key }}/{{ item.external_id|urlencode }}">{{ item.title }}</a></h3><p class="muted">ID {{ item.external_id }}{% if item.published_at %} · {{ item.published_at }}{% endif %}</p>
+      {% if item.tags %}<div class="tag-list">{% for tag in item.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}</div>
+      {% if item.tlp %}<span class="tlp">{{ item.tlp }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% else %}
+<div class="empty-state">No matching items were returned by the provider.</div>
+{% endif %}

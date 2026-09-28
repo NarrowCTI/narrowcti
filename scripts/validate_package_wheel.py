@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -76,6 +77,36 @@ def assert_runtime_inventory(names: list[str] | set[str], root: Path = ROOT) -> 
         )
 
 
+def assert_brand_asset_projection(archive: zipfile.ZipFile, root: Path = ROOT) -> None:
+    """Require every canonical brand asset in the wheel with byte-identical content."""
+
+    brand_source = root / "docs" / "assets" / "brand"
+    source_files = {
+        path.relative_to(brand_source).as_posix(): path.read_bytes()
+        for path in brand_source.rglob("*")
+        if path.is_file()
+    }
+    archive_prefix = "narrowcti/api/web/static/brand/"
+    wheel_files = {
+        name.removeprefix(archive_prefix): name
+        for name in archive.namelist()
+        if name.startswith(archive_prefix) and not name.endswith("/")
+    }
+    missing = sorted(set(source_files) - set(wheel_files))
+    unexpected = sorted(set(wheel_files) - set(source_files))
+    if missing or unexpected:
+        raise AssertionError(
+            "wheel brand asset inventory differs from canonical assets: "
+            f"missing={missing}, unexpected={unexpected}"
+        )
+    for relative, source_bytes in source_files.items():
+        wheel_bytes = archive.read(wheel_files[relative])
+        source_hash = hashlib.sha256(source_bytes).hexdigest()
+        wheel_hash = hashlib.sha256(wheel_bytes).hexdigest()
+        if wheel_hash != source_hash:
+            raise AssertionError(f"brand asset hash mismatch for {relative}")
+
+
 def run(*args: str, cwd: Path, env: dict[str, str] | None = None) -> None:
     subprocess.run(args, cwd=cwd, env=env, check=True)
 
@@ -95,6 +126,7 @@ def main() -> None:
         wheel = wheels[0]
         with zipfile.ZipFile(wheel) as archive:
             names = [name for name in archive.namelist() if not name.endswith("/")]
+            assert_brand_asset_projection(archive)
         missing = [prefix for prefix in ALLOWED_PREFIXES if not any(name.startswith(prefix) for name in names)]
         if missing:
             raise AssertionError(f"wheel is missing allowlisted runtime packages: {missing}")
@@ -127,6 +159,7 @@ def main() -> None:
         child_env.pop("PYTHONPATH", None)
         checks = """
 import importlib
+from importlib.resources import files
 from pathlib import Path
 
 import core.feed_contract as legacy_feed
@@ -143,6 +176,8 @@ from narrowcti.cli import worker as worker_role
 from narrowcti.domain.intelligence import feed_contract, scoring
 from narrowcti.domain.review import quarantine
 from narrowcti.adapters.stix import serializer
+from narrowcti.api.web import app as web_app
+from narrowcti.infrastructure.config.web_settings import WebSettings
 
 assert legacy_feed.FeedSource is feed_contract.FeedSource
 assert legacy_feed.FeedCandidate is feed_contract.FeedCandidate
@@ -160,6 +195,18 @@ assert legacy_preflight.build_preflight_report is not None
 assert {OPS, WEB, WORKER} == {"ops", "web", "worker"}
 assert callable(web_role.main)
 assert callable(worker_role.main)
+web_package = files("narrowcti.api.web")
+for resource in (
+    "templates/base.html",
+    "templates/login.html",
+    "static/app.css",
+    "static/htmx.min.js",
+    "static/brand/logo/narrowcti-logo-horizontal-light.svg",
+    "static/brand/favicon/narrowcti-favicon.ico",
+):
+    assert web_package.joinpath(*resource.split("/")).is_file(), resource
+assert callable(web_app.create_web_app)
+assert WebSettings().cookie_secure is True
 for removed in (
     "narrowcti.core.feed_contract",
     "narrowcti.connectors.misp.feed_adapter",

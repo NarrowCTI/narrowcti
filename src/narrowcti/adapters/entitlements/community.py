@@ -6,6 +6,9 @@ from narrowcti.ports.entitlements import EntitlementProvider
 COMMUNITY_ENTITLED_CAPABILITIES = (
     "source.otx",
     "source.misp",
+    "ui.basic",
+    "source.explorer",
+    "ingestion.run_once",
     "enrichment.otx_entities",
     "enrichment.mitre_attack",
     "curation.scoring",

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Community workspace · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">Community workspace</p>
+  <h1>Welcome, {{ principal.principal }}</h1>
+  <p class="muted">Explore source intelligence and review bounded Community workflows.</p>
+</section>
+<section class="panel">
+  <div class="section-heading">
+    <div><p class="eyebrow">Read-only discovery</p><h2>Source Explorer</h2></div>
+    <a class="button primary" href="/explorer">Browse sources</a>
+  </div>
+  <p class="muted">Search and inspect MISP or OTX directly. Exploration does not create ingestion jobs or alter source data.</p>
+  <div class="provider-grid">
+    {% for provider in providers %}
+    <article class="provider-card">
+      <span class="status-dot {{ 'available' if provider.available else 'unavailable' }}" aria-hidden="true"></span>
+      <h3>{{ provider.display_name }}</h3>
+      <p>{{ 'Connected' if provider.available else 'Not configured' }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% if principal.has_permission('review:read') %}
+<section class="panel">
+  <div class="section-heading"><div><p class="eyebrow">Analyst workflow</p><h2>Quarantine review</h2></div><a class="button quiet" href="/review">Open review queue</a></div>
+  <p class="muted">Review decisions remain explicit and auditable. Exported intelligence is submitted to the Worker.</p>
+</section>
+{% endif %}
+{% endblock %}

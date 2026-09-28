@@ -21,6 +21,7 @@ PUBLIC_IMPORTS = (
     "narrowcti.adapters.stix.serializer",
     "narrowcti.infrastructure.runtime.gateway_composition",
     "narrowcti.api.review.app",
+    "narrowcti.api.web.app",
     "narrowcti.cli.gateway",
     "narrowcti.cli.worker",
     "narrowcti.cli.web",
@@ -88,6 +89,7 @@ def _check_imports() -> None:
 import importlib
 import importlib.metadata
 import importlib.util
+from importlib.resources import files
 import os
 import sys
 
@@ -127,6 +129,18 @@ for name in {roots!r}:
             raise AssertionError(f"{{name}} resolved from checkout: {{location}}")
 
 assert importlib.metadata.version("narrowcti")
+web_package = files("narrowcti.api.web")
+for resource in (
+    "templates/base.html",
+    "templates/login.html",
+    "templates/sources.html",
+    "templates/source_detail.html",
+    "static/app.css",
+    "static/htmx.min.js",
+    "static/brand/logo/narrowcti-logo-horizontal-light.svg",
+    "static/brand/favicon/narrowcti-favicon.ico",
+):
+    assert web_package.joinpath(*resource.split("/")).is_file(), resource
 assert not os.environ.get("PYTHONPATH")
 assert "/app/src" not in sys.path
 print("installed-package-imports-ok")

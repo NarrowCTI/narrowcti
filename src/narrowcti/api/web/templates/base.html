@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NarrowCTI{% endblock %}</title>
+  <link rel="icon" href="/assets/brand/favicon/narrowcti-favicon.ico">
+  <link rel="stylesheet" href="/assets/app.css">
+  <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false}'>
+  <script src="/assets/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="NarrowCTI home">
+      <img src="/assets/brand/logo/narrowcti-logo-horizontal-light.svg" alt="NarrowCTI">
+    </a>
+    {% if principal %}
+    <nav aria-label="Primary">
+      {% if capabilities.get('source.explorer') %}<a href="/explorer">Source Explorer</a>{% endif %}
+      {% if principal.has_permission('review:read') %}<a href="/review">Review</a>{% endif %}
+    </nav>
+    <div class="identity">
+      <span>{{ principal.principal }}</span>
+      <form method="post" action="/logout">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button class="button quiet" type="submit">Sign out</button>
+      </form>
+    </div>
+    {% endif %}
+  </header>
+  <main class="page-shell">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">NarrowCTI Community · Source data remains with its provider.</footer>
+</body>
+</html>

@@ -29,10 +29,11 @@ tree. The CybersysBR authorship logo remains available at
 
 Keep clear space around the symbol at approximately 10% of the symbol height.
 At 32 px and below, prefer the isolated symbol rather than a full wordmark.
-For the future expanded header use the horizontal logo; for compact or
-collapsed identity use the isolated symbol; for browser identity use the
-favicon; and for dark/light surfaces use the matching approved variant. PR-21
-does not define the final browser layout; that belongs to a future UI wave.
+The Community Web expanded header uses the approved horizontal logo. Use the
+isolated symbol only for a compact identity surface, the canonical favicon for
+browser identity, and the matching approved variant for dark/light surfaces.
+The application uses the build-projected canonical files from
+`docs/assets/brand/`; do not copy or edit alternative artwork in runtime code.
 
 ## Core palette
 

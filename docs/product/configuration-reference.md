@@ -159,6 +159,30 @@ indicator-type filter that removes every exportable indicator. Start with
 Credential format, roles and endpoint behavior are documented in
 `analyst-review-api.md`.
 
+### Community Web and Source Explorer
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `NARROWCTI_WEB_ALLOWED_HOSTS` | `127.0.0.1,localhost,testserver` | Host allowlist for the Web role. Configure the externally visible host explicitly when using a reverse proxy; forwarded headers are not trusted implicitly. |
+| `NARROWCTI_WEB_PUBLIC_ORIGIN` | Empty | Exact externally visible HTTP(S) origin used for CSRF Origin validation behind a TLS-terminating proxy. Remote origins must use HTTPS; do not include a path. |
+| `NARROWCTI_WEB_COOKIE_SECURE` | `true` | Enables the production `Secure` session cookie. `false` is permitted only with local HTTP development. |
+| `NARROWCTI_WEB_MAX_BODY_BYTES` | `16384` | Bounds browser request bodies, including requests without Content-Length. |
+| `NARROWCTI_WEB_SESSION_IDLE_SECONDS` | `1800` | Idle session expiration. |
+| `NARROWCTI_WEB_SESSION_ABSOLUTE_SECONDS` | `28800` | Absolute in-memory session lifetime; a Web restart invalidates all sessions. |
+| `NARROWCTI_WEB_MISP_URL` | Empty | Dedicated configured MISP endpoint for transient Source Explorer reads. No user-supplied URL is accepted. |
+| `NARROWCTI_WEB_MISP_KEY_FILE` | `/run/secrets/narrowcti-web-misp-key` in the example | File containing a dedicated MISP Explorer identity; no fallback to `MISP_KEY`. |
+| `NARROWCTI_WEB_MISP_VERIFY_TLS` | `true` | Strict TLS verification for MISP Explorer. Invalid values fail startup closed. |
+| `NARROWCTI_WEB_OTX_KEY_FILE` | `/run/secrets/narrowcti-web-otx-key` in the example | File containing a dedicated OTX Explorer key; no fallback to `OTX_API_KEY`. |
+| `NARROWCTI_WEB_SOURCE_MAX_RESPONSE_BYTES` | `1000000` | Maximum byte size of one Explorer provider response. |
+| `NARROWCTI_WEB_PUBLISHED_PORT` | `8081` | Compose host port bound to loopback for the shared Web/API service. |
+| `NARROWCTI_WEB_ENV_FILE` | `./web.env.example` in Compose | Host path to the Web role environment file. |
+| `NARROWCTI_WEB_MISP_KEY_SOURCE` | Unset | Optional Compose overlay host path to the dedicated MISP key file. |
+| `NARROWCTI_WEB_OTX_KEY_SOURCE` | Unset | Optional Compose overlay host path to the dedicated OTX key file. |
+
+Explorer providers remain unavailable when their endpoint/key is absent; this
+does not disable the Web UI or the independent bearer API. See
+[`web-source-explorer.md`](web-source-explorer.md) for setup and safe operation.
+
 ## OTX Source
 
 | Variable | Default | Effect |

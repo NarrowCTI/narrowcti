@@ -17,7 +17,7 @@ services:
     networks: [default, opencti]
   narrowcti-opencti-relationship-audit:
     networks: [default, opencti]
-  narrowcti-review-api:
+  narrowcti-web:
     networks: [default, opencti]
 
 networks:

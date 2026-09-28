@@ -74,6 +74,15 @@ commands, or define it in your local environment.
 docker compose -f deployment\docker-compose.narrowcti-gateway.yml build narrowcti-gateway
 ```
 
+## Optional Community Web UI
+
+The shared Web role hosts the browser UI and bearer Review API on one service.
+Use a dedicated review credential and optional dedicated read-only Explorer
+credentials; the browser does not reuse Worker source keys. Follow
+[`web-source-explorer.md`](web-source-explorer.md) to configure the credential
+file, session security and optional MISP/OTX mounts before starting the `web`
+Compose profile.
+
 ## Run Preflight
 
 Preflight checks runtime posture without calling source APIs or mutating

@@ -27,8 +27,13 @@ class ComposeTopologyContractTests(unittest.TestCase):
 
     def test_web_env_example_contains_no_ingestion_credentials(self):
         source = (ROOT / "deployment" / "web.env.example").read_text(encoding="utf-8")
-        for secret in ("OTX_API_KEY", "MISP_KEY", "MISP_URL", "OPENCTI_TOKEN"):
-            self.assertNotIn(secret, source)
+        configured_names = {
+            line.split("=", 1)[0]
+            for line in source.splitlines()
+            if line and not line.startswith("#") and "=" in line
+        }
+        forbidden = {"OTX_API_KEY", "MISP_KEY", "MISP_URL", "OPENCTI_TOKEN"}
+        self.assertTrue(forbidden.isdisjoint(configured_names))
 
     def test_web_env_example_keeps_real_export_opt_in(self):
         from narrowcti.api.review.app import load_review_api_settings

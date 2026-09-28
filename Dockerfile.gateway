@@ -6,7 +6,8 @@ RUN python -m venv /opt/narrowcti-venv \
     && /opt/narrowcti-venv/bin/python -m pip install --no-cache-dir --upgrade \
         pip setuptools==82.0.1 wheel
 
-COPY pyproject.toml VERSION README.md LICENSE /build/
+COPY pyproject.toml VERSION README.md LICENSE setup.py MANIFEST.in /build/
+COPY docs/assets/brand /build/docs/assets/brand
 COPY connectors /build/connectors
 COPY core /build/core
 COPY exporters /build/exporters
