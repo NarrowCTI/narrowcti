@@ -109,6 +109,9 @@ infrastructure and quarantine/release context before OpenCTI ingestion.
 - Provides an optional Community Web UI and Source Explorer with transient
   bounded provider reads, session-bound browser protections and Worker-owned
   preview, dry-run and Admin-only run-once jobs.
+- Provides a permission-driven Community Overview, Review / Quarantine,
+  Evidence / Decisions and an inventory of existing Ops reports. The Web role
+  does not generate or schedule reports.
 
 ## Architecture
 

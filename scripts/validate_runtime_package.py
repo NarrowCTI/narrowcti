@@ -133,6 +133,8 @@ web_package = files("narrowcti.api.web")
 for resource in (
     "templates/base.html",
     "templates/login.html",
+    "templates/evidence.html",
+    "templates/reports.html",
     "templates/sources.html",
     "templates/source_detail.html",
     "static/app.css",

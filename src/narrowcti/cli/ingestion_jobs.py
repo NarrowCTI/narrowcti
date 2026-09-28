@@ -39,7 +39,7 @@ class _ReadOnlyState:
 
 
 class _DiscardAudit:
-    def append(self, _record):
+    def record(self, _record):
         return None
 
 

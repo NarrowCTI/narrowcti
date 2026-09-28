@@ -131,6 +131,13 @@ service and API share credential hashes but not an authentication mechanism:
 browser pages require a session plus CSRF, while API routes require a bearer
 header.
 
+The Web shell includes Overview, Sources / Explorer, Review / Quarantine,
+Evidence / Decisions and Reports. The evidence view is a bounded, redacted
+projection of configured local decision JSONL; report inventory does not write
+files or schedule jobs. Failed login attempts and each ingestion operation
+have separate process-local rate limits. Provider calls reject immediately
+with a stable busy result rather than growing an unbounded wait queue.
+
 ## State Backup And Restore
 
 NarrowCTI stores source checkpoints, deduplication indexes, quarantine records,

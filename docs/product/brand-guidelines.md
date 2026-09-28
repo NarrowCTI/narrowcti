@@ -47,6 +47,10 @@ The application uses the build-projected canonical files from
 
 The official SVG logo artwork also contains `#081827`, `#1FDCF0` and `#008EE8`.
 Those are logo-only rendering tokens and are not additional UI palette tokens.
+Community Web uses the canonical palette above: Navy `#102A43` for the shell,
+Slate `#1E3A5F` for panels, Cloud `#F8FAFC` for primary text, Muted `#94A3B8`
+for secondary text/borders, and Cyan `#00A8E8` for actions and current-page
+emphasis. Preserve readable contrast when applying the palette responsively.
 
 ## Usage
 

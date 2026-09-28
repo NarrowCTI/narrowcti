@@ -65,6 +65,9 @@ class HtmxAssetProvenanceTests(unittest.TestCase):
         self.assertIn("Zero-Clause BSD (0BSD)", license_text)
         self.assertIn("htmx 2.0.11", notices)
         self.assertIn("Zero-Clause BSD (0BSD)", notices)
+        template = (ROOT / "src" / "narrowcti" / "api" / "web" / "templates" / "base.html").read_text(encoding="utf-8")
+        self.assertIn("integrity=\"" + next(line.split("SRI: ", 1)[1] for line in version.splitlines() if line.startswith("SRI: ")), template)
+        self.assertIn("href=\"#main-content\"", template)
 
 
 if __name__ == "__main__":

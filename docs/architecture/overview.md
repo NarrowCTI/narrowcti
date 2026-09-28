@@ -48,7 +48,10 @@ Community 2.0 uses one package, image and version with explicit runtime roles:
 - **Web** (`python -m narrowcti.cli.web`) serves the SSR Community UI, transient
   Source Explorer and bearer Review API together; it owns no source polling
   loop. Browser evaluation requests enqueue bounded Worker jobs rather than
-  performing ingestion in the Web process.
+  performing ingestion in the Web process. Its Community shell includes
+  Overview, Sources / Explorer, Review / Quarantine, Evidence / Decisions and
+  Reports; the latter two are bounded safe projections/catalogs, not a
+  scheduler or a second reporting runtime.
 - **Worker** (`python -m narrowcti.cli.worker`) runs the existing bounded source
   cycle and is the only process allowed to hold the `worker` lease.
 - **Ops** runs preflight, reports and other one-shot operational commands.

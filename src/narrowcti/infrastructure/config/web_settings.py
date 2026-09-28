@@ -43,6 +43,7 @@ class WebSettings:
     max_request_body_bytes: int = 16384
     session_idle_seconds: int = 1800
     session_absolute_seconds: int = 28800
+    decision_audit_dir: str = "/app/state/audit"
     sources: SourceExplorerSettings = field(default_factory=SourceExplorerSettings)
 
     def __post_init__(self):
@@ -74,9 +75,10 @@ class WebSettings:
 
 def load_web_settings(environ: Mapping[str, str] | None = None) -> WebSettings:
     env = os.environ if environ is None else environ
+    legacy_hosts = env.get("NARROWCTI_REVIEW_API_ALLOWED_HOSTS", "127.0.0.1,localhost,testserver")
     hosts = tuple(
         item.strip()
-        for item in env.get("NARROWCTI_WEB_ALLOWED_HOSTS", "127.0.0.1,localhost,testserver").split(",")
+        for item in env.get("NARROWCTI_WEB_ALLOWED_HOSTS", legacy_hosts).split(",")
         if item.strip()
     )
     source_settings = SourceExplorerSettings(
@@ -101,9 +103,12 @@ def load_web_settings(environ: Mapping[str, str] | None = None) -> WebSettings:
             name="NARROWCTI_WEB_COOKIE_SECURE",
             default=True,
         ),
-        max_request_body_bytes=int(env.get("NARROWCTI_WEB_MAX_BODY_BYTES", "16384")),
+        max_request_body_bytes=int(
+            env.get("NARROWCTI_WEB_MAX_BODY_BYTES", env.get("NARROWCTI_REVIEW_API_MAX_BODY_BYTES", "16384"))
+        ),
         session_idle_seconds=int(env.get("NARROWCTI_WEB_SESSION_IDLE_SECONDS", "1800")),
         session_absolute_seconds=int(env.get("NARROWCTI_WEB_SESSION_ABSOLUTE_SECONDS", "28800")),
+        decision_audit_dir=env.get("NARROWCTI_DECISION_AUDIT_DIR", "/app/state/audit"),
         sources=source_settings,
     )
 

@@ -69,6 +69,14 @@ DAST must run only against a disposable test deployment created for CI or an
 isolated release-validation environment. It must not target production or a
 shared OpenCTI/MISP lab containing operational data.
 
+The authenticated Community Web scan must also verify browser login and logout,
+server-side permissions for navigation/page groups, CSRF rejection,
+rate-limit responses, bearer API compatibility, and absence of provider
+credentials, raw evidence metadata, local paths and exception details. Use
+synthetic credentials and unavailable or fake providers. If the API docs flag
+is enabled for a controlled environment, `/docs` and `/openapi.json` must
+remain reachable without relaxing the global CSP.
+
 The release cannot close until the DAST workflow starts the disposable service,
 waits for its health endpoint, proves protected endpoints reject missing
 credentials, exercises authenticated access, scans the OpenAPI surface and

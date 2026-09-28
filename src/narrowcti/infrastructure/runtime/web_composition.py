@@ -6,7 +6,9 @@ from pathlib import Path
 
 from narrowcti.adapters.sources.misp.explorer import MISPSourceExplorer
 from narrowcti.adapters.sources.otx.explorer import OTXSourceExplorer
+from narrowcti.adapters.persistence.local.web_evidence_reader import read_recent_records
 from narrowcti.application.source_explorer import SourceExplorerService
+from narrowcti.application.reporting.web_evidence import WebEvidenceService
 from narrowcti.infrastructure.config.web_settings import SourceExplorerSettings
 
 
@@ -39,4 +41,11 @@ def build_source_explorer(settings: SourceExplorerSettings) -> SourceExplorerSer
     return SourceExplorerService((misp, otx))
 
 
-__all__ = ["build_source_explorer"]
+def build_web_evidence(settings) -> WebEvidenceService:
+    """Expose bounded decision evidence from the configured local audit directory."""
+    directory = str(getattr(settings, "decision_audit_dir", "") or "")
+    reader = (lambda limit: read_recent_records(directory, limit)) if directory else None
+    return WebEvidenceService(reader)
+
+
+__all__ = ["build_source_explorer", "build_web_evidence"]

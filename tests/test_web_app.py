@@ -12,6 +12,7 @@ from narrowcti.api.review.auth import ReviewCredentialStore, token_sha256
 from narrowcti.api.web.app import SESSION_COOKIE_LOCAL, SESSION_COOKIE_SECURE, create_web_app
 from narrowcti.infrastructure.config.web_settings import WebSettings
 from narrowcti.api.web.sessions import InMemoryWebSessionStore
+from narrowcti.application.reporting.web_evidence import WebEvidenceService
 from narrowcti.ports.source_explorer import (
     ExplorerItemDetail,
     ExplorerItemSummary,
@@ -129,6 +130,17 @@ class WebAppTests(unittest.TestCase):
             review_api_app=api,
             session_store=self.session_store,
             job_repository=self.jobs,
+            evidence_service=WebEvidenceService(lambda _limit: [{
+                "recorded_at": "2026-09-28T12:00:00Z",
+                "action": "quarantine",
+                "reason": "synthetic safe reason",
+                "source_key": "misp",
+                "external_id": "event-42",
+                "title": "Synthetic event",
+                "indicator_count": 3,
+                "metadata": {"provider_payload": "evidence-secret-canary"},
+                "path": "C:/private/audit.jsonl",
+            }]),
         )
         self.client = TestClient(self.app, base_url="https://testserver")
 
@@ -175,6 +187,40 @@ class WebAppTests(unittest.TestCase):
         logged_out = self.client.post("/logout", data={"_csrf": token}, follow_redirects=False)
         self.assertEqual(logged_out.status_code, 303)
         self.assertEqual(self.client.get("/", follow_redirects=False).status_code, 303)
+
+    def test_failed_login_reuses_bounded_anonymous_session_and_is_rate_limited(self):
+        login = self.client.get("/login")
+        csrf = re.search(r'name="_csrf" value="([^"]+)"', login.text).group(1)
+        initial_count = len(self.session_store)
+        for _ in range(5):
+            response = self.client.post("/login", data={"_csrf": csrf, "credential": "invalid"})
+            self.assertEqual(401, response.status_code)
+            self.assertIn("The supplied credential is invalid.", response.text)
+        blocked = self.client.post("/login", data={"_csrf": csrf, "credential": "invalid"})
+        self.assertEqual(429, blocked.status_code)
+        self.assertEqual(initial_count, len(self.session_store))
+
+    def test_preview_dry_run_and_run_once_have_separate_submission_limits(self):
+        self._login(client=self.client, token=ADMIN_TOKEN)
+        detail = self.client.get("/explorer/misp/42")
+        csrf = re.search(r'name="_csrf" value="([^"]+)"', detail.text).group(1)
+        for mode, allowed in (("preview", 10), ("dry-run", 5), ("run-once", 3)):
+            for index in range(allowed):
+                response = self.client.post(
+                    f"/explorer/misp/42/{mode}",
+                    data={"_csrf": csrf, "request_id": f"rate_{mode}_{index:02d}", "expected_fingerprint": "a" * 64},
+                    follow_redirects=False,
+                )
+                self.assertEqual(303, response.status_code)
+                if mode == "run-once":
+                    _job_type, _source, _payload, key, _active_limit = self.jobs.submissions[-1]
+                    self.jobs.jobs[key]["status"] = "succeeded"
+            blocked = self.client.post(
+                f"/explorer/misp/42/{mode}",
+                data={"_csrf": csrf, "request_id": f"rate_{mode}_blocked", "expected_fingerprint": "a" * 64},
+                follow_redirects=False,
+            )
+            self.assertEqual(429, blocked.status_code)
 
     def test_reader_can_search_and_search_is_a_csrf_protected_transient_post(self):
         self._login()
@@ -321,6 +367,48 @@ class WebAppTests(unittest.TestCase):
         allowed = self.client.get("/api/v1/review/summary", headers={"Authorization": f"Bearer {TOKEN}"})
         self.assertEqual(allowed.status_code, 200)
         self.assertEqual(allowed.json(), {"pending": 0, "released": 0})
+
+    def test_review_health_contract_docs_and_security_headers_survive_web_composition(self):
+        api = create_review_api_app(
+            settings=ReviewApiSettings(
+                repository_file="synthetic-quarantine",
+                release_audit_file="synthetic-audit",
+                credentials_file="synthetic-credentials-file",
+                allowed_hosts=("testserver",),
+                docs_enabled=True,
+            ),
+            review_service=_ReviewService(),
+            credential_store=self.credential_store,
+        )
+        client = TestClient(create_web_app(
+            self.settings,
+            source_explorer=self.explorer,
+            credential_store=self.credential_store,
+            review_api_app=api,
+            session_store=InMemoryWebSessionStore(300, 3600),
+            job_repository=self.jobs,
+        ), base_url="https://testserver")
+        health = client.get("/healthz")
+        self.assertEqual(200, health.status_code)
+        self.assertEqual({"status": "ok", "service": "narrowcti-review-api"}, health.json())
+        self.assertEqual("nosniff", health.headers["x-content-type-options"])
+        self.assertEqual(200, client.get("/openapi.json").status_code)
+        self.assertEqual(200, client.get("/docs").status_code)
+
+    def test_overview_evidence_and_report_inventory_are_safe_and_accessible(self):
+        self._login()
+        overview = self.client.get("/")
+        self.assertIn("Quarantine status", overview.text)
+        self.assertIn('aria-current="page"', overview.text)
+        evidence = self.client.get("/evidence")
+        self.assertEqual(200, evidence.status_code)
+        self.assertIn("Synthetic event", evidence.text)
+        self.assertNotIn("evidence-secret-canary", evidence.text)
+        self.assertNotIn("C:/private/audit.jsonl", evidence.text)
+        reports = self.client.get("/reports")
+        self.assertEqual(200, reports.status_code)
+        self.assertIn("Not generated", reports.text)
+        self.assertIn("does not generate files", reports.text)
 
     def test_web_security_headers_and_source_cannot_set_secure_cookie_name(self):
         self.assertNotEqual(SESSION_COOKIE_LOCAL, SESSION_COOKIE_SECURE)

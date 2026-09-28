@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Evidence and decisions · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero compact"><p class="eyebrow">Audit trail</p><h1>Evidence and decisions</h1><p class="muted">A bounded, allowlisted projection of recent local DecisionRecords. Raw metadata and provider payloads are never displayed.</p></section>
+{% if evidence_status == 'available' %}
+<section class="panel"><h2>Recent decisions <span class="muted">({{ records|length }}, maximum 100)</span></h2>
+  <div class="table-wrap"><table><thead><tr><th scope="col">Recorded</th><th scope="col">Source</th><th scope="col">Title</th><th scope="col">External ID</th><th scope="col">Decision</th><th scope="col">Reason</th><th scope="col">Indicators</th></tr></thead><tbody>
+  {% for record in records %}<tr><td>{{ record.recorded_at|default('—') }}</td><td>{{ record.source_key|default('—') }}</td><td>{{ record.title|default('—') }}</td><td>{{ record.external_id|default('—') }}</td><td>{{ record.action|default('—') }}</td><td>{{ record.reason|default('—') }}</td><td>{{ record.indicator_count|default('—') }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% elif evidence_status == 'no_records' %}<section class="panel"><h2>No decision records yet</h2><p class="muted">The configured local audit source contains no readable records.</p></section>
+{% elif evidence_status == 'error' %}<section class="panel"><h2>Evidence unavailable</h2><p role="status">The audit source could not be read. Details and filesystem paths are withheld.</p></section>
+{% else %}<section class="panel"><h2>Evidence unavailable</h2><p class="muted">No local decision audit source is configured.</p></section>{% endif %}
+{% endblock %}

@@ -5,8 +5,6 @@ from __future__ import annotations
 import hmac
 import re
 import secrets
-import time
-from collections import defaultdict, deque
 from pathlib import Path
 from threading import BoundedSemaphore, Lock
 from urllib.parse import parse_qs, urlsplit
@@ -29,13 +27,14 @@ from narrowcti.application.capabilities import (
 )
 from narrowcti.application.source_explorer import SourceExplorerService
 from narrowcti.infrastructure.config.web_settings import WebSettings, load_web_settings
-from narrowcti.infrastructure.runtime.web_composition import build_source_explorer
+from narrowcti.infrastructure.runtime.web_composition import build_source_explorer, build_web_evidence
 from narrowcti.ports.jobs import ActiveJobLimitReached, INGESTION_DRY_RUN_JOB, INGESTION_PREVIEW_JOB, INGESTION_RUN_ONCE_JOB
 from narrowcti.ports.source_explorer import ExplorerError, ExplorerSearchRequest
 from narrowcti.domain.review.quarantine import released_indicators
 
 from .middleware import RequestBodyLimitMiddleware, SecurityHeadersMiddleware
 from .sessions import InMemoryWebSessionStore, WebSession
+from .rate_limits import SlidingWindowRateLimiter
 
 
 SESSION_COOKIE_SECURE = "__Host-narrowcti_session"
@@ -100,6 +99,7 @@ def _template_context(request: Request, session: WebSession | None, **extra):
         "principal": session.principal if session else None,
         "csrf_token": session.csrf_token if session else "",
         "capabilities": getattr(request.app.state, "enabled_capabilities", {}),
+        "active_page": request.url.path,
         **extra,
     }
 
@@ -109,9 +109,17 @@ def _template_response(name: str, context: dict, *, status_code: int = 200) -> H
     return HTMLResponse(rendered, status_code=status_code)
 
 
-def _bounded_provider_call(semaphore, callback, *args):
-    with semaphore:
-        return callback(*args)
+class _ProviderBusy(RuntimeError):
+    pass
+
+
+async def _bounded_provider_call(semaphore, callback, *args):
+    if not semaphore.acquire(blocking=False):
+        raise _ProviderBusy("provider_busy")
+    try:
+        return await run_in_threadpool(callback, *args)
+    finally:
+        semaphore.release()
 
 
 def _safe_job_result(value):
@@ -150,6 +158,41 @@ def _safe_job_error(value) -> str:
     return code if code in _PUBLIC_JOB_ERRORS else ("job_failed" if code else "")
 
 
+def _safe_review_summary(service):
+    if service is None:
+        return {"status": "unavailable", "pending": None, "released": None, "records": None}
+    try:
+        summary = service.summary()
+        values = summary.to_dict() if hasattr(summary, "to_dict") else summary
+        if not isinstance(values, dict):
+            raise TypeError("invalid summary")
+        counts = values.get("status_counts", {})
+        counts = counts if isinstance(counts, dict) else {}
+        return {
+            "status": "available",
+            "pending": _bounded_count(values.get("pending_count", counts.get("pending"))),
+            "released": _bounded_count(counts.get("released")),
+            "records": _bounded_count(values.get("record_count")),
+        }
+    except Exception:
+        return {"status": "error", "pending": None, "released": None, "records": None}
+
+
+def _bounded_count(value):
+    return min(max(int(value), 0), 2_147_483_647) if isinstance(value, int) else None
+
+
+def _community_report_inventory():
+    """Existing one-shot Ops reports; Web does not generate or schedule them."""
+    return (
+        {"name": "Decision audit", "command": "gateway.decisions", "status": "available"},
+        {"name": "Operational validation", "command": "gateway.operational_validation", "status": "available"},
+        {"name": "Support diagnostics", "command": "gateway.diagnostics", "status": "available"},
+        {"name": "Artifact correlation", "command": "gateway.correlation", "status": "available"},
+        {"name": "Curation report", "command": "gateway.curation_report", "status": "available"},
+    )
+
+
 def create_web_app(
     settings: WebSettings | None = None,
     *,
@@ -158,6 +201,7 @@ def create_web_app(
     review_api_app=None,
     session_store: InMemoryWebSessionStore | None = None,
     job_repository=None,
+    evidence_service=None,
 ):
     """Create the Web role without changing the existing bearer API contract."""
     settings = settings or load_web_settings()
@@ -183,6 +227,7 @@ def create_web_app(
     app.state.review_service = getattr(
         getattr(review_api_app, "state", None), "review_service", None
     )
+    app.state.evidence_service = evidence_service or build_web_evidence(settings)
     capability_registry = CapabilityRegistry.default()
     capability_state = capability_registry.resolve(
         implemented=(*COMMUNITY_CAPABILITY_NAMES, *COMMUNITY_FUTURE_CAPABILITIES),
@@ -191,9 +236,15 @@ def create_web_app(
     app.state.enabled_capabilities = {
         name: name in capability_state.enabled for name in capability_state.known
     }
-    request_rate_lock = Lock()
-    request_times: dict[str, deque[float]] = defaultdict(deque)
-    provider_semaphores = defaultdict(lambda: BoundedSemaphore(1))
+    request_limiter = SlidingWindowRateLimiter()
+    login_limiter = SlidingWindowRateLimiter(max_keys=4096)
+    ingestion_limiter = SlidingWindowRateLimiter(max_keys=10_000)
+    provider_semaphore_lock = Lock()
+    provider_semaphores = {}
+
+    def provider_semaphore(provider_key):
+        with provider_semaphore_lock:
+            return provider_semaphores.setdefault(provider_key, BoundedSemaphore(1))
 
     async def require_csrf(request: Request):
         if request.method not in _UNSAFE_METHODS:
@@ -232,17 +283,9 @@ def create_web_app(
         if not app.state.enabled_capabilities.get(name, False):
             raise HTTPException(status_code=404, detail="feature unavailable")
 
-    def allow_rate_limited_request(session_id: str, *, limit: int = 10, interval: int = 60):
-        now = time.monotonic()
-        with request_rate_lock:
-            entries = request_times[session_id]
-            while entries and now - entries[0] >= interval:
-                entries.popleft()
-            if len(entries) >= limit:
-                raise HTTPException(status_code=429, detail="request rate limit reached")
-            entries.append(now)
-            if len(request_times) > 10000:
-                request_times.pop(next(iter(request_times)))
+    def allow_rate_limited_request(key: str, *, limit: int = 10, interval: int = 60):
+        if not request_limiter.allow(key, limit=limit, interval=interval):
+            raise HTTPException(status_code=429, detail="request rate limit reached")
 
     def parse_form(request: Request, body: bytes):
         content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
@@ -270,7 +313,7 @@ def create_web_app(
 
     @app.get("/healthz", include_in_schema=False)
     async def healthz():
-        return {"status": "ok"}
+        return {"status": "ok", "service": "narrowcti-review-api"}
 
     @app.get("/assets/app.css", include_in_schema=False)
     async def app_css():
@@ -295,6 +338,9 @@ def create_web_app(
         if response:
             return response
         if not session:
+            address = request.client.host if request.client else "unknown"
+            if not login_limiter.allow(f"login-page:{address}", limit=20, interval=60):
+                raise HTTPException(status_code=429, detail="login temporarily unavailable")
             session_id, session = session_store.create_anonymous()
         response = _template_response("login.html", _template_context(request, session))
         if session_id and request.cookies.get(cookie_name) != session_id:
@@ -304,19 +350,22 @@ def create_web_app(
     @app.post("/login", dependencies=[Depends(require_csrf)], response_class=HTMLResponse)
     async def login_submit(request: Request):
         old_session_id, session = current_session(request)
+        address = request.client.host if request.client else "unknown"
+        if not login_limiter.allow(f"login:{address}", limit=5, interval=60):
+            raise HTTPException(status_code=429, detail="login temporarily unavailable")
         values = parse_form(request, await request.body())
         token = values.get("credential", "")
         principal = credential_store.authenticate(token)
         del token  # Do not retain the submitted bearer token beyond validation.
         values.clear()
         if not principal or not session or session.principal:
-            anonymous_id, anonymous = session_store.create_anonymous()
             response = _template_response(
                 "login.html",
-                _template_context(request, anonymous, error="The supplied credential is invalid."),
+                _template_context(request, session, error="The supplied credential is invalid."),
                 status_code=401,
             )
-            _set_session_cookie(response, cookie_name, anonymous_id, settings)
+            if old_session_id:
+                _set_session_cookie(response, cookie_name, old_session_id, settings)
             return response
         session_id, _authenticated = session_store.authenticate(old_session_id or "", principal)
         response = RedirectResponse("/", status_code=303)
@@ -339,13 +388,53 @@ def create_web_app(
             return RedirectResponse("/login", status_code=303)
         return _template_response(
             "home.html",
-            _template_context(request, session, providers=source_explorer.providers()),
+            _template_context(
+                request,
+                session,
+                providers=source_explorer.providers(),
+                review_summary=_safe_review_summary(app.state.review_service),
+            ),
+        )
+
+    @app.get("/evidence", response_class=HTMLResponse)
+    async def evidence_page(request: Request):
+        _session_id, session = current_session(request)
+        require_permission(session, "review:read")
+        require_capability("reporting.operational")
+        evidence_service = app.state.evidence_service
+        records = []
+        evidence_status = "unavailable"
+        if evidence_service and evidence_service.available:
+            try:
+                records = evidence_service.recent(100)
+                evidence_status = "available" if records else "no_records"
+            except Exception:
+                evidence_status = "error"
+        return _template_response(
+            "evidence.html",
+            _template_context(
+                request,
+                session,
+                records=records,
+                evidence_status=evidence_status,
+            ),
+        )
+
+    @app.get("/reports", response_class=HTMLResponse)
+    async def reports_page(request: Request):
+        _session_id, session = current_session(request)
+        require_permission(session, "review:read")
+        require_capability("reporting.operational")
+        return _template_response(
+            "reports.html",
+            _template_context(request, session, reports=_community_report_inventory()),
         )
 
     @app.get("/review", response_class=HTMLResponse)
     async def review_page(request: Request, status: str = "pending"):
         _session_id, session = current_session(request)
         require_permission(session, "review:read")
+        require_capability("quarantine.review")
         if app.state.review_service is None:
             raise HTTPException(status_code=503, detail="review service is unavailable")
         if status not in {"all", "pending", "released", "partially-released", "rejected", "expired"}:
@@ -377,6 +466,7 @@ def create_web_app(
         if app.state.review_service is None:
             raise HTTPException(status_code=503, detail="review service is unavailable")
         if action in {"release", "reject"}:
+            require_capability("quarantine.review")
             session = require_permission(session, "review:decide")
             operation = getattr(app.state.review_service, action)
             operation(quarantine_id, reason, reviewer=session.principal.principal)
@@ -450,24 +540,23 @@ def create_web_app(
         provider_key = values.get("provider_key", "")
         if provider_key not in {item.key for item in source_explorer.providers()}:
             raise HTTPException(status_code=404, detail="provider not found")
-        allow_rate_limited_request(session_id or "")
+        allow_rate_limited_request(f"explorer:{session_id or ''}")
         filters = {}
         tag = values.get("tag", "").strip()
         if tag and provider_key == "misp":
             filters["tag"] = (tag,)
         try:
             def execute_search():
-                with provider_semaphores[provider_key]:
-                    return source_explorer.search(
-                        ExplorerSearchRequest(
-                            provider_key=provider_key,
-                            query=values.get("query", ""),
-                            filters=filters,
-                            limit=10,
-                        )
+                return source_explorer.search(
+                    ExplorerSearchRequest(
+                        provider_key=provider_key,
+                        query=values.get("query", ""),
+                        filters=filters,
+                        limit=10,
                     )
+                )
 
-            result = await run_in_threadpool(execute_search)
+            result = await _bounded_provider_call(provider_semaphore(provider_key), execute_search)
             context = _template_context(request, session, result=result, error=None)
         except ExplorerError as exc:
             context = _template_context(
@@ -475,6 +564,13 @@ def create_web_app(
                 session,
                 result=None,
                 error={"code": exc.code, "message": exc.public_message},
+            )
+        except _ProviderBusy:
+            context = _template_context(
+                request,
+                session,
+                result=None,
+                error={"code": "provider_busy", "message": "Provider is busy. Try again shortly."},
             )
         if request.headers.get("hx-request", "").lower() == "true":
             return _template_response("search_results.html", context)
@@ -494,18 +590,18 @@ def create_web_app(
         require_permission(session, "source:explore")
         if provider_key not in {item.key for item in source_explorer.providers()}:
             raise HTTPException(status_code=404, detail="provider not found")
-        allow_rate_limited_request(session_id or "")
+        allow_rate_limited_request(f"explorer:{session_id or ''}")
         try:
-            item = await run_in_threadpool(
-                lambda: _bounded_provider_call(
-                    provider_semaphores[provider_key],
-                    source_explorer.detail,
-                    provider_key,
-                    external_id,
-                )
+            item = await _bounded_provider_call(
+                provider_semaphore(provider_key),
+                source_explorer.detail,
+                provider_key,
+                external_id,
             )
         except ExplorerError as exc:
             raise HTTPException(status_code=404 if exc.code == "source_not_found" else 503, detail=exc.public_message) from None
+        except _ProviderBusy:
+            raise HTTPException(status_code=503, detail="provider_busy") from None
         return _template_response(
             "source_detail.html",
             _template_context(request, session, item=item, request_id=secrets.token_urlsafe(18)),
@@ -523,6 +619,18 @@ def create_web_app(
             "run-once": "ingestion:run",
         }[mode]
         session = require_permission(session, permission)
+        limits = {
+            "preview": (10, 60),
+            "dry-run": (5, 60),
+            "run-once": (3, 3600),
+        }
+        limit, interval = limits[mode]
+        if not ingestion_limiter.allow(
+            f"ingestion:{mode}:{session.principal.credential_id}",
+            limit=limit,
+            interval=interval,
+        ):
+            raise HTTPException(status_code=429, detail="submission rate limit reached")
         values = parse_form(request, await request.body())
         request_id = values.get("request_id", "")
         fingerprint = values.get("expected_fingerprint", "")

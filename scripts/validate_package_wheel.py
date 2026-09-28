@@ -199,6 +199,8 @@ web_package = files("narrowcti.api.web")
 for resource in (
     "templates/base.html",
     "templates/login.html",
+    "templates/evidence.html",
+    "templates/reports.html",
     "static/app.css",
     "static/htmx.min.js",
     "static/brand/logo/narrowcti-logo-horizontal-light.svg",

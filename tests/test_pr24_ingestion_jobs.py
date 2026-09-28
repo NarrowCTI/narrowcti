@@ -100,7 +100,7 @@ class _Processor:
         self.received = (query, candidate_ref, state)
         if not self.settings.dry_run:
             state.mark_event(candidate_ref.external_id)
-        self.decision_audit.append({"external_id": candidate_ref.external_id})
+        self.decision_audit.record({"external_id": candidate_ref.external_id})
         if self.quarantine_repository is not None:
             self.quarantine_repository.add({"external_id": candidate_ref.external_id})
         return "ingest"
@@ -110,7 +110,7 @@ class _Audit:
     def __init__(self):
         self.records = []
 
-    def append(self, record):
+    def record(self, record):
         self.records.append(record)
 
 

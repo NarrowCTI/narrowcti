@@ -39,6 +39,16 @@ introducing commercial control-plane scope.
   introduced.
 - Community includes Basic UI, transient Source Explorer search/detail,
   preview, bounded dry-run, bounded manual run-once and basic quarantine/review.
+- The server-rendered Community shell includes Overview, Sources / Explorer,
+  Review / Quarantine, Evidence / Decisions and Reports. Navigation is derived
+  from Community capabilities and principal permissions, has an explicit
+  current-page marker, and keeps core content usable without JavaScript.
+- Overview reports provider availability and review counts only from bounded
+  current service projections; unavailable/error states remain explicit.
+  Evidence reads at most 100 recent local decision records through a bounded
+  application projection and exposes only allowlisted fields. Reports lists
+  existing one-shot Ops report commands as available/not generated; Web does
+  not generate report files or schedule them.
 - Professional begins with operational lifecycle control around these
   capabilities: saved/recurring searches, scheduling, pause/resume, bounded
   backfill, governed replay, richer history, advanced dashboards, visual
@@ -139,6 +149,16 @@ introducing commercial control-plane scope.
   requests without `Content-Length`. Provider requests enforce configured
   endpoint-only SSRF protections, TLS, redirect/proxy controls, timeouts,
   response bytes, result counts, query/filter lengths and per-session rates.
+- Login attempts and preview, dry-run and run-once submissions use separate
+  bounded process-local rate limits. Client identity is taken from the direct
+  ASGI peer only; arbitrary forwarded headers do not influence login limits.
+  Provider concurrency is one active call per provider with immediate
+  `provider_busy` response and no unbounded waiter queue.
+- The shared Web `/healthz` keeps the established Review API JSON payload and
+  outer security headers. When Review API docs are enabled, `/openapi.json` and
+  `/docs` remain mounted at their existing paths. Web settings accept legacy
+  Review API host/body-size variables as fallbacks, with Web-specific names
+  taking precedence.
 
 ### Capabilities, brand assets and supply chain
 
@@ -199,6 +219,10 @@ introducing commercial control-plane scope.
   a single modular monolith and runtime package.
 - The Web process receives distinct optional Explorer credentials and a
   bounded in-memory session store; restart invalidates browser sessions.
+- Failed logins reuse the existing anonymous session instead of allocating a
+  new one, and are rate-limited with a generic error response. The temporary
+  session's CSRF state remains server-side; submitted tokens are not persisted
+  or re-emitted.
 - Preview, dry-run and run-once have distinct evidence and mutation semantics
   that must be visible in UI and operator documentation.
 - Run-once jobs can become explicitly ambiguous after Worker reclaim; an
