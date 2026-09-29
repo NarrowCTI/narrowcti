@@ -6,6 +6,7 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from narrowcti.application.capabilities import COMMUNITY_CAPABILITY_NAMES
+from narrowcti.application.reporting.operational_snapshot import load_operational_state_snapshot
 from narrowcti.application.reporting.web_assurance import (
     project_web_operational_validation,
     project_web_preflight,
@@ -20,7 +21,7 @@ def register_community_routes(
     require_capability,
     template_context,
     template_response,
-    build_operational_reports,
+    operational_state_reader,
 ):
     """Register additive Community pages without moving existing route behavior."""
 
@@ -35,10 +36,20 @@ def register_community_routes(
 
     def current_reports():
         try:
-            preflight, validation = build_operational_reports(app.state.evidence_service)
+            raw_snapshot = operational_state_reader.read()
         except Exception:
             return None, None
-        return preflight, validation
+        snapshot = load_operational_state_snapshot(raw_snapshot)
+        if snapshot is None:
+            return None, None
+        return (
+            {**snapshot.preflight, "captured_at": snapshot.captured_at},
+            {
+                **snapshot.validation,
+                "required_sources": snapshot.required_sources,
+                "captured_at": snapshot.captured_at,
+            },
+        )
 
     @app.get("/sources", response_class=HTMLResponse)
     def sources_page(request: Request):
@@ -72,7 +83,7 @@ def register_community_routes(
         preflight, _validation = current_reports()
         return template_response(
             "operational_evidence.html",
-            template_context(request, session, preflight=project_web_preflight(preflight)),
+            template_context(request, session, preflight=preflight or project_web_preflight(None)),
         )
 
     @app.get("/evidence/validation", response_class=HTMLResponse)
@@ -84,7 +95,7 @@ def register_community_routes(
             template_context(
                 request,
                 session,
-                validation=project_web_operational_validation(validation),
+                validation=validation or project_web_operational_validation(None),
             ),
         )
 
@@ -96,7 +107,7 @@ def register_community_routes(
         preflight, _validation = current_reports()
         return template_response(
             "system_health.html",
-            template_context(request, session, preflight=project_web_preflight(preflight)),
+            template_context(request, session, preflight=preflight or project_web_preflight(None)),
         )
 
     @app.get("/system/providers", response_class=HTMLResponse)

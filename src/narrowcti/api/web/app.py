@@ -38,7 +38,7 @@ from narrowcti.infrastructure.runtime.web_composition import (
     build_operator_authentication,
     build_source_explorer,
     build_web_evidence,
-    build_web_operational_reports,
+    build_operational_state_reader,
 )
 from narrowcti.ports.jobs import ActiveJobLimitReached, INGESTION_DRY_RUN_JOB, INGESTION_PREVIEW_JOB, INGESTION_RUN_ONCE_JOB
 from narrowcti.ports.source_explorer import ExplorerError, ExplorerSearchRequest
@@ -209,13 +209,13 @@ def _bounded_count(value):
 
 
 def _community_report_inventory():
-    """Existing one-shot Ops reports; Web does not generate or schedule them."""
+    """Community-facing descriptions of reports available through operator workflows."""
     return (
-        {"name": "Decision audit", "command": "gateway.decisions", "status": "available"},
-        {"name": "Operational validation", "command": "gateway.operational_validation", "status": "available"},
-        {"name": "Support diagnostics", "command": "gateway.diagnostics", "status": "available"},
-        {"name": "Artifact correlation", "command": "gateway.correlation", "status": "available"},
-        {"name": "Curation report", "command": "gateway.curation_report", "status": "available"},
+        {"name": "Decision audit", "description": "Review bounded ingestion decisions, outcomes and source activity.", "status": "Available to operators"},
+        {"name": "Operational validation", "description": "Review the latest Gateway-published operational evidence snapshot.", "status": "Snapshot when available"},
+        {"name": "Support diagnostics", "description": "Collect a one-time operational diagnostic for support review.", "status": "Operator workflow"},
+        {"name": "Artifact correlation", "description": "Inspect artifact and source-correlation evidence.", "status": "Operator workflow"},
+        {"name": "Curation summary", "description": "Review current curation evidence and coverage.", "status": "Operator workflow"},
     )
 
 
@@ -228,7 +228,7 @@ def create_web_app(
     session_store: InMemoryWebSessionStore | None = None,
     job_repository=None,
     evidence_service=None,
-    operational_reports_builder=None,
+    operational_state_reader=None,
     operator_store=None,
     operator_authenticator: LocalOperatorAuthenticator | None = None,
 ):
@@ -263,7 +263,8 @@ def create_web_app(
         getattr(review_api_app, "state", None), "review_service", None
     )
     app.state.evidence_service = evidence_service or build_web_evidence(settings)
-    operational_reports_builder = operational_reports_builder or build_web_operational_reports
+    operational_state_reader = operational_state_reader or build_operational_state_reader(settings)
+    app.state.operational_state_reader = operational_state_reader
     capability_registry = CapabilityRegistry.default()
     capability_state = capability_registry.resolve(
         implemented=(*COMMUNITY_CAPABILITY_NAMES, *COMMUNITY_FUTURE_CAPABILITIES),
@@ -374,7 +375,7 @@ def create_web_app(
         rendered = _TEMPLATES.get_template("error.html").render(
             _template_context(
                 request,
-                None,
+                current_session(request)[1],
                 status_code=exc.status_code,
                 message=_public_http_error(exc.detail, exc.status_code),
             )
@@ -630,7 +631,7 @@ def create_web_app(
         )
 
     @app.get("/review", response_class=HTMLResponse)
-    async def review_page(request: Request, status: str = "pending"):
+    async def review_page(request: Request, status: str = "pending", source: str = "", q: str = ""):
         _session_id, session = current_session(request)
         require_permission(session, "review:read")
         require_capability("quarantine.review")
@@ -652,9 +653,19 @@ def create_web_app(
             }
             for item in records
         ]
+        source = source.strip().lower()[:64]
+        query = q.strip().casefold()[:128]
+        sources = sorted({item["source_key"] for item in projected if item["source_key"]})
+        if source:
+            projected = [item for item in projected if item["source_key"].lower() == source]
+        if query:
+            projected = [
+                item for item in projected
+                if query in " ".join((item["title"], item["external_id"], item["reason"], item["source_key"])).casefold()
+            ]
         return _template_response(
             "review.html",
-            _template_context(request, session, records=projected, status=status),
+            _template_context(request, session, records=projected, status=status, source=source, q=q, sources=sources),
         )
 
     @app.post("/review/records/{quarantine_id}/{action}", dependencies=[Depends(require_csrf)])
@@ -903,7 +914,7 @@ def create_web_app(
         require_capability=require_capability,
         template_context=_template_context,
         template_response=_template_response,
-        build_operational_reports=operational_reports_builder,
+        operational_state_reader=operational_state_reader,
     )
 
     # The established Review API remains a separate bearer-authenticated ASGI app.

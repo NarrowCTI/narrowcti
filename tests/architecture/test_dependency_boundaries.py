@@ -140,6 +140,14 @@ class DependencyBoundaryTests(unittest.TestCase):
                             violations.append(f"{source} imports outward {imported}")
         self.assertEqual([], violations, "\n".join(violations))
 
+    def test_web_composition_does_not_import_gateway_configuration_or_preflight(self):
+        source = "src/narrowcti/infrastructure/runtime/web_composition.py"
+        self.assertNotIn((source, "gateway.preflight"), EXCEPTIONS)
+        self.assertNotIn((source, "gateway.settings"), EXCEPTIONS)
+        imports = _imports(SRC / "infrastructure/runtime/web_composition.py")
+        self.assertFalse(any(_matches(item, "gateway.preflight") for item in imports))
+        self.assertFalse(any(_matches(item, "gateway.settings") for item in imports))
+
     def test_pure_layers_do_not_import_provider_sdks_or_io(self):
         violations: list[str] = []
         for layer in PURE_LAYERS:

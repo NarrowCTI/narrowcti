@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import re
+import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -12,11 +14,15 @@ from fastapi.testclient import TestClient
 from narrowcti.api.review.app import ReviewApiSettings, create_app as create_review_api_app
 from narrowcti.api.review.auth import ReviewCredentialStore, token_sha256
 from narrowcti.api.web.app import SESSION_COOKIE_LOCAL, SESSION_COOKIE_SECURE, create_web_app
-from narrowcti.infrastructure.config.web_settings import WebSettings
+from narrowcti.infrastructure.config.web_settings import WebSettings, load_web_settings
 from narrowcti.api.web.sessions import InMemoryWebSessionStore
 from narrowcti.adapters.persistence.local.operator_store import LocalOperatorStore
 from narrowcti.application.identity.passwords import LocalOperatorAuthenticator, PasswordService
 from narrowcti.application.reporting.web_evidence import WebEvidenceService
+from narrowcti.adapters.persistence.local.operational_snapshot_store import LocalOperationalSnapshotStore
+from narrowcti.infrastructure.runtime.operational_snapshot import publish_gateway_operational_snapshot
+from gateway.preflight import build_preflight_report
+from gateway.settings import load_settings as load_gateway_settings
 from narrowcti.ports.source_explorer import (
     ExplorerError,
     ExplorerItemDetail,
@@ -45,11 +51,15 @@ class _Summary:
 
 
 class _ReviewService:
+    def __init__(self):
+        self.records = []
+
     def summary(self):
         return _Summary()
 
     def list_records(self, *, status, limit):
-        return []
+        values = self.records if status == "all" else [item for item in self.records if item.get("status") == status]
+        return values[:limit]
 
 
 class _Explorer:
@@ -102,11 +112,11 @@ class _Jobs:
         return next((job for job in self.jobs.values() if job["job_id"] == job_id), None)
 
 
-class _Report:
+class _SnapshotReader:
     def __init__(self, data):
         self.data = data
 
-    def to_dict(self):
+    def read(self):
         return self.data
 
 
@@ -149,6 +159,7 @@ class WebAppTests(unittest.TestCase):
             allowed_hosts=("testserver", "localhost"),
             cookie_secure=False,
         )
+        self.review_service = _ReviewService()
         api = create_review_api_app(
             settings=ReviewApiSettings(
                 repository_file="synthetic-quarantine",
@@ -156,7 +167,7 @@ class WebAppTests(unittest.TestCase):
                 credentials_file="synthetic-credentials-file",
                 allowed_hosts=("testserver", "localhost"),
             ),
-            review_service=_ReviewService(),
+            review_service=self.review_service,
             credential_store=self.credential_store,
         )
         self.review_api_app = api
@@ -180,34 +191,26 @@ class WebAppTests(unittest.TestCase):
                 "metadata": {"provider_payload": "evidence-secret-canary"},
                 "path": "C:/private/audit.jsonl",
             }]),
-            operational_reports_builder=lambda _service: (
-                _Report({
-                    "ok": True,
-                    "ingestion_mode": "hybrid",
-                    "enabled_sources": ["misp", "otx"],
-                    "settings": {
-                        "dedup_mode": "hybrid",
-                        "graph_export_mode": "audit",
-                        "misp_verify_tls": True,
-                        "opencti_token": "preflight-secret-canary",
-                    },
-                    "evidence_paths": {"state_dir": "C:/private/narrowcti-state"},
-                    "source_controls": {"misp": {"dry_run": True}, "otx": {"dry_run": False}},
+            operational_state_reader=_SnapshotReader({
+                "schema": "narrowcti.operational-state/v1",
+                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "required_sources": ["misp"],
+                "preflight": {
+                    "status": "ready", "ingestion_mode": "hybrid", "dedup_mode": "hybrid",
+                    "graph_export_mode": "audit", "misp_tls": True,
+                    "sources": [{"name": "misp", "dry_run": True}],
                     "issues": [{"severity": "warning", "code": "mitre-cache-missing", "message": "C:/private/cache.json"}],
-                }),
-                _Report({
-                    "schema_version": "operational-validation/v1.0",
-                    "release": "v1.0.0",
-                    "overall_status": "needs-evidence",
-                    "counts": {"needs-evidence": 1},
-                    "checks": [{
-                        "code": "full-validation",
-                        "status": "needs-evidence",
-                        "message": "C:/private/release.log",
-                        "evidence": {"api_key": "validation-secret-canary", "path": "C:/private/release.log"},
-                    }],
-                }),
-            ),
+                    "settings": {"opencti_token": "preflight-secret-canary"},
+                    "evidence_paths": {"state_dir": "C:/private/narrowcti-state"},
+                },
+                "validation": {
+                    "schema_version": "operational-validation/v1.0", "release": "v1.0.0",
+                    "status": "needs-evidence", "counts": {"needs-evidence": 1},
+                    "checks": [{"code": "full-validation", "status": "needs-evidence",
+                                "message": "C:/private/release.log",
+                                "evidence": {"api_key": "validation-secret-canary", "path": "C:/private/release.log"}}],
+                },
+            }),
         )
         self.client = TestClient(self.app, base_url="https://testserver")
 
@@ -570,7 +573,8 @@ class WebAppTests(unittest.TestCase):
         self.assertNotIn("C:/private/audit.jsonl", evidence.text)
         reports = self.client.get("/reports")
         self.assertEqual(200, reports.status_code)
-        self.assertIn("Not generated", reports.text)
+        self.assertIn("Available to operators", reports.text)
+        self.assertNotIn("gateway.decisions", reports.text)
         self.assertIn("does not generate files", reports.text)
 
     def test_community_ia_routes_use_approved_access_and_preserve_legacy_paths(self):
@@ -584,7 +588,7 @@ class WebAppTests(unittest.TestCase):
             "/evidence": "Decision Audit",
             "/evidence/operational": "Operational Evidence",
             "/evidence/validation": "Operational Validation",
-            "/reports": "Report inventory",
+            "/reports": "Reports",
             "/system/health": "Health / Preflight",
             "/system/providers": "Providers",
             "/system/capabilities": "Community capabilities",
@@ -611,11 +615,109 @@ class WebAppTests(unittest.TestCase):
         health = self.client.get("/system/health")
         self.assertIn("Hybrid", health.text)
         self.assertIn("mitre-cache-missing", health.text)
+        validation = self.client.get("/evidence/validation")
+        self.assertIn("Authoritative validation sources: misp", validation.text)
+        self.assertNotIn("otx", validation.text)
         self.assertNotIn("Healthy", self.client.get("/system/providers").text)
         self.assertNotIn("Reachable", self.client.get("/system/providers").text)
         capabilities = self.client.get("/system/capabilities")
         self.assertIn("source explorer", capabilities.text.lower())
         self.assertNotIn("scheduler", capabilities.text.lower())
+
+    def test_gateway_publishes_authoritative_snapshot_from_raw_graph_evidence(self):
+        audit_dir = Path(self._temporary.name) / "gateway-audit"
+        audit_dir.mkdir()
+        audit_record = {
+            "recorded_at": "2026-09-28T12:00:00Z", "source_key": "misp",
+            "query": "tlp:green", "action": "dry-run", "reason": "candidate evaluated",
+            "score": 90, "metadata": {
+                "graph_export_plan": {
+                    "mode": "dry-run", "status": "dry-run", "candidate_count": 1,
+                    "accepted_count": 1, "accepted_object_counts": {"attack-pattern": 1},
+                },
+                "graph_export_plan_lookup_matches": [{
+                    "stix_object_type": "attack-pattern",
+                    "match": {"match_type": "mitre_attack_id", "entity_type": "Attack-Pattern"},
+                }],
+            },
+        }
+        with (audit_dir / "misp.jsonl").open("w", encoding="utf-8") as stream:
+            stream.write(json.dumps(audit_record) + "\n")
+        gateway_env = {
+            "NARROWCTI_STATE_DIR": str(Path(self._temporary.name) / "gateway-state"),
+            "NARROWCTI_RUNTIME_DB": self.settings.runtime_db_file,
+            "NARROWCTI_DECISION_AUDIT_DIR": str(audit_dir),
+            "NARROWCTI_ENABLED_SOURCES": "misp",
+            "NARROWCTI_GRAPH_EXPORT_MODE": "dry-run",
+            "NARROWCTI_GRAPH_DEDUP_STATE_FILE": str(Path(self._temporary.name) / "graph-index.json"),
+            "NARROWCTI_OPENCTI_GRAPH_LOOKUP": "true",
+            "MISP_DRY_RUN": "true",
+            "MISP_VERIFY_TLS": "true",
+            "MISP_URL": "https://misp.example.invalid",
+            "OPENCTI_URL": "https://opencti.example.invalid",
+        }
+        gateway_settings = load_gateway_settings(gateway_env)
+        preflight = build_preflight_report(gateway_settings, env=gateway_env)
+        snapshot = publish_gateway_operational_snapshot(gateway_settings, preflight)
+        checks = {check["code"]: check["status"] for check in snapshot.validation["checks"]}
+        self.assertEqual("pass", checks["canonical-attack-match"])
+        self.assertEqual("pass", checks["lookup-metadata"])
+        self.assertEqual(("misp",), snapshot.required_sources)
+
+        published = LocalOperationalSnapshotStore(self.settings.runtime_db_file).read()
+        self.assertEqual(["misp"], published["required_sources"])
+        serialized = json.dumps(published)
+        self.assertNotIn("misp.example.invalid", serialized)
+        self.assertNotIn("opencti.example.invalid", serialized)
+        self.assertNotIn(str(audit_dir), serialized)
+        self.assertNotIn("graph-index.json", serialized)
+
+        client = TestClient(create_web_app(
+            self.settings,
+            source_explorer=self.explorer,
+            credential_store=self.credential_store,
+            operator_store=self.operator_store,
+            operator_authenticator=self.operator_authenticator,
+            review_api_app=self.review_api_app,
+            session_store=InMemoryWebSessionStore(300, 3600),
+            job_repository=self.jobs,
+        ), base_url="https://testserver")
+        self._login(client=client)
+        response = client.get("/evidence/validation")
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Authoritative validation sources: misp", response.text)
+        self.assertNotIn("otx", response.text)
+        self.assertIn("Canonical Attack Match", response.text)
+        self.assertNotIn("opencti.example.invalid", response.text)
+
+    def test_web_role_env_cannot_manufacture_gateway_state_without_snapshot(self):
+        web_settings = load_web_settings({
+            "NARROWCTI_AUTH_DB": str(Path(self._temporary.name) / "auth.db"),
+            "NARROWCTI_RUNTIME_DB": str(Path(self._temporary.name) / "missing-runtime.db"),
+            "NARROWCTI_WEB_ALLOWED_HOSTS": "testserver",
+            "NARROWCTI_WEB_COOKIE_SECURE": "false",
+            "NARROWCTI_GRAPH_EXPORT_MODE": "export",
+            "NARROWCTI_ENABLED_SOURCES": "otx,misp",
+            "MISP_VERIFY_TLS": "false",
+        })
+        client = TestClient(create_web_app(
+            web_settings,
+            source_explorer=self.explorer,
+            credential_store=self.credential_store,
+            operator_store=self.operator_store,
+            operator_authenticator=self.operator_authenticator,
+            review_api_app=self.review_api_app,
+            session_store=InMemoryWebSessionStore(300, 3600),
+            job_repository=self.jobs,
+        ), base_url="https://testserver")
+        self._login(client=client)
+        self.assertEqual(str(Path(self._temporary.name) / "missing-runtime.db"), web_settings.runtime_db_file)
+        response = client.get("/system/health")
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Preflight is currently unavailable", response.text)
+        self.assertNotIn("Export", response.text)
+        validation = client.get("/evidence/validation")
+        self.assertIn("Current Operational Validation is unavailable", validation.text)
 
     def test_browser_http_errors_are_autoescaped_html_with_status_and_security_headers(self):
         self._login()
@@ -630,6 +732,58 @@ class WebAppTests(unittest.TestCase):
         self.assertNotIn("<script>synthetic-xss</script>", response.text)
         self.assertIn("&lt;script&gt;synthetic-xss&lt;/script&gt;", response.text)
         self.assertEqual("DENY", response.headers["x-frame-options"])
+        self.assertIn('class="app-layout"', response.text)
+        self.assertIn('aria-label="My Account"', response.text)
+        self.assertIn('aria-label="Sign out"', response.text)
+
+    def test_error_page_preserves_authenticated_or_anonymous_shell_and_exception_headers(self):
+        from fastapi import HTTPException
+
+        async def failure():
+            raise HTTPException(status_code=409, detail="<unsafe>", headers={"X-Contract": "preserved"})
+
+        inner_app = self.app.app.app.app
+        inner_app.add_api_route("/test-http-error", failure)
+        from starlette.routing import Mount
+        test_route = inner_app.router.routes.pop()
+        review_mount = next(index for index, route in enumerate(inner_app.router.routes) if isinstance(route, Mount) and route.path == "")
+        inner_app.router.routes.insert(review_mount, test_route)
+        self._login()
+        authenticated = self.client.get("/test-http-error")
+        self.assertEqual(409, authenticated.status_code)
+        self.assertEqual("preserved", authenticated.headers["x-contract"])
+        self.assertIn('class="app-layout"', authenticated.text)
+        self.assertIn("&lt;unsafe&gt;", authenticated.text)
+        self.client.cookies.clear()
+        anonymous = self.client.get("/test-http-error")
+        self.assertEqual(409, anonymous.status_code)
+        self.assertIn('class="login-shell"', anonymous.text)
+        self.assertNotIn('class="app-layout"', anonymous.text)
+
+    def test_mobile_menu_keeps_account_and_sign_out_controls_in_expanded_navigation(self):
+        self._login()
+        page = self.client.get("/")
+        self.assertIn('id="sidebar-toggle"', page.text)
+        self.assertIn('aria-label="My Account"', page.text)
+        self.assertIn('aria-label="Sign out"', page.text)
+        css = self.client.get("/assets/app.css").text
+        self.assertIn("@media (max-width: 800px)", css)
+        self.assertIn(".sidebar:has(.sidebar-toggle:checked) .sidebar-account { display: grid", css)
+
+    def test_quarantine_queue_filters_and_contextual_actions_preserve_permissions(self):
+        self.review_service.records = [
+            {"quarantine_id": "q-1", "title": "Lazarus campaign", "source_key": "misp", "external_id": "822", "reason": "manual review", "status": "pending", "indicator_count": 4, "created_at": "2026-09-28T10:00:00Z"},
+            {"quarantine_id": "q-2", "title": "Other campaign", "source_key": "otx", "external_id": "99", "reason": "other", "status": "pending", "indicator_count": 1, "created_at": "2026-09-27T10:00:00Z"},
+        ]
+        self._login(token=ADMIN_TOKEN)
+        response = self.client.get("/review?status=pending&source=misp&q=lazarus")
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Review queue", response.text)
+        self.assertIn("Lazarus campaign", response.text)
+        self.assertNotIn("Other campaign", response.text)
+        self.assertIn("Release all", response.text)
+        self.assertIn("Reject", response.text)
+        self.assertIn("Inspect", response.text)
 
     def test_web_security_headers_and_source_cannot_set_secure_cookie_name(self):
         self.assertNotEqual(SESSION_COOKIE_LOCAL, SESSION_COOKIE_SECURE)

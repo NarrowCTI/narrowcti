@@ -34,18 +34,23 @@ projections only. The Web never renders `PreflightReport.to_dict()` or
 diagnostics and report evidence payloads are withheld.
 
 Operational Validation uses the existing `OperationalValidationReport`
-contract for the current configuration/evidence snapshot. It does not run a
-CLI, subprocess, release-validation suite or continuous/historical validation.
-“Needs evidence” is shown as such and is not represented as a failed release
-gate.
+contract for the current configuration/evidence snapshot. The Gateway/Ops
+`python -m gateway.preflight` workflow publishes a bounded, allowlisted snapshot
+after building validation from raw bounded DecisionRecord evidence. The Web
+reads that snapshot from the shared runtime-state volume; it does not load
+Gateway settings, recompute preflight/MITRE/decision validation, or run a CLI or
+subprocess. Snapshots older than 15 minutes (or implausibly future-dated) are
+shown as unavailable, not as current Gateway state. “Needs evidence” is shown
+as such and is not represented as a failed release gate.
 
 `ProviderDescriptor.available` means configured/available to the Explorer; it
 does not mean the upstream provider was contacted or is healthy. “Healthy” or
 “Reachable” is reserved for a real bounded probe. Worker health is not inferred
 from missing errors, jobs or container state.
 
-Reports remains an inventory of existing Ops one-shot commands. Community Web
-does not generate report files, accept output paths or schedule reports.
+Reports is a product-facing inventory of Community operational reports.
+Community Web does not generate report files, expose internal module command
+names, accept output paths or schedule reports.
 Overview and empty states never invent activity, metrics or history. Job pages
 show only the existing authorized job contract; they are not a historical
 operations dashboard.

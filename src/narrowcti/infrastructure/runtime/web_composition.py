@@ -7,12 +7,11 @@ from pathlib import Path
 from narrowcti.adapters.sources.misp.explorer import MISPSourceExplorer
 from narrowcti.adapters.sources.otx.explorer import OTXSourceExplorer
 from narrowcti.adapters.persistence.local.web_evidence_reader import read_recent_records
+from narrowcti.adapters.persistence.local.operational_snapshot_store import LocalOperationalSnapshotStore
 from narrowcti.adapters.persistence.local.operator_store import LocalOperatorStore
 from narrowcti.application.identity.passwords import LocalOperatorAuthenticator, PasswordService
 from narrowcti.application.source_explorer import SourceExplorerService
 from narrowcti.application.reporting.web_evidence import WebEvidenceService
-from narrowcti.application.reporting.decisions import build_decision_audit_report
-from narrowcti.application.assurance.operational_validation import build_operational_validation_report
 from narrowcti.infrastructure.config.web_settings import SourceExplorerSettings
 
 
@@ -52,16 +51,9 @@ def build_web_evidence(settings) -> WebEvidenceService:
     return WebEvidenceService(reader)
 
 
-def build_web_operational_reports(evidence_service):
-    """Compose current-state reports through existing contracts, without CLI execution."""
-    from gateway.preflight import build_preflight_report
-    from gateway.settings import load_settings
-
-    preflight = build_preflight_report(load_settings())
-    records = evidence_service.recent(100) if evidence_service and evidence_service.available else []
-    decisions = build_decision_audit_report(records)
-    validation = build_operational_validation_report(preflight, decisions)
-    return preflight, validation
+def build_operational_state_reader(settings):
+    """Read the safe authoritative snapshot published by the Gateway/Ops role."""
+    return LocalOperationalSnapshotStore(settings.runtime_db_file)
 
 
 def build_operator_authentication(settings):
@@ -74,5 +66,5 @@ __all__ = [
     "build_operator_authentication",
     "build_source_explorer",
     "build_web_evidence",
-    "build_web_operational_reports",
+    "build_operational_state_reader",
 ]
