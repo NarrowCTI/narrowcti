@@ -289,9 +289,18 @@ def create_web_app(
         if request.method not in _UNSAFE_METHODS:
             return
         origin = request.headers.get("origin")
-        if origin and not _same_origin(request, origin, settings.public_origin):
+        fetch_site = request.headers.get("sec-fetch-site", "").lower()
+        if fetch_site == "cross-site":
             raise HTTPException(status_code=403, detail="CSRF validation failed")
-        if request.headers.get("sec-fetch-site", "").lower() == "cross-site":
+        if origin == "null" and fetch_site != "same-origin":
+            # Opaque origins are accepted only for a browser-asserted same-origin
+            # request; the session-bound CSRF token is still mandatory below.
+            raise HTTPException(status_code=403, detail="CSRF validation failed")
+        if (
+            origin
+            and origin != "null"
+            and not _same_origin(request, origin, settings.public_origin)
+        ):
             raise HTTPException(status_code=403, detail="CSRF validation failed")
         session_id = request.cookies.get(cookie_name)
         session = session_store.get(session_id)

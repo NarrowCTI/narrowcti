@@ -485,6 +485,61 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(403, denied_origin.status_code)
         self.assertEqual(403, denied_fetch.status_code)
 
+    def test_opaque_origin_requires_same_origin_fetch_metadata_and_csrf_token(self):
+        client = TestClient(self.app, base_url="https://testserver")
+        page = client.get("/login")
+        csrf = re.search(r'name="_csrf" value="([^"]+)"', page.text).group(1)
+        payload = {"_csrf": csrf, "username": "reader", "password": READER_PASSWORD}
+
+        allowed = client.post(
+            "/login",
+            data=payload,
+            headers={"Origin": "null", "Sec-Fetch-Site": "same-origin"},
+            follow_redirects=False,
+        )
+
+        invalid_token_client = TestClient(self.app, base_url="https://testserver")
+        invalid_page = invalid_token_client.get("/login")
+        invalid_csrf = re.search(
+            r'name="_csrf" value="([^"]+)"', invalid_page.text
+        ).group(1)
+        invalid_payload = {**payload, "_csrf": f"{invalid_csrf}-invalid"}
+        denied_invalid_token = invalid_token_client.post(
+            "/login",
+            data=invalid_payload,
+            headers={"Origin": "null", "Sec-Fetch-Site": "same-origin"},
+            follow_redirects=False,
+        )
+
+        cross_site_client = TestClient(self.app, base_url="https://testserver")
+        cross_site_page = cross_site_client.get("/login")
+        cross_site_csrf = re.search(
+            r'name="_csrf" value="([^"]+)"', cross_site_page.text
+        ).group(1)
+        denied_cross_site = cross_site_client.post(
+            "/login",
+            data={**payload, "_csrf": cross_site_csrf},
+            headers={"Origin": "null", "Sec-Fetch-Site": "cross-site"},
+            follow_redirects=False,
+        )
+
+        missing_metadata_client = TestClient(self.app, base_url="https://testserver")
+        missing_metadata_page = missing_metadata_client.get("/login")
+        missing_metadata_csrf = re.search(
+            r'name="_csrf" value="([^"]+)"', missing_metadata_page.text
+        ).group(1)
+        denied_without_metadata = missing_metadata_client.post(
+            "/login",
+            data={**payload, "_csrf": missing_metadata_csrf},
+            headers={"Origin": "null"},
+            follow_redirects=False,
+        )
+
+        self.assertEqual(303, allowed.status_code)
+        self.assertEqual(403, denied_invalid_token.status_code)
+        self.assertEqual(403, denied_cross_site.status_code)
+        self.assertEqual(403, denied_without_metadata.status_code)
+
     def test_reverse_proxy_origin_uses_explicit_public_origin_not_forwarded_headers(self):
         settings = WebSettings(
             credentials_file="synthetic-credentials-file",
