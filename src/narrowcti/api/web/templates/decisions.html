@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Decisions · NarrowCTI Community{% endblock %}
+{% block content %}
+<section class="hero compact"><p class="eyebrow">Intelligence</p><h1>Decisions</h1><p class="muted">Recent decisions from the same bounded, allowlisted Community evidence service used by Decision Audit. Maximum 100 records; no raw provider metadata.</p></section>
+{% if evidence_status == 'available' %}<section class="panel"><div class="section-heading"><h2>Recent decisions</h2><span class="status-pill">{{ records|length }} shown · max 100</span></div><div class="table-wrap"><table><thead><tr><th scope="col">Recorded</th><th scope="col">Outcome</th><th scope="col">Source</th><th scope="col">Title</th><th scope="col">External ID</th><th scope="col">Reason</th><th scope="col">Indicators</th></tr></thead><tbody>{% for record in records %}<tr><td>{{ record.recorded_at|default('—') }}</td><td>{{ record.action|default('—') }}</td><td>{{ record.source_key|default('—') }}</td><td>{{ record.title|default('—') }}</td><td>{{ record.external_id|default('—') }}</td><td>{{ record.reason|default('—') }}</td><td>{{ record.indicator_count|default('—') }}</td></tr>{% endfor %}</tbody></table></div><p class="muted">This view is bounded to recent local audit records and is not a complete ingestion history.</p></section>
+{% elif evidence_status == 'no_records' %}<section class="empty-state"><h2>No decision records yet</h2><p>The configured audit source contains no readable records.</p></section>
+{% elif evidence_status == 'error' %}<section class="empty-state"><h2>Decision evidence unavailable</h2><p role="status">The audit source could not be read. Details and filesystem paths are withheld.</p></section>
+{% else %}<section class="empty-state"><h2>Decision evidence not configured</h2><p>No local decision audit source is available to this Web role.</p></section>{% endif %}
+{% endblock %}

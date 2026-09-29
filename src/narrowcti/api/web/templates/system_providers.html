@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Providers · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero compact"><p class="eyebrow">System</p><h1>Providers</h1><p class="muted">Provider descriptors show whether an integration is configured for Explorer. They are not live health or reachability probes.</p></section>
+{% if providers %}<section class="provider-grid">{% for provider in providers %}<article class="provider-card"><div class="section-heading"><h2>{{ provider.display_name }}</h2><span class="status-pill {{ 'good' if provider.available else '' }}">{{ 'Configured · Available for Explorer' if provider.available else 'Not configured' }}</span></div><p>Supported operations: {% for operation in provider.operations %}{{ operation.value|default(operation)|replace('_', ' ')|title }}{% if not loop.last %}, {% endif %}{% else %}None declared{% endfor %}</p>{% if provider.filters %}<p class="filter-summary">Filters: {% for item in provider.filters %}{{ item.label }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}</article>{% endfor %}</section>{% else %}<section class="empty-state">No providers are registered.</section>{% endif %}
+{% endblock %}

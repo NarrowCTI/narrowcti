@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Evidence and decisions · NarrowCTI{% endblock %}
+{% block title %}Decision Audit · NarrowCTI{% endblock %}
 {% block content %}
-<section class="hero compact"><p class="eyebrow">Audit trail</p><h1>Evidence and decisions</h1><p class="muted">A bounded, allowlisted projection of recent local DecisionRecords. Raw metadata and provider payloads are never displayed.</p></section>
+<section class="hero compact"><p class="eyebrow">Evidence</p><h1>Decision Audit</h1><p class="muted">A bounded, allowlisted projection of recent local DecisionRecords. Raw metadata and provider payloads are never displayed.</p></section>
 {% if evidence_status == 'available' %}
 <section class="panel"><h2>Recent decisions <span class="muted">({{ records|length }}, maximum 100)</span></h2>
   <div class="table-wrap"><table><thead><tr><th scope="col">Recorded</th><th scope="col">Source</th><th scope="col">Title</th><th scope="col">External ID</th><th scope="col">Decision</th><th scope="col">Reason</th><th scope="col">Indicators</th></tr></thead><tbody>

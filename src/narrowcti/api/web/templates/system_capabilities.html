@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Community Capabilities · NarrowCTI{% endblock %}
+{% block content %}
+<section class="hero compact"><p class="eyebrow">System</p><h1>Community capabilities</h1><p class="muted">This inventory lists Community capabilities only. Access is still enforced by the server on every route and action.</p></section>
+<section class="panel"><div class="table-wrap"><table><thead><tr><th scope="col">Capability</th><th scope="col">Community state</th></tr></thead><tbody>{% for item in community_capabilities %}<tr><th scope="row">{{ item.name|replace('.', ' ')|replace('_', ' ')|title }}</th><td><span class="status-pill {{ 'good' if item.enabled else 'warn' }}">{{ 'Available' if item.enabled else 'Not available' }}</span></td></tr>{% endfor %}</tbody></table></div><p class="muted">Commercial, future and entitlement-specific capabilities are not included in this Community view.</p></section>
+{% endblock %}

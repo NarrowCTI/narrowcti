@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Request unavailable · NarrowCTI{% endblock %}
+{% block content %}
+<section class="error-page"><p class="eyebrow">Request {{ status_code }}</p><h1>We could not complete that request</h1><p role="alert">{{ message }}</p>{% if not principal %}<a class="button primary" href="/login">Sign in</a>{% else %}<a class="button quiet" href="/">Return to Overview</a>{% endif %}</section>
+{% endblock %}

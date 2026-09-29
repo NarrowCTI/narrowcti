@@ -1,7 +1,21 @@
 {
   "schema_version": 1,
-  "scope": "W7 / PR-21",
+  "scope": "Community 2.0 migration boundaries (W7 / PR-21 baseline, PR-25 addition)",
   "exceptions": [
+    {
+      "source": "src/narrowcti/infrastructure/runtime/web_composition.py",
+      "module": "gateway.preflight",
+      "reason": "reuse the complete current-state Gateway preflight composition for the Community Web projection",
+      "owner": "gateway.preflight",
+      "removal_target": "canonical preflight composition follow-up"
+    },
+    {
+      "source": "src/narrowcti/infrastructure/runtime/web_composition.py",
+      "module": "gateway.settings",
+      "reason": "supply the existing Gateway settings contract to the complete current-state preflight",
+      "owner": "gateway.settings",
+      "removal_target": "canonical preflight composition follow-up"
+    },
     {
       "source": "src/narrowcti/application/runtime.py",
       "module": "core.decision_audit",

@@ -11,33 +11,59 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
-  <header class="site-header">
-    <a class="brand" href="/" aria-label="NarrowCTI home">
-      <img src="/assets/brand/logo/narrowcti-logo-horizontal-dark.svg" alt="NarrowCTI">
-    </a>
-    {% if principal %}
-    <nav aria-label="Primary">
-      <a href="/" {% if active_page == '/' %}aria-current="page"{% endif %}>Overview</a>
-      {% if capabilities.get('source.explorer') and principal.has_permission('source:explore') %}<a href="/explorer" {% if active_page.startswith('/explorer') %}aria-current="page"{% endif %}>Sources / Explorer</a>{% endif %}
-      {% if capabilities.get('quarantine.review') and principal.has_permission('review:read') %}<a href="/review" {% if active_page == '/review' %}aria-current="page"{% endif %}>Review / Quarantine</a>{% endif %}
-      {% if capabilities.get('reporting.operational') and principal.has_permission('review:read') %}
-      <a href="/evidence" {% if active_page == '/evidence' %}aria-current="page"{% endif %}>Evidence / Decisions</a>
-      <a href="/reports" {% if active_page == '/reports' %}aria-current="page"{% endif %}>Reports</a>
-      {% endif %}
-    </nav>
-    <div class="identity">
-      <span>{{ principal.principal }}</span>
-      <a href="/account" {% if active_page == '/account' %}aria-current="page"{% endif %}>My account</a>
-      <form method="post" action="/logout">
-        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-        <button class="button quiet" type="submit">Sign out</button>
-      </form>
-    </div>
-    {% endif %}
-  </header>
-  <main id="main-content" class="page-shell" tabindex="-1">
-    {% block content %}{% endblock %}
-  </main>
-  <footer class="site-footer">NarrowCTI Community · Source data remains with its provider.</footer>
+  {% if principal %}<div class="app-layout">
+    <aside class="sidebar" aria-label="Application navigation">
+      <input class="sidebar-toggle" type="checkbox" id="sidebar-toggle" aria-label="Toggle sidebar navigation">
+      <label class="sidebar-toggle-label" for="sidebar-toggle" title="Collapse or expand navigation">
+        <span class="expanded-label">Collapse</span><span class="collapsed-label">Expand</span><span class="mobile-label">Menu</span>
+      </label>
+      <a class="brand" href="/" aria-label="NarrowCTI home">
+        <img class="brand-expanded" src="/assets/brand/logo/narrowcti-logo-horizontal-dark.svg" alt="NarrowCTI">
+        <img class="brand-collapsed" src="/assets/brand/symbol/narrowcti-symbol-gradient.svg" alt="NarrowCTI">
+      </a>
+      <nav class="sidebar-nav" aria-label="Primary">
+        {% if capabilities.get('ui.basic') %}
+        <a class="nav-link" href="/" aria-label="Overview" {% if active_page == '/' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">OV</span><span class="nav-label">Overview</span></a>
+        {% endif %}
+        <p class="nav-section">Intelligence</p>
+        {% if capabilities.get('source.explorer') and principal.has_permission('source:explore') %}
+        <a class="nav-link" href="/sources" aria-label="Sources" {% if active_page == '/sources' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">SO</span><span class="nav-label">Sources</span></a>
+        <a class="nav-link" href="/explorer" aria-label="Explorer" {% if active_page.startswith('/explorer') %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">EX</span><span class="nav-label">Explorer</span></a>
+        {% endif %}
+        {% if capabilities.get('reporting.operational') and principal.has_permission('review:read') %}
+        <a class="nav-link" href="/decisions" aria-label="Decisions" {% if active_page == '/decisions' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">DE</span><span class="nav-label">Decisions</span></a>
+        {% endif %}
+        {% if capabilities.get('quarantine.review') and principal.has_permission('review:read') %}
+        <p class="nav-section">Review</p>
+        <a class="nav-link" href="/review" aria-label="Quarantine" {% if active_page == '/review' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">QU</span><span class="nav-label">Quarantine</span></a>
+        {% endif %}
+        {% if capabilities.get('reporting.operational') and principal.has_permission('review:read') %}
+        <p class="nav-section">Evidence</p>
+        <a class="nav-link" href="/evidence" aria-label="Decision Audit" {% if active_page == '/evidence' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">DA</span><span class="nav-label">Decision Audit</span></a>
+        <a class="nav-link" href="/evidence/operational" aria-label="Operational Evidence" {% if active_page == '/evidence/operational' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">OE</span><span class="nav-label">Operational Evidence</span></a>
+        {% endif %}
+        {% if capabilities.get('reporting.operational_validation') and principal.has_permission('review:read') %}
+        <a class="nav-link" href="/evidence/validation" aria-label="Validation" {% if active_page == '/evidence/validation' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">VA</span><span class="nav-label">Validation</span></a>
+        {% endif %}
+        {% if capabilities.get('reporting.operational') and principal.has_permission('review:read') %}
+        <p class="nav-section">Reports</p>
+        <a class="nav-link" href="/reports" aria-label="Reports" {% if active_page == '/reports' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">RP</span><span class="nav-label">Reports</span></a>
+        {% endif %}
+        {% if capabilities.get('ui.basic') %}
+        <p class="nav-section">System</p>
+        <a class="nav-link" href="/system/health" aria-label="Health and Preflight" {% if active_page == '/system/health' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">HP</span><span class="nav-label">Health / Preflight</span></a>
+        <a class="nav-link" href="/system/providers" aria-label="Providers" {% if active_page == '/system/providers' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">PR</span><span class="nav-label">Providers</span></a>
+        <a class="nav-link" href="/system/capabilities" aria-label="Capabilities" {% if active_page == '/system/capabilities' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">CA</span><span class="nav-label">Capabilities</span></a>
+        {% endif %}
+      </nav>
+      <div class="sidebar-account"><span class="operator-name">{{ principal.principal }}</span><a class="nav-link" href="/account" aria-label="My Account" {% if active_page == '/account' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">AC</span><span class="nav-label">My Account</span></a>
+        <form method="post" action="/logout"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="nav-link signout" type="submit" aria-label="Sign out"><span class="nav-icon" aria-hidden="true">↪</span><span class="nav-label">Sign out</span></button></form>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="workspace-header"><p class="workspace-context">Community workspace</p><span class="workspace-role">{{ principal.roles|sort|join(" · ") }}</span></header>
+  {% else %}<div class="login-shell">{% endif %}
+  <main id="main-content" class="page-shell{% if not principal %} login-content{% endif %}" tabindex="-1">{% block content %}{% endblock %}</main>
+  {% if principal %}<footer class="site-footer">NarrowCTI Community · Source data remains with its provider.</footer></div></div>{% else %}</div>{% endif %}
 </body>
 </html>

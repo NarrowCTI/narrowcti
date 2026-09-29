@@ -11,6 +11,7 @@ The machine-readable migration ledger is
   [`product/deployment-operations.md`](product/deployment-operations.md),
   [`product/configuration-reference.md`](product/configuration-reference.md),
   [`product/web-source-explorer.md`](product/web-source-explorer.md),
+  [`product/community-web-ux.md`](product/community-web-ux.md),
   [`product/product-reference.md`](product/product-reference.md),
   [`product/brand-guidelines.md`](product/brand-guidelines.md)
 - Architecture: [`architecture/overview.md`](architecture/overview.md) and

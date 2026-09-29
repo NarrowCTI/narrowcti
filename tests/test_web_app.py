@@ -18,6 +18,7 @@ from narrowcti.adapters.persistence.local.operator_store import LocalOperatorSto
 from narrowcti.application.identity.passwords import LocalOperatorAuthenticator, PasswordService
 from narrowcti.application.reporting.web_evidence import WebEvidenceService
 from narrowcti.ports.source_explorer import (
+    ExplorerError,
     ExplorerItemDetail,
     ExplorerItemSummary,
     ExplorerSearchResult,
@@ -46,6 +47,9 @@ class _Summary:
 class _ReviewService:
     def summary(self):
         return _Summary()
+
+    def list_records(self, *, status, limit):
+        return []
 
 
 class _Explorer:
@@ -96,6 +100,14 @@ class _Jobs:
 
     def get(self, job_id):
         return next((job for job in self.jobs.values() if job["job_id"] == job_id), None)
+
+
+class _Report:
+    def __init__(self, data):
+        self.data = data
+
+    def to_dict(self):
+        return self.data
 
 
 class WebAppTests(unittest.TestCase):
@@ -168,6 +180,34 @@ class WebAppTests(unittest.TestCase):
                 "metadata": {"provider_payload": "evidence-secret-canary"},
                 "path": "C:/private/audit.jsonl",
             }]),
+            operational_reports_builder=lambda _service: (
+                _Report({
+                    "ok": True,
+                    "ingestion_mode": "hybrid",
+                    "enabled_sources": ["misp", "otx"],
+                    "settings": {
+                        "dedup_mode": "hybrid",
+                        "graph_export_mode": "audit",
+                        "misp_verify_tls": True,
+                        "opencti_token": "preflight-secret-canary",
+                    },
+                    "evidence_paths": {"state_dir": "C:/private/narrowcti-state"},
+                    "source_controls": {"misp": {"dry_run": True}, "otx": {"dry_run": False}},
+                    "issues": [{"severity": "warning", "code": "mitre-cache-missing", "message": "C:/private/cache.json"}],
+                }),
+                _Report({
+                    "schema_version": "operational-validation/v1.0",
+                    "release": "v1.0.0",
+                    "overall_status": "needs-evidence",
+                    "counts": {"needs-evidence": 1},
+                    "checks": [{
+                        "code": "full-validation",
+                        "status": "needs-evidence",
+                        "message": "C:/private/release.log",
+                        "evidence": {"api_key": "validation-secret-canary", "path": "C:/private/release.log"},
+                    }],
+                }),
+            ),
         )
         self.client = TestClient(self.app, base_url="https://testserver")
 
@@ -520,7 +560,8 @@ class WebAppTests(unittest.TestCase):
     def test_overview_evidence_and_report_inventory_are_safe_and_accessible(self):
         self._login()
         overview = self.client.get("/")
-        self.assertIn("Quarantine status", overview.text)
+        self.assertIn("Quarantine", overview.text)
+        self.assertIn("Synthetic event", overview.text)
         self.assertIn('aria-current="page"', overview.text)
         evidence = self.client.get("/evidence")
         self.assertEqual(200, evidence.status_code)
@@ -531,6 +572,64 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(200, reports.status_code)
         self.assertIn("Not generated", reports.text)
         self.assertIn("does not generate files", reports.text)
+
+    def test_community_ia_routes_use_approved_access_and_preserve_legacy_paths(self):
+        self._login()
+        expected = {
+            "/": "Overview",
+            "/sources": "Sources",
+            "/explorer": "Source Explorer",
+            "/decisions": "Decisions",
+            "/review": "Quarantine review",
+            "/evidence": "Decision Audit",
+            "/evidence/operational": "Operational Evidence",
+            "/evidence/validation": "Operational Validation",
+            "/reports": "Report inventory",
+            "/system/health": "Health / Preflight",
+            "/system/providers": "Providers",
+            "/system/capabilities": "Community capabilities",
+            "/account": "My account",
+        }
+        for path, marker in expected.items():
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(200, response.status_code)
+                self.assertIn(marker, response.text)
+                self.assertIn("content-security-policy", response.headers)
+        self.assertEqual(200, self.client.get("/healthz").status_code)
+        self.assertEqual(404, self.client.get("/quarantine").status_code)
+        self.assertEqual(401, self.client.get("/api/v1/review/summary").status_code)
+
+    def test_operational_pages_strip_paths_secrets_and_raw_report_messages(self):
+        self._login()
+        for path in ("/system/health", "/evidence/operational", "/evidence/validation"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(200, response.status_code)
+                self.assertNotIn("C:/private", response.text)
+                self.assertNotIn("secret-canary", response.text)
+        health = self.client.get("/system/health")
+        self.assertIn("Hybrid", health.text)
+        self.assertIn("mitre-cache-missing", health.text)
+        self.assertNotIn("Healthy", self.client.get("/system/providers").text)
+        self.assertNotIn("Reachable", self.client.get("/system/providers").text)
+        capabilities = self.client.get("/system/capabilities")
+        self.assertIn("source explorer", capabilities.text.lower())
+        self.assertNotIn("scheduler", capabilities.text.lower())
+
+    def test_browser_http_errors_are_autoescaped_html_with_status_and_security_headers(self):
+        self._login()
+
+        def hostile_detail(_provider_key, _external_id):
+            raise ExplorerError("source_not_found", "<script>synthetic-xss</script>")
+
+        self.explorer.detail = hostile_detail
+        response = self.client.get("/explorer/misp/42")
+        self.assertEqual(404, response.status_code)
+        self.assertEqual("text/html; charset=utf-8", response.headers["content-type"])
+        self.assertNotIn("<script>synthetic-xss</script>", response.text)
+        self.assertIn("&lt;script&gt;synthetic-xss&lt;/script&gt;", response.text)
+        self.assertEqual("DENY", response.headers["x-frame-options"])
 
     def test_web_security_headers_and_source_cannot_set_secure_cookie_name(self):
         self.assertNotEqual(SESSION_COOKIE_LOCAL, SESSION_COOKIE_SECURE)
