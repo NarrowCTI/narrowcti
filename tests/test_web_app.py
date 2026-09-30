@@ -937,11 +937,20 @@ class WebAppTests(unittest.TestCase):
         self._login()
         page = self.client.get("/")
         self.assertIn('id="sidebar-toggle"', page.text)
+        self.assertIn('class="mobile-label mobile-open-label">Menu</span>', page.text)
+        self.assertIn('class="mobile-close-label">Close</span>', page.text)
         self.assertIn('aria-label="My Account"', page.text)
         self.assertIn('aria-label="Sign out"', page.text)
         css = self.client.get("/assets/app.css").text
         self.assertIn("@media (max-width: 800px)", css)
-        self.assertIn(".sidebar:has(.sidebar-toggle:checked) .sidebar-account { display: grid", css)
+        mobile_css = css.split("@media (max-width: 800px)", 1)[1].split("@media (max-width: 640px)", 1)[0]
+        self.assertIn(".sidebar:has(.sidebar-toggle:checked) .sidebar-account { display: grid", mobile_css)
+        self.assertIn(".sidebar:has(.sidebar-toggle:checked) .sidebar-nav .nav-label { display: inline; }", mobile_css)
+        self.assertIn(".sidebar:has(.sidebar-toggle:checked) .sidebar-nav .nav-section { display: block; }", mobile_css)
+        self.assertIn(".sidebar:has(.sidebar-toggle:checked) .sidebar-nav .nav-link { justify-content: flex-start;", mobile_css)
+        self.assertIn(".sidebar:has(.sidebar-toggle:checked) .mobile-open-label { display: none; }", mobile_css)
+        self.assertIn(".sidebar:has(.sidebar-toggle:checked) .mobile-close-label { display: inline; }", mobile_css)
+        self.assertIn(".brand .brand-collapsed { display: block !important;", mobile_css)
 
     def test_quarantine_queue_filters_and_contextual_actions_preserve_permissions(self):
         self.review_service.records = [

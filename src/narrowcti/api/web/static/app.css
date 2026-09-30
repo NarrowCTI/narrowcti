@@ -22,7 +22,7 @@ a:hover { color: var(--text); }
 .sidebar-toggle { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .sidebar-toggle-label { align-self: flex-end; min-width: 44px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; text-align: center; font-size: .78rem; }
 .sidebar-toggle:focus-visible + .sidebar-toggle-label { outline: 3px solid var(--accent); outline-offset: 3px; }
-.collapsed-label, .mobile-label { display: none; }
+.collapsed-label, .mobile-label, .mobile-close-label { display: none; }
 .brand { min-height: 52px; display: flex; align-items: center; padding: 3px 9px 12px; }
 .brand img { display: block; width: 190px; max-height: 44px; }
 .brand .brand-expanded { display: block; }
@@ -160,12 +160,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .sidebar { position: sticky; z-index: 5; width: 100%; height: auto; max-height: none; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 12px; padding: 8px 14px; border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
   .sidebar-toggle-label { grid-column: 1; grid-row: 1; justify-self: start; }
   .mobile-label { display: inline; }
+  .sidebar:has(.sidebar-toggle:checked) .mobile-open-label { display: none; }
+  .sidebar:has(.sidebar-toggle:checked) .mobile-close-label { display: inline; }
   .expanded-label, .collapsed-label { display: none !important; }
   .brand { grid-column: 2; grid-row: 1; min-height: 44px; justify-content: flex-end; padding: 0; }
   .brand .brand-expanded { display: none !important; }
   .brand .brand-collapsed { display: block !important; width: 38px; height: 38px; }
   .sidebar-nav { grid-column: 1 / -1; display: none; max-height: calc(100vh - 90px); overflow-y: auto; }
   .sidebar:has(.sidebar-toggle:checked) .sidebar-nav { display: grid; }
+  .sidebar:has(.sidebar-toggle:checked) .sidebar-nav .nav-label { display: inline; }
+  .sidebar:has(.sidebar-toggle:checked) .sidebar-nav .nav-section { display: block; }
+  .sidebar:has(.sidebar-toggle:checked) .sidebar-nav .nav-link { justify-content: flex-start; padding-inline: 10px; }
   .sidebar-account { display: none; }
   .sidebar:has(.sidebar-toggle:checked) .sidebar-account { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; margin-top: 0; padding-top: 8px; }
   .sidebar:has(.sidebar-toggle:checked) .sidebar-account .nav-label { display: inline; }
