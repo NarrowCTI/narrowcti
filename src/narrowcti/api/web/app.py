@@ -38,6 +38,7 @@ from narrowcti.infrastructure.runtime.web_composition import (
     build_operator_authentication,
     build_source_explorer,
     build_web_evidence,
+    build_operational_state_reader,
 )
 from narrowcti.ports.jobs import ActiveJobLimitReached, INGESTION_DRY_RUN_JOB, INGESTION_PREVIEW_JOB, INGESTION_RUN_ONCE_JOB
 from narrowcti.ports.source_explorer import ExplorerError, ExplorerSearchRequest
@@ -46,6 +47,7 @@ from narrowcti.domain.review.quarantine import released_indicators
 from .middleware import RequestBodyLimitMiddleware, SecurityHeadersMiddleware
 from .sessions import InMemoryWebSessionStore, WebSession
 from .rate_limits import SlidingWindowRateLimiter
+from .routes.community import register_community_routes
 
 
 SESSION_COOKIE_SECURE = "__Host-narrowcti_session"
@@ -118,6 +120,19 @@ def _template_context(request: Request, session: WebSession | None, **extra):
 def _template_response(name: str, context: dict, *, status_code: int = 200) -> HTMLResponse:
     rendered = _TEMPLATES.get_template(name).render(**context)
     return HTMLResponse(rendered, status_code=status_code)
+
+
+def _public_http_error(detail, status_code: int) -> str:
+    if isinstance(detail, str) and len(detail) <= 512:
+        return detail
+    return {
+        400: "The request could not be completed.",
+        403: "You do not have access to perform this action.",
+        404: "The requested page or resource is not available.",
+        413: "The request is larger than allowed.",
+        429: "Too many requests. Try again later.",
+        503: "The requested service is temporarily unavailable.",
+    }.get(status_code, "The request could not be completed.")
 
 
 class _ProviderBusy(RuntimeError):
@@ -194,13 +209,13 @@ def _bounded_count(value):
 
 
 def _community_report_inventory():
-    """Existing one-shot Ops reports; Web does not generate or schedule them."""
+    """Community-facing descriptions of reports available through operator workflows."""
     return (
-        {"name": "Decision audit", "command": "gateway.decisions", "status": "available"},
-        {"name": "Operational validation", "command": "gateway.operational_validation", "status": "available"},
-        {"name": "Support diagnostics", "command": "gateway.diagnostics", "status": "available"},
-        {"name": "Artifact correlation", "command": "gateway.correlation", "status": "available"},
-        {"name": "Curation report", "command": "gateway.curation_report", "status": "available"},
+        {"name": "Decision audit", "description": "Review bounded ingestion decisions, outcomes and source activity.", "status": "Available to operators"},
+        {"name": "Operational validation", "description": "Review the latest Gateway-published operational evidence snapshot.", "status": "Snapshot when available"},
+        {"name": "Support diagnostics", "description": "Collect a one-time operational diagnostic for support review.", "status": "Operator workflow"},
+        {"name": "Artifact correlation", "description": "Inspect artifact and source-correlation evidence.", "status": "Operator workflow"},
+        {"name": "Curation summary", "description": "Review current curation evidence and coverage.", "status": "Operator workflow"},
     )
 
 
@@ -213,6 +228,7 @@ def create_web_app(
     session_store: InMemoryWebSessionStore | None = None,
     job_repository=None,
     evidence_service=None,
+    operational_state_reader=None,
     operator_store=None,
     operator_authenticator: LocalOperatorAuthenticator | None = None,
 ):
@@ -247,6 +263,8 @@ def create_web_app(
         getattr(review_api_app, "state", None), "review_service", None
     )
     app.state.evidence_service = evidence_service or build_web_evidence(settings)
+    operational_state_reader = operational_state_reader or build_operational_state_reader(settings)
+    app.state.operational_state_reader = operational_state_reader
     capability_registry = CapabilityRegistry.default()
     capability_state = capability_registry.resolve(
         implemented=(*COMMUNITY_CAPABILITY_NAMES, *COMMUNITY_FUTURE_CAPABILITIES),
@@ -271,9 +289,18 @@ def create_web_app(
         if request.method not in _UNSAFE_METHODS:
             return
         origin = request.headers.get("origin")
-        if origin and not _same_origin(request, origin, settings.public_origin):
+        fetch_site = request.headers.get("sec-fetch-site", "").lower()
+        if fetch_site == "cross-site":
             raise HTTPException(status_code=403, detail="CSRF validation failed")
-        if request.headers.get("sec-fetch-site", "").lower() == "cross-site":
+        if origin == "null" and fetch_site != "same-origin":
+            # Opaque origins are accepted only for a browser-asserted same-origin
+            # request; the session-bound CSRF token is still mandatory below.
+            raise HTTPException(status_code=403, detail="CSRF validation failed")
+        if (
+            origin
+            and origin != "null"
+            and not _same_origin(request, origin, settings.public_origin)
+        ):
             raise HTTPException(status_code=403, detail="CSRF validation failed")
         session_id = request.cookies.get(cookie_name)
         session = session_store.get(session_id)
@@ -323,6 +350,11 @@ def create_web_app(
             raise HTTPException(status_code=403, detail="permission denied")
         return session
 
+    def require_operator(session: WebSession | None):
+        if not session or not session.principal:
+            raise HTTPException(status_code=303, headers={"Location": "/login"})
+        return session
+
     def require_capability(name: str):
         if not app.state.enabled_capabilities.get(name, False):
             raise HTTPException(status_code=404, detail="feature unavailable")
@@ -348,9 +380,17 @@ def create_web_app(
     @app.exception_handler(HTTPException)
     async def browser_http_exception_handler(request: Request, exc: HTTPException):
         if exc.status_code == 303 and exc.headers and exc.headers.get("Location") == "/login":
-            return RedirectResponse("/login", status_code=303)
+            return RedirectResponse("/login", status_code=303, headers=exc.headers)
+        rendered = _TEMPLATES.get_template("error.html").render(
+            _template_context(
+                request,
+                current_session(request)[1],
+                status_code=exc.status_code,
+                message=_public_http_error(exc.detail, exc.status_code),
+            )
+        )
         return HTMLResponse(
-            str(exc.detail),
+            rendered,
             status_code=exc.status_code,
             headers=exc.headers,
         )
@@ -472,13 +512,13 @@ def create_web_app(
     @app.get("/account", response_class=HTMLResponse)
     async def account_page(request: Request):
         _session_id, session = current_session(request)
-        session = require_permission(session, "review:read")
+        session = require_operator(session)
         return _template_response("account.html", _template_context(request, session))
 
     @app.post("/account/password", dependencies=[Depends(require_csrf)])
     async def change_own_password(request: Request):
         session_id, session = current_session(request)
-        session = require_permission(session, "review:read")
+        session = require_operator(session)
         values = parse_form(request, await request.body())
         current_password = values.get("current_password", "")
         new_password = values.get("new_password", "")
@@ -545,6 +585,14 @@ def create_web_app(
         _session_id, session = current_session(request)
         if not session or not session.principal:
             return RedirectResponse("/login", status_code=303)
+        recent_decisions = []
+        decision_status = "unavailable"
+        if app.state.evidence_service and app.state.evidence_service.available:
+            try:
+                recent_decisions = app.state.evidence_service.recent(5)
+                decision_status = "available" if recent_decisions else "no_records"
+            except Exception:
+                decision_status = "error"
         return _template_response(
             "home.html",
             _template_context(
@@ -552,6 +600,8 @@ def create_web_app(
                 session,
                 providers=source_explorer.providers(),
                 review_summary=_safe_review_summary(app.state.review_service),
+                recent_decisions=recent_decisions,
+                decision_status=decision_status,
             ),
         )
 
@@ -590,7 +640,7 @@ def create_web_app(
         )
 
     @app.get("/review", response_class=HTMLResponse)
-    async def review_page(request: Request, status: str = "pending"):
+    async def review_page(request: Request, status: str = "pending", source: str = "", q: str = ""):
         _session_id, session = current_session(request)
         require_permission(session, "review:read")
         require_capability("quarantine.review")
@@ -612,9 +662,19 @@ def create_web_app(
             }
             for item in records
         ]
+        source = source.strip().lower()[:64]
+        query = q.strip().casefold()[:128]
+        sources = sorted({item["source_key"] for item in projected if item["source_key"]})
+        if source:
+            projected = [item for item in projected if item["source_key"].lower() == source]
+        if query:
+            projected = [
+                item for item in projected
+                if query in " ".join((item["title"], item["external_id"], item["reason"], item["source_key"])).casefold()
+            ]
         return _template_response(
             "review.html",
-            _template_context(request, session, records=projected, status=status),
+            _template_context(request, session, records=projected, status=status, source=source, q=q, sources=sources),
         )
 
     @app.post("/review/records/{quarantine_id}/{action}", dependencies=[Depends(require_csrf)])
@@ -855,6 +915,16 @@ def create_web_app(
             "job_status_fragment.html",
             _template_context(request, session, job=projected),
         )
+
+    register_community_routes(
+        app,
+        current_session=current_session,
+        require_permission=require_permission,
+        require_capability=require_capability,
+        template_context=_template_context,
+        template_response=_template_response,
+        operational_state_reader=operational_state_reader,
+    )
 
     # The established Review API remains a separate bearer-authenticated ASGI app.
     app.mount("/", review_api_app, name="review-api")

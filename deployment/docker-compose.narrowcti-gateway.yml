@@ -210,8 +210,6 @@ services:
       - gateway.operational_validation
       - --decision-path
       - /app/state/audit
-      - --required-sources
-      - ${NARROWCTI_OPERATIONAL_VALIDATION_SOURCES:-otx,misp}
       - --evidence-file
       - ${NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE:-/app/state/operational-validation-evidence.json}
       - --relationship-audit-file

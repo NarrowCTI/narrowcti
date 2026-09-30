@@ -68,7 +68,7 @@ def build_support_diagnostics(
         resource_posture_ok=evidence_bool(manual_evidence, "resource_posture_ok"),
         resource_posture_unhealthy=evidence_bool(manual_evidence, "resource_posture_unhealthy"),
         relationship_audit_evidence=relationship_audit_evidence,
-        required_sources=preflight.enabled_sources,
+        required_sources=settings.operational_validation_sources,
     )
     return _build_support_diagnostics(
         preflight,

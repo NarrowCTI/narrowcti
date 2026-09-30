@@ -347,11 +347,18 @@ jobs:
                   raise SystemExit("Review API bearer authentication failed")
 
           for path, marker in (
-              ("/", "Community workspace"),
+              ("/", "Overview"),
+              ("/sources", "Sources"),
               ("/explorer", "Source Explorer"),
+              ("/decisions", "Decisions"),
               ("/review", "Quarantine review"),
-              ("/evidence", "Evidence and decisions"),
+              ("/evidence", "Decision Audit"),
+              ("/evidence/operational", "Operational Evidence"),
+              ("/evidence/validation", "Operational Validation"),
               ("/reports", "Report inventory"),
+              ("/system/health", "Health / Preflight"),
+              ("/system/providers", "Providers"),
+              ("/system/capabilities", "Community capabilities"),
               ("/account", "My account"),
               ("/openapi.json", '"openapi"'),
               ("/docs", "Swagger UI"),
@@ -374,14 +381,19 @@ jobs:
           else:
               raise SystemExit("browser mutation without CSRF was not rejected")
 
-          anonymous = Request(base + "/explorer")
-          try:
-              opener.open(anonymous, timeout=5)
-          except HTTPError as error:
-              if error.code != 303:
-                  raise
-          else:
-              raise SystemExit("protected Explorer route was accessible without a session")
+          for protected_path in (
+              "/sources", "/explorer", "/decisions", "/review", "/evidence",
+              "/evidence/operational", "/evidence/validation", "/reports",
+              "/system/health", "/system/providers", "/system/capabilities", "/account",
+          ):
+              anonymous = Request(base + protected_path)
+              try:
+                  opener.open(anonymous, timeout=5)
+              except HTTPError as error:
+                  if error.code != 303:
+                      raise
+              else:
+                  raise SystemExit(f"protected route was accessible without a session: {protected_path}")
 
           print("authenticated-browser-dast-preflight-ok")
           print(f"::add-mask::{authenticated_cookie}")

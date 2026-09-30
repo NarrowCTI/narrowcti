@@ -72,6 +72,17 @@ quarantine records, artifact indexes and audit evidence remain authoritative and
 retain their historical formats. The `web` profile starts the shared UI/API
 process. There is no separate Review API service or second HTTP process.
 
+The bounded Community Web Preflight and Operational Validation views consume
+separate safe snapshots published by their owning Gateway/Ops workflows. Run
+the one-shot `python -m gateway.preflight` workflow to refresh Preflight after
+Gateway configuration changes. Run `python -m gateway.operational_validation`
+with the configured manual and relationship evidence inputs to refresh
+Operational Validation. Both snapshots are stored beside `runtime.db` on the
+shared state volume and contain only allowlisted status fields. After 15
+minutes, Web labels the captured result stale and shows refresh guidance; if no
+snapshot exists it reports state unavailable. Web remains read-only and never
+loads Gateway environment/secrets or recomputes these reports.
+
 The browser identity is separate from Review API bearer credentials. Its
 versioned local SQLite database defaults to `NARROWCTI_AUTH_DB=/app/auth/auth.db`
 and is persisted in the dedicated `narrowcti-auth` volume. The Worker does not

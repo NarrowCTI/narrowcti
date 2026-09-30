@@ -16,6 +16,7 @@ def make_settings(**overrides):
     values = {
         "mode": "gateway",
         "enabled_sources": ["otx"],
+        "operational_validation_sources": ("otx",),
         "dry_run": True,
         "run_once": True,
         "source_interval_seconds": 300,

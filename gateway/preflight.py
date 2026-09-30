@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 from dataclasses import replace
 
@@ -23,6 +24,11 @@ from narrowcti.infrastructure.runtime.topology import (
     validate_configured_endpoints,
     validate_state_path,
 )
+from narrowcti.infrastructure.runtime.operational_snapshot import (
+    publish_gateway_preflight_snapshot,
+)
+
+log = logging.getLogger(__name__)
 
 
 def build_preflight_report(settings, available_sources=AVAILABLE_SOURCES, env=None):
@@ -141,7 +147,14 @@ def main():
     args = parser.parse_args()
 
     try:
-        report = build_preflight_report(load_settings())
+        settings = load_settings()
+        report = build_preflight_report(settings)
+        try:
+            publish_gateway_preflight_snapshot(settings, report)
+        except Exception:
+            # Snapshot publication is best-effort. Web treats missing/stale state
+            # as unavailable rather than recomputing Gateway state under Web role.
+            log.warning("Unable to publish the Gateway preflight snapshot; Web will report it unavailable")
     except Exception as exc:
         issue = PreflightIssue("error", "settings-invalid", str(exc))
         report = PreflightReport(

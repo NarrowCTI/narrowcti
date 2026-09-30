@@ -1,29 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Quarantine review · NarrowCTI{% endblock %}
 {% block content %}
-<section class="hero compact">
-  <p class="eyebrow">Analyst workflow</p>
-  <h1>Quarantine review</h1>
-  <p class="muted">Review evidence is shown without raw source snapshots.</p>
-</section>
-<section class="panel">
-  <form method="get" action="/review" class="search-form">
-    <label for="status">Status</label>
-    <select id="status" name="status">
+<section class="hero compact"><p class="eyebrow">Analyst workflow</p><h1>Quarantine review</h1><p class="muted">Work the review queue, inspect bounded evidence, and take only the actions allowed by your role.</p></section>
+<section class="panel"><form method="get" action="/review" class="queue-filters">
+    <label for="status">Status</label><select id="status" name="status">
       {% for value in ('pending', 'released', 'partially-released', 'rejected', 'expired', 'all') %}
       <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ value }}</option>
       {% endfor %}
     </select>
-    <button class="button quiet" type="submit">Filter</button>
-  </form>
-</section>
+    <label for="source">Source</label><select id="source" name="source"><option value="">All sources</option>{% for value in sources %}<option value="{{ value }}" {% if source == value %}selected{% endif %}>{{ value|upper }}</option>{% endfor %}</select>
+    <label for="q">Search queue</label><input id="q" name="q" value="{{ q }}" maxlength="128" placeholder="Title, source ID, or reason">
+    <button class="button primary" type="submit">Apply filters</button>
+  </form></section>
 {% if records %}
-  {% for record in records %}
-  <article class="panel review-record">
-    <p class="eyebrow">{{ record.source_key }} · {{ record.external_id }}</p>
-    <h2>{{ record.title }}</h2>
-    <p>{{ record.reason }}</p>
-    <p class="muted">{{ record.status }} · {{ record.indicator_count }} indicators · {{ record.created_at }}</p>
+<section class="panel queue-desktop"><div class="section-heading"><div><h2>Review queue</h2><p class="muted">{{ records|length }} records in this view</p></div></div><div class="table-wrap"><table class="queue-table"><thead><tr><th scope="col">Status</th><th scope="col">Source / ID</th><th scope="col">Report</th><th scope="col">Indicators</th><th scope="col">Created</th><th scope="col">Details & actions</th></tr></thead><tbody>
+{% for record in records %}<tr><td><span class="status-pill {{ 'warn' if record.status == 'pending' else '' }}">{{ record.status|replace('-', ' ')|title }}</span></td><td><strong>{{ record.source_key|upper }}</strong><br><code>{{ record.external_id }}</code></td><td>{{ record.title }}</td><td>{{ record.indicator_count }}</td><td>{{ record.created_at }}</td><td><details class="queue-detail"><summary>Inspect</summary><p>{{ record.reason }}</p><div class="action-row">
     {% if record.status == 'pending' %}
       {% if principal.has_permission('review:decide') %}
       {% for action, label in (('release', 'Release all'), ('reject', 'Reject')) %}
@@ -48,8 +39,11 @@
       </form>
       {% endif %}
     {% endif %}
-  </article>
-  {% endfor %}
+  </div></details></td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="queue-mobile">{% for record in records %}<article class="panel review-record"><div class="section-heading"><span class="status-pill {{ 'warn' if record.status == 'pending' else '' }}">{{ record.status|replace('-', ' ')|title }}</span><span class="muted">{{ record.indicator_count }} indicators</span></div><p class="eyebrow">{{ record.source_key|upper }} · {{ record.external_id }}</p><h2>{{ record.title }}</h2><p>{{ record.reason }}</p><p class="muted">{{ record.created_at }}</p><div class="action-row">
+{% if record.status == 'pending' and principal.has_permission('review:decide') %}{% for action, label in (('release', 'Release all'), ('reject', 'Reject')) %}<form method="post" action="/review/records/{{ record.quarantine_id }}/{{ action }}" class="inline-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><label class="visually-hidden" for="mobile-reason-{{ record.quarantine_id }}-{{ action }}">Reason</label><input id="mobile-reason-{{ record.quarantine_id }}-{{ action }}" name="reason" maxlength="2000" required placeholder="Reason for {{ action }}"><button class="button quiet" type="submit">{{ label }}</button></form>{% endfor %}{% endif %}
+{% if record.status in ('released', 'partially-released') and principal.has_permission('export:preview') %}<form method="post" action="/review/records/{{ record.quarantine_id }}/export-preview" class="inline-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button quiet" type="submit">Preview export</button></form>{% endif %}{% if record.status in ('released', 'partially-released') and principal.has_permission('export:execute') %}<form method="post" action="/review/records/{{ record.quarantine_id }}/export" class="inline-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button primary" type="submit">Submit export to Worker</button></form>{% endif %}</div></article>{% endfor %}</section>
 {% else %}
 <section class="panel"><p>No records in this view.</p></section>
 {% endif %}

@@ -7,6 +7,7 @@ from pathlib import Path
 from narrowcti.adapters.sources.misp.explorer import MISPSourceExplorer
 from narrowcti.adapters.sources.otx.explorer import OTXSourceExplorer
 from narrowcti.adapters.persistence.local.web_evidence_reader import read_recent_records
+from narrowcti.adapters.persistence.local.operational_snapshot_store import LocalOperationalSnapshotStore
 from narrowcti.adapters.persistence.local.operator_store import LocalOperatorStore
 from narrowcti.application.identity.passwords import LocalOperatorAuthenticator, PasswordService
 from narrowcti.application.source_explorer import SourceExplorerService
@@ -50,10 +51,20 @@ def build_web_evidence(settings) -> WebEvidenceService:
     return WebEvidenceService(reader)
 
 
+def build_operational_state_reader(settings):
+    """Read the safe authoritative snapshot published by the Gateway/Ops role."""
+    return LocalOperationalSnapshotStore(settings.runtime_db_file)
+
+
 def build_operator_authentication(settings):
     """Compose local operator persistence and password authentication for Web."""
     store = LocalOperatorStore(settings.auth_db)
     return store, LocalOperatorAuthenticator(store, PasswordService())
 
 
-__all__ = ["build_operator_authentication", "build_source_explorer", "build_web_evidence"]
+__all__ = [
+    "build_operator_authentication",
+    "build_source_explorer",
+    "build_web_evidence",
+    "build_operational_state_reader",
+]

@@ -69,6 +69,9 @@ class HtmxAssetProvenanceTests(unittest.TestCase):
         self.assertIn("integrity=\"" + next(line.split("SRI: ", 1)[1] for line in version.splitlines() if line.startswith("SRI: ")), template)
         self.assertIn("href=\"#main-content\"", template)
         self.assertIn("narrowcti-logo-horizontal-dark.svg", template)
+        self.assertIn("narrowcti-symbol-gradient.svg", template)
+        self.assertIn('type="checkbox" id="sidebar-toggle"', template)
+        self.assertIn('aria-label="Toggle sidebar navigation"', template)
 
 
 if __name__ == "__main__":

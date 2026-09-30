@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Sources · NarrowCTI Community{% endblock %}
+{% block content %}
+<section class="hero compact"><p class="eyebrow">Intelligence</p><h1>Sources</h1><p class="muted">Configured providers available to the read-only Explorer. Configuration does not indicate current upstream health.</p></section>
+{% if providers %}<section class="provider-grid">{% for provider in providers %}<article class="provider-card"><div class="section-heading"><h2>{{ provider.display_name }}</h2><span class="status-pill {{ 'good' if provider.available else '' }}">{{ 'Configured · Available for Explorer' if provider.available else 'Not configured' }}</span></div><p>Operations: {% for operation in provider.operations %}{{ operation.value|default(operation)|replace('_', ' ')|title }}{% if not loop.last %}, {% endif %}{% else %}No operations declared{% endfor %}</p>{% if provider.filters %}<p class="filter-summary">Filters: {% for item in provider.filters %}{{ item.label }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}<a class="button quiet" href="/explorer">Open Explorer</a></article>{% endfor %}</section>{% else %}<section class="empty-state">No source providers are registered.</section>{% endif %}
+{% endblock %}

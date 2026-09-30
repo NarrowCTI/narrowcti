@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "W7 / PR-21",
+  "scope": "Community 2.0 migration boundaries (W7 / PR-21 baseline, PR-25 addition)",
   "exceptions": [
     {
       "source": "src/narrowcti/application/runtime.py",
