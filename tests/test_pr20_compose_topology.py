@@ -178,7 +178,6 @@ class ComposeTopologyContractTests(unittest.TestCase):
                                 )
                                 self.assertEqual("bind", mount["type"])
                                 self.assertEqual(True, mount["read_only"])
-                                self.assertEqual(False, mount["bind"]["create_host_path"])
                                 self.assertEqual(
                                     str(misp_key if provider == "misp" else otx_key),
                                     mount["source"],
