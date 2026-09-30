@@ -30,6 +30,7 @@ def register_community_routes(
     operational_state_reader,
     require_csrf,
     readiness_limiter,
+    bounded_provider_call,
 ):
     """Register additive Community pages without moving existing route behavior."""
 
@@ -159,7 +160,7 @@ def register_community_routes(
         dependencies=[Depends(require_csrf)],
         response_class=HTMLResponse,
     )
-    def provider_readiness_page(request: Request, provider_key: str):
+    async def provider_readiness_page(request: Request, provider_key: str):
         session = authorized(request, "ui.basic")
         if session is None:
             return RedirectResponse("/login", status_code=303)
@@ -170,7 +171,11 @@ def register_community_routes(
         ):
             raise HTTPException(status_code=429, detail="provider readiness rate limit reached")
         try:
-            readiness = app.state.source_explorer.check_readiness(provider_key)
+            readiness = await bounded_provider_call(
+                provider_key,
+                app.state.source_explorer.check_readiness,
+                provider_key,
+            )
         except Exception as exc:
             if getattr(exc, "code", "") == "provider_unknown":
                 raise HTTPException(status_code=404, detail="provider readiness is unavailable") from None

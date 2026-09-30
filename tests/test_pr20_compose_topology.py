@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 import subprocess
 import tempfile
@@ -63,8 +64,14 @@ class ComposeTopologyContractTests(unittest.TestCase):
             with self.subTest(filename=filename):
                 self.assertEqual(2, source.count(target))
                 self.assertEqual(2, source.count("read_only: true"))
+                self.assertEqual(2, source.count("create_host_path: false"))
                 self.assertIn("narrowcti-web:", source)
                 self.assertIn("narrowcti-provider-readiness:", source)
+                for service in ("narrowcti-web", "narrowcti-provider-readiness"):
+                    block = source.split(f"  {service}:", 1)[1]
+                    self.assertIn(target, block.split("  narrowcti-", 1)[0])
+                    self.assertIn("read_only: true", block.split("  narrowcti-", 1)[0])
+                    self.assertIn("create_host_path: false", block.split("  narrowcti-", 1)[0])
 
     def test_build_context_excludes_all_env_named_files(self):
         source = (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
@@ -145,7 +152,7 @@ class ComposeTopologyContractTests(unittest.TestCase):
             for label, layers in cases:
                 with self.subTest(layers=label):
                     result = subprocess.run(
-                        ["docker", "compose", *layers, "--profile", "web", "--profile", "ops", "config"],
+                        ["docker", "compose", *layers, "--profile", "web", "--profile", "ops", "config", "--format", "json"],
                         cwd=ROOT / "deployment",
                         env=env,
                         capture_output=True,
@@ -155,6 +162,27 @@ class ComposeTopologyContractTests(unittest.TestCase):
                     self.assertEqual(0, result.returncode, result.stderr)
                     self.assertNotIn("synthetic-misp-read-only-key", result.stdout)
                     self.assertNotIn("synthetic-otx-key", result.stdout)
+                    if label in {"misp", "otx", "both", "shared+binaries"}:
+                        config = json.loads(result.stdout)
+                        expected = {
+                            "misp": ("NARROWCTI_WEB_MISP_KEY_SOURCE", "/run/secrets/narrowcti-web-misp-key"),
+                            "otx": ("NARROWCTI_WEB_OTX_KEY_SOURCE", "/run/secrets/narrowcti-web-otx-key"),
+                        }
+                        active = ("misp", "otx") if label in {"both", "shared+binaries"} else (label,)
+                        for provider in active:
+                            _source_var, target = expected[provider]
+                            for service in ("narrowcti-web", "narrowcti-provider-readiness"):
+                                mount = next(
+                                    item for item in config["services"][service]["volumes"]
+                                    if item.get("target") == target
+                                )
+                                self.assertEqual("bind", mount["type"])
+                                self.assertEqual(True, mount["read_only"])
+                                self.assertEqual(False, mount["bind"]["create_host_path"])
+                                self.assertEqual(
+                                    str(misp_key if provider == "misp" else otx_key),
+                                    mount["source"],
+                                )
 
 
 if __name__ == "__main__":

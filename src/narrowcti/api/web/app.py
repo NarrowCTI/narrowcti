@@ -286,6 +286,14 @@ def create_web_app(
         with provider_semaphore_lock:
             return provider_semaphores.setdefault(provider_key, BoundedSemaphore(1))
 
+    async def bounded_source_provider_call(provider_key, callback, *args):
+        try:
+            return await _bounded_provider_call(
+                provider_semaphore(provider_key), callback, *args
+            )
+        except _ProviderBusy:
+            raise HTTPException(status_code=503, detail="provider_busy") from None
+
     async def require_csrf(request: Request):
         if request.method not in _UNSAFE_METHODS:
             return
@@ -927,6 +935,7 @@ def create_web_app(
         operational_state_reader=operational_state_reader,
         require_csrf=require_csrf,
         readiness_limiter=provider_readiness_limiter,
+        bounded_provider_call=bounded_source_provider_call,
     )
 
     # The established Review API remains a separate bearer-authenticated ASGI app.

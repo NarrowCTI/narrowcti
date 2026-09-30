@@ -5,9 +5,13 @@ services:
         source: ${NARROWCTI_WEB_OTX_KEY_SOURCE:?set NARROWCTI_WEB_OTX_KEY_SOURCE to a dedicated OTX Explorer key file}
         target: /run/secrets/narrowcti-web-otx-key
         read_only: true
+        bind:
+          create_host_path: false
   narrowcti-provider-readiness:
     volumes:
       - type: bind
         source: ${NARROWCTI_WEB_OTX_KEY_SOURCE:?set NARROWCTI_WEB_OTX_KEY_SOURCE to a dedicated OTX Explorer key file}
         target: /run/secrets/narrowcti-web-otx-key
         read_only: true
+        bind:
+          create_host_path: false
