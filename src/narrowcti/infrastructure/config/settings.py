@@ -58,6 +58,7 @@ class GatewaySettings:
     runtime_db_file: str = ""
     job_poll_seconds: float = 2.0
     worker_lease_seconds: int = 120
+    operational_validation_sources: tuple[str, ...] = ("otx", "misp")
 
     def __post_init__(self):
         if not self.enabled_sources:
@@ -137,6 +138,9 @@ def load_settings(environ: Mapping[str, str] | None = None):
         mitre_cache_file=env.get("NARROWCTI_MITRE_CACHE_FILE", ""),
         mitre_stix_url=env.get("NARROWCTI_MITRE_STIX_URL", DEFAULT_MITRE_STIX_URL),
         runtime_db_file=env.get("NARROWCTI_RUNTIME_DB", os.path.join(state_dir, "runtime.db")),
+        operational_validation_sources=tuple(
+            env_list("NARROWCTI_OPERATIONAL_VALIDATION_SOURCES", "otx,misp", env)
+        ),
     )
 
 

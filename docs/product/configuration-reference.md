@@ -286,7 +286,7 @@ decision and evidence in the operational report.
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `NARROWCTI_CAPABILITIES` | Empty | Declared capability inventory. Unknown values are warnings; no feature blocking in Community Edition. |
-| `NARROWCTI_OPERATIONAL_VALIDATION_SOURCES` | `otx,misp` in Compose | Sources required by operational validation. |
+| `NARROWCTI_OPERATIONAL_VALIDATION_SOURCES` | `otx,misp` | Authoritative source set consumed by Gateway/Ops Operational Validation and its Web snapshot; independent of enabled Gateway sources. |
 | `NARROWCTI_OPERATIONAL_VALIDATION_EVIDENCE_FILE` | `/app/state/operational-validation-evidence.json` in Compose | Manual validation evidence file. |
 | `NARROWCTI_OPENCTI_RELATIONSHIP_AUDIT_FILE` | `/app/state/opencti-relationship-audit.json` in Compose | Relationship audit evidence consumed by reports/validation. |
 | `NARROWCTI_OPENCTI_AUDIT_TYPE` | Empty | Target OpenCTI object type for relationship audit. |

@@ -5,8 +5,14 @@ from __future__ import annotations
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from narrowcti.application.capabilities import COMMUNITY_CAPABILITY_NAMES
-from narrowcti.application.reporting.operational_snapshot import load_operational_state_snapshot
+from narrowcti.application.capabilities import (
+    COMMUNITY_CAPABILITY_NAMES,
+    COMMUNITY_CAPABILITY_PRESENTATION,
+)
+from narrowcti.application.reporting.operational_snapshot import (
+    load_operational_validation_snapshot,
+    load_preflight_snapshot,
+)
 from narrowcti.application.reporting.web_assurance import (
     project_web_operational_validation,
     project_web_preflight,
@@ -35,21 +41,47 @@ def register_community_routes(
         return session
 
     def current_reports():
-        try:
-            raw_snapshot = operational_state_reader.read()
-        except Exception:
-            return None, None
-        snapshot = load_operational_state_snapshot(raw_snapshot)
-        if snapshot is None:
-            return None, None
-        return (
-            {**snapshot.preflight, "captured_at": snapshot.captured_at},
-            {
-                **snapshot.validation,
-                "required_sources": snapshot.required_sources,
-                "captured_at": snapshot.captured_at,
-            },
+        preflight_hint = (
+            "Ask a Gateway operator to rerun the authoritative preflight workflow. "
+            "This Web page is read-only and does not execute it."
         )
+        validation_hint = (
+            "Ask an operator to rerun Operational Validation from the Gateway/Ops role "
+            "with its manual and relationship evidence inputs. This Web page is read-only."
+        )
+        try:
+            raw_preflight = app.state.operational_state_reader.read_preflight()
+        except Exception:
+            raw_preflight = None
+        preflight_snapshot = load_preflight_snapshot(raw_preflight)
+        preflight = (
+            preflight_snapshot.to_web_dict()
+            if preflight_snapshot
+            else {
+                **project_web_preflight(None),
+                "captured_at": None,
+                "freshness": "unavailable",
+            }
+        )
+        preflight["refresh_hint"] = preflight_hint
+
+        try:
+            raw_validation = app.state.operational_state_reader.read_validation()
+        except Exception:
+            raw_validation = None
+        validation_snapshot = load_operational_validation_snapshot(raw_validation)
+        validation = (
+            validation_snapshot.to_web_dict()
+            if validation_snapshot
+            else {
+                **project_web_operational_validation(None),
+                "captured_at": None,
+                "freshness": "unavailable",
+                "required_sources": (),
+            }
+        )
+        validation["refresh_hint"] = validation_hint
+        return preflight, validation
 
     @app.get("/sources", response_class=HTMLResponse)
     def sources_page(request: Request):
@@ -127,7 +159,12 @@ def register_community_routes(
             return RedirectResponse("/login", status_code=303)
         enabled = app.state.enabled_capabilities
         capabilities = [
-            {"name": name, "enabled": bool(enabled.get(name, False))}
+            {
+                "id": name,
+                "label": COMMUNITY_CAPABILITY_PRESENTATION[name][0],
+                "description": COMMUNITY_CAPABILITY_PRESENTATION[name][1],
+                "enabled": bool(enabled.get(name, False)),
+            }
             for name in COMMUNITY_CAPABILITY_NAMES
         ]
         return template_response(

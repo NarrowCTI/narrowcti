@@ -1,27 +1,36 @@
-"""Gateway-side publication of bounded operational state for read-only Web use."""
+"""Ops-owned publication of safe, independent Web operational snapshots."""
 
 from __future__ import annotations
 
 from narrowcti.adapters.persistence.local.operational_snapshot_store import (
     LocalOperationalSnapshotStore,
 )
-from narrowcti.adapters.persistence.local.web_evidence_reader import read_recent_records
 from narrowcti.application.reporting.operational_snapshot import (
-    build_operational_state_snapshot,
+    build_operational_validation_snapshot,
+    build_preflight_snapshot,
 )
 
 
-def publish_gateway_operational_snapshot(settings, preflight_report):
-    """Build from Gateway settings and raw bounded evidence, then atomically publish."""
+def publish_gateway_preflight_snapshot(settings, preflight_report):
+    """Publish the Gateway preflight result without deriving validation state."""
 
-    records = read_recent_records(settings.decision_audit_dir, limit=100)
-    snapshot = build_operational_state_snapshot(
-        preflight_report,
-        records,
-        required_sources=tuple(settings.enabled_sources),
-    )
-    LocalOperationalSnapshotStore(settings.runtime_db_file).write(snapshot)
+    snapshot = build_preflight_snapshot(preflight_report)
+    LocalOperationalSnapshotStore(settings.runtime_db_file).write_preflight(snapshot)
     return snapshot
 
 
-__all__ = ["publish_gateway_operational_snapshot"]
+def publish_operational_validation_snapshot(settings, validation_report, required_sources):
+    """Publish the report produced by the authoritative Operational Validation workflow."""
+
+    snapshot = build_operational_validation_snapshot(
+        validation_report,
+        required_sources=tuple(required_sources),
+    )
+    LocalOperationalSnapshotStore(settings.runtime_db_file).write_validation(snapshot)
+    return snapshot
+
+
+__all__ = [
+    "publish_gateway_preflight_snapshot",
+    "publish_operational_validation_snapshot",
+]

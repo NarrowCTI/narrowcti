@@ -6,7 +6,7 @@ import re
 import json
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -20,9 +20,15 @@ from narrowcti.adapters.persistence.local.operator_store import LocalOperatorSto
 from narrowcti.application.identity.passwords import LocalOperatorAuthenticator, PasswordService
 from narrowcti.application.reporting.web_evidence import WebEvidenceService
 from narrowcti.adapters.persistence.local.operational_snapshot_store import LocalOperationalSnapshotStore
-from narrowcti.infrastructure.runtime.operational_snapshot import publish_gateway_operational_snapshot
+from narrowcti.infrastructure.runtime.operational_snapshot import (
+    publish_gateway_preflight_snapshot,
+    publish_operational_validation_snapshot,
+)
 from gateway.preflight import build_preflight_report
+from gateway.decisions import build_decision_audit_report
+from gateway.operational_validation import build_operational_validation_report
 from gateway.settings import load_settings as load_gateway_settings
+from narrowcti.adapters.persistence.local.decision_audit_reader import read_decision_records
 from narrowcti.ports.source_explorer import (
     ExplorerError,
     ExplorerItemDetail,
@@ -113,11 +119,15 @@ class _Jobs:
 
 
 class _SnapshotReader:
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, preflight=None, validation=None):
+        self.preflight = preflight
+        self.validation = validation
 
-    def read(self):
-        return self.data
+    def read_preflight(self):
+        return self.preflight
+
+    def read_validation(self):
+        return self.validation
 
 
 class WebAppTests(unittest.TestCase):
@@ -191,11 +201,11 @@ class WebAppTests(unittest.TestCase):
                 "metadata": {"provider_payload": "evidence-secret-canary"},
                 "path": "C:/private/audit.jsonl",
             }]),
-            operational_state_reader=_SnapshotReader({
-                "schema": "narrowcti.operational-state/v1",
-                "captured_at": datetime.now(timezone.utc).isoformat(),
-                "required_sources": ["misp"],
-                "preflight": {
+            operational_state_reader=_SnapshotReader(
+                preflight={
+                    "schema": "narrowcti.web-preflight/v1",
+                    "captured_at": datetime.now(timezone.utc).isoformat(),
+                    "report": {
                     "status": "ready", "ingestion_mode": "hybrid", "dedup_mode": "hybrid",
                     "graph_export_mode": "audit", "misp_tls": True,
                     "sources": [{"name": "misp", "dry_run": True}],
@@ -203,14 +213,20 @@ class WebAppTests(unittest.TestCase):
                     "settings": {"opencti_token": "preflight-secret-canary"},
                     "evidence_paths": {"state_dir": "C:/private/narrowcti-state"},
                 },
-                "validation": {
+                },
+                validation={
+                    "schema": "narrowcti.web-operational-validation/v1",
+                    "captured_at": datetime.now(timezone.utc).isoformat(),
+                    "required_sources": ["misp"],
+                    "report": {
                     "schema_version": "operational-validation/v1.0", "release": "v1.0.0",
                     "status": "needs-evidence", "counts": {"needs-evidence": 1},
                     "checks": [{"code": "full-validation", "status": "needs-evidence",
                                 "message": "C:/private/release.log",
                                 "evidence": {"api_key": "validation-secret-canary", "path": "C:/private/release.log"}}],
                 },
-            }),
+                },
+            ),
         )
         self.client = TestClient(self.app, base_url="https://testserver")
 
@@ -677,7 +693,40 @@ class WebAppTests(unittest.TestCase):
         self.assertNotIn("Reachable", self.client.get("/system/providers").text)
         capabilities = self.client.get("/system/capabilities")
         self.assertIn("source explorer", capabilities.text.lower())
+        self.assertIn("Community web workspace", capabilities.text)
+        self.assertIn("Use the authenticated Community web interface.", capabilities.text)
+        self.assertIn("<code class=\"muted\">ui.basic</code>", capabilities.text)
+        self.assertNotIn("Ui Basic", capabilities.text)
         self.assertNotIn("scheduler", capabilities.text.lower())
+
+    def test_brand_logo_display_contract_is_exclusive_for_expanded_collapsed_and_mobile(self):
+        css = (
+            Path(__file__).parents[1]
+            / "src/narrowcti/api/web/static/app.css"
+        ).read_text(encoding="utf-8")
+        template = (
+            Path(__file__).parents[1]
+            / "src/narrowcti/api/web/templates/base.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("narrowcti-logo-horizontal-dark.svg", template)
+        self.assertIn("narrowcti-symbol-gradient.svg", template)
+        self.assertRegex(css, r"\.brand \.brand-expanded\s*\{\s*display:\s*block;")
+        self.assertRegex(css, r"\.brand \.brand-collapsed\s*\{\s*display:\s*none;")
+        self.assertRegex(css, r"\.app-layout:has\(\.sidebar-toggle:checked\) \.brand-expanded[^\{]*\{\s*display:\s*none;")
+        self.assertRegex(css, r"\.app-layout:has\(\.sidebar-toggle:checked\) \.brand-collapsed[^\{]*\{\s*display:\s*block;")
+        self.assertRegex(css, r"@media \(max-width: 800px\)[\s\S]*?\.brand \.brand-expanded\s*\{\s*display:\s*none !important;")
+        self.assertRegex(css, r"@media \(max-width: 800px\)[\s\S]*?\.brand \.brand-collapsed\s*\{\s*display:\s*block !important;")
+
+    def test_mid_sized_workspace_reflows_explorer_and_review_filters(self):
+        css = (Path(__file__).parents[1] / "src/narrowcti/api/web/static/app.css").read_text(encoding="utf-8")
+        self.assertRegex(
+            css,
+            r"@media \(max-width: 1100px\)[\s\S]*?\.explorer-toolbar \{ grid-template-columns: minmax\(140px, \.7fr\) minmax\(220px, 2fr\); \}",
+        )
+        self.assertRegex(
+            css,
+            r"@media \(max-width: 1100px\)[\s\S]*?\.queue-filters \{ grid-template-columns: auto minmax\(0, 1fr\) auto minmax\(0, 1fr\); \}",
+        )
 
     def test_gateway_publishes_authoritative_snapshot_from_raw_graph_evidence(self):
         audit_dir = Path(self._temporary.name) / "gateway-audit"
@@ -702,7 +751,8 @@ class WebAppTests(unittest.TestCase):
             "NARROWCTI_STATE_DIR": str(Path(self._temporary.name) / "gateway-state"),
             "NARROWCTI_RUNTIME_DB": self.settings.runtime_db_file,
             "NARROWCTI_DECISION_AUDIT_DIR": str(audit_dir),
-            "NARROWCTI_ENABLED_SOURCES": "misp",
+            "NARROWCTI_ENABLED_SOURCES": "otx,misp",
+            "NARROWCTI_OPERATIONAL_VALIDATION_SOURCES": "misp",
             "NARROWCTI_GRAPH_EXPORT_MODE": "dry-run",
             "NARROWCTI_GRAPH_DEDUP_STATE_FILE": str(Path(self._temporary.name) / "graph-index.json"),
             "NARROWCTI_OPENCTI_GRAPH_LOOKUP": "true",
@@ -713,15 +763,45 @@ class WebAppTests(unittest.TestCase):
         }
         gateway_settings = load_gateway_settings(gateway_env)
         preflight = build_preflight_report(gateway_settings, env=gateway_env)
-        snapshot = publish_gateway_operational_snapshot(gateway_settings, preflight)
-        checks = {check["code"]: check["status"] for check in snapshot.validation["checks"]}
+        preflight_snapshot = publish_gateway_preflight_snapshot(gateway_settings, preflight)
+        records = read_decision_records([str(audit_dir)])
+        decisions = build_decision_audit_report(records)
+        validation_report = build_operational_validation_report(
+            preflight,
+            decisions,
+            full_validation_passed=True,
+            required_sources=gateway_settings.operational_validation_sources,
+            relationship_audit_evidence={
+                "found": True,
+                "relationship_count": 3,
+                "outbound_count": 2,
+                "inbound_count": 1,
+                "diamond_quadrant_counts": {"capability": 2, "infrastructure": 1},
+                "kill_chain_attack_patterns": ["T1059"],
+            },
+        )
+        validation_snapshot = publish_operational_validation_snapshot(
+            gateway_settings,
+            validation_report,
+            gateway_settings.operational_validation_sources,
+        )
+        checks = {check["code"]: check["status"] for check in validation_snapshot.report["checks"]}
         self.assertEqual("pass", checks["canonical-attack-match"])
         self.assertEqual("pass", checks["lookup-metadata"])
-        self.assertEqual(("misp",), snapshot.required_sources)
+        self.assertEqual(("otx", "misp"), preflight.enabled_sources)
+        self.assertEqual(("misp",), gateway_settings.operational_validation_sources)
+        self.assertEqual(("misp",), validation_snapshot.required_sources)
+        self.assertEqual("pass", checks["full-validation"])
+        self.assertEqual("pass", checks["opencti-relationship-audit"])
 
-        published = LocalOperationalSnapshotStore(self.settings.runtime_db_file).read()
-        self.assertEqual(["misp"], published["required_sources"])
-        serialized = json.dumps(published)
+        store = LocalOperationalSnapshotStore(self.settings.runtime_db_file)
+        published_preflight = store.read_preflight()
+        published_validation = store.read_validation()
+        self.assertIsNotNone(published_preflight)
+        self.assertIsNotNone(published_validation)
+        self.assertEqual(preflight_snapshot.to_dict(), published_preflight)
+        self.assertEqual(["misp"], published_validation["required_sources"])
+        serialized = json.dumps([published_preflight, published_validation])
         self.assertNotIn("misp.example.invalid", serialized)
         self.assertNotIn("opencti.example.invalid", serialized)
         self.assertNotIn(str(audit_dir), serialized)
@@ -769,10 +849,48 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(str(Path(self._temporary.name) / "missing-runtime.db"), web_settings.runtime_db_file)
         response = client.get("/system/health")
         self.assertEqual(200, response.status_code)
-        self.assertIn("Preflight is currently unavailable", response.text)
+        self.assertIn("Authoritative preflight snapshot unavailable", response.text)
+        self.assertIn("rerun the authoritative preflight workflow", response.text)
         self.assertNotIn("Export", response.text)
         validation = client.get("/evidence/validation")
-        self.assertIn("Current Operational Validation is unavailable", validation.text)
+        self.assertIn("Authoritative Operational Validation snapshot unavailable", validation.text)
+        self.assertIn("rerun Operational Validation from the Gateway/Ops role", validation.text)
+
+    def test_stale_authoritative_snapshots_show_capture_time_and_refresh_guidance(self):
+        self._login()
+        captured_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        target_app = self.client.app
+        while not hasattr(target_app, "state"):
+            target_app = target_app.app
+        target_app.state.operational_state_reader = _SnapshotReader(
+            preflight={
+                "schema": "narrowcti.web-preflight/v1",
+                "captured_at": captured_at,
+                "report": {"status": "ready", "sources": [], "issues": []},
+            },
+            validation={
+                "schema": "narrowcti.web-operational-validation/v1",
+                "captured_at": captured_at,
+                "required_sources": ["misp"],
+                "report": {
+                    "status": "needs-evidence",
+                    "checks": [],
+                    "counts": {"needs-evidence": 1},
+                },
+            },
+        )
+
+        preflight = self.client.get("/system/health")
+        self.assertEqual(200, preflight.status_code)
+        self.assertIn("Stale snapshot", preflight.text)
+        self.assertIn(captured_at, preflight.text)
+        self.assertIn("Ask a Gateway operator to rerun the authoritative preflight workflow", preflight.text)
+
+        validation = self.client.get("/evidence/validation")
+        self.assertEqual(200, validation.status_code)
+        self.assertIn("Stale snapshot", validation.text)
+        self.assertIn(captured_at, validation.text)
+        self.assertIn("with its manual and relationship evidence inputs", validation.text)
 
     def test_browser_http_errors_are_autoescaped_html_with_status_and_security_headers(self):
         self._login()

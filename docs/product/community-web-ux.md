@@ -34,14 +34,18 @@ projections only. The Web never renders `PreflightReport.to_dict()` or
 diagnostics and report evidence payloads are withheld.
 
 Operational Validation uses the existing `OperationalValidationReport`
-contract for the current configuration/evidence snapshot. The Gateway/Ops
-`python -m gateway.preflight` workflow publishes a bounded, allowlisted snapshot
-after building validation from raw bounded DecisionRecord evidence. The Web
-reads that snapshot from the shared runtime-state volume; it does not load
+contract and the same configured `NARROWCTI_OPERATIONAL_VALIDATION_SOURCES`
+value as the Gateway/Ops validator. The Gateway/Ops preflight workflow
+publishes a separate bounded Preflight snapshot. The
+`python -m gateway.operational_validation` workflow publishes a separate
+bounded Operational Validation snapshot after consuming the supported manual
+and relationship evidence inputs and bounded DecisionRecord evidence. Web
+reads both snapshots from the shared runtime-state volume; it does not load
 Gateway settings, recompute preflight/MITRE/decision validation, or run a CLI or
-subprocess. Snapshots older than 15 minutes (or implausibly future-dated) are
-shown as unavailable, not as current Gateway state. “Needs evidence” is shown
-as such and is not represented as a failed release gate.
+subprocess. Each snapshot includes its capture time; snapshots older than 15
+minutes are shown as stale with operator refresh guidance, never as current
+Gateway state. Missing/invalid snapshots are shown as unavailable. “Needs
+evidence” is shown as such and is not represented as a failed release gate.
 
 `ProviderDescriptor.available` means configured/available to the Explorer; it
 does not mean the upstream provider was contacted or is healthy. “Healthy” or

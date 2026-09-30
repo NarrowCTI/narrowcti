@@ -1,4 +1,4 @@
-"""Bounded atomic storage for safe Gateway operational-state snapshots."""
+"""Bounded atomic stores for separate Ops-owned Web read snapshots."""
 
 from __future__ import annotations
 
@@ -8,27 +8,32 @@ from pathlib import Path
 
 from narrowcti.adapters.persistence.local.atomic_io import write_json_atomic
 from narrowcti.application.reporting.operational_snapshot import (
-    OperationalStateSnapshot,
-    load_operational_state_snapshot,
+    WebOperationalValidationSnapshot,
+    WebPreflightSnapshot,
 )
 
 
 MAX_SNAPSHOT_BYTES = 256 * 1024
-SNAPSHOT_FILENAME = "operational-snapshot.json"
+PREFLIGHT_SNAPSHOT_FILENAME = "preflight-snapshot.json"
+VALIDATION_SNAPSHOT_FILENAME = "operational-validation-snapshot.json"
 
 
 class LocalOperationalSnapshotStore:
-    """Read the fixed snapshot adjacent to runtime.db; never follows a custom path."""
+    """Read/write only fixed snapshot files alongside the shared runtime DB."""
 
     def __init__(self, runtime_db_file: str):
         if not runtime_db_file:
             raise ValueError("runtime database location is required")
-        self.path = Path(os.path.abspath(os.fspath(runtime_db_file))).parent / SNAPSHOT_FILENAME
+        self.directory = Path(os.path.abspath(os.fspath(runtime_db_file))).parent
 
-    def read(self) -> dict | None:
+    def _path(self, filename):
+        return self.directory / filename
+
+    def _read(self, filename):
+        path = self._path(filename)
         try:
-            resolved = self.path.resolve(strict=True)
-            if resolved.parent != self.path.parent.resolve() or not resolved.is_file():
+            resolved = path.resolve(strict=True)
+            if resolved.parent != self.directory.resolve() or not resolved.is_file():
                 return None
             if resolved.stat().st_size > MAX_SNAPSHOT_BYTES:
                 return None
@@ -36,14 +41,31 @@ class LocalOperationalSnapshotStore:
                 value = json.load(file_obj)
         except (OSError, UnicodeError, json.JSONDecodeError):
             return None
-        snapshot = load_operational_state_snapshot(value)
-        return snapshot.to_dict() if snapshot is not None else None
+        return value if isinstance(value, dict) else None
 
-    def write(self, snapshot: OperationalStateSnapshot) -> None:
-        payload = json.dumps(snapshot.to_dict(), sort_keys=True, separators=(",", ":"))
-        if len(payload.encode("utf-8")) > MAX_SNAPSHOT_BYTES:
+    def _write(self, filename, snapshot):
+        payload = snapshot.to_dict()
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        if len(encoded) > MAX_SNAPSHOT_BYTES:
             raise ValueError("operational snapshot exceeds its size limit")
-        write_json_atomic(str(self.path), snapshot.to_dict())
+        write_json_atomic(str(self._path(filename)), payload)
+
+    def read_preflight(self):
+        return self._read(PREFLIGHT_SNAPSHOT_FILENAME)
+
+    def write_preflight(self, snapshot: WebPreflightSnapshot) -> None:
+        self._write(PREFLIGHT_SNAPSHOT_FILENAME, snapshot)
+
+    def read_validation(self):
+        return self._read(VALIDATION_SNAPSHOT_FILENAME)
+
+    def write_validation(self, snapshot: WebOperationalValidationSnapshot) -> None:
+        self._write(VALIDATION_SNAPSHOT_FILENAME, snapshot)
 
 
-__all__ = ["MAX_SNAPSHOT_BYTES", "SNAPSHOT_FILENAME", "LocalOperationalSnapshotStore"]
+__all__ = [
+    "MAX_SNAPSHOT_BYTES",
+    "PREFLIGHT_SNAPSHOT_FILENAME",
+    "VALIDATION_SNAPSHOT_FILENAME",
+    "LocalOperationalSnapshotStore",
+]

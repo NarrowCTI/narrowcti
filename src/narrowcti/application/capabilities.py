@@ -35,6 +35,28 @@ COMMUNITY_CAPABILITY_NAMES = (
 
 COMMUNITY_FUTURE_CAPABILITIES: tuple[str, ...] = ()
 
+COMMUNITY_CAPABILITY_PRESENTATION = {
+    "source.otx": ("OTX source", "Connect the AlienVault Open Threat Exchange source."),
+    "source.misp": ("MISP source", "Connect a MISP instance as an intelligence source."),
+    "ui.basic": ("Community web workspace", "Use the authenticated Community web interface."),
+    "source.explorer": ("Source Explorer", "Search and inspect supported source records."),
+    "ingestion.run_once": ("Run one ingestion cycle", "Submit an administrator-controlled one-time ingestion job."),
+    "enrichment.otx_entities": ("OTX entity enrichment", "Enrich candidates with supported OTX entity context."),
+    "enrichment.mitre_attack": ("MITRE ATT&CK enrichment", "Resolve supported ATT&CK identifiers from the configured local cache."),
+    "curation.scoring": ("Indicator scoring", "Apply the Community scoring and policy rules."),
+    "curation.contextual_scoring": ("Contextual scoring", "Apply configured contextual scoring signals."),
+    "quarantine.review": ("Quarantine review", "Review, release, or reject held candidates."),
+    "quarantine.review_api": ("Review API", "Expose the authenticated analyst review API."),
+    "reporting.operational": ("Operational reports", "View bounded decision, evidence, and Community reports."),
+    "reporting.operational_validation": ("Operational Validation", "View the latest Ops-published validation snapshot."),
+    "reporting.support_diagnostics": ("Support diagnostics", "Build bounded, redacted Community support diagnostics."),
+    "graph.export.audit": ("Graph export audit", "Record graph export plans without publishing them."),
+    "graph.export.dry_run": ("Graph export dry-run", "Validate graph export plans without mutating OpenCTI."),
+    "graph.lookup.opencti": ("OpenCTI graph lookup", "Read existing graph objects for deduplication and reconciliation."),
+    "graph.export.controlled": ("Controlled graph export", "Enable the configured controlled graph export path."),
+    "deployment.templates": ("Deployment templates", "Use the supported Community deployment templates."),
+}
+
 COMMERCIAL_CAPABILITIES = (
     "ui.control_plane",
     "ingestion.scheduler",
@@ -208,6 +230,7 @@ __all__ = [
     "CapabilityResolution",
     "COMMERCIAL_CAPABILITIES",
     "COMMUNITY_FUTURE_CAPABILITIES",
+    "COMMUNITY_CAPABILITY_PRESENTATION",
     "COMMUNITY_CAPABILITY_NAMES",
     "DEFAULT_ALIASES",
     "normalize_capability",

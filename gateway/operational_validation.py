@@ -4,6 +4,7 @@ from __future__ import annotations
 # ruff: noqa: F403, F405
 
 import argparse
+import logging
 import json
 import os
 
@@ -13,6 +14,8 @@ from narrowcti.application.reporting.decisions import build_decision_audit_repor
 from narrowcti.adapters.persistence.local.decision_audit_reader import read_decision_records
 from gateway.preflight import build_preflight_report
 from gateway.settings import load_settings
+
+log = logging.getLogger(__name__)
 
 def write_report(report, output_file, output_format="text"):
     output_file = str(output_file or "").strip()
@@ -66,7 +69,7 @@ def main():
     )
     parser.add_argument(
         "--required-sources",
-        default="otx,misp",
+        default=None,
         help="Comma-separated source keys expected in bounded dry-run evidence.",
     )
     parser.add_argument(
@@ -136,6 +139,11 @@ def main():
     relationship_audit_evidence = load_relationship_audit_evidence(
         args.relationship_audit_file
     )
+    required_sources = parse_sources(
+        args.required_sources
+        if args.required_sources is not None
+        else ",".join(settings.operational_validation_sources)
+    )
     report = build_operational_validation_report(
         preflight,
         decisions,
@@ -151,8 +159,18 @@ def main():
         or evidence_bool(manual_evidence, "resource_posture_unhealthy"),
         resource_posture_evidence=manual_evidence.get("resource_posture"),
         relationship_audit_evidence=relationship_audit_evidence,
-        required_sources=parse_sources(args.required_sources),
+        required_sources=required_sources,
     )
+    try:
+        from narrowcti.infrastructure.runtime.operational_snapshot import (
+            publish_operational_validation_snapshot,
+        )
+
+        publish_operational_validation_snapshot(settings, report, required_sources)
+    except Exception:
+        # Web presents a missing or stale snapshot as unavailable; operational
+        # validation itself remains authoritative and its CLI result is intact.
+        log.warning("Unable to publish the Operational Validation snapshot; Web will report it unavailable")
     output_format = "json" if args.json else args.format
     rendered = render_report(report, output_format=output_format)
     if args.output_file:
