@@ -34,6 +34,9 @@ class PackageRuntimeContractTests(unittest.TestCase):
             "narrowcti.infrastructure.runtime.gateway_composition",
             "narrowcti.api.review.app",
             "narrowcti.cli.gateway",
+            "narrowcti.application.provider_readiness",
+            "narrowcti.ports.provider_readiness",
+            "narrowcti.cli.provider_readiness",
         ):
             self.assertIn(f'"{module}"', source)
         self.assertNotIn('"narrowcti.core.', source)

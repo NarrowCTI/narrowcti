@@ -177,7 +177,9 @@ jobs:
           exit 1
 
       - name: Smoke test canonical Worker role
+        shell: bash
         run: |
+          set +e
           docker run --rm --read-only -i \
             --tmpfs /tmp \
             --tmpfs /app/state:uid=10001,gid=10001,mode=0750 \
@@ -187,6 +189,9 @@ jobs:
             -e NARROWCTI_ENABLED_SOURCES=offline \
             -e NARROWCTI_JOB_POLL_SECONDS=1 \
             narrowcti-gateway:scan python -m narrowcti.cli.worker
+          status=$?
+          set -e
+          test "$status" -eq 2
 
       - name: Smoke test Ops role
         run: |
@@ -197,6 +202,15 @@ jobs:
             -e NARROWCTI_QUARANTINE_REPOSITORY=/app/state/quarantine.jsonl \
             -e NARROWCTI_RELEASE_AUDIT_FILE=/app/state/audit/releases.jsonl \
             narrowcti-gateway:scan python -m narrowcti.cli.quarantine --json summary
+
+      - name: Smoke test bounded provider readiness command
+        run: |
+          docker run --rm --read-only \
+            --tmpfs /tmp \
+            -e NARROWCTI_WEB_MISP_KEY_FILE=/run/secrets/missing-misp-key \
+            -e NARROWCTI_WEB_OTX_KEY_FILE=/run/secrets/missing-otx-key \
+            narrowcti-gateway:scan \
+            python -m narrowcti.cli.provider_readiness --json
 
       - name: Scan candidate image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

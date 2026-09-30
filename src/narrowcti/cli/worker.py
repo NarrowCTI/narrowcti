@@ -21,6 +21,7 @@ from narrowcti.infrastructure.runtime.gateway_composition import default_source_
 from narrowcti.ports.jobs import INGESTION_JOB_TYPES, QUARANTINE_EXPORT_JOB
 
 from .gateway import run_gateway_loop, run_gateway_once
+from .exit_codes import RUN_ONCE_SOURCE_FAILURE_EXIT_CODE, run_once_exit_code
 
 
 EXPORT_QUARANTINE_JOB = QUARANTINE_EXPORT_JOB
@@ -238,16 +239,22 @@ def main():
     settings = load_settings()
     registry = default_source_registry(print, settings)
     try:
-        run_worker(settings, registry, lambda message: print(f"[INFO] {message}", flush=True), run_loop=run_worker_loop)
+        result = run_worker(
+            settings,
+            registry,
+            lambda message: print(f"[INFO] {message}", flush=True),
+            run_loop=run_worker_loop,
+        )
     except WorkerLeaseUnavailable as exc:
         print(str(exc), file=sys.stderr, flush=True)
         return WORKER_LEASE_HELD_EXIT_CODE
-    return 0
+    return run_once_exit_code(result) if settings.run_once else 0
 
 
 __all__ = [
     "EXPORT_QUARANTINE_JOB",
     "WORKER_LEASE_HELD_EXIT_CODE",
+    "RUN_ONCE_SOURCE_FAILURE_EXIT_CODE",
     "WorkerLeaseUnavailable",
     "main",
     "process_pending_jobs",

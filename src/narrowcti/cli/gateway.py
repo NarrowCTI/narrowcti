@@ -8,6 +8,7 @@ from narrowcti.application.runtime import run_gateway_once as _run_gateway_once
 from narrowcti.infrastructure.config.settings import load_settings
 from narrowcti.infrastructure.runtime.gateway_composition import default_source_registry
 from narrowcti.infrastructure.runtime.summary_store import write_gateway_summary
+from narrowcti.cli.exit_codes import run_once_exit_code
 
 
 def log(msg):
@@ -41,8 +42,7 @@ def main():
     settings = load_settings()
     registry = default_source_registry(log, settings)
     if settings.run_once:
-        _run_once(settings, registry, log)
-        return
+        return run_once_exit_code(_run_once(settings, registry, log))
     run_gateway_loop(settings, registry, log)
 
 

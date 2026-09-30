@@ -71,6 +71,27 @@ services:
     volumes:
       - narrowcti-state:/app/state
 
+  narrowcti-provider-readiness:
+    build:
+      context: ..
+      dockerfile: Dockerfile.gateway
+    image: ${NARROWCTI_GATEWAY_IMAGE:-narrowcti/gateway:local}
+    env_file:
+      - ${NARROWCTI_WEB_ENV_FILE:-./web.env.example}
+    environment:
+      PYTHONUNBUFFERED: "1"
+    command: ["python", "-m", "narrowcti.cli.provider_readiness"]
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    profiles:
+      - ops
+
   narrowcti-operator-auth:
     build:
       context: ..

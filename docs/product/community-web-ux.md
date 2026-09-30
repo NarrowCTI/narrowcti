@@ -52,6 +52,14 @@ does not mean the upstream provider was contacted or is healthy. “Healthy” o
 “Reachable” is reserved for a real bounded probe. Worker health is not inferred
 from missing errors, jobs or container state.
 
+The authenticated Providers page offers an explicit, bounded live readiness
+check. It reports the fixed provider-readiness taxonomy with a capture time and
+safe operator guidance; it is not run on ordinary page GETs and does not alter
+`/healthz`. The Ops `narrowcti-provider-readiness` command uses the same
+application contract. See
+[`community-deployment-readiness.md`](community-deployment-readiness.md) for
+the Compose and local-lab contract.
+
 Reports is a product-facing inventory of Community operational reports.
 Community Web does not generate report files, expose internal module command
 names, accept output paths or schedule reports.

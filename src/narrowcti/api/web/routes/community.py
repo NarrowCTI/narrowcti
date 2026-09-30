@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from narrowcti.application.capabilities import (
@@ -28,6 +28,8 @@ def register_community_routes(
     template_context,
     template_response,
     operational_state_reader,
+    require_csrf,
+    readiness_limiter,
 ):
     """Register additive Community pages without moving existing route behavior."""
 
@@ -149,7 +151,38 @@ def register_community_routes(
             return RedirectResponse("/login", status_code=303)
         return template_response(
             "system_providers.html",
-            template_context(request, session, providers=app.state.source_explorer.providers()),
+            template_context(request, session, providers=app.state.source_explorer.providers(), readiness=None),
+        )
+
+    @app.post(
+        "/system/providers/{provider_key}/readiness",
+        dependencies=[Depends(require_csrf)],
+        response_class=HTMLResponse,
+    )
+    def provider_readiness_page(request: Request, provider_key: str):
+        session = authorized(request, "ui.basic")
+        if session is None:
+            return RedirectResponse("/login", status_code=303)
+        if not readiness_limiter.allow(
+            f"provider-readiness:{session.principal.operator_id}",
+            limit=3,
+            interval=60,
+        ):
+            raise HTTPException(status_code=429, detail="provider readiness rate limit reached")
+        try:
+            readiness = app.state.source_explorer.check_readiness(provider_key)
+        except Exception as exc:
+            if getattr(exc, "code", "") == "provider_unknown":
+                raise HTTPException(status_code=404, detail="provider readiness is unavailable") from None
+            raise
+        return template_response(
+            "system_providers.html",
+            template_context(
+                request,
+                session,
+                providers=app.state.source_explorer.providers(),
+                readiness=readiness,
+            ),
         )
 
     @app.get("/system/capabilities", response_class=HTMLResponse)

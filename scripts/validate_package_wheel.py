@@ -173,6 +173,8 @@ import gateway.preflight as legacy_preflight
 from narrowcti.application.runtime_roles import OPS, WEB, WORKER
 from narrowcti.cli import web as web_role
 from narrowcti.cli import worker as worker_role
+from narrowcti.cli import provider_readiness as readiness_cli
+from narrowcti.application.provider_readiness import ProviderReadinessService
 from narrowcti.domain.intelligence import feed_contract, scoring
 from narrowcti.domain.review import quarantine
 from narrowcti.adapters.stix import serializer
@@ -200,6 +202,8 @@ assert {OPS, WEB, WORKER} == {"ops", "web", "worker"}
 assert callable(web_role.main)
 assert callable(worker_role.main)
 assert callable(auth_cli.main)
+assert callable(readiness_cli.main)
+assert ProviderReadinessService is not None
 assert LocalOperatorStore is not None
 assert PasswordService is not None
 assert LocalOperatorPrincipal is not None

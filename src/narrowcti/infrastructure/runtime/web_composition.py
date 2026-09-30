@@ -19,7 +19,10 @@ def _read_credential(path: str) -> str | None:
     if not path:
         return None
     try:
-        with Path(path).open("r", encoding="utf-8") as file_obj:
+        credential_path = Path(path)
+        if not credential_path.is_file():
+            return None
+        with credential_path.open("r", encoding="utf-8") as file_obj:
             value = file_obj.read(8193)
     except (OSError, UnicodeError):
         return None

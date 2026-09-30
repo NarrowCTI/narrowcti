@@ -6,6 +6,9 @@ Edition.
 The v0.8 detailed deployment snapshot is `docs/product/deployment-operations-v0.8.md`.
 Versioned deployment files remain available as release history; operators
 should link to this unversioned document for the current deployment path.
+The reproducible Community Web/Worker/Ops lab layers, provider overlays,
+readiness checks, snapshot refresh and reverse-proxy/CSRF path are documented in
+[`community-deployment-readiness.md`](community-deployment-readiness.md).
 
 ## Current Deployment Model
 
