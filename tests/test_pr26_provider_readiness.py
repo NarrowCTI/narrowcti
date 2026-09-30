@@ -59,18 +59,24 @@ class ProviderReadinessTests(unittest.TestCase):
 
     def test_static_preflight_remains_network_free(self):
         from gateway.preflight import build_preflight_report
-        from tests.test_gateway_preflight import make_settings
+        from gateway.settings import load_settings
+
+        env = {
+            "NARROWCTI_ENABLED_SOURCES": "otx",
+            "NARROWCTI_DEDUP_MODE": "hybrid",
+            "NARROWCTI_ENABLE_MITRE_ATTACK_RESOLUTION": "false",
+            "OPENCTI_URL": "https://opencti.example.invalid",
+            "OTX_DRY_RUN": "true",
+        }
+        settings = load_settings(env)
 
         with patch(
             "narrowcti.adapters.sources.bounded_http.requests.Session",
             side_effect=AssertionError("static preflight must not use the network"),
         ):
             report = build_preflight_report(
-                make_settings(enabled_sources=["otx"]),
-                env={
-                    "OPENCTI_URL": "https://opencti.example.invalid",
-                    "OTX_DRY_RUN": "true",
-                },
+                settings,
+                env=env,
             )
         self.assertTrue(report.ok)
 
