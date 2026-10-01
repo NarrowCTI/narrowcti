@@ -29,7 +29,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
-        curl libmagic1 openssl libssl3t64 openssl-provider-legacy \
+        curl libmagic1 libpcre2-8-0 openssl libssl3t64 openssl-provider-legacy \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 narrowcti \
     && useradd --uid 10001 --gid 10001 --create-home --home-dir /home/narrowcti --shell /usr/sbin/nologin narrowcti \
