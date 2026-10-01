@@ -86,6 +86,17 @@ Explorer credentials are a separate read-only integration identity and are
 never inherited from `MISP_KEY` or `OTX_API_KEY`. Missing credentials make the
 provider unavailable without preventing the Web role from starting.
 
+MISP search is intent-aware and bounded. Deterministic IPv4/IPv6, hostname/domain,
+MD5, SHA-1 and SHA-256 values use the provider's attribute-value search and are
+normalized back to event identities. Other text uses the bounded event-info
+search; actor, malware and tag-like text may resolve a small set of canonical
+MISP tags before one bounded tag search. The Explorer does not use the MISP
+`searchall` or `searchattribute` strategies, does not hydrate event details
+during a list search, and deduplicates results at event level. Each operation
+has one aggregate request/deadline budget, so exhaustion is reported as a
+provider timeout rather than as silently complete results. Provider timeouts,
+TLS failures and connectivity failures retain distinct public error semantics.
+
 For MISP, set `NARROWCTI_WEB_MISP_URL` and
 `NARROWCTI_WEB_MISP_KEY_FILE` in `web.env`, then mount a dedicated API key
 read-only using the optional MISP overlay:

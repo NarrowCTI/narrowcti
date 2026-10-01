@@ -44,13 +44,20 @@ def request_json(
     read_timeout: float = 10.0,
     total_timeout: float = DEFAULT_TOTAL_TIMEOUT_SECONDS,
     max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
+    deadline: float | None = None,
 ) -> object:
     """Make one non-redirecting, environment-independent, byte-bounded request."""
     if max_response_bytes < 1 or total_timeout <= 0:
         raise ValueError("HTTP response limits must be positive")
+    if deadline is not None and deadline <= time.monotonic():
+        raise ExplorerError("provider_timeout", "The source provider request timed out.", True)
     session = requests.Session()
     session.trust_env = False
     started = time.monotonic()
+    remaining = None if deadline is None else max(0.001, deadline - started)
+    effective_total_timeout = total_timeout if remaining is None else min(total_timeout, remaining)
+    effective_connect_timeout = connect_timeout if remaining is None else min(connect_timeout, remaining)
+    effective_read_timeout = read_timeout if remaining is None else min(read_timeout, remaining)
     try:
         with session.request(
             method,
@@ -58,7 +65,7 @@ def request_json(
             headers=headers,
             params=params,
             json=json_body,
-            timeout=(connect_timeout, read_timeout),
+            timeout=(effective_connect_timeout, effective_read_timeout),
             verify=verify_tls,
             allow_redirects=False,
             stream=True,
@@ -86,7 +93,9 @@ def request_json(
             chunks: list[bytes] = []
             received = 0
             for chunk in response.iter_content(chunk_size=_CHUNK_SIZE):
-                if time.monotonic() - started > total_timeout:
+                if time.monotonic() - started > effective_total_timeout or (
+                    deadline is not None and time.monotonic() >= deadline
+                ):
                     raise ExplorerError("provider_timeout", "The source provider request timed out.", True)
                 if not chunk:
                     continue
@@ -94,7 +103,9 @@ def request_json(
                 if received > max_response_bytes:
                     raise ExplorerError("response_too_large", "The source response exceeded the configured size limit.")
                 chunks.append(chunk)
-            if time.monotonic() - started > total_timeout:
+            if time.monotonic() - started > effective_total_timeout or (
+                deadline is not None and time.monotonic() >= deadline
+            ):
                 raise ExplorerError("provider_timeout", "The source provider request timed out.", True)
         try:
             return json.loads(b"".join(chunks))
@@ -102,6 +113,12 @@ def request_json(
             raise ExplorerError("invalid_provider_response", "The source provider returned invalid JSON.") from None
     except ExplorerError:
         raise
+    except requests.exceptions.SSLError:
+        raise ExplorerError("provider_tls_failed", "The source provider TLS check failed.") from None
+    except requests.exceptions.Timeout:
+        raise ExplorerError("provider_timeout", "The source provider request timed out.", True) from None
+    except requests.exceptions.ConnectionError:
+        raise ExplorerError("provider_unavailable", "The source provider could not be reached.", True) from None
     except requests.RequestException:
         raise ExplorerError("provider_unavailable", "The source provider could not be reached.", True) from None
     finally:

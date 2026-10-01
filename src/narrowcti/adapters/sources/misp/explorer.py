@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
+import ipaddress
+import re
+import time
 from urllib.parse import quote
 
-from narrowcti.adapters.sources.bounded_http import probe_status, request_json, validate_base_url
+from narrowcti.adapters.sources.bounded_http import (
+    DEFAULT_TOTAL_TIMEOUT_SECONDS,
+    probe_status,
+    request_json,
+    validate_base_url,
+)
 from narrowcti.adapters.sources.fingerprint import source_document_fingerprint
 from narrowcti.ports.source_explorer import (
     ExplorerError,
@@ -20,6 +28,14 @@ from narrowcti.ports.source_explorer import (
 
 _MAX_INDICATORS = 100
 _MAX_VALUE_LENGTH = 512
+_MAX_TAG_CANDIDATES = 3
+_MAX_UPSTREAM_REQUESTS = 3
+_MAX_PROVIDER_RECORDS = 100
+_SEARCH_DEADLINE_SECONDS = DEFAULT_TOTAL_TIMEOUT_SECONDS
+_DOMAIN_RE = re.compile(
+    r"^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}\.?$"
+)
+_HASH_LENGTHS = {32: "md5", 40: "sha1", 64: "sha256"}
 
 
 def _event(value):
@@ -51,11 +67,43 @@ def _summary(value):
     return ExplorerItemSummary(
         provider_key="misp",
         external_id=external_id[:256],
-        title=str(event.get("info") or event.get("name") or external_id)[:512],
+        title=str(event.get("info") or event.get("name") or f"MISP Event {external_id}")[:512],
         published_at=_published(event),
         tlp=next((tag for tag in _tag_values(event) if tag.lower().startswith("tlp:")), None),
         tags=_tag_values(event),
     )
+
+
+def _observable_kind(query: str) -> str | None:
+    """Return a deterministic observable kind, or None for generic text."""
+    try:
+        parsed = ipaddress.ip_address(query)
+    except ValueError:
+        parsed = None
+    if parsed is not None:
+        return "ipv4" if parsed.version == 4 else "ipv6"
+    if len(query) in _HASH_LENGTHS and re.fullmatch(r"[0-9a-fA-F]+", query):
+        return _HASH_LENGTHS[len(query)]
+    if _DOMAIN_RE.fullmatch(query):
+        return "domain"
+    return None
+
+
+class _SearchBudget:
+    def __init__(self, *, deadline_seconds: float = _SEARCH_DEADLINE_SECONDS) -> None:
+        self.deadline = time.monotonic() + deadline_seconds
+        self.requests = 0
+
+    def remaining(self) -> float:
+        remaining = self.deadline - time.monotonic()
+        if remaining <= 0:
+            raise ExplorerError("provider_timeout", "The source provider request timed out.", True)
+        return remaining
+
+    def consume(self) -> None:
+        if self.requests >= _MAX_UPSTREAM_REQUESTS:
+            raise ExplorerError("provider_timeout", "The source provider search budget was exhausted.", True)
+        self.requests += 1
 
 
 class MISPSourceExplorer:
@@ -90,31 +138,86 @@ class MISPSourceExplorer:
 
     def search(self, request: ExplorerSearchRequest) -> ExplorerSearchResult:
         self._ensure_available()
-        payload: dict[str, object] = {
-            "returnFormat": "json",
-            "metadata": True,
-            "includeEventTags": True,
-            "searchall": request.query,
-            "limit": request.limit + 1,
-        }
-        tags = request.filters.get("tag")
-        if tags:
-            payload["tags"] = list(tags) if isinstance(tags, tuple) else [tags]
-        data = request_json(
+        query = request.query.strip()
+        budget = _SearchBudget()
+        explicit_tags = request.filters.get("tag")
+        tags = list(explicit_tags) if isinstance(explicit_tags, tuple) else ([explicit_tags] if explicit_tags else [])
+        observable_kind = _observable_kind(query)
+        if observable_kind is not None:
+            if tags:
+                raise ExplorerError(
+                    "invalid_request",
+                    "The selected tag filter cannot be combined with an observable search.",
+                )
+            data = self._request(
+                budget,
+                "/attributes/restSearch",
+                {"returnFormat": "json", "metadata": True, "value": query, "limit": request.limit + 1},
+            )
+            records = self._attribute_records(data)
+        elif tags:
+            data = self._request(
+                budget,
+                "/events/restSearch",
+                {
+                    "returnFormat": "json",
+                    "metadata": True,
+                    "includeEventTags": True,
+                    "eventinfo": query,
+                    "tags": tags,
+                    "limit": request.limit + 1,
+                },
+            )
+            records = self._records(data)
+        else:
+            event_data = self._request(
+                budget,
+                "/events/index",
+                {
+                    "returnFormat": "json",
+                    "metadata": True,
+                    "includeEventTags": True,
+                    "searcheventinfo": query,
+                    "limit": request.limit + 1,
+                    "page": 1,
+                },
+            )
+            records = self._records(event_data)
+            tag_data = self._request(budget, "/tags/search", {"tag": query})
+            canonical_tags = self._tag_names(tag_data)[:_MAX_TAG_CANDIDATES]
+            if canonical_tags:
+                tag_events = self._request(
+                    budget,
+                    "/events/restSearch",
+                    {
+                        "returnFormat": "json",
+                        "metadata": True,
+                        "includeEventTags": True,
+                        "tags": canonical_tags,
+                        "limit": request.limit + 1,
+                    },
+                )
+                records.extend(self._records(tag_events))
+        items, truncated = self._deduplicated_items(records, request.limit)
+        return ExplorerSearchResult(
+            provider_key="misp",
+            items=items,
+            truncated=truncated,
+            has_more=truncated,
+        )
+
+    def _request(self, budget: _SearchBudget, path: str, payload: dict[str, object]) -> object:
+        budget.consume()
+        remaining = budget.remaining()
+        return request_json(
             "POST",
-            f"{self._base_url}/events/restSearch",
+            f"{self._base_url}{path}",
             headers=self._headers(),
             json_body=payload,
             verify_tls=self._verify_tls,
             max_response_bytes=self._max_response_bytes,
-        )
-        records = self._records(data)
-        items = tuple(_summary(item) for item in records[:request.limit])
-        return ExplorerSearchResult(
-            provider_key="misp",
-            items=items,
-            truncated=len(records) > request.limit,
-            has_more=len(records) > request.limit,
+            total_timeout=remaining,
+            deadline=budget.deadline,
         )
 
     def detail(self, external_id: str) -> ExplorerItemDetail:
@@ -182,17 +285,92 @@ class MISPSourceExplorer:
     @staticmethod
     def _records(value):
         if isinstance(value, list):
-            return value
+            return value[:_MAX_PROVIDER_RECORDS]
         if not isinstance(value, dict):
             raise ExplorerError("invalid_provider_response", "The source provider returned invalid event data.")
         response = value.get("response")
         if isinstance(response, list):
-            return [_event(item) for item in response if isinstance(item, dict)]
+            return [_event(item) for item in response[:_MAX_PROVIDER_RECORDS] if isinstance(item, dict)]
         if isinstance(value.get("Event"), dict):
             return [value["Event"]]
         if isinstance(response, dict):
+            if isinstance(response.get("Event"), list):
+                return [item for item in response["Event"][:_MAX_PROVIDER_RECORDS] if isinstance(item, dict)]
             return MISPSourceExplorer._records(response)
         return []
+
+    @staticmethod
+    def _attribute_records(value):
+        if not isinstance(value, dict):
+            raise ExplorerError("invalid_provider_response", "The source provider returned invalid attribute data.")
+        response = value.get("response")
+        if isinstance(response, dict):
+            attributes = response.get("Attribute") or response.get("attributes") or []
+        else:
+            attributes = value.get("Attribute") or value.get("attributes") or []
+        if not isinstance(attributes, list):
+            raise ExplorerError("invalid_provider_response", "The source provider returned invalid attribute data.")
+        return attributes[:_MAX_PROVIDER_RECORDS]
+
+    @staticmethod
+    def _tag_names(value):
+        if isinstance(value, list):
+            records = value
+        elif isinstance(value, dict):
+            response = value.get("response")
+            if isinstance(response, list):
+                records = response
+            elif isinstance(response, dict):
+                records = response.get("Tag") or response.get("tags") or []
+            else:
+                records = value.get("Tag") or value.get("tags") or []
+        else:
+            raise ExplorerError("invalid_provider_response", "The source provider returned invalid tag data.")
+        names = []
+        for record in records:
+            if len(names) >= _MAX_TAG_CANDIDATES:
+                break
+            if not isinstance(record, dict):
+                continue
+            tag = record.get("Tag") or record.get("tag") or record
+            if isinstance(tag, dict):
+                name = tag.get("name") or tag.get("Name")
+                if name and str(name) not in names:
+                    names.append(str(name)[:128])
+        return names
+
+    @staticmethod
+    def _deduplicated_items(records, limit):
+        items = []
+        seen = set()
+        for record in records:
+            event = _event(record)
+            if not isinstance(record, dict):
+                continue
+            nested_event = record.get("Event") if isinstance(record.get("Event"), dict) else None
+            external_id = str(
+                record.get("event_id")
+                or (nested_event or {}).get("id")
+                or (record.get("id") if nested_event is None else None)
+                or event.get("uuid")
+                or record.get("uuid")
+                or ""
+            )
+            if not external_id or external_id in seen:
+                continue
+            seen.add(external_id)
+            if nested_event is not None or "event_id" not in record:
+                items.append(_summary(event))
+            else:
+                projected = dict(record)
+                projected["Event"] = {
+                    **event,
+                    "id": external_id,
+                    "info": event.get("info") or f"MISP Event {external_id}",
+                }
+                items.append(_summary(projected))
+        truncated = len(items) > limit or len(records) >= _MAX_PROVIDER_RECORDS
+        return tuple(items[:limit]), truncated
 
 
 __all__ = ["MISPSourceExplorer"]

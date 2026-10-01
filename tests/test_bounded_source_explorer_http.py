@@ -5,6 +5,8 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
+import requests
+
 from narrowcti.adapters.sources.bounded_http import request_json, validate_base_url
 from narrowcti.ports.source_explorer import ExplorerError
 
@@ -79,6 +81,22 @@ class BoundedHTTPTests(unittest.TestCase):
             request_json("GET", "https://misp.example", headers={}, max_response_bytes=10)
 
         self.assertEqual(caught.exception.code, "response_too_large")
+
+    def test_request_exception_mapping_keeps_timeout_tls_and_connectivity_distinct(self):
+        cases = (
+            (requests.exceptions.Timeout("secret"), "provider_timeout"),
+            (requests.exceptions.SSLError("secret"), "provider_tls_failed"),
+            (requests.exceptions.ConnectionError("secret"), "provider_unavailable"),
+        )
+        for error, expected in cases:
+            with self.subTest(expected=expected), patch(
+                "narrowcti.adapters.sources.bounded_http.requests.Session"
+            ) as factory:
+                factory.return_value.request.side_effect = error
+                with self.assertRaises(ExplorerError) as raised:
+                    request_json("GET", "https://misp.example", headers={})
+                self.assertEqual(expected, raised.exception.code)
+                self.assertNotIn("secret", str(raised.exception))
 
 
 if __name__ == "__main__":
