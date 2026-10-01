@@ -278,12 +278,21 @@ def create_web_app(
     password_change_limiter = SlidingWindowRateLimiter(max_keys=4096)
     auth_work = BoundedSemaphore(2)
     ingestion_limiter = SlidingWindowRateLimiter(max_keys=10_000)
+    provider_readiness_limiter = SlidingWindowRateLimiter(max_keys=4096)
     provider_semaphore_lock = Lock()
     provider_semaphores = {}
 
     def provider_semaphore(provider_key):
         with provider_semaphore_lock:
             return provider_semaphores.setdefault(provider_key, BoundedSemaphore(1))
+
+    async def bounded_source_provider_call(provider_key, callback, *args):
+        try:
+            return await _bounded_provider_call(
+                provider_semaphore(provider_key), callback, *args
+            )
+        except _ProviderBusy:
+            raise HTTPException(status_code=503, detail="provider_busy") from None
 
     async def require_csrf(request: Request):
         if request.method not in _UNSAFE_METHODS:
@@ -397,7 +406,7 @@ def create_web_app(
 
     @app.get("/healthz", include_in_schema=False)
     async def healthz():
-        return {"status": "ok", "service": "narrowcti-review-api"}
+        return {"status": "ok", "service": "narrowcti-web"}
 
     @app.get("/assets/app.css", include_in_schema=False)
     async def app_css():
@@ -924,6 +933,9 @@ def create_web_app(
         template_context=_template_context,
         template_response=_template_response,
         operational_state_reader=operational_state_reader,
+        require_csrf=require_csrf,
+        readiness_limiter=provider_readiness_limiter,
+        bounded_provider_call=bounded_source_provider_call,
     )
 
     # The established Review API remains a separate bearer-authenticated ASGI app.

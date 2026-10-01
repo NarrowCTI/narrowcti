@@ -1,6 +1,8 @@
 import os
+import json
 import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -46,6 +48,37 @@ class ComposeTopologyContractTests(unittest.TestCase):
         forbidden = {"OTX_API_KEY", "MISP_KEY", "MISP_URL", "OPENCTI_TOKEN"}
         self.assertTrue(forbidden.isdisjoint(configured_names))
 
+    def test_provider_readiness_ops_uses_web_configuration_not_gateway_credentials(self):
+        source = BASE.read_text(encoding="utf-8")
+        service = source.split("  narrowcti-provider-readiness:", 1)[1].split("  narrowcti-operator-auth:", 1)[0]
+        self.assertIn("NARROWCTI_WEB_ENV_FILE", service)
+        self.assertIn("narrowcti.cli.provider_readiness", service)
+        self.assertNotIn("NARROWCTI_GATEWAY_ENV_FILE", service)
+
+    def test_provider_overlays_are_read_only_for_web_and_ops_readiness(self):
+        for filename, target in (
+            ("docker-compose.narrowcti-web-misp.yml", "/run/secrets/narrowcti-web-misp-key"),
+            ("docker-compose.narrowcti-web-otx.yml", "/run/secrets/narrowcti-web-otx-key"),
+        ):
+            source = (ROOT / "deployment" / filename).read_text(encoding="utf-8")
+            with self.subTest(filename=filename):
+                self.assertEqual(2, source.count(target))
+                self.assertEqual(2, source.count("read_only: true"))
+                self.assertEqual(2, source.count("create_host_path: false"))
+                self.assertIn("narrowcti-web:", source)
+                self.assertIn("narrowcti-provider-readiness:", source)
+                for service in ("narrowcti-web", "narrowcti-provider-readiness"):
+                    block = source.split(f"  {service}:", 1)[1]
+                    self.assertIn(target, block.split("  narrowcti-", 1)[0])
+                    self.assertIn("read_only: true", block.split("  narrowcti-", 1)[0])
+                    self.assertIn("create_host_path: false", block.split("  narrowcti-", 1)[0])
+
+    def test_build_context_excludes_all_env_named_files(self):
+        source = (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
+        self.assertIn("*.env", source)
+        self.assertIn(".env", source)
+        self.assertIn(".env.*", source)
+
     def test_web_env_example_keeps_real_export_opt_in(self):
         from narrowcti.api.review.app import load_review_api_settings
 
@@ -90,6 +123,65 @@ class ComposeTopologyContractTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_compose_config_matrix_with_synthetic_provider_secret_files(self):
+        if shutil.which("docker") is None:
+            self.skipTest("Docker is not available")
+        misp = ROOT / "deployment" / "docker-compose.narrowcti-web-misp.yml"
+        otx = ROOT / "deployment" / "docker-compose.narrowcti-web-otx.yml"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            misp_key = root / "misp.key"
+            otx_key = root / "otx.key"
+            misp_key.write_text("synthetic-misp-read-only-key", encoding="utf-8")
+            otx_key.write_text("synthetic-otx-key", encoding="utf-8")
+            cases = (
+                ("base", ["-f", str(BASE)]),
+                ("shared", ["-f", str(BASE), "-f", str(SHARED)]),
+                ("misp", ["-f", str(BASE), "-f", str(misp)]),
+                ("otx", ["-f", str(BASE), "-f", str(otx)]),
+                ("both", ["-f", str(BASE), "-f", str(misp), "-f", str(otx)]),
+                ("shared+binaries", ["-f", str(BASE), "-f", str(SHARED), "-f", str(misp), "-f", str(otx)]),
+            )
+            env = {
+                **os.environ,
+                "NARROWCTI_DOCKER_NETWORK": "threat-net",
+                "NARROWCTI_WEB_MISP_KEY_SOURCE": str(misp_key),
+                "NARROWCTI_WEB_OTX_KEY_SOURCE": str(otx_key),
+            }
+            for label, layers in cases:
+                with self.subTest(layers=label):
+                    result = subprocess.run(
+                        ["docker", "compose", *layers, "--profile", "web", "--profile", "ops", "config", "--format", "json"],
+                        cwd=ROOT / "deployment",
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    self.assertNotIn("synthetic-misp-read-only-key", result.stdout)
+                    self.assertNotIn("synthetic-otx-key", result.stdout)
+                    if label in {"misp", "otx", "both", "shared+binaries"}:
+                        config = json.loads(result.stdout)
+                        expected = {
+                            "misp": ("NARROWCTI_WEB_MISP_KEY_SOURCE", "/run/secrets/narrowcti-web-misp-key"),
+                            "otx": ("NARROWCTI_WEB_OTX_KEY_SOURCE", "/run/secrets/narrowcti-web-otx-key"),
+                        }
+                        active = ("misp", "otx") if label in {"both", "shared+binaries"} else (label,)
+                        for provider in active:
+                            _source_var, target = expected[provider]
+                            for service in ("narrowcti-web", "narrowcti-provider-readiness"):
+                                mount = next(
+                                    item for item in config["services"][service]["volumes"]
+                                    if item.get("target") == target
+                                )
+                                self.assertEqual("bind", mount["type"])
+                                self.assertEqual(True, mount["read_only"])
+                                self.assertEqual(
+                                    str(misp_key if provider == "misp" else otx_key),
+                                    mount["source"],
+                                )
 
 
 if __name__ == "__main__":

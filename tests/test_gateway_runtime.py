@@ -379,7 +379,8 @@ class GatewayConnectorTests(unittest.TestCase):
         ), patch("gateway.connector.run_gateway_once") as run_once, patch(
             "gateway.connector.run_gateway_loop"
         ) as run_loop:
-            main()
+            run_once.return_value = SimpleNamespace(failed=0)
+            self.assertEqual(0, main())
 
         run_once.assert_called_once_with(settings, registry, ANY)
         run_loop.assert_not_called()

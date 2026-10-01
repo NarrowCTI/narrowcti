@@ -6,8 +6,10 @@ import re
 import json
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Event
 
 from fastapi.testclient import TestClient
 
@@ -37,6 +39,7 @@ from narrowcti.ports.source_explorer import (
     ProviderDescriptor,
     ProviderOperation,
 )
+from narrowcti.application.provider_readiness import ProviderReadinessResult, ProviderReadinessState
 from argon2 import PasswordHasher
 from argon2.low_level import Type
 
@@ -91,6 +94,17 @@ class _Explorer:
             revision_fingerprint="a" * 64,
         )
         return ExplorerItemDetail(summary, {"description": "Safe detail"}, {"source": provider_key})
+
+    def check_readiness(self, provider_key):
+        if provider_key != "misp":
+            raise ExplorerError("provider_unknown", "The selected provider is not available.")
+        return ProviderReadinessResult(
+            "misp", ProviderReadinessState.AUTH_REJECTED,
+            "2026-09-30T12:00:00Z", "The provider rejected the configured Explorer credential or permissions.",
+        )
+
+    def check_readiness_all(self):
+        return (self.check_readiness("misp"),)
 
 
 class _Jobs:
@@ -626,7 +640,8 @@ class WebAppTests(unittest.TestCase):
         ), base_url="https://testserver")
         health = client.get("/healthz")
         self.assertEqual(200, health.status_code)
-        self.assertEqual({"status": "ok", "service": "narrowcti-review-api"}, health.json())
+        self.assertEqual({"status": "ok", "service": "narrowcti-web"}, health.json())
+        self.assertEqual({"service", "status"}, set(health.json()))
         self.assertEqual("nosniff", health.headers["x-content-type-options"])
         self.assertEqual(200, client.get("/openapi.json").status_code)
         self.assertEqual(200, client.get("/docs").status_code)
@@ -698,6 +713,95 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("<code class=\"muted\">ui.basic</code>", capabilities.text)
         self.assertNotIn("Ui Basic", capabilities.text)
         self.assertNotIn("scheduler", capabilities.text.lower())
+
+    def test_provider_readiness_is_explicit_authenticated_csrf_protected_and_safe(self):
+        self._login()
+        page = self.client.get("/system/providers")
+        self.assertIn("Check live readiness", page.text)
+        self.assertNotIn("Healthy", page.text)
+        csrf = re.search(r'name="_csrf" value="([^\"]+)"', page.text).group(1)
+        denied = self.client.post("/system/providers/misp/readiness", data={})
+        self.assertEqual(403, denied.status_code)
+        checked = self.client.post(
+            "/system/providers/misp/readiness",
+            data={"_csrf": csrf},
+            headers={"origin": "https://testserver", "sec-fetch-site": "same-origin"},
+        )
+        self.assertEqual(200, checked.status_code)
+        self.assertIn("auth_rejected", checked.text)
+        self.assertIn("2026-09-30T12:00:00Z", checked.text)
+        self.assertNotIn("synthetic-misp-key", checked.text)
+
+    def test_readiness_shares_provider_busy_limit_with_explorer_search_and_detail(self):
+        self._login()
+        page = self.client.get("/system/providers")
+        csrf = re.search(r'name="_csrf" value="([^\"]+)"', page.text).group(1)
+        readiness_calls = []
+        entered = Event()
+        release = Event()
+        self.explorer.providers = lambda: (
+            ProviderDescriptor("misp", "MISP", True, operations=(ProviderOperation.SEARCH, ProviderOperation.DETAIL)),
+            ProviderDescriptor("otx", "OTX", True, operations=(ProviderOperation.SEARCH, ProviderOperation.DETAIL)),
+        )
+
+        def blocking_provider_call(*_args):
+            entered.set()
+            if not release.wait(timeout=5):
+                raise AssertionError("test provider call was not released")
+
+        def blocking_search(request):
+            blocking_provider_call()
+            return ExplorerSearchResult(provider_key=request.provider_key, items=())
+
+        def blocking_detail(_provider_key, _external_id):
+            blocking_provider_call()
+            summary = ExplorerItemSummary("misp", "42", "Synthetic", revision_fingerprint="a" * 64)
+            return ExplorerItemDetail(summary, {}, {})
+
+        def check_readiness(provider_key):
+            readiness_calls.append(provider_key)
+            return ProviderReadinessResult(
+                provider_key,
+                ProviderReadinessState.READY,
+                "2026-09-30T12:00:00Z",
+                "Synthetic bounded readiness result.",
+            )
+
+        self.explorer.search = blocking_search
+        self.explorer.detail = blocking_detail
+        self.explorer.check_readiness = check_readiness
+
+        other_client = TestClient(self.app, base_url="https://testserver")
+        other_client.cookies.update(self.client.cookies)
+        headers = {"origin": "https://testserver", "sec-fetch-site": "same-origin"}
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            for provider_key, operation in (("misp", "search"), ("misp", "detail"), ("otx", "search")):
+                entered.clear()
+                release.clear()
+                if operation == "search":
+                    in_flight = executor.submit(
+                        self.client.post,
+                        "/explorer/search",
+                        data={"_csrf": csrf, "provider_key": provider_key, "query": "synthetic"},
+                        headers=headers,
+                    )
+                else:
+                    in_flight = executor.submit(
+                        self.client.get,
+                        f"/explorer/{provider_key}/event-42",
+                    )
+                self.assertTrue(entered.wait(timeout=2), f"{operation} did not enter provider call")
+                busy = other_client.post(
+                    f"/system/providers/{provider_key}/readiness",
+                    data={"_csrf": csrf},
+                    headers=headers,
+                )
+                self.assertEqual(503, busy.status_code)
+                self.assertIn("provider_busy", busy.text)
+                self.assertEqual([], readiness_calls)
+                release.set()
+                self.assertEqual(200, in_flight.result(timeout=5).status_code)
+
 
     def test_brand_logo_display_contract_is_exclusive_for_expanded_collapsed_and_mobile(self):
         css = (

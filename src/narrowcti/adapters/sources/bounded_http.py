@@ -108,4 +108,50 @@ def request_json(
         session.close()
 
 
-__all__ = ["DEFAULT_MAX_RESPONSE_BYTES", "DEFAULT_TOTAL_TIMEOUT_SECONDS", "request_json", "validate_base_url"]
+def probe_status(
+    method: str,
+    url: str,
+    *,
+    headers: dict[str, str],
+    params: dict[str, str] | None = None,
+    verify_tls: bool = True,
+    connect_timeout: float = 3.0,
+    read_timeout: float = 5.0,
+    total_timeout: float = 8.0,
+) -> int:
+    """Return only the HTTP status from one bounded non-redirecting probe.
+
+    The response body is never read, parsed, logged or retained.
+    """
+    if min(connect_timeout, read_timeout, total_timeout) <= 0:
+        raise ValueError("HTTP probe timeouts must be positive")
+    session = requests.Session()
+    session.trust_env = False
+    started = time.monotonic()
+    try:
+        with session.request(
+            method,
+            url,
+            headers=headers,
+            params=params,
+            timeout=(connect_timeout, read_timeout),
+            verify=verify_tls,
+            allow_redirects=False,
+            stream=True,
+        ) as response:
+            if time.monotonic() - started > total_timeout:
+                raise ExplorerError("provider_timeout", "The source provider readiness check timed out.", True)
+            return int(response.status_code)
+    except ExplorerError:
+        raise
+    except requests.exceptions.SSLError:
+        raise ExplorerError("provider_tls_failed", "The source provider TLS check failed.") from None
+    except requests.exceptions.Timeout:
+        raise ExplorerError("provider_timeout", "The source provider readiness check timed out.", True) from None
+    except requests.RequestException:
+        raise ExplorerError("provider_unavailable", "The source provider could not be reached.", True) from None
+    finally:
+        session.close()
+
+
+__all__ = ["DEFAULT_MAX_RESPONSE_BYTES", "DEFAULT_TOTAL_TIMEOUT_SECONDS", "probe_status", "request_json", "validate_base_url"]

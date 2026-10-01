@@ -5,6 +5,10 @@ from __future__ import annotations
 from collections.abc import Iterable
 from types import MappingProxyType
 
+from narrowcti.application.provider_readiness import (
+    ProviderReadinessResult,
+    ProviderReadinessService,
+)
 from narrowcti.ports.source_explorer import (
     ExplorerError,
     ExplorerItemDetail,
@@ -32,12 +36,23 @@ class SourceExplorerService:
             if not descriptor.key or descriptor.key in self._providers:
                 raise ValueError("source explorer provider keys must be unique and non-empty")
             self._providers[descriptor.key] = provider
+        self._readiness = ProviderReadinessService(self._providers.values())
 
     def providers(self) -> tuple[ProviderDescriptor, ...]:
         return tuple(
             provider.descriptor()
             for _, provider in sorted(self._providers.items())
         )
+
+    def check_readiness(self, provider_key: str) -> ProviderReadinessResult:
+        """Perform an explicit bounded probe, separate from configuration descriptors."""
+        try:
+            return self._readiness.check(provider_key)
+        except KeyError:
+            raise ExplorerError("provider_unknown", "The selected provider is not available.") from None
+
+    def check_readiness_all(self) -> tuple[ProviderReadinessResult, ...]:
+        return self._readiness.check_all()
 
     def search(self, request: ExplorerSearchRequest) -> ExplorerSearchResult:
         provider = self._get_provider(request.provider_key)

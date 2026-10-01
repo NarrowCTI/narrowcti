@@ -31,6 +31,9 @@ PUBLIC_IMPORTS = (
     "narrowcti.domain.security.identity",
     "narrowcti.adapters.persistence.local.operator_store",
     "narrowcti.application.runtime_roles",
+    "narrowcti.application.provider_readiness",
+    "narrowcti.ports.provider_readiness",
+    "narrowcti.cli.provider_readiness",
 )
 LEGACY_COMPAT_IMPORTS = (
     "gateway.connector",

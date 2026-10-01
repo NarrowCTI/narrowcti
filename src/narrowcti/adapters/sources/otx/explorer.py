@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from narrowcti.adapters.sources.bounded_http import request_json
+from narrowcti.adapters.sources.bounded_http import probe_status, request_json
 from narrowcti.adapters.sources.fingerprint import source_document_fingerprint
 from narrowcti.ports.source_explorer import (
     ExplorerError,
@@ -19,6 +19,7 @@ from narrowcti.ports.source_explorer import (
 
 _SEARCH_URL = "https://otx.alienvault.com/api/v1/search/pulses"
 _PULSE_BASE_URL = "https://otx.alienvault.com/api/v1/pulses"
+_SUBSCRIBED_PULSES_URL = "https://otx.alienvault.com/api/v1/pulses/subscribed"
 _MAX_INDICATORS = 100
 _MAX_VALUE_LENGTH = 512
 
@@ -110,6 +111,17 @@ class OTXSourceExplorer:
                 "indicators_truncated": len(raw_indicators) > len(indicators) if isinstance(raw_indicators, list) else False,
             },
             provenance={"source": "otx", "external_id": summary.external_id, "fingerprint": fingerprint},
+        )
+
+    def probe_readiness(self) -> int:
+        """Check the non-mutating subscribed-pulses endpoint without reading data."""
+        self._ensure_available()
+        return probe_status(
+            "GET",
+            _SUBSCRIBED_PULSES_URL,
+            headers=self._headers(),
+            params={"limit": "1"},
+            verify_tls=True,
         )
 
     def _ensure_available(self):

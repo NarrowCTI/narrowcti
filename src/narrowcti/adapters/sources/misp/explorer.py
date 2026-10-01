@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from narrowcti.adapters.sources.bounded_http import request_json, validate_base_url
+from narrowcti.adapters.sources.bounded_http import probe_status, request_json, validate_base_url
 from narrowcti.adapters.sources.fingerprint import source_document_fingerprint
 from narrowcti.ports.source_explorer import (
     ExplorerError,
@@ -153,6 +153,16 @@ class MISPSourceExplorer:
             summary=ExplorerItemSummary(**{**summary.__dict__, "revision_fingerprint": fingerprint}),
             fields=fields,
             provenance={"source": "misp", "external_id": summary.external_id, "fingerprint": fingerprint},
+        )
+
+    def probe_readiness(self) -> int:
+        """Check the read-only MISP server-version endpoint; never read its body."""
+        self._ensure_available()
+        return probe_status(
+            "GET",
+            f"{self._base_url}/servers/getVersion",
+            headers=self._headers(),
+            verify_tls=self._verify_tls,
         )
 
     def _ensure_available(self):

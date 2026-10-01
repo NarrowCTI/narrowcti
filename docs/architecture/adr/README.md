@@ -31,6 +31,7 @@ wave and PR scopes stated in those records.
 | [MIG-ADR-023](MIG-ADR-023.md) | Documentation architecture, boundaries, and brand integration | accepted for W7 / PR-21 |
 | [MIG-ADR-024](MIG-ADR-024.md) | Community 2.0 compatibility cutover | accepted for W7 / PR-22 |
 | [MIG-ADR-025](MIG-ADR-025.md) | Runtime Role Foundation | accepted for W8 / PR-23 |
+| [MIG-ADR-026](MIG-ADR-026.md) | Community deployment bootstrap and provider readiness | accepted for W9 / PR-26 |
 
 Each ADR must be reviewed and approved before the migration wave that depends
 on it. Accepted records remain bounded by their stated PR scope. PR-03 adds

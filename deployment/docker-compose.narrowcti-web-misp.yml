@@ -5,3 +5,13 @@ services:
         source: ${NARROWCTI_WEB_MISP_KEY_SOURCE:?set NARROWCTI_WEB_MISP_KEY_SOURCE to a dedicated MISP read-only key file}
         target: /run/secrets/narrowcti-web-misp-key
         read_only: true
+        bind:
+          create_host_path: false
+  narrowcti-provider-readiness:
+    volumes:
+      - type: bind
+        source: ${NARROWCTI_WEB_MISP_KEY_SOURCE:?set NARROWCTI_WEB_MISP_KEY_SOURCE to a dedicated MISP read-only key file}
+        target: /run/secrets/narrowcti-web-misp-key
+        read_only: true
+        bind:
+          create_host_path: false

@@ -3,6 +3,8 @@ services:
     networks: [default, opencti]
   narrowcti-preflight:
     networks: [default, opencti]
+  narrowcti-provider-readiness:
+    networks: [default, opencti]
   narrowcti-gateway-report:
     networks: [default, opencti]
   narrowcti-curation-report:
