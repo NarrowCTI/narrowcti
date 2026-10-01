@@ -5,6 +5,7 @@ from __future__ import annotations
 import ipaddress
 import re
 import time
+from dataclasses import dataclass
 from urllib.parse import quote
 
 from narrowcti.adapters.sources.bounded_http import (
@@ -106,6 +107,18 @@ class _SearchBudget:
         self.requests += 1
 
 
+@dataclass(frozen=True)
+class _RecordBatch:
+    records: list
+    upstream_may_have_more: bool = False
+
+
+@dataclass(frozen=True)
+class _TagBatch:
+    names: list[str]
+    upstream_may_have_more: bool = False
+
+
 class MISPSourceExplorer:
     def __init__(
         self,
@@ -144,17 +157,20 @@ class MISPSourceExplorer:
         tags = list(explicit_tags) if isinstance(explicit_tags, tuple) else ([explicit_tags] if explicit_tags else [])
         observable_kind = _observable_kind(query)
         if observable_kind is not None:
-            if tags:
-                raise ExplorerError(
-                    "invalid_request",
-                    "The selected tag filter cannot be combined with an observable search.",
-                )
             data = self._request(
                 budget,
                 "/attributes/restSearch",
-                {"returnFormat": "json", "metadata": True, "value": query, "limit": request.limit + 1},
+                {
+                    "returnFormat": "json",
+                    "metadata": True,
+                    "value": query,
+                    "limit": request.limit + 1,
+                    **({"tags": tags} if tags else {}),
+                },
             )
-            records = self._attribute_records(data)
+            batch = self._attribute_records(data, fetch_cap=request.limit + 1)
+            records = batch.records
+            upstream_may_have_more = batch.upstream_may_have_more
         elif tags:
             data = self._request(
                 budget,
@@ -168,7 +184,9 @@ class MISPSourceExplorer:
                     "limit": request.limit + 1,
                 },
             )
-            records = self._records(data)
+            batch = self._records(data, fetch_cap=request.limit + 1)
+            records = batch.records
+            upstream_may_have_more = batch.upstream_may_have_more
         else:
             event_data = self._request(
                 budget,
@@ -182,9 +200,13 @@ class MISPSourceExplorer:
                     "page": 1,
                 },
             )
-            records = self._records(event_data)
+            event_batch = self._records(event_data, fetch_cap=request.limit + 1)
+            records = event_batch.records
+            upstream_may_have_more = event_batch.upstream_may_have_more
             tag_data = self._request(budget, "/tags/search", {"tag": query})
-            canonical_tags = self._tag_names(tag_data)[:_MAX_TAG_CANDIDATES]
+            tag_batch = self._tag_names(tag_data)
+            canonical_tags = tag_batch.names
+            upstream_may_have_more = upstream_may_have_more or tag_batch.upstream_may_have_more
             if canonical_tags:
                 tag_events = self._request(
                     budget,
@@ -197,8 +219,10 @@ class MISPSourceExplorer:
                         "limit": request.limit + 1,
                     },
                 )
-                records.extend(self._records(tag_events))
-        items, truncated = self._deduplicated_items(records, request.limit)
+                tag_event_batch = self._records(tag_events, fetch_cap=request.limit + 1)
+                records.extend(tag_event_batch.records)
+                upstream_may_have_more = upstream_may_have_more or tag_event_batch.upstream_may_have_more
+        items, truncated = self._deduplicated_items(records, request.limit, upstream_may_have_more)
         return ExplorerSearchResult(
             provider_key="misp",
             items=items,
@@ -283,24 +307,36 @@ class MISPSourceExplorer:
         }
 
     @staticmethod
-    def _records(value):
+    def _records(value, fetch_cap=None):
         if isinstance(value, list):
-            return value[:_MAX_PROVIDER_RECORDS]
+            return _RecordBatch(
+                value[:_MAX_PROVIDER_RECORDS],
+                len(value) >= _MAX_PROVIDER_RECORDS or (fetch_cap is not None and len(value) >= fetch_cap),
+            )
         if not isinstance(value, dict):
             raise ExplorerError("invalid_provider_response", "The source provider returned invalid event data.")
         response = value.get("response")
         if isinstance(response, list):
-            return [_event(item) for item in response[:_MAX_PROVIDER_RECORDS] if isinstance(item, dict)]
+            return _RecordBatch(
+                [_event(item) for item in response[:_MAX_PROVIDER_RECORDS] if isinstance(item, dict)],
+                len(response) >= _MAX_PROVIDER_RECORDS
+                or (fetch_cap is not None and len(response) >= fetch_cap),
+            )
         if isinstance(value.get("Event"), dict):
-            return [value["Event"]]
+            return _RecordBatch([value["Event"]])
         if isinstance(response, dict):
             if isinstance(response.get("Event"), list):
-                return [item for item in response["Event"][:_MAX_PROVIDER_RECORDS] if isinstance(item, dict)]
-            return MISPSourceExplorer._records(response)
-        return []
+                events = response["Event"]
+                return _RecordBatch(
+                    [item for item in events[:_MAX_PROVIDER_RECORDS] if isinstance(item, dict)],
+                    len(events) >= _MAX_PROVIDER_RECORDS
+                    or (fetch_cap is not None and len(events) >= fetch_cap),
+                )
+            return MISPSourceExplorer._records(response, fetch_cap=fetch_cap)
+        return _RecordBatch([])
 
     @staticmethod
-    def _attribute_records(value):
+    def _attribute_records(value, fetch_cap=None):
         if not isinstance(value, dict):
             raise ExplorerError("invalid_provider_response", "The source provider returned invalid attribute data.")
         response = value.get("response")
@@ -310,7 +346,11 @@ class MISPSourceExplorer:
             attributes = value.get("Attribute") or value.get("attributes") or []
         if not isinstance(attributes, list):
             raise ExplorerError("invalid_provider_response", "The source provider returned invalid attribute data.")
-        return attributes[:_MAX_PROVIDER_RECORDS]
+        return _RecordBatch(
+            attributes[:_MAX_PROVIDER_RECORDS],
+            len(attributes) >= _MAX_PROVIDER_RECORDS
+            or (fetch_cap is not None and len(attributes) >= fetch_cap),
+        )
 
     @staticmethod
     def _tag_names(value):
@@ -327,6 +367,7 @@ class MISPSourceExplorer:
         else:
             raise ExplorerError("invalid_provider_response", "The source provider returned invalid tag data.")
         names = []
+        upstream_may_have_more = len(records) > _MAX_TAG_CANDIDATES
         for record in records:
             if len(names) >= _MAX_TAG_CANDIDATES:
                 break
@@ -337,10 +378,10 @@ class MISPSourceExplorer:
                 name = tag.get("name") or tag.get("Name")
                 if name and str(name) not in names:
                     names.append(str(name)[:128])
-        return names
+        return _TagBatch(names, upstream_may_have_more)
 
     @staticmethod
-    def _deduplicated_items(records, limit):
+    def _deduplicated_items(records, limit, upstream_may_have_more=False):
         items = []
         seen = set()
         for record in records:
@@ -369,7 +410,7 @@ class MISPSourceExplorer:
                     "info": event.get("info") or f"MISP Event {external_id}",
                 }
                 items.append(_summary(projected))
-        truncated = len(items) > limit or len(records) >= _MAX_PROVIDER_RECORDS
+        truncated = upstream_may_have_more or len(items) > limit
         return tuple(items[:limit]), truncated
 
 

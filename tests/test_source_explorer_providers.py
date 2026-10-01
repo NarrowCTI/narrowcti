@@ -77,6 +77,23 @@ class SourceExplorerProviderTests(unittest.TestCase):
         self.assertEqual("203.0.113.7", payload["value"])
         self.assertNotIn("searchall", payload)
         self.assertNotIn("searchattribute", payload)
+        self.assertFalse(result.truncated)
+        self.assertEqual(result.truncated, result.has_more)
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_observable_preserves_explicit_tag_filter_provider_side(self, request):
+        request.return_value = {
+            "response": {"Attribute": [{"event_id": "42", "value": "203.0.113.7"}]}
+        }
+        provider = MISPSourceExplorer("https://misp.example/api", "key")
+
+        result = provider.search(ExplorerSearchRequest("misp", "203.0.113.7", {"tag": ("apt",)}))
+
+        self.assertEqual(("42",), tuple(item.external_id for item in result.items))
+        self.assertEqual(1, request.call_count)
+        payload = request.call_args.kwargs["json_body"]
+        self.assertEqual("203.0.113.7", payload["value"])
+        self.assertEqual(["apt"], payload["tags"])
 
     @patch("narrowcti.adapters.sources.misp.explorer.request_json")
     def test_misp_hash_and_generic_text_choose_distinct_bounded_routes(self, request):
@@ -101,7 +118,7 @@ class SourceExplorerProviderTests(unittest.TestCase):
     @patch("narrowcti.adapters.sources.misp.explorer.request_json")
     def test_misp_generic_text_resolves_canonical_tag_and_event_results(self, request):
         request.side_effect = [
-            {"response": []},
+            {"response": [{"Event": {"id": "9", "info": "APT Example"}}]},
             [{"Tag": {"name": "misp-galaxy:threat-actor=APT-Example"}}],
             {"response": [{"Event": {"id": "9", "info": "APT Example"}}]},
         ]
@@ -110,6 +127,8 @@ class SourceExplorerProviderTests(unittest.TestCase):
         result = provider.search(ExplorerSearchRequest("misp", "APT Example", limit=10))
 
         self.assertEqual(("9",), tuple(item.external_id for item in result.items))
+        self.assertFalse(result.truncated)
+        self.assertEqual(result.truncated, result.has_more)
         tag_payload = request.call_args_list[2].kwargs["json_body"]
         self.assertEqual(["misp-galaxy:threat-actor=APT-Example"], tag_payload["tags"])
         self.assertNotIn("searchall", repr(request.call_args_list))
@@ -126,6 +145,40 @@ class SourceExplorerProviderTests(unittest.TestCase):
         payload = request.call_args.kwargs["json_body"]
         self.assertEqual("Tagged", payload["eventinfo"])
         self.assertEqual(["apt"], payload["tags"])
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_attribute_fetch_cap_survives_event_deduplication(self, request):
+        request.return_value = {
+            "response": {
+                "Attribute": [
+                    {"id": str(index), "event_id": "42", "value": "203.0.113.7"}
+                    for index in range(11)
+                ]
+            }
+        }
+        provider = MISPSourceExplorer("https://misp.example/api", "key")
+
+        result = provider.search(ExplorerSearchRequest("misp", "203.0.113.7", limit=10))
+
+        self.assertEqual(("42",), tuple(item.external_id for item in result.items))
+        self.assertTrue(result.truncated)
+        self.assertEqual(result.truncated, result.has_more)
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_unique_result_cap_is_conservative(self, request):
+        request.return_value = {
+            "response": [
+                {"Event": {"id": str(index), "info": f"Tagged {index}"}}
+                for index in range(11)
+            ]
+        }
+        provider = MISPSourceExplorer("https://misp.example/api", "key")
+
+        result = provider.search(ExplorerSearchRequest("misp", "Tagged", {"tag": ("apt",)}, limit=10))
+
+        self.assertEqual(10, len(result.items))
+        self.assertTrue(result.truncated)
+        self.assertEqual(result.truncated, result.has_more)
 
     @patch("narrowcti.adapters.sources.misp.explorer.time.monotonic", side_effect=[0.0, 16.0])
     @patch("narrowcti.adapters.sources.misp.explorer.request_json")
