@@ -5,6 +5,18 @@
   <dl class="detail-grid">
     {% for key, value in job.result.items() if key != 'items' %}<dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>{% endfor %}
   </dl>
-  {% for item in job.result.items or [] %}<article><strong>{{ item.action }}</strong><dl class="detail-grid">{% for key, value in item.items() if key != 'action' %}<dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></article>{% endfor %}
+  {% for item in job.result.get('items', []) %}<article><strong>{{ item.action }}</strong><dl class="detail-grid">{% for key, value in item.items() if key != 'action' %}<dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></article>{% endfor %}
+  {% if job.follow_up_actions %}
+  <h3>Continue with the revision evaluated by Preview</h3>
+  <p class="muted">These actions refetch the source and fail closed if it changed. Each submission gets a new request ID.</p>
+  {% for mode, label, request_id in job.follow_up_actions %}
+  <form method="post" action="/explorer/{{ job.result.source_key }}/{{ job.result.external_id|urlencode }}/{{ mode }}" class="inline-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="request_id" value="{{ request_id }}">
+    <input type="hidden" name="expected_fingerprint" value="{{ job.result.revision_fingerprint }}">
+    <button class="button {{ 'primary' if mode == 'run-once' else 'quiet' }}" type="submit">{{ label }}</button>
+  </form>
+  {% endfor %}
+  {% endif %}
   {% endif %}
 </section>

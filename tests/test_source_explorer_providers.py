@@ -192,26 +192,167 @@ class SourceExplorerProviderTests(unittest.TestCase):
         request.assert_not_called()
 
     @patch("narrowcti.adapters.sources.misp.explorer.request_json")
-    def test_misp_detail_returns_bounded_projection_and_fingerprint(self, request):
-        request.return_value = {
-            "Event": {
-                "id": "42",
-                "info": "Incident",
-                "date": "2026-09-01",
-                "Tag": [{"name": "tlp:green"}],
-                "Attribute": [{"type": "domain", "value": "bad.example"}],
-                "secret": "not projected",
-            }
-        }
-        provider = MISPSourceExplorer("https://misp.example", "key")
+    def test_misp_detail_uses_two_bounded_endpoints_and_has_no_revision_fingerprint(self, request):
+        request.side_effect = [
+            {
+                "Event": {
+                    "id": "42",
+                    "uuid": "event-uuid-42",
+                    "attribute_count": "1",
+                    "info": "Incident",
+                    "date": "2026-09-01",
+                    "publish_timestamp": "2026-09-02",
+                    "Tag": [{"name": "tlp:green"}],
+                    "secret": "not projected",
+                }
+            },
+            {
+                "response": {
+                    "Attribute": [
+                        {
+                            "event_id": "42",
+                            "event_uuid": "event-uuid-42",
+                            "type": "domain",
+                            "value": "bad.example",
+                        }
+                    ],
+                    "total": 1,
+                }
+            },
+        ]
+        provider = MISPSourceExplorer("https://misp.example/api", "key")
 
-        result = provider.detail("42/../../../secret")
+        result = provider.detail("42")
 
+        self.assertEqual(2, request.call_count)
+        self.assertEqual("GET", request.call_args_list[0].args[0])
+        self.assertEqual("https://misp.example/api/events/view2/42.json", request.call_args_list[0].args[1])
+        self.assertEqual("POST", request.call_args_list[1].args[0])
+        self.assertEqual("https://misp.example/api/events/viewAttributes/42.json", request.call_args_list[1].args[1])
+        self.assertEqual({"page": 1, "limit": 101}, request.call_args_list[1].kwargs["json_body"])
+        self.assertEqual(1_000_000, request.call_args_list[0].kwargs["max_response_bytes"])
+        self.assertEqual(1_000_000, request.call_args_list[1].kwargs["max_response_bytes"])
+        self.assertEqual(
+            request.call_args_list[0].kwargs["deadline"],
+            request.call_args_list[1].kwargs["deadline"],
+        )
+        self.assertTrue(request.call_args_list[0].kwargs["verify_tls"])
+        self.assertEqual("42", result.summary.external_id)
+        self.assertEqual(("tlp:green",), result.summary.tags)
         self.assertEqual(result.fields["attributes"], [{"type": "domain", "value": "bad.example"}])
+        self.assertFalse(result.fields["attributes_truncated"])
+        self.assertIsNone(result.summary.revision_fingerprint)
+        self.assertNotIn("fingerprint", result.provenance)
         self.assertNotIn("secret", result.fields)
-        self.assertEqual(result.summary.revision_fingerprint, result.provenance["fingerprint"])
-        self.assertIn("%2F", request.call_args.args[1])
-        self.assertTrue(request.call_args.kwargs["verify_tls"])
+        self.assertNotIn("/events/view/", repr(request.call_args_list))
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_detail_renders_at_most_100_and_uses_provider_total_for_truncation(self, request):
+        attributes = [
+            {"event_id": "42", "type": "domain", "value": f"item-{index}.example"}
+            for index in range(101)
+        ]
+        request.side_effect = [
+            {"Event": {"id": "42", "uuid": "event-uuid-42", "attribute_count": 120, "info": "Incident"}},
+            {"Attribute": attributes, "total": 120},
+        ]
+        result = MISPSourceExplorer("https://misp.example", "key").detail("42")
+        self.assertEqual(100, len(result.fields["attributes"]))
+        self.assertTrue(result.fields["attributes_truncated"])
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_detail_total_of_100_is_not_truncated(self, request):
+        attributes = [
+            {"event_id": "42", "type": "domain", "value": f"item-{index}.example"}
+            for index in range(100)
+        ]
+        request.side_effect = [
+            {"Event": {"id": "42", "attribute_count": "100", "info": "Incident"}},
+            {"Attribute": attributes, "total": "100"},
+        ]
+        result = MISPSourceExplorer("https://misp.example", "key").detail("42")
+        self.assertEqual(100, len(result.fields["attributes"]))
+        self.assertFalse(result.fields["attributes_truncated"])
+
+    @patch("narrowcti.adapters.sources.misp.explorer.time.monotonic", side_effect=[0.0, 1.0, 3.0])
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_detail_propagates_one_aggregate_deadline(self, request, _clock):
+        request.side_effect = [
+            {"Event": {"id": "42", "attribute_count": 0, "info": "Incident"}},
+            {"Attribute": [], "total": 0},
+        ]
+
+        MISPSourceExplorer("https://misp.example", "key").detail("42")
+
+        first, second = request.call_args_list
+        self.assertEqual(first.kwargs["deadline"], second.kwargs["deadline"])
+        self.assertLess(second.kwargs["total_timeout"], first.kwargs["total_timeout"])
+
+    def test_misp_detail_rejects_mismatched_event_identity_and_invalid_totals(self):
+        cases = (
+            (
+                {"Event": {"id": "43", "attribute_count": 0, "info": "Wrong event"}},
+                {"Attribute": [], "total": 0},
+            ),
+            (
+                {"Event": {"id": "42", "uuid": "uuid-42", "attribute_count": 1, "info": "Incident"}},
+                {"Attribute": [{"event_id": "43", "type": "domain", "value": "bad.example"}], "total": 1},
+            ),
+            (
+                {"Event": {"id": "42", "uuid": "uuid-42", "attribute_count": 1, "info": "Incident"}},
+                {
+                    "Attribute": [
+                        {
+                            "event_id": "42",
+                            "event_uuid": "uuid-other",
+                            "type": "domain",
+                            "value": "bad.example",
+                        }
+                    ],
+                    "total": 1,
+                },
+            ),
+            (
+                {"Event": {"id": "42", "attribute_count": 2, "info": "Incident"}},
+                {"Attribute": [{"event_id": "42", "type": "domain", "value": "bad.example"}], "total": "unknown"},
+            ),
+            (
+                {"Event": {"id": "42", "attribute_count": 0, "info": "Incident"}},
+                {"Attribute": [], "total": -1},
+            ),
+        )
+        for shell, attributes in cases:
+            with self.subTest(shell=shell, attributes=attributes):
+                with patch(
+                    "narrowcti.adapters.sources.misp.explorer.request_json",
+                    side_effect=[shell, attributes],
+                ):
+                    with self.assertRaises(ExplorerError) as raised:
+                        MISPSourceExplorer("https://misp.example", "key").detail("42")
+                self.assertEqual("invalid_provider_response", raised.exception.code)
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_detail_404_checks_version_only_to_distinguish_old_server(self, request):
+        request.side_effect = [
+            ExplorerError("source_not_found", "missing"),
+            {"version": "2.5.34"},
+        ]
+        with self.assertRaises(ExplorerError) as raised:
+            MISPSourceExplorer("https://misp.example", "key").detail("42")
+        self.assertEqual("provider_unavailable", raised.exception.code)
+        self.assertEqual(2, request.call_count)
+        self.assertEqual("https://misp.example/servers/getVersion", request.call_args_list[1].args[1])
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_supported_server_keeps_missing_event_not_found(self, request):
+        request.side_effect = [
+            ExplorerError("source_not_found", "missing"),
+            {"version": "2.5.35"},
+        ]
+        with self.assertRaises(ExplorerError) as raised:
+            MISPSourceExplorer("https://misp.example", "key").detail("42")
+        self.assertEqual("source_not_found", raised.exception.code)
+        self.assertEqual(2, request.call_count)
 
     @patch("narrowcti.adapters.sources.otx.explorer.request_json")
     def test_otx_search_is_fixed_endpoint_and_returns_only_summary_fields(self, request):

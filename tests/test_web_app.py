@@ -46,8 +46,10 @@ from argon2.low_level import Type
 
 TOKEN = "synthetic-browser-login-token-not-a-real-secret"
 ADMIN_TOKEN = "synthetic-browser-admin-token-not-a-real-secret"
+REVIEWER_TOKEN = "synthetic-browser-reviewer-token-not-a-real-secret"
 READER_PASSWORD = "reader synthetic phrase 01"
 ADMIN_PASSWORD = "admin synthetic phrase 02"
+REVIEWER_PASSWORD = "reviewer synthetic phrase 03"
 
 
 def _test_passwords():
@@ -75,6 +77,7 @@ class _Explorer:
     def __init__(self):
         self.request = None
         self.title = "Example incident"
+        self.revision_fingerprint = "a" * 64
 
     def providers(self):
         return (ProviderDescriptor("misp", "MISP", True, operations=(ProviderOperation.SEARCH, ProviderOperation.DETAIL)),)
@@ -91,7 +94,7 @@ class _Explorer:
             provider_key=provider_key,
             external_id=external_id,
             title="Example incident",
-            revision_fingerprint="a" * 64,
+            revision_fingerprint=self.revision_fingerprint,
         )
         return ExplorerItemDetail(summary, {"description": "Safe detail"}, {"source": provider_key})
 
@@ -155,6 +158,9 @@ class WebAppTests(unittest.TestCase):
         )
         self.reader_operator = self.operator_store.create_operator(
             "reader", self.passwords.hash_password(READER_PASSWORD), ["reader"]
+        )
+        self.reviewer_operator = self.operator_store.create_operator(
+            "reviewer", self.passwords.hash_password(REVIEWER_PASSWORD), ["reviewer"]
         )
         self.operator_authenticator = LocalOperatorAuthenticator(self.operator_store, self.passwords)
         self.credential_store = ReviewCredentialStore(
@@ -255,8 +261,14 @@ class WebAppTests(unittest.TestCase):
             "/login",
             data={
                 "_csrf": csrf,
-                "username": "admin" if token == ADMIN_TOKEN else "reader",
-                "password": ADMIN_PASSWORD if token == ADMIN_TOKEN else READER_PASSWORD,
+                "username": (
+                    "admin" if token == ADMIN_TOKEN else "reviewer" if token == REVIEWER_TOKEN else "reader"
+                ),
+                "password": (
+                    ADMIN_PASSWORD
+                    if token == ADMIN_TOKEN
+                    else REVIEWER_PASSWORD if token == REVIEWER_TOKEN else READER_PASSWORD
+                ),
             },
             follow_redirects=False,
         )
@@ -473,6 +485,80 @@ class WebAppTests(unittest.TestCase):
             follow_redirects=False,
         )
         self.assertEqual(403, denied.status_code)
+
+    def test_detail_without_fingerprint_allows_only_preview_and_preview_payload_omits_fingerprint(self):
+        self._login()
+        self.explorer.revision_fingerprint = None
+        detail = self.client.get("/explorer/misp/42")
+        self.assertEqual(200, detail.status_code)
+        self.assertIn('action="/explorer/misp/42/preview"', detail.text)
+        self.assertNotIn('action="/explorer/misp/42/dry-run"', detail.text)
+        self.assertNotIn('action="/explorer/misp/42/run-once"', detail.text)
+        csrf = re.search(r'name="_csrf" value="([^\"]+)"', detail.text).group(1)
+        request_id = re.search(
+            r'action="/explorer/misp/42/preview"[\s\S]*?name="request_id" value="([^\"]+)"',
+            detail.text,
+        ).group(1)
+
+        response = self.client.post(
+            "/explorer/misp/42/preview",
+            data={"_csrf": csrf, "request_id": request_id},
+            follow_redirects=False,
+        )
+
+        self.assertEqual(303, response.status_code)
+        _job_type, _source, payload, _key, _limit = self.jobs.submissions[-1]
+        self.assertNotIn("expected_fingerprint", payload)
+
+    def test_preview_result_offers_only_authorized_followup_with_new_request_id(self):
+        self._login(token=REVIEWER_TOKEN)
+        preview_request_id = "preview_request_01"
+        self.jobs.jobs["preview-key"] = {
+            "job_id": "job-preview-follow-up",
+            "job_type": "ingestion.preview",
+            "payload": {
+                "source_key": "misp",
+                "external_id": "42",
+                "request_id": preview_request_id,
+                "requester": "reviewer",
+            },
+            "status": "succeeded",
+            "created_at": "2026-01-01T00:00:00Z",
+            "error": None,
+            "result": {
+                "action": "ingest",
+                "source_key": "misp",
+                "external_id": "42",
+                "revision_fingerprint": "b" * 64,
+                "raw_event": {"info": "must not be rendered"},
+            },
+        }
+
+        response = self.client.get("/jobs/job-preview-follow-up")
+
+        self.assertEqual(200, response.status_code)
+        self.assertIn('action="/explorer/misp/42/dry-run"', response.text)
+        self.assertNotIn('action="/explorer/misp/42/run-once"', response.text)
+        self.assertIn('name="expected_fingerprint" value="' + "b" * 64 + '"', response.text)
+        self.assertNotIn("must not be rendered", response.text)
+        follow_up_request_id = re.search(
+            r'action="/explorer/misp/42/dry-run"[\s\S]*?name="request_id" value="([^\"]+)"',
+            response.text,
+        ).group(1)
+        self.assertNotEqual(preview_request_id, follow_up_request_id)
+
+        csrf = re.search(r'name="_csrf" value="([^\"]+)"', response.text).group(1)
+        submitted = self.client.post(
+            "/explorer/misp/42/dry-run",
+            data={
+                "_csrf": csrf,
+                "request_id": follow_up_request_id,
+                "expected_fingerprint": "b" * 64,
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(303, submitted.status_code)
+        self.assertEqual(follow_up_request_id, self.jobs.submissions[-1][2]["request_id"])
 
     def test_admin_can_submit_run_once_with_identity_only_job_payload(self):
         client = TestClient(self.app, base_url="https://testserver")
@@ -1116,6 +1202,28 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("job_failed", response.text)
         self.assertNotIn("synthetic-secret-value", response.text)
+
+    def test_job_result_fingerprint_is_allowlisted_and_malformed_value_is_dropped(self):
+        self._login()
+        self.jobs.jobs["fingerprint-key"] = {
+            "job_id": "job-fingerprint",
+            "job_type": "ingestion.preview",
+            "payload": {"requester": "reader"},
+            "status": "succeeded",
+            "created_at": "2026-01-01T00:00:00Z",
+            "error": None,
+            "result": {
+                "action": "ingest",
+                "source_key": "misp",
+                "external_id": "42",
+                "revision_fingerprint": "not-a-fingerprint",
+                "raw": "synthetic-private-data",
+            },
+        }
+        response = self.client.get("/jobs/job-fingerprint")
+        self.assertEqual(200, response.status_code)
+        self.assertNotIn("not-a-fingerprint", response.text)
+        self.assertNotIn("synthetic-private-data", response.text)
 
     def test_valid_csrf_with_unsupported_body_encoding_is_rejected(self):
         self._login()

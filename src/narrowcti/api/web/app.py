@@ -154,12 +154,16 @@ def _safe_job_result(value):
     allowed = {
         "action", "source_key", "external_id", "reviewed", "ingested",
         "dropped", "quarantined", "skipped", "errors", "dry_run",
+        "revision_fingerprint",
     }
     projected = {
         key: item[:512] if isinstance(item, str) else item
         for key, item in value.items()
         if key in allowed and isinstance(item, (str, int, bool, type(None)))
     }
+    fingerprint = projected.get("revision_fingerprint")
+    if fingerprint is not None and not _FINGERPRINT.fullmatch(str(fingerprint)):
+        projected.pop("revision_fingerprint", None)
     items = value.get("items")
     if isinstance(items, list):
         item_keys = {
@@ -832,7 +836,12 @@ def create_web_app(
             raise HTTPException(status_code=503, detail="provider_busy") from None
         return _template_response(
             "source_detail.html",
-            _template_context(request, session, item=item, request_id=secrets.token_urlsafe(18)),
+            _template_context(
+                request,
+                session,
+                item=item,
+                request_ids={mode: secrets.token_urlsafe(18) for mode in _JOB_TYPES},
+            ),
         )
 
     @app.post("/explorer/{provider_key}/{external_id}/{mode}", dependencies=[Depends(require_csrf)])
@@ -862,7 +871,10 @@ def create_web_app(
         values = parse_form(request, await request.body())
         request_id = values.get("request_id", "")
         fingerprint = values.get("expected_fingerprint", "")
-        if not _REQUEST_ID.fullmatch(request_id) or not _FINGERPRINT.fullmatch(fingerprint):
+        fingerprint_valid = bool(_FINGERPRINT.fullmatch(fingerprint))
+        if not _REQUEST_ID.fullmatch(request_id) or (
+            mode == "preview" and fingerprint and not fingerprint_valid
+        ) or (mode != "preview" and not fingerprint_valid):
             raise HTTPException(status_code=400, detail="invalid source revision identity")
         if not external_id or len(external_id) > 256 or any(ord(char) < 32 for char in external_id):
             raise HTTPException(status_code=400, detail="invalid source identifier")
@@ -872,10 +884,11 @@ def create_web_app(
         payload = {
             "source_key": provider_key,
             "external_id": external_id,
-            "expected_fingerprint": fingerprint,
             "request_id": request_id,
             "requester": session.principal.principal,
         }
+        if fingerprint_valid:
+            payload["expected_fingerprint"] = fingerprint
         idempotency_key = f"{job_type}:{session.principal.credential_id}:{request_id}"
         active_limit = 1 if mode == "run-once" else 3
         try:
@@ -910,6 +923,23 @@ def create_web_app(
             "error": _safe_job_error(job.get("error")),
             "result": _safe_job_result(job.get("result")),
         }
+        result = projected["result"]
+        preview_ready = (
+            projected["job_type"] == INGESTION_PREVIEW_JOB
+            and projected["status"] == "succeeded"
+            and result.get("source_key") in {"misp", "otx"}
+            and bool(result.get("external_id"))
+            and bool(_FINGERPRINT.fullmatch(str(result.get("revision_fingerprint") or "")))
+        )
+        follow_up_actions = []
+        if preview_ready:
+            for mode, permission, label in (
+                ("dry-run", "ingestion:dry_run", "Dry-run this reviewed revision"),
+                ("run-once", "ingestion:run", "Run once for this reviewed revision"),
+            ):
+                if session.principal.has_permission(permission):
+                    follow_up_actions.append((mode, label, secrets.token_urlsafe(18)))
+        projected["follow_up_actions"] = follow_up_actions
         return session, projected
 
     @app.get("/jobs/{job_id}", response_class=HTMLResponse)
