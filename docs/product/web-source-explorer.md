@@ -151,7 +151,11 @@ issued fingerprint, which subsequent Dry-run and Run-once submissions must
 provide. Those actions refetch and compare the full-document digest before
 processing, and fail closed with `candidate_changed` if the source changed.
 Preview continues to produce no durable candidate effects; no raw provider
-document is stored in its job result or returned to the browser.
+document is stored in its job result or returned to the browser. If the
+existing source-specific normalization policy intentionally yields no
+candidate (such as an oversized-event `skip`), Preview returns a bounded
+terminal skip with the fingerprint from that same raw document and offers no
+Dry-run/Run-once follow-up.
 
 The detailed MISP search and bounded-detail contract is documented in
 [`community-misp-explorer-search.md`](community-misp-explorer-search.md).

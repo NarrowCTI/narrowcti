@@ -560,6 +560,30 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(303, submitted.status_code)
         self.assertEqual(follow_up_request_id, self.jobs.submissions[-1][2]["request_id"])
 
+    def test_terminal_preview_skip_does_not_offer_followup_actions(self):
+        self._login(token=REVIEWER_TOKEN)
+        self.jobs.jobs["preview-skip-key"] = {
+            "job_id": "job-preview-skip",
+            "job_type": "ingestion.preview",
+            "payload": {"source_key": "misp", "external_id": "42", "requester": "reviewer"},
+            "status": "succeeded",
+            "created_at": "2026-01-01T00:00:00Z",
+            "error": None,
+            "result": {
+                "action": "skip",
+                "source_key": "misp",
+                "external_id": "42",
+                "revision_fingerprint": "c" * 64,
+            },
+        }
+
+        response = self.client.get("/jobs/job-preview-skip")
+
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Revision Fingerprint", response.text)
+        self.assertNotIn('action="/explorer/misp/42/dry-run"', response.text)
+        self.assertNotIn('action="/explorer/misp/42/run-once"', response.text)
+
     def test_admin_can_submit_run_once_with_identity_only_job_payload(self):
         client = TestClient(self.app, base_url="https://testserver")
         self._login(client, ADMIN_TOKEN)

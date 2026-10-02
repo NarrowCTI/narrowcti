@@ -287,7 +287,10 @@ governed ingestion.
   from that document, normalizes/processes that same raw document through the
   existing source-specific path, and returns the authoritative fingerprint
   in the bounded Preview result. Preview remains free of durable candidate
-  effects.
+  effects. If source-specific normalization intentionally yields no candidate
+  (for example, the existing oversized-event `skip` policy), Preview returns
+  a bounded terminal `skip` with the fingerprint of that same raw document;
+  it is not reported as a provider outage and exposes no follow-up action.
 - Dry-run and Run-once still require the fingerprint issued by Preview. The
   Worker refetches the full document and compares its digest before
   normalization or processing; mismatch remains `candidate_changed` and fails

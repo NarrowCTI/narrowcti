@@ -927,6 +927,7 @@ def create_web_app(
         preview_ready = (
             projected["job_type"] == INGESTION_PREVIEW_JOB
             and projected["status"] == "succeeded"
+            and result.get("action") != "skip"
             and result.get("source_key") in {"misp", "otx"}
             and bool(result.get("external_id"))
             and bool(_FINGERPRINT.fullmatch(str(result.get("revision_fingerprint") or "")))

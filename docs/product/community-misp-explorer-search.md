@@ -53,6 +53,10 @@ evaluates the same fetched document through the existing source-specific
 processor, and returns only the bounded result plus the authoritative
 fingerprint. The raw Event is not put in the job payload, result, browser or
 logs. Preview has no durable candidate effects.
+If the existing source-specific normalization policy intentionally yields no
+candidate (for example, the oversized-event `skip` policy), Preview returns a
+bounded terminal skip with the fingerprint from that same raw Event and does
+not offer Dry-run or Run-once follow-up.
 
 Dry-run and Run-once require the fingerprint returned by Preview. The Worker
 refetches the full Event and compares the full-document digest before

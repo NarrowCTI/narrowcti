@@ -251,6 +251,44 @@ class IngestionJobTests(unittest.TestCase):
         self.assertEqual([], original_audit.records)
         self.assertEqual(processor.quarantine_repository, None)
 
+    def test_preview_returns_revision_for_source_normalization_skip(self):
+        event = dict(EVENT)
+        processor = _Processor(event)
+        processor.feed_adapter.normalize_event = lambda _raw, external_id=None: None
+        job = _job(event=event)
+        del job["payload"]["expected_fingerprint"]
+
+        result = execute_ingestion_job(job, None, _Registry(processor), lambda _message: None)
+
+        self.assertEqual(
+            result,
+            {
+                "action": "skip",
+                "source_key": "misp",
+                "external_id": "event-42",
+                "revision_fingerprint": source_document_fingerprint(event),
+            },
+        )
+        self.assertEqual(["event-42"], processor.misp_client.calls)
+        self.assertIsNone(processor.received)
+        self.assertEqual([], processor.state.events)
+        self.assertEqual([], processor.state.pulses)
+
+    def test_dry_run_keeps_fail_closed_behavior_when_normalization_returns_no_candidate(self):
+        processor = _Processor(dict(EVENT))
+        processor.feed_adapter.normalize_event = lambda _raw, external_id=None: None
+
+        with self.assertRaisesRegex(IngestionJobFailure, "provider_unavailable"):
+            execute_ingestion_job(
+                _job(INGESTION_DRY_RUN_JOB),
+                None,
+                _Registry(processor),
+                lambda _message: None,
+            )
+
+        self.assertEqual(["event-42"], processor.misp_client.calls)
+        self.assertIsNone(processor.received)
+
     def test_dry_run_keeps_local_evidence_contract_but_wraps_checkpoint_state(self):
         processor = _Processor(dict(EVENT))
         registry = _Registry(processor)

@@ -95,7 +95,14 @@ def _unwrap_misp(value):
     return value
 
 
-def _refetch_candidate_with_revision(processor, source_key: str, external_id: str, expected: str | None):
+def _refetch_candidate_with_revision(
+    processor,
+    source_key: str,
+    external_id: str,
+    expected: str | None,
+    *,
+    allow_missing_candidate: bool = False,
+):
     if source_key == "misp":
         raw = processor.misp_client.get_event(external_id)
         raw = _unwrap_misp(raw)
@@ -117,6 +124,8 @@ def _refetch_candidate_with_revision(processor, source_key: str, external_id: st
         raw = dict(raw)
         raw.setdefault("id", external_id)
         candidate_ref = processor.normalize_feed_candidate(raw)
+    if candidate_ref is None and allow_missing_candidate:
+        return None, revision_fingerprint
     if candidate_ref is None or candidate_ref.external_id != external_id:
         raise IngestionJobFailure("provider_unavailable")
     return candidate_ref, revision_fingerprint
@@ -141,6 +150,7 @@ def execute_ingestion_job(job, settings, registry, logger):
     if int(job.get("attempt") or 1) > 1:
         raise IngestionJobFailure("execution_ambiguous")
     source_key, external_id, expected = _job_identity(job)
+    is_preview = job_type == INGESTION_PREVIEW_JOB
     try:
         runner = registry.get(source_key).factory()
         processor = runner.processor
@@ -149,6 +159,7 @@ def execute_ingestion_job(job, settings, registry, logger):
             source_key,
             external_id,
             expected,
+            allow_missing_candidate=is_preview,
         )
     except IngestionJobFailure:
         raise
@@ -156,11 +167,18 @@ def execute_ingestion_job(job, settings, registry, logger):
         logger(f"ingestion job source refetch failed: source={source_key}")
         raise IngestionJobFailure("provider_unavailable") from None
 
+    if candidate_ref is None:
+        return {
+            "action": "skip",
+            "source_key": source_key,
+            "external_id": external_id,
+            "revision_fingerprint": revision_fingerprint,
+        }
+
     # Reuse the verified fetch for the existing processor enrichment stage.
     # This closes the TOCTOU gap without persisting the raw source document.
     processor.feed_adapter.enrich = lambda _candidate: candidate_ref
     mode = job_type
-    is_preview = mode == INGESTION_PREVIEW_JOB
     is_governed_dry_run = mode in {INGESTION_PREVIEW_JOB, INGESTION_DRY_RUN_JOB}
     if is_governed_dry_run:
         processor.settings = replace(processor.settings, dry_run=True)
