@@ -265,3 +265,38 @@ introducing commercial control-plane scope.
 ## Target Wave
 
 W8 / PR-24 — Community Basic Web UI / Source Explorer.
+
+## PR-27A addendum — bounded detail and Worker-issued revision
+
+PR-27A refines the existing Explorer-to-Worker freshness contract without
+changing the ownership boundary: Web detail is an upstream-bounded projection,
+while the Worker remains authoritative for the full source revision used by
+governed ingestion.
+
+- MISP detail uses sequential `GET /events/view2/{id}.json` and
+  `POST /events/viewAttributes/{id}.json` requests with `page=1` and
+  `limit=101`, an aggregate deadline, at most two upstream requests and the
+  existing 1,000,000-byte per-response cap. It never falls back to
+  `/events/view`, performs no further pagination and renders at most 100
+  bounded attributes. The response total determines truncation; malformed or
+  inconsistent identity/count data fails closed.
+- This bounded MISP detail does not issue a `revision_fingerprint`. OTX detail
+  retains its existing full-document fingerprint behavior.
+- Preview may be submitted without an expected fingerprint. The Worker fetches
+  the full source document once, calculates `source_document_fingerprint()`
+  from that document, normalizes/processes that same raw document through the
+  existing source-specific path, and returns the authoritative fingerprint
+  in the bounded Preview result. Preview remains free of durable candidate
+  effects.
+- Dry-run and Run-once still require the fingerprint issued by Preview. The
+  Worker refetches the full document and compares its digest before
+  normalization or processing; mismatch remains `candidate_changed` and fails
+  closed. Each follow-up action has a fresh request ID.
+- Bounded MISP Explorer detail requires MISP `>= 2.5.35`. A 404 is not by
+  itself treated as proof of an unsupported server: bounded version discovery
+  occurs only when needed to distinguish an unsupported detail endpoint from a
+  missing event. There is no full-event detail fallback.
+
+The addendum does not change MISP/OTX runtime processor behavior, the normal
+Worker ingestion path, readiness semantics, or the separate follow-on PR-27B
+and PR-28 scopes.

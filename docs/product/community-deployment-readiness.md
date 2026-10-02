@@ -11,6 +11,9 @@ lab path; versioned deployment documents remain historical context.
 - **Web** serves UI/API and bounded read-only MISP/OTX Source Explorer access
   with dedicated Web credentials. Explorer calls are transient and never start
   a Worker, container, consumer or ingestion cycle.
+- Bounded MISP Explorer detail requires MISP `>= 2.5.35`; the Web detail path
+  uses bounded event-shell and attribute endpoints and does not fall back to a
+  full event response.
 - **Worker** continuously polls the configured sources independently of the
   browser. Preview, dry-run and run-once requests are bounded jobs claimed by an
   already-running Worker using its own Gateway credentials.

@@ -188,7 +188,7 @@ Credential format, roles and endpoint behavior are documented in
 | `NARROWCTI_WEB_MISP_KEY_FILE` | `/run/secrets/narrowcti-web-misp-key` in the example | File containing a dedicated MISP Explorer identity; no fallback to `MISP_KEY`. |
 | `NARROWCTI_WEB_MISP_VERIFY_TLS` | `true` | Strict TLS verification for MISP Explorer. Invalid values fail startup closed. |
 | `NARROWCTI_WEB_OTX_KEY_FILE` | `/run/secrets/narrowcti-web-otx-key` in the example | File containing a dedicated OTX Explorer key; no fallback to `OTX_API_KEY`. |
-| `NARROWCTI_WEB_SOURCE_MAX_RESPONSE_BYTES` | `1000000` | Maximum byte size of one Explorer provider response. |
+| `NARROWCTI_WEB_SOURCE_MAX_RESPONSE_BYTES` | `1000000` | Maximum byte size of one Explorer provider response; MISP bounded detail requires each of its two responses to fit this cap. |
 | `NARROWCTI_WEB_PUBLISHED_PORT` | `8081` | Compose host port bound to loopback for the shared Web/API service. |
 | `NARROWCTI_WEB_ENV_FILE` | `./web.env.example` in Compose | Host path to the Web role environment file. |
 | `NARROWCTI_WEB_MISP_KEY_SOURCE` | Unset | Optional Compose overlay host path to the dedicated MISP key file. |
