@@ -154,16 +154,36 @@ def _safe_job_result(value):
     allowed = {
         "action", "source_key", "external_id", "reviewed", "ingested",
         "dropped", "quarantined", "skipped", "errors", "dry_run",
-        "revision_fingerprint",
+        "revision_fingerprint", "title", "indicator_count", "tags", "tlp",
     }
-    projected = {
-        key: item[:512] if isinstance(item, str) else item
-        for key, item in value.items()
-        if key in allowed and isinstance(item, (str, int, bool, type(None)))
+    string_limits = {
+        "action": 32,
+        "source_key": 32,
+        "external_id": 256,
+        "revision_fingerprint": 64,
+        "title": 512,
+        "tlp": 64,
     }
+    projected = {}
+    for key, item in value.items():
+        if key not in allowed:
+            continue
+        if key in string_limits and isinstance(item, str):
+            projected[key] = item[: string_limits[key]]
+        elif key in {"reviewed", "ingested", "dropped", "quarantined", "skipped", "errors"}:
+            if isinstance(item, int) and not isinstance(item, bool) and item >= 0:
+                projected[key] = item
+        elif key == "indicator_count":
+            if isinstance(item, int) and not isinstance(item, bool) and item >= 0:
+                projected[key] = item
+        elif key == "dry_run" and isinstance(item, bool):
+            projected[key] = item
     fingerprint = projected.get("revision_fingerprint")
     if fingerprint is not None and not _FINGERPRINT.fullmatch(str(fingerprint)):
         projected.pop("revision_fingerprint", None)
+    tags = value.get("tags")
+    if isinstance(tags, list):
+        projected["tags"] = [tag[:128] for tag in tags[:20] if isinstance(tag, str) and tag.strip()]
     items = value.get("items")
     if isinstance(items, list):
         item_keys = {

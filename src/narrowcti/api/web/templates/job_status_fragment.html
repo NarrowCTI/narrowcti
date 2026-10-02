@@ -6,6 +6,17 @@
     {% for key, value in job.result.items() if key != 'items' %}<dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>{% endfor %}
   </dl>
   {% for item in job.result.get('items', []) %}<article><strong>{{ item.action }}</strong><dl class="detail-grid">{% for key, value in item.items() if key != 'action' %}<dt>{{ key.replace('_', ' ')|title }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></article>{% endfor %}
+  {% if job.job_type == 'ingestion.preview' and job.result.get('title') %}
+  <article class="preview-candidate" aria-label="Candidate evaluated by Preview">
+    <h3>Candidate evaluated</h3>
+    <p>{{ job.result.title }}</p>
+    <dl class="detail-grid">
+      <dt>Indicators</dt><dd>{{ job.result.indicator_count }}</dd>
+      {% if job.result.get('tlp') %}<dt>TLP</dt><dd><span class="status-pill">{{ job.result.tlp }}</span></dd>{% endif %}
+    </dl>
+    {% if job.result.get('tags') %}<div class="tag-list" aria-label="Candidate tags">{% for tag in job.result.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}
+  </article>
+  {% endif %}
   {% if job.follow_up_actions %}
   <h3>Continue with the revision evaluated by Preview</h3>
   <p class="muted">These actions refetch the source and fail closed if it changed. Each submission gets a new request ID.</p>

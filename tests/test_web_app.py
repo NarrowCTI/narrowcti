@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 
 from narrowcti.api.review.app import ReviewApiSettings, create_app as create_review_api_app
 from narrowcti.api.review.auth import ReviewCredentialStore, token_sha256
-from narrowcti.api.web.app import SESSION_COOKIE_LOCAL, SESSION_COOKIE_SECURE, create_web_app
+from narrowcti.api.web.app import SESSION_COOKIE_LOCAL, SESSION_COOKIE_SECURE, _safe_job_result, create_web_app
 from narrowcti.infrastructure.config.web_settings import WebSettings, load_web_settings
 from narrowcti.api.web.sessions import InMemoryWebSessionStore
 from narrowcti.adapters.persistence.local.operator_store import LocalOperatorStore
@@ -530,7 +530,12 @@ class WebAppTests(unittest.TestCase):
                 "source_key": "misp",
                 "external_id": "42",
                 "revision_fingerprint": "b" * 64,
+                "title": "Evaluated synthetic candidate",
+                "indicator_count": 3,
+                "tags": ["tlp:amber", "actor:example"],
+                "tlp": "tlp:amber",
                 "raw_event": {"info": "must not be rendered"},
+                "indicators": [{"value": "private-observable.example"}],
             },
         }
 
@@ -540,7 +545,11 @@ class WebAppTests(unittest.TestCase):
         self.assertIn('action="/explorer/misp/42/dry-run"', response.text)
         self.assertNotIn('action="/explorer/misp/42/run-once"', response.text)
         self.assertIn('name="expected_fingerprint" value="' + "b" * 64 + '"', response.text)
+        self.assertIn("Evaluated synthetic candidate", response.text)
+        self.assertIn("Indicator Count", response.text)
+        self.assertIn("tlp:amber", response.text)
         self.assertNotIn("must not be rendered", response.text)
+        self.assertNotIn("private-observable.example", response.text)
         follow_up_request_id = re.search(
             r'action="/explorer/misp/42/dry-run"[\s\S]*?name="request_id" value="([^\"]+)"',
             response.text,
@@ -559,6 +568,31 @@ class WebAppTests(unittest.TestCase):
         )
         self.assertEqual(303, submitted.status_code)
         self.assertEqual(follow_up_request_id, self.jobs.submissions[-1][2]["request_id"])
+
+    def test_preview_candidate_projection_is_allowlisted_and_bounded(self):
+        safe = _safe_job_result(
+            {
+                "action": "ingest",
+                "source_key": "misp",
+                "external_id": "42",
+                "revision_fingerprint": "d" * 64,
+                "title": "t" * 700,
+                "indicator_count": 4,
+                "tags": ["x" * 200 for _ in range(25)],
+                "tlp": "tlp:" + "y" * 100,
+                "indicators": [{"value": "must-not-pass"}],
+                "raw_event": {"value": "must-not-pass"},
+            }
+        )
+
+        self.assertEqual(512, len(safe["title"]))
+        self.assertEqual(4, safe["indicator_count"])
+        self.assertEqual(20, len(safe["tags"]))
+        self.assertTrue(all(len(tag) == 128 for tag in safe["tags"]))
+        self.assertEqual(64, len(safe["tlp"]))
+        self.assertNotIn("indicators", safe)
+        self.assertNotIn("raw_event", safe)
+        self.assertNotIn("must-not-pass", repr(safe))
 
     def test_terminal_preview_skip_does_not_offer_followup_actions(self):
         self._login(token=REVIEWER_TOKEN)

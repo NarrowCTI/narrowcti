@@ -141,6 +141,39 @@ def _refetch_candidate(processor, source_key: str, external_id: str, expected: s
     return candidate_ref
 
 
+def _preview_candidate_projection(candidate_ref, *, source_key, external_id, revision_fingerprint, action):
+    """Return only the bounded operator-facing fields for an evaluated candidate."""
+    raw_title = getattr(candidate_ref, "title", "")
+    title = raw_title[:512] if isinstance(raw_title, str) else ""
+
+    raw_tags = getattr(candidate_ref, "tags", ()) or ()
+    if not isinstance(raw_tags, (list, tuple)):
+        raw_tags = ()
+    tags = []
+    for tag in raw_tags:
+        if isinstance(tag, str) and tag.strip():
+            tags.append(tag[:128])
+            if len(tags) == 20:
+                break
+
+    indicators = getattr(candidate_ref, "indicators", ()) or ()
+    indicator_count = len(indicators) if isinstance(indicators, (list, tuple)) else 0
+
+    result = {
+        "action": str(action),
+        "source_key": source_key,
+        "external_id": external_id,
+        "revision_fingerprint": revision_fingerprint,
+        "title": title,
+        "indicator_count": indicator_count,
+        "tags": tags,
+    }
+    tlp = next((tag for tag in tags if tag.lower().startswith("tlp:")), None)
+    if tlp is not None:
+        result["tlp"] = tlp[:64]
+    return result
+
+
 def execute_ingestion_job(job, settings, registry, logger):
     """Refetch by identity, verify revision and invoke the existing processor path."""
 
@@ -205,7 +238,13 @@ def execute_ingestion_job(job, settings, registry, logger):
         "external_id": external_id,
     }
     if is_preview:
-        result["revision_fingerprint"] = revision_fingerprint
+        return _preview_candidate_projection(
+            candidate_ref,
+            source_key=source_key,
+            external_id=external_id,
+            revision_fingerprint=revision_fingerprint,
+            action=action,
+        )
     return result
 
 

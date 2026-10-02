@@ -47,6 +47,8 @@ class _CandidateRef:
     external_id: str
     title: str
     raw: dict
+    indicators: tuple = ()
+    tags: tuple = ()
 
 
 class _State:
@@ -84,7 +86,12 @@ class _FeedAdapter:
 
     def normalize_event(self, raw, *, external_id):
         self.normalizations.append(raw)
-        return _CandidateRef(external_id, raw["info"], raw)
+        indicators = tuple(raw.get("Attribute") or ())
+        tags = tuple(
+            tag.get("name", "") if isinstance(tag, dict) else str(tag)
+            for tag in raw.get("Tag", ())
+        )
+        return _CandidateRef(external_id, raw["info"], raw, indicators, tags)
 
 
 class _Processor:
@@ -215,6 +222,9 @@ class IngestionJobTests(unittest.TestCase):
                 "source_key": "misp",
                 "external_id": "event-42",
                 "revision_fingerprint": source_document_fingerprint(processor.misp_client.event),
+                "title": "Synthetic incident",
+                "indicator_count": 0,
+                "tags": [],
             },
         )
         self.assertEqual(processor.misp_client.calls, ["event-42"])
@@ -230,7 +240,34 @@ class IngestionJobTests(unittest.TestCase):
         self.assertEqual(processor.received[1].external_id, "event-42")
         self.assertIs(processor.feed_adapter.normalizations[0], processor.misp_client.event)
         self.assertNotIn("raw_event", _job()["payload"])
-        self.assertNotIn("info", result)
+        self.assertNotIn("raw", result)
+        self.assertNotIn("indicators", result)
+
+    def test_preview_projects_bounded_candidate_context_without_indicator_values(self):
+        event = {
+            **EVENT,
+            "info": "L" * 700,
+            "Tag": [{"name": "tlp:amber"}, {"name": "actor:example"}, {"name": "secret-tag-value"}],
+            "Attribute": [
+                {"type": "domain", "value": "private-observable.example"},
+                {"type": "sha256", "value": "private-hash-value"},
+            ],
+        }
+        processor = _Processor(event)
+        job = _job(event=event)
+        del job["payload"]["expected_fingerprint"]
+
+        result = execute_ingestion_job(job, None, _Registry(processor), lambda _message: None)
+
+        self.assertEqual(1, len(processor.misp_client.calls))
+        self.assertEqual(source_document_fingerprint(event), result["revision_fingerprint"])
+        self.assertEqual(512, len(result["title"]))
+        self.assertEqual(2, result["indicator_count"])
+        self.assertEqual(["tlp:amber", "actor:example", "secret-tag-value"], result["tags"])
+        self.assertEqual("tlp:amber", result["tlp"])
+        self.assertNotIn("private-observable.example", repr(result))
+        self.assertNotIn("private-hash-value", repr(result))
+        self.assertNotIn("Attribute", repr(result))
 
     def test_preview_without_fingerprint_issues_revision_for_same_single_fetch(self):
         event = dict(EVENT)

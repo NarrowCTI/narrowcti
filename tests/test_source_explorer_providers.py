@@ -261,6 +261,39 @@ class SourceExplorerProviderTests(unittest.TestCase):
         self.assertTrue(result.fields["attributes_truncated"])
 
     @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_object_attributes_do_not_invalidate_standalone_attribute_total(self, request):
+        attributes = [
+            {"event_id": "42", "type": "domain", "value": f"standalone-{index}.example"}
+            for index in range(80)
+        ]
+        request.side_effect = [
+            {"Event": {"id": "42", "attribute_count": 150, "info": "Object-rich event"}},
+            {"Attribute": attributes, "total": 80},
+        ]
+
+        result = MISPSourceExplorer("https://misp.example", "key").detail("42")
+
+        self.assertEqual(2, request.call_count)
+        self.assertEqual(80, len(result.fields["attributes"]))
+        self.assertFalse(result.fields["attributes_truncated"])
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
+    def test_misp_object_rich_event_still_uses_provider_total_for_truncation(self, request):
+        attributes = [
+            {"event_id": "42", "type": "domain", "value": f"standalone-{index}.example"}
+            for index in range(101)
+        ]
+        request.side_effect = [
+            {"Event": {"id": "42", "attribute_count": 150, "info": "Object-rich event"}},
+            {"Attribute": attributes, "total": 120},
+        ]
+
+        result = MISPSourceExplorer("https://misp.example", "key").detail("42")
+
+        self.assertEqual(100, len(result.fields["attributes"]))
+        self.assertTrue(result.fields["attributes_truncated"])
+
+    @patch("narrowcti.adapters.sources.misp.explorer.request_json")
     def test_misp_detail_total_of_100_is_not_truncated(self, request):
         attributes = [
             {"event_id": "42", "type": "domain", "value": f"item-{index}.example"}

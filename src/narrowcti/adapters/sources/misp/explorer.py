@@ -355,8 +355,11 @@ class MISPSourceExplorer:
         if len(raw_attributes) > _ATTRIBUTE_FETCH_LIMIT or provider_total < len(raw_attributes):
             raise _invalid_provider_response()
         shell_total = event.get("attribute_count")
-        if shell_total is not None and _count(shell_total) != provider_total:
-            raise _invalid_provider_response()
+        if shell_total is not None:
+            # Event.attribute_count includes Object Attributes, while the
+            # unflattened viewAttributes endpoint reports standalone ones.
+            # Validate its shape, but do not compare these different counts.
+            _count(shell_total)
 
         summary = _summary(event)
         attributes = []
