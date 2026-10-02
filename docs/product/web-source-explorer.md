@@ -128,6 +128,38 @@ the upstream service provides per-key read-only permission granularity.
 
 ## Governed operations
 
+### Bounded MISP detail and revision freshness
+
+MISP detail is a bounded projection, not the source document used to authorize
+later ingestion. It requests the event shell from
+`GET /events/view2/{id}.json`, then requests one attribute page from
+`POST /events/viewAttributes/{id}.json` with `page=1` and `limit=101`. Both
+requests share one aggregate deadline and each response remains capped at
+1,000,000 bytes. The Web operation makes no more than two sequential upstream
+requests, performs no additional pagination or N+1 lookups, never calls
+`/events/view`, and renders at most 100 attributes. Provider totals drive the
+truncation flag. Invalid shapes, counts or event/attribute identities fail
+closed. This bounded detail contract requires MISP `>= 2.5.35`; there is no
+full-event fallback.
+
+The bounded MISP detail has no `revision_fingerprint`. OTX detail retains its
+existing full-document fingerprint. Preview is the authoritative revision
+boundary: the Worker fetches the full source document once, hashes that exact
+document, and processes the same fetched document through the existing
+source-specific normalization path. Its bounded result includes the Worker-
+issued fingerprint, which subsequent Dry-run and Run-once submissions must
+provide. Those actions refetch and compare the full-document digest before
+processing, and fail closed with `candidate_changed` if the source changed.
+Preview continues to produce no durable candidate effects; no raw provider
+document is stored in its job result or returned to the browser. If the
+existing source-specific normalization policy intentionally yields no
+candidate (such as an oversized-event `skip`), Preview returns a bounded
+terminal skip with the fingerprint from that same raw document and offers no
+Dry-run/Run-once follow-up.
+
+The detailed MISP search and bounded-detail contract is documented in
+[`community-misp-explorer-search.md`](community-misp-explorer-search.md).
+
 | Operation | Execution | Effects |
 | --- | --- | --- |
 | Search/detail | Web request | Transient, bounded provider read; no job or persistence. |
@@ -135,9 +167,10 @@ the upstream service provides per-key read-only permission granularity.
 | Dry-run | Worker job | Uses the governed dry-run path. Existing local DecisionRecord and quarantine behavior may occur; no OpenCTI export, successful artifact mark or source checkpoint. |
 | Run once | Worker job | Real bounded ingestion using Worker credentials; Admin-only and limited to one active Community job globally. |
 
-Every evaluation job stores only `source_key`, `external_id`, the expected
-revision fingerprint, request ID and requester. The Worker refetches the
-source document with its own credentials and fails closed if the fingerprint
+Every evaluation job stores only `source_key`, `external_id`, request ID and
+requester, plus an optional expected fingerprint for Preview or a required
+fingerprint for Dry-run/Run-once. The Worker refetches the source document with
+its own credentials and fails closed if a supplied authoritative fingerprint
 changed. A reclaimed attempt is marked `execution_ambiguous`; it is never
 automatically replayed.
 

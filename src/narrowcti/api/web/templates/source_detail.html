@@ -19,20 +19,18 @@
   {% if observables %}<h3>Indicators ({{ observables|length }} shown)</h3><ul class="observable-list">{% for observable in observables %}<li><code>{{ observable.type }}</code><span>{{ observable.value }}</span></li>{% endfor %}</ul>{% endif %}
   {% if item.summary.revision_fingerprint %}<p class="fingerprint"><span class="muted">Revision fingerprint:</span> <code>{{ item.summary.revision_fingerprint }}</code></p>{% endif %}
 </section>
-{% if item.summary.revision_fingerprint %}
 <section class="panel">
   <h2>Evaluate with the governed Worker</h2>
-  <p class="muted">Preview is ephemeral. Dry-run may record local decision evidence and quarantine outcomes but never exports to OpenCTI or checkpoints successful ingestion.</p>
+  <p class="muted">Preview is ephemeral and establishes the revision evaluated by the Worker. Dry-run and Run once are available only when a revision fingerprint is present.</p>
   {% for mode, permission, label in [('preview', 'ingestion:preview', 'Preview'), ('dry-run', 'ingestion:dry_run', 'Dry-run'), ('run-once', 'ingestion:run', 'Run once')] %}
-    {% if principal.has_permission(permission) %}
+    {% if principal.has_permission(permission) and (mode == 'preview' or item.summary.revision_fingerprint) %}
     <form method="post" action="/explorer/{{ item.summary.provider_key }}/{{ item.summary.external_id|urlencode }}/{{ mode }}" class="inline-form">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-      <input type="hidden" name="request_id" value="{{ request_id }}">
-      <input type="hidden" name="expected_fingerprint" value="{{ item.summary.revision_fingerprint }}">
+      <input type="hidden" name="request_id" value="{{ request_ids[mode] }}">
+      {% if item.summary.revision_fingerprint %}<input type="hidden" name="expected_fingerprint" value="{{ item.summary.revision_fingerprint }}">{% endif %}
       <button class="button {{ 'primary' if mode == 'preview' else 'quiet' }}" type="submit">{{ label }}</button>
     </form>
     {% endif %}
   {% endfor %}
 </section>
-{% endif %}
 {% endblock %}

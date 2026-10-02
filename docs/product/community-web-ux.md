@@ -67,6 +67,14 @@ Overview and empty states never invent activity, metrics or history. Job pages
 show only the existing authorized job contract; they are not a historical
 operations dashboard.
 
+MISP Explorer detail is a bounded event/attribute projection and does not
+issue an authoritative source fingerprint. Preview establishes that revision
+in the Worker from the same single full-document fetch it evaluates; later
+Dry-run/Run-once actions must present that Worker-issued revision and fail
+closed if the source changed. See the
+[`Community MISP Explorer search contract`](community-misp-explorer-search.md)
+for provider routes, response bounds and minimum MISP version.
+
 ## Route compatibility
 
 The existing `/`, `/explorer`, `/review`, `/evidence`, `/reports`, `/account`,

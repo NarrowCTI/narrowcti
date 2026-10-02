@@ -47,6 +47,8 @@ class _CandidateRef:
     external_id: str
     title: str
     raw: dict
+    indicators: tuple = ()
+    tags: tuple = ()
 
 
 class _State:
@@ -80,9 +82,16 @@ class _MISPClient:
 class _FeedAdapter:
     def __init__(self):
         self.enrich = lambda _candidate: None
+        self.normalizations = []
 
     def normalize_event(self, raw, *, external_id):
-        return _CandidateRef(external_id, raw["info"], raw)
+        self.normalizations.append(raw)
+        indicators = tuple(raw.get("Attribute") or ())
+        tags = tuple(
+            tag.get("name", "") if isinstance(tag, dict) else str(tag)
+            for tag in raw.get("Tag", ())
+        )
+        return _CandidateRef(external_id, raw["info"], raw, indicators, tags)
 
 
 class _Processor:
@@ -104,6 +113,9 @@ class _Processor:
         if self.quarantine_repository is not None:
             self.quarantine_repository.add({"external_id": candidate_ref.external_id})
         return "ingest"
+
+    def process_pulse_outcome(self, query, candidate_ref, state):
+        return self.process_event_outcome(query, candidate_ref, state)
 
 
 class _Audit:
@@ -203,7 +215,18 @@ class IngestionJobTests(unittest.TestCase):
 
         result = execute_ingestion_job(_job(), None, registry, logs.append)
 
-        self.assertEqual(result, {"action": "ingest", "source_key": "misp", "external_id": "event-42"})
+        self.assertEqual(
+            result,
+            {
+                "action": "ingest",
+                "source_key": "misp",
+                "external_id": "event-42",
+                "revision_fingerprint": source_document_fingerprint(processor.misp_client.event),
+                "title": "Synthetic incident",
+                "indicator_count": 0,
+                "tags": [],
+            },
+        )
         self.assertEqual(processor.misp_client.calls, ["event-42"])
         self.assertEqual(registry.lookups, ["misp"])
         self.assertTrue(processor.settings.dry_run)
@@ -215,6 +238,93 @@ class IngestionJobTests(unittest.TestCase):
         self.assertEqual(original_quarantine.records, [])
         self.assertEqual(processor.received[0], "Community Web")
         self.assertEqual(processor.received[1].external_id, "event-42")
+        self.assertIs(processor.feed_adapter.normalizations[0], processor.misp_client.event)
+        self.assertNotIn("raw_event", _job()["payload"])
+        self.assertNotIn("raw", result)
+        self.assertNotIn("indicators", result)
+
+    def test_preview_projects_bounded_candidate_context_without_indicator_values(self):
+        event = {
+            **EVENT,
+            "info": "L" * 700,
+            "Tag": [{"name": "tlp:amber"}, {"name": "actor:example"}, {"name": "secret-tag-value"}],
+            "Attribute": [
+                {"type": "domain", "value": "private-observable.example"},
+                {"type": "sha256", "value": "private-hash-value"},
+            ],
+        }
+        processor = _Processor(event)
+        job = _job(event=event)
+        del job["payload"]["expected_fingerprint"]
+
+        result = execute_ingestion_job(job, None, _Registry(processor), lambda _message: None)
+
+        self.assertEqual(1, len(processor.misp_client.calls))
+        self.assertEqual(source_document_fingerprint(event), result["revision_fingerprint"])
+        self.assertEqual(512, len(result["title"]))
+        self.assertEqual(2, result["indicator_count"])
+        self.assertEqual(["tlp:amber", "actor:example", "secret-tag-value"], result["tags"])
+        self.assertEqual("tlp:amber", result["tlp"])
+        self.assertNotIn("private-observable.example", repr(result))
+        self.assertNotIn("private-hash-value", repr(result))
+        self.assertNotIn("Attribute", repr(result))
+
+    def test_preview_without_fingerprint_issues_revision_for_same_single_fetch(self):
+        event = dict(EVENT)
+        processor = _Processor(event)
+        original_audit = processor.decision_audit
+        job = _job(event=event)
+        del job["payload"]["expected_fingerprint"]
+
+        result = execute_ingestion_job(job, None, _Registry(processor), lambda _message: None)
+
+        self.assertEqual(1, len(processor.misp_client.calls))
+        self.assertEqual(source_document_fingerprint(event), result["revision_fingerprint"])
+        self.assertIs(processor.feed_adapter.normalizations[0], event)
+        self.assertIs(processor.received[1].raw, event)
+        self.assertEqual(processor.state.events, [])
+        self.assertEqual(processor.state.pulses, [])
+        self.assertIsNot(processor.decision_audit, original_audit)
+        self.assertEqual([], original_audit.records)
+        self.assertEqual(processor.quarantine_repository, None)
+
+    def test_preview_returns_revision_for_source_normalization_skip(self):
+        event = dict(EVENT)
+        processor = _Processor(event)
+        processor.feed_adapter.normalize_event = lambda _raw, external_id=None: None
+        job = _job(event=event)
+        del job["payload"]["expected_fingerprint"]
+
+        result = execute_ingestion_job(job, None, _Registry(processor), lambda _message: None)
+
+        self.assertEqual(
+            result,
+            {
+                "action": "skip",
+                "source_key": "misp",
+                "external_id": "event-42",
+                "revision_fingerprint": source_document_fingerprint(event),
+            },
+        )
+        self.assertEqual(["event-42"], processor.misp_client.calls)
+        self.assertIsNone(processor.received)
+        self.assertEqual([], processor.state.events)
+        self.assertEqual([], processor.state.pulses)
+
+    def test_dry_run_keeps_fail_closed_behavior_when_normalization_returns_no_candidate(self):
+        processor = _Processor(dict(EVENT))
+        processor.feed_adapter.normalize_event = lambda _raw, external_id=None: None
+
+        with self.assertRaisesRegex(IngestionJobFailure, "provider_unavailable"):
+            execute_ingestion_job(
+                _job(INGESTION_DRY_RUN_JOB),
+                None,
+                _Registry(processor),
+                lambda _message: None,
+            )
+
+        self.assertEqual(["event-42"], processor.misp_client.calls)
+        self.assertIsNone(processor.received)
 
     def test_dry_run_keeps_local_evidence_contract_but_wraps_checkpoint_state(self):
         processor = _Processor(dict(EVENT))
@@ -226,6 +336,16 @@ class IngestionJobTests(unittest.TestCase):
         self.assertEqual(processor.state.events, [])
         self.assertEqual(len(processor.decision_audit.records), 1)
         self.assertEqual(len(processor.quarantine_repository.records), 1)
+
+    def test_dry_run_and_run_once_require_a_fingerprint_before_provider_fetch(self):
+        for job_type in (INGESTION_DRY_RUN_JOB, INGESTION_RUN_ONCE_JOB):
+            with self.subTest(job_type=job_type):
+                processor = _Processor(dict(EVENT))
+                job = _job(job_type)
+                del job["payload"]["expected_fingerprint"]
+                with self.assertRaisesRegex(IngestionJobFailure, "invalid_job"):
+                    execute_ingestion_job(job, None, _Registry(processor), lambda _message: None)
+                self.assertEqual(processor.misp_client.calls, [])
 
     def test_run_once_uses_worker_state_and_preserves_real_ingestion_mode(self):
         processor = _Processor(dict(EVENT))
@@ -245,7 +365,30 @@ class IngestionJobTests(unittest.TestCase):
         with self.assertRaisesRegex(IngestionJobFailure, "candidate_changed"):
             execute_ingestion_job(_job(), None, registry, lambda _message: None)
         self.assertEqual(processor.misp_client.calls, ["event-42"])
+        self.assertEqual(processor.feed_adapter.normalizations, [])
         self.assertIsNone(processor.received)
+
+    def test_preview_with_fingerprint_still_rejects_changed_source(self):
+        changed = {**EVENT, "info": "Changed after detail"}
+        processor = _Processor(changed)
+        with self.assertRaisesRegex(IngestionJobFailure, "candidate_changed"):
+            execute_ingestion_job(_job(), None, _Registry(processor), lambda _message: None)
+        self.assertEqual(processor.feed_adapter.normalizations, [])
+
+    def test_otx_preview_with_existing_fingerprint_keeps_full_document_contract(self):
+        pulse = {"name": "Synthetic pulse", "created": "2026-09-27T00:00:00Z"}
+        processor = _Processor(dict(EVENT))
+        processor.otx_client = SimpleNamespace(enrich_pulse=lambda _external_id: pulse)
+        processor.normalize_feed_candidate = lambda raw: _CandidateRef("pulse-42", raw["name"], raw)
+        job = _job(payload_updates={"source_key": "otx", "external_id": "pulse-42"})
+        job["payload"]["expected_fingerprint"] = source_document_fingerprint(pulse)
+
+        result = execute_ingestion_job(job, None, _Registry(processor), lambda _message: None)
+
+        self.assertEqual(source_document_fingerprint(pulse), result["revision_fingerprint"])
+        self.assertEqual("pulse-42", result["external_id"])
+        self.assertEqual(processor.state.events, [])
+        self.assertEqual(processor.misp_client.calls, [])
 
     def test_reclaimed_attempt_is_ambiguous_and_never_replayed(self):
         processor = _Processor(dict(EVENT))
