@@ -64,9 +64,10 @@ provisioning helper; Worker does not receive browser identity data. A small SQLi
 `NARROWCTI_RUNTIME_DB` (defaulting to `<NARROWCTI_STATE_DIR>/runtime.db`) owns
 job, lease and mutation-coordination metadata; source checkpoints, quarantine,
 deduplication indexes and audit evidence remain in their existing JSON/JSONL
-files. The Community foundation is deliberately one-worker and process-safe:
-there is no scheduler, broker, multi-worker claim model or commercial
-entitlement behavior in this wave.
+files. The currently supported Community deployment runs one active Worker per
+runtime-state scope. Its SQLite lease prevents concurrent Worker ownership for
+that scope; the current runtime does not provide a Scheduler or distributed
+Worker pool.
 
 ## Transitional boundary allowlist
 
