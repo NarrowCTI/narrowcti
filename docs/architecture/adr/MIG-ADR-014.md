@@ -1,12 +1,13 @@
 # MIG-ADR-014 — Compatibility and rollout policy
 
-- Status: accepted
-- Context: The migration must preserve v1.1.1 behavior while changing package and architecture boundaries over multiple waves.
-- Proposed Decision: Require characterization evidence, review and release validation at each wave; use explicit compatibility windows and rollback points.
+- Status: accepted; historical Community 2.0 refactor record
+- Context: During the Community 2.0 refactor, package and architecture boundaries changed while preserving the v1.1.1 behavioral baseline.
+- Decision: The completed migration used characterization evidence, bounded rollout, compatibility windows, release validation and rollback points.
 - Alternatives: Merge all waves into one release; rely on semantic versioning without behavioral evidence.
-- Consequences: Each wave has a bounded blast radius and can be rolled back without rewriting protected branches.
+- Consequences: The completed refactor kept each change bounded and provided rollback points without rewriting protected branches.
 - Dependencies: W0 inventory, coverage observation, all preceding ADRs and the documented `chore/* -> dev -> main` flow.
-- Target Wave: W0 approval; applies to all subsequent waves.
+- Historical scope: Accepted during W0 and applied to the completed Community 2.0 migration waves. This ADR does not define future product construction or roadmap work.
 
-This record governs the W1 foundation rollout. No release version change or
-automatic rollout is implemented by PR-02.
+This record documents the compatibility and rollout policy used during the
+completed refactor. PR-02 did not change the release version or implement an
+automatic rollout.

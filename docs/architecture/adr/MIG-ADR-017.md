@@ -30,5 +30,5 @@
   other module attributes are technically inaccessible.
 - Dependencies: Current MISP extraction characterization, MIG-ADR-005,
   MIG-ADR-014 and MIG-ADR-016.
-- Related ADRs: MIG-ADR-004 and MIG-ADR-006.
+- Related ADRs: MIG-ADR-006 and MIG-ADR-016.
 - Target Wave: W3 / PR-09.

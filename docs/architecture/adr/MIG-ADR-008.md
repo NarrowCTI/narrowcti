@@ -6,7 +6,7 @@
 - Alternatives: Invent a generic entity/relationship port unused by current consumers; move the concrete graph index into an OpenCTI adapter; rewrite STIX/export and gateway runtime in this wave.
 - Consequences: Domain and ports remain independent of OpenCTI, legacy `core.*` imports continue to resolve the same public objects, and OpenCTI outages retain the existing observable fail-open lookup behavior. Runtime/client capability negotiation and STIX compilation remain in later waves.
 - Dependencies: current OpenCTI lookup/dedup characterization; MIG-ADR-002; MIG-ADR-014; MIG-ADR-015.
-- Related ADRs: MIG-ADR-006; MIG-ADR-007; MIG-ADR-009.
+- Related ADRs: MIG-ADR-006; MIG-ADR-009.
 - Target Wave: W4 / PR-13.
 
 The implementation is intentionally limited to the graph lookup/dedup/provider boundary. PR-14 owns the STIX IR/compiler and OpenCTI adapter rewrite; PR-15 owns gateway runtime/provider registry and client capability migration.

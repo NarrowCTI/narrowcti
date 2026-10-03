@@ -32,9 +32,8 @@
   - MIG-ADR-008
   - MIG-ADR-014
 - Related ADRs:
-  - MIG-ADR-007 — the PR relies on the already-characterized upstream
-    candidate/promotion boundary, but does not authorize or modify that policy
-    boundary
+  - The established candidate/promotion boundary remains outside this
+    decision's scope.
   - MIG-ADR-002 — only if the implementation changes the established package
     compatibility surface
 - Target Wave: W4 / PR-14

@@ -5,7 +5,7 @@
 - Proposed Decision: PR-02 makes the current flat layout installable and restricts package discovery explicitly to `connectors*`, `core*`, `exporters*` and `gateway*`. No module is moved in PR-02. The migration to `src/` and its compatibility imports are reserved exclusively for PR-03.
 - Alternatives: Use unrestricted automatic discovery; move the tree during PR-02; infer package boundaries from directory names at build time.
 - Consequences: The wheel contains only the four current runtime package families, existing imports remain stable, and PR-03 can introduce `src/` with a separately reviewed compatibility layer. `tests`, `docs`, `scripts`, `deployment`, `state` and local artifacts are excluded from the package.
-- Dependencies: W0 inventory and characterization; MIG-ADR-001 and MIG-ADR-014; PR-03 for the later `src/` migration.
+- Dependencies: W0 inventory and characterization; MIG-ADR-014; PR-03 for the later `src/` migration.
 - Target Wave: W1 / PR-02 package foundation; `src/` migration is W1 / PR-03.
 
 ## PR-03 addendum — canonical namespace bootstrap
@@ -33,7 +33,7 @@
   import contract. The facade preserves that existing limitation without a
   runtime workaround. Source-mode uses `PYTHONPATH=/app/src:/app`; an installed
   wheel contains both canonical facades and legacy packages.
-- Dependencies: PR-02 package foundation, MIG-ADR-001 and MIG-ADR-014.
+- Dependencies: PR-02 package foundation and MIG-ADR-014.
 - Target Wave: W1 / PR-03.
 
 The compatibility window remains in force until a later migration release
@@ -67,7 +67,7 @@ is outside PR-03 and requires a separate approved decision.
   canonical domain implementation. `FeedAdapter`, `FeedRunSummary`,
   `DecisionRecord`, `DecisionAuditLog` and the OTX historical script remain
   outside this migration.
-- Dependencies: MIG-ADR-001, MIG-ADR-005 and MIG-ADR-014.
+- Dependencies: MIG-ADR-005 and MIG-ADR-014.
 - Target Wave: W1 / PR-05.
 
 ## PR-06 addendum — persistence compatibility boundary

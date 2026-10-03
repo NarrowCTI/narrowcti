@@ -22,7 +22,7 @@
   decision.
 - Dependencies: Existing GraphEvidence characterization and golden-output
   contract; established legacy compatibility and rollout constraints.
-- Related ADRs: MIG-ADR-002, MIG-ADR-005, MIG-ADR-007, MIG-ADR-009.
+- Related ADRs: MIG-ADR-002, MIG-ADR-005, MIG-ADR-009.
 - Target Wave: W4 / PR-12.
 
 No evidence field, relationship behavior, or source extraction behavior is

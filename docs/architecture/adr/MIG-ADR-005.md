@@ -20,7 +20,7 @@
   legacy `core.*` modules reexport the same objects. Existing behavior,
   serialized outputs and import compatibility remain characterization
   contracts. No new orchestration API is introduced by PR-05.
-- Dependencies: W0 golden fixtures, MIG-ADR-001, MIG-ADR-002 and
+- Dependencies: W0 golden fixtures, MIG-ADR-002 and
   MIG-ADR-014. MIG-ADR-006 is related to the evidence contract but is not a
   prerequisite dependency for these domain primitives.
 - Target Wave: W1 / PR-05.

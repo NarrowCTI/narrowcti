@@ -45,5 +45,5 @@
   ordering is preserved.
 - Dependencies: Current MISP/OTX pipeline characterization, MIG-ADR-005 and
   MIG-ADR-014.
-- Related ADRs: MIG-ADR-004, MIG-ADR-010, MIG-ADR-011 and MIG-ADR-015.
+- Related ADRs: MIG-ADR-011 and MIG-ADR-015.
 - Target Wave: W2 / PR-08.
