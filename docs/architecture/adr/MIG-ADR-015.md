@@ -23,7 +23,7 @@
   timestamps remain compatibility contracts. The application-facing adoption
   of generic `StateRepository` is deferred to a later wave; OTX/MISP continue
   using their historical source-specific methods in this PR.
-- Dependencies: MIG-ADR-001, MIG-ADR-002, MIG-ADR-005, MIG-ADR-014 and the
+- Dependencies: MIG-ADR-002, MIG-ADR-005, MIG-ADR-014 and the
   characterized state, artifact and graph deduplication tests.
 - Target Wave: W2 / PR-06 — persistence, artifact and graph ports with local
   adapters.

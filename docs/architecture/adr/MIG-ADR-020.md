@@ -1,10 +1,10 @@
 # MIG-ADR-020 — Shared Web Architecture, Community Basic UI, Source Explorer & Web Security
 
-- Status: accepted for W8 / PR-24
+- Status: accepted and implemented in Community
 - Date: 2026-09-27
 - Scope: Community Basic Web UI, Source Explorer and secure Web foundation
-- Dependencies:
-  - current Review API, runtime-role, capability and Web security characterization
+- Depends on public contracts:
+  - Review API, runtime-role, capability and Web security behavior
   - MIG-ADR-003
   - MIG-ADR-011
   - MIG-ADR-012
@@ -15,17 +15,15 @@
   - MIG-ADR-023
   - MIG-ADR-024
   - MIG-ADR-025
-- Related ADRs: MIG-ADR-002, MIG-ADR-004, MIG-ADR-014, MIG-ADR-015
+- Related decisions: MIG-ADR-002, MIG-ADR-003, MIG-ADR-011, MIG-ADR-012, MIG-ADR-014, MIG-ADR-015, MIG-ADR-016, MIG-ADR-018, MIG-ADR-019, MIG-ADR-022, MIG-ADR-023, MIG-ADR-024, MIG-ADR-025
 
 ## Context
 
-The Community distribution already has a Web/API runtime, a Worker, one-shot
-Ops roles, a Review API, capability contracts, a local job repository and
-approved NarrowCTI brand assets. It does not yet provide the shared browser UI
-or provider-aware Source Explorer described by the v0.7 Blueprint. Browser
-features must reuse application behavior without creating a second ingestion
-runtime, exposing provider credentials, weakening API compatibility or
-introducing commercial control-plane scope.
+The Community distribution provides a Web/API runtime, a Worker, one-shot Ops
+roles, a Review API, capability contracts, a local job repository, a shared
+browser UI and a provider-aware Source Explorer. Browser features reuse
+application behavior without creating a second ingestion runtime, exposing
+provider credentials or weakening API compatibility.
 
 ## Decision
 
@@ -49,13 +47,9 @@ introducing commercial control-plane scope.
   application projection and exposes only allowlisted fields. Reports lists
   existing one-shot Ops report commands as available/not generated; Web does
   not generate report files or schedule them.
-- Professional begins with operational lifecycle control around these
-  capabilities: saved/recurring searches, scheduling, pause/resume, bounded
-  backfill, governed replay, richer history, advanced dashboards, visual
-  policy management and scheduled reporting.
-- Preview and dry-run are Community capabilities; the Blueprint §10.1 table is
-  not an exclusive entitlement statement. The authoritative boundary is
-  Blueprint §§8.2, 8.4 and 21.1.
+- Preview, dry-run and bounded manual run-once are Community capabilities and
+  remain governed by the same server-side permission and Worker ownership
+  contracts as their corresponding API operations.
 
 ### Source Explorer and credentials
 
@@ -100,9 +94,8 @@ introducing commercial control-plane scope.
   never raw provider documents, provider credentials or arbitrary commands.
 - Duplicate HTTP delivery of the same request returns the same job. At most
   one active `ingestion.run_once` job exists globally in Community. Preview
-  and dry-run submissions are rate-limited and bounded; no scheduler, general
-  job-control plane, cancellation, rich history or job pruning feature is
-  introduced.
+  and dry-run submissions are rate-limited and bounded. The Web job surface
+  exposes bounded status and result projections only.
 - An initial run-once claim (`attempt == 1`) may execute. A reclaimed stale
   claim (`attempt > 1`) fails closed with stable error code
   `execution_ambiguous`; the Worker never automatically repeats provider or
@@ -192,8 +185,7 @@ introducing commercial control-plane scope.
 
 ### Capabilities, brand assets and supply chain
 
-- The existing future Community capabilities become implemented/entitled
-  only when their feature is present: `ui.basic`, `source.explorer` and
+- The Community capabilities `ui.basic`, `source.explorer` and
   `ingestion.run_once`. Preview uses `source.explorer`; dry-run uses its
   explicit permission and existing Community UI capability. No edition
   conditionals or new preview/search capability aliases are introduced.
@@ -210,9 +202,8 @@ introducing commercial control-plane scope.
 
 ### Runtime, validation and rollback
 
-- Community continues to support one active Worker. Search/detail are direct
-  bounded Web calls; evaluation and real ingestion are Worker-owned. No broker,
-  Postgres, multi-worker support or paid operational lifecycle is added.
+- Community supports one active Worker. Search/detail are direct bounded Web
+  calls; evaluation and real ingestion are Worker-owned.
 - Preserve the current Review API and quarantine/review/export service
   behavior through direct service/router composition; Web never calls its own
   HTTP API.
@@ -240,8 +231,8 @@ introducing commercial control-plane scope.
   inconsistent.
 - Signed-cookie-only session state, a SQLite session DB or storing sessions
   in runtime.db: rejected for the one-process Community Web baseline.
-- Generic command registry, Scheduler, cancellation, arbitrary query jobs or
-  broad job history: deferred to later operational-control work.
+- An unbounded command/job interface is not used: Web submissions remain
+  explicit, bounded and permission-checked.
 
 ## Consequences
 
@@ -259,19 +250,11 @@ introducing commercial control-plane scope.
   operator must submit a new request rather than relying on automatic replay.
 - The wheel and candidate image include governed UI assets and vendored HTMX,
   with additional package and authenticated DAST validation.
-- Professional may add saved/recurring searches, schedules, run control,
-  richer history and advanced operational dashboards in a later wave.
+## MISP detail and Worker-issued Preview revision contract
 
-## Target Wave
-
-W8 / PR-24 — Community Basic Web UI / Source Explorer.
-
-## PR-27A addendum — bounded detail and Worker-issued revision
-
-PR-27A refines the existing Explorer-to-Worker freshness contract without
-changing the ownership boundary: Web detail is an upstream-bounded projection,
-while the Worker remains authoritative for the full source revision used by
-governed ingestion.
+The Explorer-to-Worker freshness contract keeps Web detail as an
+upstream-bounded projection, while the Worker remains authoritative for the
+full source revision used by governed ingestion.
 
 - MISP detail uses sequential `GET /events/view2/{id}.json` and
   `POST /events/viewAttributes/{id}.json` requests with `page=1` and
@@ -300,6 +283,5 @@ governed ingestion.
   occurs only when needed to distinguish an unsupported detail endpoint from a
   missing event. There is no full-event detail fallback.
 
-The addendum does not change MISP/OTX runtime processor behavior, the normal
-Worker ingestion path, readiness semantics, or the separate follow-on PR-27B
-and PR-28 scopes.
+This bounded-detail contract does not change MISP/OTX runtime processor
+behavior, the normal Worker ingestion path or provider-readiness semantics.

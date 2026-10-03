@@ -36,7 +36,6 @@ discoverable through a machine-readable migration ledger.
 
 ## Dependencies
 
-- MIG-ADR-001
 - MIG-ADR-014
 - MIG-ADR-022
 

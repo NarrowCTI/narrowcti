@@ -86,13 +86,13 @@ for the operator bootstrap procedure.
 
 ## Product Identity
 
-The v0.2 line was the modular OTX connector foundation. The v0.3 line is the
-transition from an OTX-specific connector into NarrowCTI Gateway, an OpenCTI-native
-pre-ingestion intelligence gateway. OTX remains the first source adapter; it is no
-longer the product identity. The v0.4 release validated the gateway model with a
-second real feed, and v0.5 introduced the unified gateway runtime model. The
-current gateway shapes source-backed actor, arsenal, TTP, victimology,
-infrastructure and quarantine/release context before OpenCTI ingestion.
+NarrowCTI Community is an OpenCTI-native threat-intelligence gateway for
+pre-ingestion curation. It applies source-backed enrichment, scoring,
+deduplication, policy and review before data reaches the OpenCTI graph. OTX
+and MISP are supported source integrations; their current behavior is described
+in the product and deployment documentation. Release history is available in
+`CHANGELOG.md` and `docs/documentation-map.md`, not as current operating
+guidance.
 
 ## What It Does
 
@@ -157,28 +157,22 @@ OpenCTI. Its role is to reduce feed noise before data reaches the OpenCTI graph
 by applying source-specific enrichment, scoring, deduplication and policy.
 
 The gateway serves analysts, hunters, SOC and platform teams that need curated
-intelligence, explainable decisions and auditable feed governance instead of raw
-IoC forwarding. OTX, MISP and other approved source adapters use the same
-explainable ingestion model. Source-backed actors, arsenal, MITRE tactics and
-techniques, victimology, infrastructure, campaigns, vulnerabilities and
-detection context are exported when the evidence supports them. The public
-product boundary is tracked in `docs/product/product-reference.md`.
+intelligence, explainable decisions and auditable feed governance instead of
+raw IoC forwarding. The current product boundary is documented in
+`docs/product/product-reference.md`.
 
-MITRE ATT&CK is treated as reference and curation context. The official MITRE
-connector should populate OpenCTI with the canonical ATT&CK baseline, while
-NarrowCTI uses ATT&CK ids found in OTX and MISP to enrich, score, filter,
-deduplicate, audit and relate curated intelligence to the OpenCTI graph. This
-decision is tracked in
-`docs/architecture/mitre-curation-architecture-v0.7.md`.
+MITRE ATT&CK identifiers are used as reference and curation context when
+present in source evidence. Current architecture and integration behavior are
+documented in `docs/architecture/overview.md` and the current product guides.
 
 ## Deduplication Posture
 
-NarrowCTI should protect OpenCTI graph hygiene instead of forwarding the same
-artifact repeatedly. The current implementation deduplicates processed source
-items with local state, deduplicates repeated STIX patterns inside each bundle
-and can keep a local artifact index with provenance sightings for cross-source
-correlation. The v0.5 gateway design extends this into layered pre-export
-deduplication:
+NarrowCTI protects OpenCTI graph hygiene by deduplicating processed source
+items, repeated STIX patterns and, when configured, artifacts with a local
+index. Source sightings provide bounded cross-source correlation context.
+Current configuration and behavior are described in
+`docs/product/configuration-reference.md` and
+`docs/product/product-reference.md`:
 
 - Source-item deduplication prevents the same OTX pulse or MISP event from being
   processed repeatedly.
@@ -190,7 +184,7 @@ deduplication:
 - Cross-source matches should become provenance and confidence evidence, not
   duplicate graph noise.
 
-## v0.4 Release
+## Historical v0.4 Release
 
 The v0.4 release starts the multi-feed expansion. OTX remains the reference
 adapter, while MISP becomes the likely second adapter because many operations
@@ -224,7 +218,7 @@ historical backfill filters for date ranges, tags and published-only imports.
 The adapter has dedicated settings, MISP event state and a processor foundation
 so it can evolve without sharing OTX pulse processing state.
 
-## v0.5 Release
+## Historical v0.5 Release
 
 The v0.5 release introduces the first unified NarrowCTI Gateway runtime.
 Instead of treating each source container as the product shape, the gateway
@@ -239,7 +233,7 @@ runs. The runtime design is tracked in `docs/architecture/gateway-runtime-v0.5.m
 product/architecture continuity validation is tracked in
 `docs/validation/product-architecture-validation-v0.5.md`.
 
-## v0.6 Release Track
+## Historical v0.6 Release
 
 The v0.6 track is the quarantine and enrichment foundation. The goal is to
 turn quarantine from a decision outcome into a reviewable, auditable operator
@@ -287,7 +281,7 @@ OTX entity extraction is controlled by
 metadata-only: adversary, malware family, ATT&CK ids, industries, targeted
 countries, TLP, references and tags are preserved as structured graph evidence.
 
-## v0.7 Release
+## Historical v0.7 Release
 
 The v0.7 release turns the enrichment evidence from v0.6 into graph-aware
 STIX/OpenCTI planning and preview output. The objective is to validate source
@@ -303,7 +297,7 @@ MITRE, MISP and OTX mapping documents remain available through
 `docs/documentation-map.md`; they explain evolution but do not override the
 current product contract.
 
-## v0.8 Release
+## Historical v0.8 Release
 
 The v0.8 release starts the controlled promotion gate after v0.7. It adds
 read-only OpenCTI graph lookup so NarrowCTI can detect canonical ATT&CK objects,
@@ -322,7 +316,7 @@ optionally infer additional relationships after the curated graph exists.
 OpenCTI tab coverage, current export status and backlog boundaries are tracked
 in `docs/validation/opencti-coverage-matrix-v0.8.md`.
 
-## v0.9 Release
+## Historical v0.9 Release
 
 The published v0.9 release turns the v0.8 graph and analyst foundations into a
 governed operator workflow. It adds the authenticated review API, exact
@@ -332,7 +326,7 @@ contributor governance and blocking CI/CD security gates.
 The authoritative notes are in `docs/releases/release-v0.9.0.md`. The published image
 and tag policy are in `docs/product/container-images.md`.
 
-## v1.0 Release
+## Historical v1.0 Release
 
 The v1.0 release hardens the existing OTX and MISP gateway paths for Community
 Edition. It covers deterministic contextual scoring,
@@ -346,7 +340,14 @@ The current product contract is `docs/product/product-reference.md`, the current
 OpenCTI coverage matrix is `docs/product/opencti-coverage-matrix.md`, and the current
 release evidence is `docs/releases/release-v1.1.1.md`.
 
-## Curation Configuration
+## Historical configuration and graph-export notes
+
+The following release-era notes describe how configuration and graph export
+evolved. They are retained as historical context, not as the current
+configuration contract. Use
+[`docs/product/configuration-reference.md`](docs/product/configuration-reference.md)
+and [`docs/product/deployment-operations.md`](docs/product/deployment-operations.md)
+for supported current settings and operations.
 
 Curation controls must be visible in configuration and then applied
 automatically by the gateway. Current source runtimes expose score thresholds,
@@ -538,7 +539,7 @@ The documentation index is available in:
 docs/README.md
 ```
 
-Recommended starting points:
+Current product and contributor guidance:
 
 ```text
 docs/product/getting-started.md
@@ -554,22 +555,17 @@ docs/product/container-images.md
 docs/product/opencti-compatibility.md
 docs/product/security-quality-gates.md
 docs/community/community-standards.md
-docs/documentation-map.md
-docs/architecture/architecture-v0.9.md
-docs/architecture/graph-promotion-v0.8.md
-docs/validation/opencti-coverage-matrix-v0.8.md
 docs/development/repository-structure.md
 docs/development/development-guide.md
 docs/development/source-adapter-onboarding.md
 docs/community/community-issue-triage.md
-docs/releases/release-v1.1.1.md
-docs/releases/release-v1.0.1.md
-docs/releases/release-v1.1.0.md
-docs/releases/release-v0.9.0.md
-docs/releases/release-v0.8.0.md
-docs/releases/release-v1.0.0.md
 docs/development/release-process.md
 ```
+
+Historical snapshots and release evidence are retained separately. Use
+[`docs/documentation-map.md`](docs/documentation-map.md) to locate them; they
+describe named historical states and are not current product guidance. The
+current release record is [`docs/releases/release-v1.1.1.md`](docs/releases/release-v1.1.1.md).
 
 Development evidence and lab validation notes are retained only where they help
 maintainers reproduce supported behavior. Release source archives are curated

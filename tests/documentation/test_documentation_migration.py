@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER = ROOT / "docs/development/documentation-migration-map.json"
 DISPOSITIONS = {"STAY", "MOVE", "LEGACY-RETAIN", "CANONICAL-REPLACEMENT"}
+CURRENT_STATES = {"present", "removed"}
 
 
 def _git_index_bytes(path: Path) -> bytes:
@@ -25,6 +26,8 @@ class DocumentationMigrationTests(unittest.TestCase):
     def test_baseline_docs_have_one_explicit_disposition(self):
         payload = json.loads(LEDGER.read_text(encoding="utf-8"))
         entries = payload["entries"]
+        self.assertEqual(2, payload["schema_version"])
+        self.assertEqual("present", payload["current_state_default"])
         old_paths = [entry["old_path"] for entry in entries]
         self.assertEqual(len(old_paths), len(set(old_paths)))
         self.assertEqual(payload["baseline_docs_count"], len(old_paths))
@@ -36,12 +39,31 @@ class DocumentationMigrationTests(unittest.TestCase):
         self.assertEqual(len(move_targets), len(set(move_targets)))
         for entry in entries:
             target = ROOT / entry["new_path"]
-            self.assertTrue(target.exists(), entry["new_path"])
-            if entry["disposition"] in {"MOVE", "CANONICAL-REPLACEMENT"}:
+            current_state = entry.get("current_state", payload["current_state_default"])
+            self.assertIn(current_state, CURRENT_STATES, entry["old_path"])
+            if current_state == "present":
                 self.assertTrue(target.exists(), entry["new_path"])
-            if entry["immutable"] and entry.get("sha256_before"):
+            else:
+                self.assertFalse(target.exists(), entry["new_path"])
+            if entry["immutable"] and entry.get("sha256_before") and current_state == "present":
                 digest = hashlib.sha256(_git_index_bytes(target)).hexdigest()
                 self.assertEqual(entry["sha256_before"], digest, entry["old_path"])
+
+    def test_removed_current_documents_keep_historical_ledger_disposition(self):
+        payload = json.loads(LEDGER.read_text(encoding="utf-8"))
+        removed = {
+            entry["old_path"]: entry
+            for entry in payload["entries"]
+            if entry.get("current_state") == "removed"
+        }
+        expected = {
+            f"docs/architecture/adr/MIG-ADR-{number}.md"
+            for number in ("001", "004", "007", "010", "013")
+        }
+        self.assertEqual(expected, set(removed))
+        for path, entry in removed.items():
+            self.assertEqual("STAY", entry["disposition"], path)
+            self.assertEqual(path, entry["new_path"], path)
 
     def test_current_docs_do_not_reference_moved_paths(self):
         payload = json.loads(LEDGER.read_text(encoding="utf-8"))
@@ -50,6 +72,11 @@ class DocumentationMigrationTests(unittest.TestCase):
             for entry in payload["entries"]
             if entry["disposition"] == "MOVE"
         }
+        forbidden.update(
+            entry["old_path"]
+            for entry in payload["entries"]
+            if entry.get("current_state", payload["current_state_default"]) == "removed"
+        )
         historical_targets = {
             Path(entry["new_path"]).as_posix()
             for entry in payload["entries"]

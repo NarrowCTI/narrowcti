@@ -1,5 +1,6 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "current_state_default": "present",
   "baseline_ref": "PR-20 merge baseline",
   "baseline_commit": "c224665d6adbba1f064202357d05f319a7908303",
   "baseline_docs_count": 93,
@@ -78,6 +79,7 @@
     {
       "old_path": "docs/architecture/adr/MIG-ADR-001.md",
       "new_path": "docs/architecture/adr/MIG-ADR-001.md",
+      "current_state": "removed",
       "classification": "current",
       "historical": false,
       "immutable": false,
@@ -102,6 +104,7 @@
     {
       "old_path": "docs/architecture/adr/MIG-ADR-004.md",
       "new_path": "docs/architecture/adr/MIG-ADR-004.md",
+      "current_state": "removed",
       "classification": "current",
       "historical": false,
       "immutable": false,
@@ -126,6 +129,7 @@
     {
       "old_path": "docs/architecture/adr/MIG-ADR-007.md",
       "new_path": "docs/architecture/adr/MIG-ADR-007.md",
+      "current_state": "removed",
       "classification": "current",
       "historical": false,
       "immutable": false,
@@ -150,6 +154,7 @@
     {
       "old_path": "docs/architecture/adr/MIG-ADR-010.md",
       "new_path": "docs/architecture/adr/MIG-ADR-010.md",
+      "current_state": "removed",
       "classification": "current",
       "historical": false,
       "immutable": false,
@@ -174,6 +179,7 @@
     {
       "old_path": "docs/architecture/adr/MIG-ADR-013.md",
       "new_path": "docs/architecture/adr/MIG-ADR-013.md",
+      "current_state": "removed",
       "classification": "current",
       "historical": false,
       "immutable": false,

@@ -1,81 +1,53 @@
 # MIG-ADR-019 — Capability registry and entitlement provider boundary
 
-Status: accepted for W6 / PR-18
+Status: accepted and implemented in Community
 
 ## Context
 
-The Community runtime currently exposes feature-gate names from
-`gateway.feature_gates`, but that inventory conflates capability knowledge,
-implementation presence, entitlement, operator requests, and enabled state.
-Community 2.0 needs a capability-first boundary without introducing
-commercial licensing, network calls, or edition checks into the public runtime.
+The legacy feature-gate inventory combined capability knowledge,
+implementation presence, entitlement, operator requests and enabled state.
+Community needs a deterministic boundary that distinguishes those states
+without network access or capability escalation through configuration.
 
-## Proposed Decision
+## Decision
 
-PR-18 introduces a canonical `CapabilityRegistry`, an immutable capability
-resolution, and the minimal `EntitlementProvider` port. Capability names and
-aliases are resolved deterministically, while implementation presence is an
-explicit Community manifest and entitlements are supplied by the local,
+Community uses a canonical `CapabilityRegistry`, immutable capability
+resolution and the `EntitlementProvider` contract. Capability names and
+supported aliases resolve deterministically; implementation presence comes
+from the explicit Community manifest, and entitlements come from the local,
 offline `CommunityEntitlements` provider.
 
 The states remain distinct: known, implemented, entitled, requested, enabled,
-disabled, and unknown. Enabled is exactly the intersection of implemented and
-entitled. Requests never grant entitlements.
+disabled and unknown. A capability is enabled only when implemented and
+entitled. A request does not grant an entitlement. Community resolution does
+not use network access, license files, secrets or dynamic package discovery.
+Security controls are product invariants, not capabilities.
 
-Community entitlement resolution does not use network access, license files,
-secrets, private packages, dynamic plugin discovery, or edition checks.
-Security controls remain product invariants, not capabilities or commercial
-entitlements.
+Legacy `FeatureGateState`, `AVAILABLE_CAPABILITIES`, normalization helpers and
+`build_feature_gate_state` remain import-compatible projections. Existing
+legacy aliases and reporting names retain their supported normalization
+behavior; a legacy name does not by itself make a capability implemented,
+entitled or enabled.
 
-The legacy `FeatureGateState`, `AVAILABLE_CAPABILITIES`, normalization helpers,
-and `build_feature_gate_state` remain import-compatible projections. Legacy
-reporting names resolve to canonical `reporting.*` names. The historical
-`mssp.multi_environment` name resolves to `environment.multi`, but is not
-implemented, entitled, or enabled in Community. `deployment.templates`
-remains a legacy Community capability for compatibility and is explicitly not
-a commercial grant.
+## Rationale
 
-Future Community names `ui.basic`, `source.explorer`, and `ingestion.run_once`
-are known target names only; they are not implemented or granted by PR-18.
-`source.search` and `ingestion.preview` are not canonical names in this wave.
-
-No Web UI, Source Explorer implementation, licensing implementation, API
-route, scheduler, processor cutover, graph/STIX/OpenCTI change, or deployment
-topology change is part of this decision.
-
-## Alternatives
-
-- Keep the current feature-gate tuple as the authority. Rejected because it
-  cannot distinguish implementation, entitlement, and request state.
-- Let `NARROWCTI_CAPABILITIES` grant features. Rejected because configuration
-  must remain declarative and must not escalate Community privileges.
-- Add a network-backed license client. Rejected because Community remains
-  deterministic and offline.
-- Use dynamic package/plugin discovery for implementation presence. Rejected
-  because it would make enablement non-deterministic and blur the boundary.
+- Retaining the feature-gate tuple as authority would continue to conflate
+  implementation, entitlement and request state.
+- Allowing configuration to grant capabilities would turn declarative
+  settings into a privilege escalation path.
+- A local provider keeps Community capability resolution deterministic and
+  usable without an external service.
 
 ## Consequences
 
-- Consumers gain a stable capability-first contract.
+- Consumers have a stable capability-resolution contract and explicit
+  Community implementation/entitlement state.
 - Existing feature-gate imports and DTO shape remain compatible.
-- The false Community enablement of `mssp.multi_environment` is corrected.
-- Future commercial providers can implement the public port without changing
-  the Community provider.
-- The legacy tuple remains a compatibility projection rather than the full
-  canonical namespace.
+- Legacy feature-gate data remains a compatibility projection rather than the
+  canonical capability inventory.
 
-## Dependencies
+## Related decisions
 
-- Current feature-gate and preflight characterization
-- MIG-ADR-002
-- MIG-ADR-014
-
-## Related ADRs
-
-- MIG-ADR-013
-- MIG-ADR-018
-- MIG-ADR-010
-
-## Target Wave
-
-W6 / PR-18 — CapabilityRegistry + CommunityEntitlements.
+- MIG-ADR-002 — source tree and package boundary
+- MIG-ADR-014 — compatibility and rollout policy
+- MIG-ADR-018 — gateway provider registry boundary

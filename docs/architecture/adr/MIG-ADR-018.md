@@ -21,8 +21,8 @@
   source composition in application; invent a generic provider/plugin registry;
   or move the infinite scheduler loop into the application runtime. These
   alternatives either violate dependency direction, make inactive sources
-  require credentials, or couple Community to future commercial capability
-  concerns.
+  require credentials, or couple source-runtime composition to unrelated
+  capability concerns.
 - Consequences: One-cycle execution can be tested independently of scheduling
   and concrete providers. Source factories remain lazy, the shared artifact
   deduplication index remains shared, and summary JSONL persistence remains an
@@ -30,6 +30,6 @@
   `gateway.connector` monkeypatch surface are preserved behaviorally.
 - Dependencies: Current gateway runtime/source/settings/OpenCTI
   characterization; MIG-ADR-003; MIG-ADR-008; MIG-ADR-014; MIG-ADR-016.
-- Related ADRs: MIG-ADR-004; MIG-ADR-015.
+- Related ADRs: MIG-ADR-015; MIG-ADR-016.
 - Target Wave: W5 / PR-15.
 

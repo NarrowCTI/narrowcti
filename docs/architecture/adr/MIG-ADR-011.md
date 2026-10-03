@@ -10,7 +10,7 @@
 - Alternatives: Drop low scores irreversibly; export first and review later; replace the historical concrete repository name with a new adapter-specific class; normalize quarantine indicator aliases with the intelligence domain.
 - Consequences: Analysts can release, partially release or reject with evidence and without bypassing policy. Existing processors, Review API, CLI and exporter remain compatible while the domain/port/adapter boundary becomes explicit.
 - Dependencies: Existing quarantine/review/export characterization, MIG-ADR-002, MIG-ADR-014 and MIG-ADR-015.
-- Related ADRs: MIG-ADR-007 and MIG-ADR-010.
+- Related ADRs: MIG-ADR-006 and MIG-ADR-012.
 - Target Wave: W2 quarantine domain/repository boundary, with existing W5 review/API consumers preserved during compatibility.
 
 ## PR-16 addendum — review service, API and persistence separation
